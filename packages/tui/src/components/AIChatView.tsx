@@ -40,14 +40,31 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
         </Box>
       )}
 
-      <Box flexDirection="column" flexGrow={1} marginTop={0} overflowY="hidden">
-        {messages.map((msg, i) => (
-          <Box key={i} flexDirection="column" marginBottom={0}>
-            <Text color={msg.role === 'user' ? 'green' : 'yellow'}>
-              {msg.role === 'user' ? '▸ ' : '🤖 '}{msg.content}
-            </Text>
-          </Box>
-        ))}
+      <Box flexDirection="column" flexGrow={1} marginTop={0}>
+        {messages.map((msg, i) => {
+          if (msg.role === 'tool_call') {
+            const toolName = (msg as { toolName?: string }).toolName || '';
+            return (
+              <Box key={i} flexDirection="column" marginBottom={1}>
+                <Text color="cyan" dimColor>🔧 使用了 {toolName}</Text>
+              </Box>
+            );
+          }
+          if (msg.role === 'tool_result') {
+            return (
+              <Box key={i} flexDirection="column" marginBottom={1}>
+                <Text color="cyan" dimColor>  ⮡  {msg.content}</Text>
+              </Box>
+            );
+          }
+          return (
+            <Box key={i} flexDirection="column" marginBottom={1}>
+              <Text color={msg.role === 'user' ? 'green' : 'yellow'}>
+                {msg.role === 'user' ? '▸ ' : '🤖 '}{msg.content}
+              </Text>
+            </Box>
+          );
+        })}
         {loading && (
           <Box height={1}>
             <Text color="cyan"><Spinner type="dots" />{' AI 思考中...'}</Text>

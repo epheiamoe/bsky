@@ -201,6 +201,8 @@ export class AIAssistant {
   }
 
   private async makeRequest(): Promise<ChatCompletionResponse> {
+    // TODO: streaming support — set stream:true, use ReadableStream + SSE parser
+    // to yield tokens in real-time instead of waiting for full response
     const body: ChatCompletionRequest = {
       model: this.config.model,
       messages: this.messages,
