@@ -15,7 +15,7 @@ interface AIChatViewProps {
   focused: boolean;
 }
 
-export function AIChatView({ client, aiConfig, contextUri, cols, focused }: AIChatViewProps) {
+export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, focused }: AIChatViewProps) {
   const { messages, loading, guidingQuestions, send } = useAIChat(client, aiConfig, contextUri);
   const [input, setInput] = useState('');
 
@@ -29,25 +29,32 @@ export function AIChatView({ client, aiConfig, contextUri, cols, focused }: AICh
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
-        <Text bold color={focused ? 'magentaBright' : 'magenta'}>🤖 AI 对话 {focused ? '[聚焦]' : ''}</Text>
+        <Text bold color={focused ? 'magentaBright' : 'magenta'}>🤖 AI 对话{focused ? ' [聚焦]' : ''}</Text>
         <Text dimColor> Esc 返回</Text>
       </Box>
+
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Text dimColor>快速提问：</Text>
           {guidingQuestions.map((q, i) => <Text key={i} color="cyan">{'  '}[{i + 1}] {q}</Text>)}
         </Box>
       )}
-      <Box flexDirection="column" flexGrow={1} marginTop={0}>
-        {messages.slice(-10).map((msg, i) => (
+
+      <Box flexDirection="column" flexGrow={1} marginTop={0} overflowY="hidden">
+        {messages.map((msg, i) => (
           <Box key={i} flexDirection="column" marginBottom={0}>
             <Text color={msg.role === 'user' ? 'green' : 'yellow'}>
-              {msg.role === 'user' ? '▸ ' : '🤖 '}{msg.content.slice(0, cols - 4)}
+              {msg.role === 'user' ? '▸ ' : '🤖 '}{msg.content}
             </Text>
           </Box>
         ))}
-        {loading && <Box height={1}><Text color="cyan"><Spinner type="dots" />{' AI 思考中...'}</Text></Box>}
+        {loading && (
+          <Box height={1}>
+            <Text color="cyan"><Spinner type="dots" />{' AI 思考中...'}</Text>
+          </Box>
+        )}
       </Box>
+
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>
         <Text color={focused ? 'yellow' : 'gray'}>{focused ? '▸ ' : '· '}</Text>
         {focused ? (
