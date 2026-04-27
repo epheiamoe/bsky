@@ -589,6 +589,31 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       },
       requiresWrite: false,
     },
+    {
+      definition: {
+        name: 'fetch_web_markdown',
+        description: 'Fetch an external web page as clean markdown via r.jina.ai proxy. Use this to read articles, links shared in posts, or any external URL.',
+        inputSchema: {
+          type: 'object',
+          properties: { url: { type: 'string', description: 'The full URL of the web page to fetch' } },
+          required: ['url'],
+        },
+      },
+      handler: async (p) => {
+        const url = p.url as string;
+        const proxyUrl = `https://r.jina.ai/${url}`;
+        const res = await fetch(proxyUrl, {
+          headers: { 'Accept': 'text/markdown' },
+        });
+        if (!res.ok) {
+          return JSON.stringify({ error: `HTTP ${res.status}: ${res.statusText}`, url });
+        }
+        const md = await res.text();
+        const trimmed = md.length > 4000 ? md.slice(0, 4000) + '\n\n... (truncated)' : md;
+        return JSON.stringify({ url, title: extractTitle(md), content: trimmed });
+      },
+      requiresWrite: false,
+    },
 
     // ======================== WRITE TOOLS ========================
     {
@@ -858,4 +883,15 @@ function formatPostLine(post: PostView, depth: number, prefix: string): string {
 
   const authorStr = displayName ? `${handle} (${displayName})` : handle;
   return `${prefix}depth:${depth} | ${authorStr} (post:${rkey})\n"${text}"${mediaInfo}`;
+}
+
+function extractTitle(md: string): string {
+  const h1 = md.match(/^#\s+(.+)/m);
+  if (h1) return h1[1]!.trim();
+  const h2 = md.match(/^##\s+(.+)/m);
+  if (h2) return h2[1]!.trim();
+  const title = md.match(/<title>([^<]+)<\/title>/i);
+  if (title) return title[1]!.trim();
+  const firstLine = md.split('\n')[0];
+  return firstLine ? firstLine.trim().slice(0, 120) : '(no title)';
 }

@@ -407,5 +407,18 @@
     },
     "endpoint": "com.atproto.repo.uploadBlob",
     "readonly": false
+  },
+  {
+    "name": "fetch_web_markdown",
+    "description": "Fetch an external web page as clean markdown via r.jina.ai proxy. Use to read articles, links shared in posts.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "url": { "type": "string", "description": "The full URL of the web page to fetch" }
+      },
+      "required": ["url"]
+    },
+    "endpoint": "Proxy: https://r.jina.ai/{url}",
+    "readonly": true
   }
 ]
