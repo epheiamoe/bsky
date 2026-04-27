@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Box, Text } from 'ink';
 import { useNotifications } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -9,19 +9,8 @@ interface NotifViewProps {
   cols: number;
 }
 
-export function NotifView({ client, goBack, cols }: NotifViewProps) {
-  const { notifications, loading, refresh } = useNotifications(client);
-
-  useEffect(() => {
-    const onData = (data: Buffer) => {
-      for (const ch of data.toString()) {
-        if (ch === '\x1b') goBack();
-        if (ch.toLowerCase() === 'r') refresh;
-      }
-    };
-    process.stdin.on('data', onData);
-    return () => { process.stdin.off('data', onData); };
-  }, [goBack, refresh]);
+export function NotifView({ client, cols }: NotifViewProps) {
+  const { notifications, loading } = useNotifications(client);
 
   if (loading) {
     return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>加载通知...</Text></Box>;
@@ -36,9 +25,7 @@ export function NotifView({ client, goBack, cols }: NotifViewProps) {
       {notifications.length === 0 && <Text dimColor>暂无通知</Text>}
       {notifications.map((n, i) => (
         <Box key={i} height={1}>
-          <Text color={n.isRead ? undefined : 'cyan'}>
-            {n.isRead ? '○' : '●'}
-          </Text>
+          <Text color={n.isRead ? undefined : 'cyan'}>{n.isRead ? '○' : '●'}</Text>
           <Text color="green">{' '}{n.author?.handle ?? ''}</Text>
           <Text>{' '}{reasonLabel(n.reason)}</Text>
           <Text dimColor>{' · '}{n.indexedAt ? new Date(n.indexedAt).toLocaleString('zh-CN') : ''}</Text>
