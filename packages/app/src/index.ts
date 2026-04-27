@@ -12,6 +12,7 @@ export { useCompose } from './hooks/useCompose.js';
 export { useAIChat } from './hooks/useAIChat.js';
 export type { AIChatMessage } from './hooks/useAIChat.js';
 export { useTranslation } from './hooks/useTranslation.js';
+export type { TargetLang } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';
 export { useSearch } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';

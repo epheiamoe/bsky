@@ -9,7 +9,7 @@ export interface PostDetailStore {
   translations: Map<string, string>;
 
   load(client: BskyClient, uri: string): Promise<void>;
-  translate(client: BskyClient, text: string, aiKey: string, aiBaseUrl: string): Promise<string>;
+  translate(client: BskyClient, text: string, aiKey: string, aiBaseUrl: string, targetLang?: string): Promise<string>;
   getCachedTranslation(text: string): string | undefined;
 
   _notify(): void;
@@ -52,9 +52,16 @@ export function createPostDetailStore(): PostDetailStore {
       }
     },
 
-    async translate(client, text, aiKey, aiBaseUrl) {
-      const cached = store.translations.get(text);
+    async translate(client, text, aiKey, aiBaseUrl, targetLang = 'zh') {
+      const cacheKey = `${targetLang}::${text}`;
+      const cached = store.translations.get(cacheKey);
       if (cached) return cached;
+
+      const prompts: Record<string, string> = {
+        zh: '你是一个专业翻译，将以下文本翻译成中文，保持原意，仅输出翻译结果，不做解释。',
+        en: 'You are a professional translator. Translate the following text into English. Output only the translation.',
+        ja: 'プロの翻訳者です。以下のテキストを日本語に翻訳してください。翻訳結果だけを出力してください。',
+      };
 
       const res = await fetch(`${aiBaseUrl}/v1/chat/completions`, {
         method: 'POST',
@@ -62,7 +69,7 @@ export function createPostDetailStore(): PostDetailStore {
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: [
-            { role: 'system', content: '你是一个专业翻译，将以下文本翻译成中文，保持原意，仅输出翻译结果，不做解释。' },
+            { role: 'system', content: prompts[targetLang] ?? prompts['zh']! },
             { role: 'user', content: text },
           ],
           temperature: 0.3,
@@ -71,7 +78,7 @@ export function createPostDetailStore(): PostDetailStore {
       });
       const data = await res.json() as { choices: Array<{ message: { content: string } }> };
       const result = data.choices[0]?.message?.content ?? '';
-      store.translations.set(text, result);
+      store.translations.set(cacheKey, result);
       store._notify();
       return result;
     },

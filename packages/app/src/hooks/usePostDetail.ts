@@ -18,6 +18,7 @@ export function usePostDetail(
   goTo: (v: AppView) => void,
   aiKey: string,
   aiBaseUrl: string,
+  targetLang = 'zh',
 ) {
   const [store] = useState(() => createPostDetailStore());
   const [, force] = useState(0);
@@ -47,7 +48,7 @@ export function usePostDetail(
     translate: () => {
       if (store.post && client) {
         const text = store.post.record.text;
-        void store.translate(client, text, aiKey, aiBaseUrl);
+        void store.translate(client, text, aiKey, aiBaseUrl, targetLang);
       }
     },
     openAI: () => {
@@ -64,7 +65,7 @@ export function usePostDetail(
     loading: store.loading,
     error: store.error,
     translations: store.translations,
-    translate: (text: string) => client ? store.translate(client, text, aiKey, aiBaseUrl) : Promise.resolve(''),
+    translate: (text: string) => client ? store.translate(client, text, aiKey, aiBaseUrl, targetLang) : Promise.resolve(''),
     actions,
   };
 }

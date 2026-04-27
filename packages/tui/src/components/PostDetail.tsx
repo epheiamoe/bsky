@@ -12,11 +12,16 @@ interface PostDetailProps {
   cols: number;
   rows: number;
   aiConfig: AIConfig;
+  targetLang?: string;
 }
 
-export function PostDetail({ client, uri, goTo, goBack, cols, rows, aiConfig }: PostDetailProps) {
+const TARGET_LANG_LABELS: Record<string, string> = {
+  zh: '中文', en: 'English', ja: '日本語', ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español',
+};
+
+export function PostDetail({ client, uri, goTo, goBack, cols, rows, aiConfig, targetLang = 'zh' }: PostDetailProps) {
   const { post, flatThread, loading, translate, actions } = usePostDetail(
-    client, uri, goTo, aiConfig.apiKey, aiConfig.baseUrl,
+    client, uri, goTo, aiConfig.apiKey, aiConfig.baseUrl, targetLang,
   );
   const [translations, setTranslations] = useState<Map<string, string>>(new Map());
   const [showTranslation, setShowTranslation] = useState(false);
@@ -72,7 +77,7 @@ export function PostDetail({ client, uri, goTo, goBack, cols, rows, aiConfig }: 
         </Box>
         {showTranslation && translation && (
           <Box marginTop={0} paddingX={2}>
-            <Text color="yellow" dimColor>翻译：</Text>
+            <Text color="yellow" dimColor>{TARGET_LANG_LABELS[targetLang] ?? targetLang}：</Text>
             <Text color="yellow">{translation}</Text>
           </Box>
         )}
@@ -89,7 +94,7 @@ export function PostDetail({ client, uri, goTo, goBack, cols, rows, aiConfig }: 
       <Box marginBottom={1}>
         <Text backgroundColor="#1e40af" color="white">{' [R] 回复 '}</Text>
         <Text>{' '}</Text>
-        <Text backgroundColor={showTranslation ? '#1e40af' : '#374151'} color="white">{' [T] 翻译 '}</Text>
+        <Text backgroundColor={showTranslation ? '#1e40af' : '#374151'} color="white">{' [T] '}{TARGET_LANG_LABELS[targetLang] ?? '翻译'} {' '}</Text>
         <Text>{' '}</Text>
         <Text backgroundColor="#374151" color="white">{' [H] 展开对话 '}</Text>
         <Text>{' '}</Text>

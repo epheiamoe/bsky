@@ -37,6 +37,7 @@ const config = {
     baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
     model: process.env.LLM_MODEL || 'deepseek-chat',
   },
+  targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
 };
 
 // Check raw mode support
