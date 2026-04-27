@@ -10,6 +10,25 @@ importers:
 
   contracts: {}
 
+  packages/app:
+    dependencies:
+      '@bsky/core':
+        specifier: workspace:*
+        version: link:../core
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+    devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
+      '@types/react':
+        specifier: ^18.3.28
+        version: 18.3.28
+      typescript:
+        specifier: ^5.7.3
+        version: 5.9.3
+
   packages/core:
     dependencies:
       dotenv:
@@ -31,6 +50,9 @@ importers:
 
   packages/tui:
     dependencies:
+      '@bsky/app':
+        specifier: workspace:^
+        version: link:../app
       '@bsky/core':
         specifier: workspace:*
         version: link:../core

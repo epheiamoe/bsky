@@ -5,7 +5,16 @@ export { BskyClient } from './at/client.js';
 export { createTools } from './at/tools.js';
 export type { ToolDefinition, ToolHandler, ToolDescriptor } from './at/tools.js';
 export { parseAtUri } from './at/types.js';
-export type { PostView, ProfileView, Notification, ThreadViewPost } from './at/types.js';
+export type {
+  PostView,
+  ProfileView,
+  ProfileViewBasic,
+  Notification,
+  ThreadViewPost,
+  NotFoundPost,
+  CreateSessionResponse,
+  PostRecord,
+} from './at/types.js';
 
 // AI exports
 export { AIAssistant, singleTurnAI, translateToChinese, polishDraft } from './ai/assistant.js';
