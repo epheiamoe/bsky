@@ -114,6 +114,10 @@ export class AIAssistant {
     this.messages = [];
   }
 
+  loadMessages(msgs: ChatMessage[]): void {
+    this.messages = [...msgs];
+  }
+
   async sendMessage(content: string): Promise<{
     content: string;
     toolCallsExecuted: number;

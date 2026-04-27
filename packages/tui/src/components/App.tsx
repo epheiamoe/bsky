@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
-import { useNavigation, useAuth, useNotifications, useTimeline, usePostDetail, useThread, useCompose } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, usePostDetail, useThread, useCompose, getDefaultStorage, useChatHistory } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { Sidebar } from './Sidebar.jsx';
@@ -255,7 +255,11 @@ function PostDetailView({ post, loading, detailThread, showTranslation, translat
       {detailThread && (
         <Box flexDirection="column" borderStyle="single" borderColor="gray" paddingX={1}>
           <Text dimColor>对话预览：</Text>
-          {detailThread.split('\n').slice(0, 10).map((line, i) => <Text key={i} dimColor>{line.slice(0, cols - 4)}</Text>)}
+          {formatThreadPreview(detailThread).map((line, i) => (
+            <Text key={i} dimColor>{line.slice(0, cols - 4)}</Text>
+          ))}
+          <Box height={1}></Box>
+          <Text color="cyan">按 H 展开完整对话树</Text>
         </Box>
       )}
     </Box>
@@ -345,4 +349,44 @@ function footerHint(v: { type: string }, canGoBack: boolean): string {
     aiChat: `${esc} Enter:发送 Tab:切面板`,
   };
   return hints[v.type] ?? esc;
+}
+
+function formatThreadPreview(flat: string): string[] {
+  const lines = flat.split('\n').filter(l => l.trim());
+  if (lines.length === 0) return ['(无回复)'];
+
+  // Classify lines
+  const parents: string[] = [];
+  const replies: string[] = [];
+  let currentPost = '';
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('↰')) {
+      parents.push(trimmed.replace(/^↰\s*/, ''));
+    } else if (trimmed.startsWith('↳')) {
+      replies.push(trimmed.replace(/^↳\s*/, ''));
+    } else if (!trimmed.startsWith('"')) {
+      // Post header line
+      if (trimmed.startsWith('depth:0')) currentPost = trimmed;
+    }
+  }
+
+  const result: string[] = [];
+  if (parents.length > 0) {
+    result.push(`└ 父帖: ${parents.length} 条`);
+    if (parents[0]) result.push(`  └ ${parents[0].slice(0, 60)}`);
+  }
+  if (currentPost) {
+    result.push(`  ▶ 本: ${currentPost.slice(0, 60)}`);
+  }
+  if (replies.length > 0) {
+    result.push(`└ 回复: ${replies.length} 条`);
+    for (const r of replies.slice(0, 2)) {
+      result.push(`  └ ${r.slice(0, 60)}`);
+    }
+    if (replies.length > 2) result.push(`  └ ... 还有 ${replies.length - 2} 条`);
+  }
+  return result;
 }

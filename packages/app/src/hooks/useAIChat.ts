@@ -1,24 +1,48 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AIAssistant, createTools } from '@bsky/core';
 import type { AIConfig, BskyClient } from '@bsky/core';
+import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
+import type { ChatStorage } from '../services/chatStorage.js';
+import { v4 as uuidv4 } from './uuid.js';
 
-export interface AIChatMessage {
-  role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
-  content: string;
-  toolName?: string;
+interface UseAIChatOptions {
+  chatId?: string;
+  storage?: ChatStorage;
 }
 
 export function useAIChat(
   client: BskyClient | null,
   aiConfig: AIConfig,
   contextUri?: string,
+  options?: UseAIChatOptions,
 ) {
   const [assistant] = useState(() => new AIAssistant(aiConfig));
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
   const lastContext = useRef<string | undefined>();
+  const chatIdRef = useRef(options?.chatId ?? uuidv4());
+  const storage = options?.storage;
 
+  // Load existing conversation from storage on mount
+  useEffect(() => {
+    if (!storage || !options?.chatId) return;
+    void (async () => {
+      const record = await storage.loadChat(options.chatId!);
+      if (record) {
+        setMessages(record.messages);
+        // Restore AIAssistant internal state by replaying user messages
+        // (Tool calls and context will be re-fetched if needed on next send)
+        if (contextUri) {
+          assistant.addSystemMessage(
+            `你是一个深度集成 Bluesky 的终端助手。用户正在查看帖子 ${contextUri}，如果需要请用工具获取上下文。回答简练，适合终端显示。`
+          );
+        }
+      }
+    })();
+  }, []);
+
+  // Initialize tools and system prompt
   useEffect(() => {
     if (!client) return;
     const tools = createTools(client);
@@ -26,8 +50,12 @@ export function useAIChat(
 
     if (contextUri !== lastContext.current) {
       lastContext.current = contextUri;
-      assistant.clearMessages();
-      setMessages([]);
+
+      // Only reset if not restoring from storage
+      if (!options?.chatId && messages.length > 0) {
+        assistant.clearMessages();
+        setMessages([]);
+      }
 
       if (contextUri) {
         assistant.addSystemMessage(
@@ -43,39 +71,65 @@ export function useAIChat(
     }
   }, [client, contextUri, assistant]);
 
+  const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
+    if (!storage) return;
+    const title = msgs.find(m => m.role === 'user')?.content.slice(0, 80) ?? '新对话';
+    try {
+      await storage.saveChat({
+        id: chatIdRef.current,
+        title,
+        contextUri,
+        messages: msgs,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+    } catch { /* silently fail */ }
+  }, [storage, contextUri]);
+
   const send = useCallback(async (text: string) => {
-    setMessages(prev => [...prev, { role: 'user', content: text }]);
+    const newUserMsg: AIChatMessage = { role: 'user', content: text };
+    setMessages(prev => {
+      const updated = [...prev, newUserMsg];
+      void autoSave(updated);
+      return updated;
+    });
     setGuidingQuestions([]);
     setLoading(true);
     try {
-      // TODO: streaming support — use AbortController + ReadableStream for real-time token display
       const result = await assistant.sendMessage(text);
 
-      const newMsgs: AIChatMessage[] = [];
-      for (const step of result.intermediateSteps) {
-        if (step.type === 'tool_call') {
-          newMsgs.push({ role: 'tool_call', content: step.content, toolName: extractToolName(step.content) });
-        } else if (step.type === 'tool_result') {
-          // Truncate long tool results
-          const summary = truncateToolResult(step.content);
-          newMsgs.push({ role: 'tool_result', content: summary });
+      setMessages(prev => {
+        const newMsgs: AIChatMessage[] = [];
+        for (const step of result.intermediateSteps) {
+          if (step.type === 'tool_call') {
+            newMsgs.push({ role: 'tool_call', content: step.content, toolName: extractToolName(step.content) });
+          } else if (step.type === 'tool_result') {
+            const summary = truncateToolResult(step.content);
+            newMsgs.push({ role: 'tool_result', content: summary });
+          }
         }
-      }
-      newMsgs.push({ role: 'assistant', content: result.content });
-
-      setMessages(prev => [...prev, ...newMsgs]);
+        newMsgs.push({ role: 'assistant', content: result.content });
+        const updated = [...prev, ...newMsgs];
+        void autoSave(updated);
+        return updated;
+      });
     } catch (e) {
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Error: ${e instanceof Error ? e.message : String(e)}`,
-      }]);
+      setMessages(prev => {
+        const errMsg: AIChatMessage = { role: 'assistant', content: `Error: ${e instanceof Error ? e.message : String(e)}` };
+        const updated = [...prev, errMsg];
+        void autoSave(updated);
+        return updated;
+      });
     } finally {
       setLoading(false);
     }
-  }, [assistant]);
+  }, [assistant, autoSave]);
 
-  return { messages, loading, guidingQuestions, send };
+  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current };
 }
+
+// Re-export the AIChatMessage type for consumers
+export type { AIChatMessage };
 
 function extractToolName(raw: string): string {
   const m = raw.match(/Calling (\w+)\(/);
@@ -83,7 +137,6 @@ function extractToolName(raw: string): string {
 }
 
 function truncateToolResult(raw: string): string {
-  // Strip the "Result from X: " prefix, keep first 300 chars
   const prefixMatch = raw.match(/^Result from \w+: /);
   const body = prefixMatch ? raw.slice(prefixMatch[0].length) : raw;
   const data = tryJsonSummary(body);
@@ -93,7 +146,6 @@ function truncateToolResult(raw: string): string {
 function tryJsonSummary(text: string): string {
   try {
     const obj = JSON.parse(text);
-    // Extract meaningful summary fields
     if (obj.posts !== undefined) return `搜索到 ${obj.total ?? obj.posts.length} 个帖子`;
     if (obj.feed !== undefined) return `获取了 ${obj.feed.length} 条时间线`;
     if (obj.thread !== undefined) return obj.thread.slice(0, 200);

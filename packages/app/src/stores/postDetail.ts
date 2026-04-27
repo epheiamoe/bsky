@@ -28,6 +28,10 @@ export function createPostDetailStore(): PostDetailStore {
 
     async load(client, uri) {
       store.loading = true;
+      store.post = null;
+      store.flatThread = '';
+      store.error = null;
+      store.translations.clear();
       store._notify();
       try {
         // Get full thread
