@@ -1,0 +1,411 @@
+[
+  {
+    "name": "resolve_handle",
+    "description": "Resolve a Bluesky handle to a DID",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "handle": { "type": "string", "description": "The handle to resolve (e.g., alice.bsky.social)" }
+      },
+      "required": ["handle"]
+    },
+    "endpoint": "com.atproto.identity.resolveHandle",
+    "readonly": true
+  },
+  {
+    "name": "get_record",
+    "description": "Get a raw record by AT URI",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI (at://did:plc:xxx/collection/rkey)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "com.atproto.repo.getRecord",
+    "readonly": true
+  },
+  {
+    "name": "list_records",
+    "description": "List records in a repository collection",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "repo": { "type": "string", "description": "The DID or handle of the repo" },
+        "collection": { "type": "string", "description": "The NSID collection" },
+        "limit": { "type": "number", "description": "Maximum records (default 50)" }
+      },
+      "required": ["repo", "collection"]
+    },
+    "endpoint": "com.atproto.repo.listRecords",
+    "readonly": true
+  },
+  {
+    "name": "search_posts",
+    "description": "Search for posts on Bluesky",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "q": { "type": "string", "description": "Search query" },
+        "limit": { "type": "number", "description": "Maximum results (default 25)" },
+        "sort": { "type": "string", "description": "Sort order: top or latest" }
+      },
+      "required": ["q"]
+    },
+    "endpoint": "app.bsky.feed.searchPosts",
+    "readonly": true
+  },
+  {
+    "name": "get_timeline",
+    "description": "Get the authenticated user's home timeline",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
+      },
+      "required": []
+    },
+    "endpoint": "app.bsky.feed.getTimeline",
+    "readonly": true
+  },
+  {
+    "name": "get_author_feed",
+    "description": "Get a user's post feed",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "The DID or handle of the user" },
+        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
+      },
+      "required": ["actor"]
+    },
+    "endpoint": "app.bsky.feed.getAuthorFeed",
+    "readonly": true
+  },
+  {
+    "name": "get_popular_feed_generators",
+    "description": "Get popular feed generators",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": []
+    },
+    "endpoint": "app.bsky.unspecced.getPopularFeedGenerators",
+    "readonly": true
+  },
+  {
+    "name": "get_feed_generator",
+    "description": "Get details about a feed generator",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "feed": { "type": "string", "description": "The AT URI of the feed generator" }
+      },
+      "required": ["feed"]
+    },
+    "endpoint": "app.bsky.feed.getFeedGenerator",
+    "readonly": true
+  },
+  {
+    "name": "get_feed",
+    "description": "Get posts from a specific feed",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "feed": { "type": "string", "description": "The AT URI of the feed" },
+        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
+      },
+      "required": ["feed"]
+    },
+    "endpoint": "app.bsky.feed.getFeed",
+    "readonly": true
+  },
+  {
+    "name": "get_post_thread",
+    "description": "Get the raw post thread (tree structure)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" },
+        "depth": { "type": "number", "description": "Thread depth (default 6)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "app.bsky.feed.getPostThread",
+    "readonly": true
+  },
+  {
+    "name": "get_post_thread_flat",
+    "description": "Get a flattened, human-readable version of a post thread with depth markers and reply arrows. Prefer this over get_post_thread for understanding conversations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post to start from" },
+        "depth": { "type": "number", "description": "Maximum depth (default 3)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (calls getPostThread + formatting)",
+    "readonly": true
+  },
+  {
+    "name": "get_post_subtree",
+    "description": "Flatten a subtree starting from a specific post URI. Use to expand folded replies.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post to expand" },
+        "depth": { "type": "number", "description": "Maximum depth (default 3)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (calls getPostThread + formatting)",
+    "readonly": true
+  },
+  {
+    "name": "get_post_context",
+    "description": "Get full context for a post: parent chain, quoted post content, and media summary",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (calls getPostThread + getRecord)",
+    "readonly": true
+  },
+  {
+    "name": "get_likes",
+    "description": "Get users who liked a post",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" },
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "app.bsky.feed.getLikes",
+    "readonly": true
+  },
+  {
+    "name": "get_reposted_by",
+    "description": "Get users who reposted a post",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" },
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "app.bsky.feed.getRepostedBy",
+    "readonly": true
+  },
+  {
+    "name": "get_quotes",
+    "description": "Search for posts that quote a specific post",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the quoted post" },
+        "limit": { "type": "number", "description": "Maximum results (default 25)" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (calls searchPosts)",
+    "readonly": true
+  },
+  {
+    "name": "search_actors",
+    "description": "Search for users on Bluesky",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "q": { "type": "string", "description": "Search query" },
+        "limit": { "type": "number", "description": "Maximum results (default 25)" }
+      },
+      "required": ["q"]
+    },
+    "endpoint": "app.bsky.actor.searchActors",
+    "readonly": true
+  },
+  {
+    "name": "get_profile",
+    "description": "Get a user's profile",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "The DID or handle of the user" }
+      },
+      "required": ["actor"]
+    },
+    "endpoint": "app.bsky.actor.getProfile",
+    "readonly": true
+  },
+  {
+    "name": "get_follows",
+    "description": "Get who a user follows",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "The DID or handle of the user" },
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": ["actor"]
+    },
+    "endpoint": "app.bsky.graph.getFollows",
+    "readonly": true
+  },
+  {
+    "name": "get_followers",
+    "description": "Get a user's followers",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "The DID or handle of the user" },
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": ["actor"]
+    },
+    "endpoint": "app.bsky.graph.getFollowers",
+    "readonly": true
+  },
+  {
+    "name": "get_suggested_follows",
+    "description": "Get suggested follows for a user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "The DID or handle of the user" }
+      },
+      "required": ["actor"]
+    },
+    "endpoint": "app.bsky.graph.getSuggestedFollowsByActor",
+    "readonly": true
+  },
+  {
+    "name": "list_notifications",
+    "description": "Get notifications for the authenticated user",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "limit": { "type": "number", "description": "Maximum results (default 50)" }
+      },
+      "required": []
+    },
+    "endpoint": "app.bsky.notification.listNotifications",
+    "readonly": true
+  },
+  {
+    "name": "extract_images_from_post",
+    "description": "Extract image blob references (did + cid) from a post",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (parses record)",
+    "readonly": true
+  },
+  {
+    "name": "download_image",
+    "description": "Download an image blob and return as base64 (truncated to 500 chars for preview)",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "did": { "type": "string", "description": "The DID of the repo" },
+        "cid": { "type": "string", "description": "The CID of the blob" }
+      },
+      "required": ["did", "cid"]
+    },
+    "endpoint": "com.atproto.sync.getBlob",
+    "readonly": true
+  },
+  {
+    "name": "extract_external_link",
+    "description": "Extract external link embed from a post",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (parses record)",
+    "readonly": true
+  },
+  {
+    "name": "create_post",
+    "description": "Create a new post, or reply to an existing post. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string", "description": "The post text content" },
+        "replyTo": { "type": "string", "description": "Optional: AT URI of the post to reply to" },
+        "quoteUri": { "type": "string", "description": "Optional: AT URI of the post to quote" }
+      },
+      "required": ["text"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.post)",
+    "readonly": false
+  },
+  {
+    "name": "like",
+    "description": "Like a post. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post to like" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.like)",
+    "readonly": false
+  },
+  {
+    "name": "repost",
+    "description": "Repost a post. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post to repost" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.repost)",
+    "readonly": false
+  },
+  {
+    "name": "follow",
+    "description": "Follow a user. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string", "description": "The DID of the user to follow" }
+      },
+      "required": ["subject"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.follow)",
+    "readonly": false
+  },
+  {
+    "name": "upload_blob",
+    "description": "Upload a binary blob (image). Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "base64": { "type": "string", "description": "Base64-encoded binary data" },
+        "mimeType": { "type": "string", "description": "MIME type (e.g., image/png)" }
+      },
+      "required": ["base64", "mimeType"]
+    },
+    "endpoint": "com.atproto.repo.uploadBlob",
+    "readonly": false
+  }
+]

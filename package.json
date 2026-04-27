@@ -1,0 +1,19 @@
+{
+  "name": "bsky-tui",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Bluesky TUI client with AI integration",
+  "scripts": {
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "test:e2e": "pnpm -r test:e2e",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
