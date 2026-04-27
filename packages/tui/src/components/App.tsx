@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Box, Text, useStdout } from 'ink';
+import { Box, Text, useStdout, useInput } from 'ink';
 import { useNavigation, useAuth, useNotifications, useTimeline, usePostDetail, useThread, useCompose } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
@@ -61,165 +61,99 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (!authLoading) login(config.blueskyHandle, config.blueskyPassword);
   }, []);
 
-  // ═════════════════════ CENTRALIZED KEYBOARD DISPATCHER ═════════════════════
-  // Stable refs for callbacks that change too often
-  const loadMoreRef = useRef(loadMore); loadMoreRef.current = loadMore;
-  const refreshRef = useRef(refresh); refreshRef.current = refresh;
-  const goToRef = useRef(goTo); goToRef.current = goTo;
-  const goBackRef = useRef(goBack); goBackRef.current = goBack;
-  const stateRef = useRef({ currentView, focusedPanel, feedIdx, threadIdx, postsLen: posts.length, detailUri });
-  stateRef.current = { currentView, focusedPanel, feedIdx, threadIdx, postsLen: posts.length, detailUri };
+  // ═════════════════════ CENTRALIZED KEYBOARD DISPATCHER (useInput) ═════════════════════
+  useInput((input, key) => {
+    // AI Chat mode with AI focused: let TextInput's own useInput handle everything
+    if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
 
-  useEffect(() => {
-    if (!isRawModeSupported) return;
-
-    let escTimer: ReturnType<typeof setTimeout> | null = null;
-    let escSeq = '';
-
-    function flushEsc() {
-      // Single Esc press — dispatch based on current view
-      const s = stateRef.current;
-      if (s.currentView.type === 'aiChat') {
-        if (s.focusedPanel === 'ai') { setFocusedPanel('main'); }
-        else { goBackRef.current(); }
-      } else if (s.currentView.type === 'compose') {
-        goBackRef.current();
-      } else if (s.currentView.type !== 'feed') {
-        goBackRef.current();
+    // Esc
+    if (key.escape) {
+      if (currentView.type === 'aiChat') {
+        if (focusedPanel === 'ai') { setFocusedPanel('main'); return; }
+        goBack(); return;
       }
-      escSeq = '';
+      if (currentView.type === 'compose') { goBack(); return; }
+      if (currentView.type !== 'feed') { goBack(); return; }
+      return;
     }
 
-    const onData = (data: Buffer) => {
-      const str = data.toString();
-      for (let i = 0; i < str.length; i++) {
-        const ch = str[i]!;
+    // Tab
+    if (key.tab) {
+      if (currentView.type === 'aiChat') setFocusedPanel(f => f === 'ai' ? 'main' : 'ai');
+      return;
+    }
 
-        // ── Escape sequence detection ──
-        if (ch === '\x1b') {
-          // Cancel any pending single-Esc timeout
-          if (escTimer) { clearTimeout(escTimer); escTimer = null; }
-          escSeq = '\x1b';
-          // Start timeout: if no more chars within 30ms, it's a lone Esc
-          escTimer = setTimeout(flushEsc, 30);
-          continue;
-        }
+    // Arrow keys
+    if (key.upArrow) {
+      if (currentView.type === 'feed') setFeedIdx(i => Math.max(0, i - 1));
+      else if (currentView.type === 'thread') setThreadIdx(i => Math.max(0, i - 1));
+      return;
+    }
+    if (key.downArrow) {
+      if (currentView.type === 'feed') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
+      else if (currentView.type === 'thread') setThreadIdx(i => Math.min(thread.flatLines.length - 1, i + 1));
+      return;
+    }
 
-        // Continuation of escape sequence?
-        if (escSeq.startsWith('\x1b')) {
-          if (escTimer) { clearTimeout(escTimer); escTimer = null; }
-          escSeq += ch;
-          if (escSeq === '\x1b[' && (ch >= '0' && ch <= '9' || ch === ';')) continue; // CSI params
-          if (escSeq.startsWith('\x1b[') && escSeq.length >= 3) {
-            const final = escSeq[escSeq.length - 1]!;
-            if (final === 'A') arrowDispatch('up');
-            else if (final === 'B') arrowDispatch('down');
-            escSeq = '';
-            continue;
-          }
-          escSeq = ''; // unrecognized
-          continue;
-        }
-
-        // ── AI Chat mode: let TextInput handle everything except Esc (handled above) ──
-        if (stateRef.current.currentView.type === 'aiChat' && stateRef.current.focusedPanel === 'ai') {
-          continue; // TextInput's useInput handles all keys
-        }
-
-        // ── Ctrl keys ──
-        if (ch === '\x07') { goToRef.current({ type: 'aiChat', contextUri: stateRef.current.detailUri ?? undefined }); continue; }
-        if (ch === '\t') {
-          if (stateRef.current.currentView.type === 'aiChat') setFocusedPanel(f => f === 'ai' ? 'main' : 'ai');
-          continue;
-        }
-
-        // ── Enter ──
-        if (ch === '\r' || ch === '\n') {
-          enterDispatch();
-          continue;
-        }
-
-        const key = ch.toLowerCase();
-
-        // ── AI visible but main focused ──
-        if (stateRef.current.currentView.type === 'aiChat' && stateRef.current.focusedPanel !== 'ai') {
-          switch (key) {
-            case 'a': goBackRef.current(); goToRef.current({ type: 'feed' }); continue;
-            case 't': goBackRef.current(); goToRef.current({ type: 'feed' }); continue;
-          }
-          continue;
-        }
-
-        // ── View-specific dispatch ──
-        keyDispatch(key);
+    // Enter
+    if (key.return) {
+      if (currentView.type === 'feed') {
+        const p = posts[feedIdx];
+        if (p) goTo({ type: 'detail', uri: p.uri });
+      } else if (currentView.type === 'thread') {
+        const l = thread.flatLines[threadIdx];
+        if (l?.uri) goTo({ type: 'detail', uri: l.uri });
+      } else if (currentView.type === 'compose') {
+        if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo);
       }
-    };
-
-    process.stdin.on('data', onData);
-    return () => {
-      process.stdin.off('data', onData);
-      if (escTimer) clearTimeout(escTimer);
-    };
-  }, [isRawModeSupported]);
-
-  // Stable arrow/enter/key dispatch using refs
-  const arrowDispatch = useCallback((dir: 'up' | 'down') => {
-    const s = stateRef.current;
-    if (s.currentView.type === 'feed') {
-      setFeedIdx(i => dir === 'up' ? Math.max(0, i - 1) : Math.min(s.postsLen - 1, i + 1));
-    } else if (s.currentView.type === 'thread') {
-      setThreadIdx(i => dir === 'up' ? Math.max(0, i - 1) : Math.min(thread.flatLines.length - 1, i + 1));
+      return;
     }
-  }, [thread.flatLines.length]);
 
-  const enterDispatch = useCallback(() => {
-    const s = stateRef.current;
-    if (s.currentView.type === 'feed') {
-      const p = posts[s.feedIdx];
-      if (p) goToRef.current({ type: 'detail', uri: p.uri });
-    } else if (s.currentView.type === 'thread') {
-      const l = thread.flatLines[s.threadIdx];
-      if (l?.uri) goToRef.current({ type: 'detail', uri: l.uri });
-    } else if (s.currentView.type === 'compose') {
-      if (composeDraft.trim()) { compose.submit(composeDraft.trim(), (s.currentView as { replyTo?: string }).replyTo); }
+    // Ctrl+G
+    if (input === '\x07') {
+      goTo({ type: 'aiChat', contextUri: detailUri ?? undefined });
+      return;
     }
-  }, [posts, thread.flatLines, composeDraft, compose.submit]);
 
-  const keyDispatch = useCallback((key: string) => {
-    const s = stateRef.current;
-    switch (s.currentView.type) {
+    // Single char keys
+    const k = input.toLowerCase();
+    if (!k) return;
+
+    // AI visible but main has focus
+    if (currentView.type === 'aiChat' && focusedPanel === 'main') {
+      if (k === 'a' || k === 't') { goBack(); goTo({ type: 'feed' }); }
+      return;
+    }
+
+    // View-specific
+    switch (currentView.type) {
       case 'feed':
-        if (key === 'j') { setFeedIdx(i => Math.min(s.postsLen - 1, i + 1)); return; }
-        if (key === 'k') { setFeedIdx(i => Math.max(0, i - 1)); return; }
-        if (key === 'm') { loadMoreRef.current?.(); return; }
-        if (key === 'r') { refreshRef.current?.(); return; }
+        if (k === 'j') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
+        else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
+        else if (k === 'm') loadMore?.();
+        else if (k === 'r') refresh?.();
         break;
       case 'detail':
-        if (key === 'r') { goToRef.current({ type: 'compose', replyTo: s.detailUri }); return; }
-        if (key === 'h' && s.detailUri) { goToRef.current({ type: 'thread', uri: s.detailUri }); return; }
-        if (key === 'a' && s.detailUri) { goToRef.current({ type: 'aiChat', contextUri: s.detailUri }); return; }
-        if (key === 't' && post && !showTranslation) {
+        if (k === 'r') goTo({ type: 'compose', replyTo: detailUri });
+        else if (k === 'h' && detailUri) goTo({ type: 'thread', uri: detailUri });
+        else if (k === 'a' && detailUri) goTo({ type: 'aiChat', contextUri: detailUri });
+        else if (k === 't' && post && !showTranslation) {
           void doTranslate(post.record.text).then(t => {
             setTranslations(prev => { prev.set(post.record.text, t); return new Map(prev); });
             setShowTranslation(true);
           });
-        } else if (key === 't') {
-          setShowTranslation(false);
-        }
-        return;
+        } else if (k === 't') setShowTranslation(false);
+        break;
       case 'thread':
-        if (key === 'j') { setThreadIdx(i => Math.min(thread.flatLines.length - 1, i + 1)); return; }
-        if (key === 'k') { setThreadIdx(i => Math.max(0, i - 1)); return; }
-        if (key === 'r') {
-          const l = thread.flatLines[s.threadIdx];
-          if (l?.uri) goToRef.current({ type: 'compose', replyTo: l.uri });
+        if (k === 'j') setThreadIdx(i => Math.min(thread.flatLines.length - 1, i + 1));
+        else if (k === 'k') setThreadIdx(i => Math.max(0, i - 1));
+        else if (k === 'r') {
+          const l = thread.flatLines[threadIdx];
+          if (l?.uri) goTo({ type: 'compose', replyTo: l.uri });
         }
-        return;
-      case 'notifications':
-        if (key === 'r') { /* TODO: refresh notifications */ }
         break;
     }
-  }, [post, showTranslation, doTranslate, thread.flatLines]);
+  });
 
   // ── Layout ──
   const sidebarW = Math.max(16, Math.floor(cols * 0.14));
