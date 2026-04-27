@@ -63,10 +63,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
   // ═════════════════════ CENTRALIZED KEYBOARD DISPATCHER (useInput) ═════════════════════
   useInput((input, key) => {
-    // AI Chat mode with AI focused: let TextInput's own useInput handle everything
-    if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
-
-    // Esc
+    // Tab and Esc always work, even when AI panel is focused
+    if (key.tab) {
+      if (currentView.type === 'aiChat') setFocusedPanel(f => f === 'ai' ? 'main' : 'ai');
+      return;
+    }
     if (key.escape) {
       if (currentView.type === 'aiChat') {
         if (focusedPanel === 'ai') { setFocusedPanel('main'); return; }
@@ -77,11 +78,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
-    // Tab
-    if (key.tab) {
-      if (currentView.type === 'aiChat') setFocusedPanel(f => f === 'ai' ? 'main' : 'ai');
-      return;
-    }
+    // AI Chat mode with AI focused: let TextInput handle all other keys
+    if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
 
     // Arrow keys
     if (key.upArrow) {
