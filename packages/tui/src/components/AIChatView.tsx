@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Text } from 'ink';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Text, useInput } from 'ink';
 import { useAIChat, useChatHistory, getDefaultStorage } from '@bsky/app';
-import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
@@ -19,14 +18,15 @@ interface AIChatViewProps {
 export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, focused }: AIChatViewProps) {
   const storage = getDefaultStorage();
   const [chatId, setChatId] = useState<string | undefined>();
-  const [showHistory, setShowHistory] = useState(true);
-  const { messages, loading, guidingQuestions, send, chatId: currentChatId } = useAIChat(
+  // Skip history if opened from thread view (has contextUri)
+  const [showHistory, setShowHistory] = useState(!contextUri);
+  const { messages, loading, guidingQuestions, send } = useAIChat(
     client, aiConfig, contextUri, { chatId, storage },
   );
   const { conversations, deleteConversation, refresh: refreshHistory } = useChatHistory(storage);
   const [input, setInput] = useState('');
+  const [historyIdx, setHistoryIdx] = useState(0);
 
-  // Keep showHistory in sync - hide when conversation has messages
   useEffect(() => {
     if (messages.length > 0) setShowHistory(false);
   }, [messages]);
@@ -38,32 +38,39 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     }
   };
 
-  const loadConversation = (id: string) => {
-    setChatId(id);
-    setShowHistory(false);
-  };
-
-  const newConversation = () => {
-    setChatId(undefined);
-    setShowHistory(false);
-  };
+  // History keyboard
+  useInput((input, key) => {
+    if (!showHistory) return; // only when showing history
+    if (key.escape) { goBack(); return; }
+    if (key.upArrow) { setHistoryIdx(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow) { setHistoryIdx(i => Math.min(conversations.length - 1, i + 1)); return; }
+    if (input === 'n' || input === 'N') { setChatId(undefined); setShowHistory(false); return; }
+    if (input === 'l' || input === 'L') {
+      const c = conversations[historyIdx];
+      if (c) { setChatId(c.id); setShowHistory(false); }
+      return;
+    }
+    if (input === 'd' || input === 'D') {
+      const c = conversations[historyIdx];
+      if (c) { void deleteConversation(c.id); }
+      return;
+    }
+  });
 
   if (showHistory && conversations.length > 0 && messages.length === 0) {
     return (
       <Box flexDirection="column" width={cols} borderStyle="single" borderColor="magenta" paddingX={1}>
-        <Box height={1}><Text bold color="magentaBright">🤖 AI 对话历史</Text><Text dimColor> Esc 返回</Text></Box>
-        <Box height={1}>
-          <Text color="cyan">[N] 新建对话</Text><Text>  </Text>
-        </Box>
+        <Box height={1}><Text bold color="magentaBright">🤖 AI 对话历史</Text><Text dimColor> Esc 返回 ↑↓:选择 N:新建 L:加载 D:删除</Text></Box>
         <Box flexDirection="column" flexGrow={1} marginTop={0}>
-          {conversations.map((c) => (
+          {conversations.map((c, i) => (
             <Box key={c.id} height={1}>
-              <Text dimColor>{new Date(c.updatedAt).toLocaleDateString('zh-CN')}</Text>
+              <Text color={i === historyIdx ? 'cyanBright' : undefined}>
+                {i === historyIdx ? '▸' : ' '}
+              </Text>
+              <Text dimColor>{' '}{new Date(c.updatedAt).toLocaleDateString('zh-CN')}</Text>
               <Text>{' '}</Text>
               <Text color="yellow">{c.title.slice(0, 50)}</Text>
               <Text dimColor>{' ('}{c.messageCount} msg)</Text>
-              <Text color="cyan">{' [L]'}</Text>
-              <Text color="red">{' [D]'}</Text>
             </Box>
           ))}
         </Box>
@@ -72,11 +79,12 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     );
   }
 
+  // Chat view (new or loaded)
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>🤖 AI 对话{focused ? ' [聚焦]' : ''}</Text>
-        <Text dimColor> Esc 返回  Esc 2x 退出</Text>
+        <Text dimColor> Esc 返回</Text>
       </Box>
 
       {guidingQuestions.length > 0 && messages.length === 0 && (

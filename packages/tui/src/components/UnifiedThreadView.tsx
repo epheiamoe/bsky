@@ -22,6 +22,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
   const [confirmRepost, setConfirmRepost] = useState<{ uri: string; handle: string } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
+  const [yankedUri, setYankedUri] = useState<string | null>(null);
 
   const focusedUri = focused?.uri;
   const isTheme = focused?.isRoot && focused?.depth === 0;
@@ -61,6 +62,15 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       if (input === 'l' || input === 'L') { void handleLike(cursorLine.uri, cursorLine.rkey); return; }
       if (input === 'r') { setConfirmRepost({ uri: cursorLine.uri, handle: cursorLine.handle }); return; }
       if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
+      if (input === 'y') {
+        const rkey = cursorLine.uri.split('/').pop() ?? '';
+        const url = `@${cursorLine.handle} ${cursorLine.uri} https://bsky.app/profile/${cursorLine.handle}/post/${rkey}`;
+        setYankedUri(url);
+        // Also write to stderr so it survives TUI exit
+        process.stderr.write(`\n📋 ${url}\n`);
+        setTimeout(() => setYankedUri(null), 5000);
+        return;
+      }
     }
   });
 
@@ -128,6 +138,14 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={1} marginTop={0}>
           <Text bold color="yellow">⚠ 确认转发 @{confirmRepost.handle} 的回复？</Text>
           <Box><Text color="green">[Y] 确认转发</Text><Text>{'  '}</Text><Text color="red">[N] 取消</Text></Box>
+        </Box>
+      )}
+
+      {/* ── Yanked URI ── */}
+      {yankedUri && (
+        <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1} marginTop={0}>
+          <Text color="cyan" bold>📋 已复制到 stderr + 下方：</Text>
+          <Text color="white">{yankedUri}</Text>
         </Box>
       )}
     </Box>
