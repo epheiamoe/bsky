@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useAIChat, useChatHistory, getDefaultStorage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
+import { wrapLines } from '../utils/text.js';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 
@@ -20,80 +21,74 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const [chatId, setChatId] = useState<string | undefined>();
   const [showHistory, setShowHistory] = useState(!contextUri);
   const { messages, loading, guidingQuestions, send } = useAIChat(client, aiConfig, contextUri, { chatId, storage });
-  const { conversations, deleteConversation, refresh: refreshHistory } = useChatHistory(storage);
+  const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
-  const [scrollOffset, setScrollOffset] = useState(0); // lines scrolled up from bottom
+  const [scrollOffset, setScrollOffset] = useState(0);
   const prevMsgCount = useRef(0);
+  const wasAtBottom = useRef(true);
 
   useEffect(() => { if (messages.length > 0) setShowHistory(false); }, [messages]);
 
-  // Auto-scroll to bottom when new messages arrive
+  const handleSend = () => { if (input.trim() && !loading) { void send(input.trim()); setInput(''); } };
+
+  // ── CJK-safe viewport with conditional auto-scroll ──
+  const maxCols = Math.max(20, cols - 6);
+  const allMessageLines = useMemo(() => {
+    const lines: string[] = [];
+    for (const msg of messages) {
+      if (msg.role === 'tool_call') {
+        lines.push(`\u{1f527} 使用了 ${msg.toolName ?? ''}`);
+      } else if (msg.role === 'tool_result') {
+        for (const l of wrapLines(msg.content, maxCols, 4)) {
+          lines.push(`  \u21a1  ${l}`);
+        }
+      } else {
+        const prefix = msg.role === 'user' ? '\u25b8 ' : '\u{1f916} ';
+        for (const l of wrapLines(msg.content, maxCols, 2)) {
+          lines.push(prefix + l);
+        }
+      }
+      lines.push('');
+    }
+    if (loading) lines.push('... AI \u601d\u8003\u4e2d ...');
+    return lines;
+  }, [messages, loading, maxCols]);
+
+  const maxVisible = Math.max(10, rows - 6);
+
+  // Only auto-scroll to bottom if user was already at bottom
   const totalMsgCount = useMemo(() => messages.length, [messages]);
   useEffect(() => {
-    if (totalMsgCount > prevMsgCount.current) { setScrollOffset(0); }
+    if (totalMsgCount > prevMsgCount.current) {
+      if (wasAtBottom.current) setScrollOffset(0);
+    }
     prevMsgCount.current = totalMsgCount;
   }, [totalMsgCount]);
 
-  const handleSend = () => { if (input.trim() && !loading) { void send(input.trim()); setInput(''); } };
+  // Track whether we're at bottom
+  useEffect(() => {
+    wasAtBottom.current = scrollOffset === 0;
+  }, [scrollOffset]);
 
-  // ── Viewport: pre-compute message lines ──
-  const allMessageLines = useMemo(() => {
-    const lines: string[] = [];
-    // Conservative width: CJK chars take 2 cols, so use ~50% of cols
-    const maxChars = Math.max(20, Math.floor(cols * 0.55));
-    for (const msg of messages) {
-      if (msg.role === 'tool_call') {
-        lines.push(`🔧 使用了 ${msg.toolName ?? ''}`);
-      } else if (msg.role === 'tool_result') {
-        // Wrap long tool results
-        const prefix = '  ⮡  ';
-        let remaining = prefix + msg.content;
-        while (remaining.length > 0) {
-          if (remaining.length <= maxChars) { lines.push(remaining); break; }
-          lines.push(remaining.slice(0, maxChars));
-          remaining = remaining.slice(maxChars);
-        }
-      } else {
-        // User/assistant message - wrap to width
-        const prefix = msg.role === 'user' ? '▸ ' : '🤖 ';
-        let remaining = prefix + msg.content;
-        while (remaining.length > 0) {
-          if (remaining.length <= maxChars) { lines.push(remaining); break; }
-          // Try to break at space near maxChars
-          let bp = maxChars;
-          for (let j = maxChars; j > maxChars - 30 && j > 0; j--) {
-            if (remaining[j] === ' ') { bp = j + 1; break; }
-          }
-          lines.push(remaining.slice(0, bp));
-          remaining = remaining.slice(bp);
-        }
-      }
-      // Blank separator between messages
-      lines.push('');
-    }
-    if (loading) lines.push('... AI 思考中 ...');
-    return lines;
-  }, [messages, loading, cols]);
-
-  // Viewport range with scroll offset
-  const maxVisible = Math.max(10, rows - 6);
   const viewStart = Math.max(0, allMessageLines.length - maxVisible - scrollOffset);
   const visibleLines = allMessageLines.slice(viewStart, viewStart + maxVisible);
   const canScrollUp = viewStart > 0;
   const canScrollDown = viewStart + maxVisible < allMessageLines.length;
 
-  // Chat scroll keys (non-history mode) — only process scroll, don't block others
+  // Scroll keys: PgUp/PgDn always, ↑/↓ when unfocused
   useInput((input, key) => {
-    if (!showHistory) {
-      if (key.upArrow && !focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
-      if (key.downArrow && !focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
-      if ((input === 'u' || input === 'U') && focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
-      if ((input === 'd' || input === 'D') && focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
+    if (showHistory) return;
+    const page = Math.floor(maxVisible * 0.7);
+    if (key.pageUp) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + page)); return; }
+    if (key.pageDown) { setScrollOffset(s => Math.max(0, s - page)); return; }
+    if (!focused) {
+      if (key.upArrow) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
+      if (key.downArrow) { setScrollOffset(s => Math.max(0, s - 3)); return; }
     }
   });
 
-  // History keyboard (separate handler)
+  // History keyboard
   useInput((input, key) => {
     if (!showHistory) return;
     if (key.escape) { goBack(); return; }
@@ -125,12 +120,11 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     );
   }
 
-  // Chat view
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>🤖 AI 对话{focused ? ' [聚焦]' : ''}</Text>
-        <Text dimColor> Esc 返回</Text>
+        <Text dimColor> Esc 返回  PgUp/PgDn:滚动</Text>
       </Box>
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
@@ -138,18 +132,15 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
           {guidingQuestions.map((q, i) => <Text key={i} color="cyan">{'  '}[{i + 1}] {q}</Text>)}
         </Box>
       )}
-      {/* Messages as flat Text lines — no Box nesting */}
       <Box flexDirection="column" flexGrow={1} marginTop={0}>
         {canScrollUp && (
-          <Text dimColor color="cyan">{`↑ ${viewStart} 行在上方 [u]上翻`}</Text>
+          <Text dimColor color="cyan">↑ {viewStart} 行在上方</Text>
         )}
         {visibleLines.map((line, i) => (
-          <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>
-            {line || ' '}
-          </Text>
+          <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>{line || ' '}</Text>
         ))}
         {canScrollDown && (
-          <Text dimColor color="cyan">{`↓ ${allMessageLines.length - viewStart - maxVisible} 行在下方 [d]下翻`}</Text>
+          <Text dimColor color="cyan">↓ {allMessageLines.length - viewStart - maxVisible} 行在下方</Text>
         )}
       </Box>
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>

@@ -10,6 +10,8 @@ import { SearchView } from './SearchView.jsx';
 import { NotifView } from './NotifView.jsx';
 import { AIChatView } from './AIChatView.jsx';
 import { UnifiedThreadView } from './UnifiedThreadView.jsx';
+import { enableMouseTracking, disableMouseTracking, parseMouseEvent } from '../utils/mouse.js';
+import type { MouseEvent } from '../utils/mouse.js';
 
 interface AppConfig {
   blueskyHandle: string;
@@ -121,7 +123,33 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       else if (k === 'm') loadMore?.();
       else if (k === 'r') refresh?.();
     }
+
+    // PgUp/PgDn: scroll feed
+    if (currentView.type === 'feed') {
+      if (input === '\x1b[5~') { setFeedIdx(i => Math.max(0, i - 5)); return; }
+      if (input === '\x1b[6~') { setFeedIdx(i => Math.min(posts.length - 1, i + 5)); return; }
+    }
   });
+
+  // ── Mouse scroll dispatch ──
+  useEffect(() => {
+    if (!stdout) return;
+    enableMouseTracking(stdout);
+    const onData = (data: Buffer) => {
+      const evt = parseMouseEvent(data);
+      if (!evt) return;
+      if (evt.type === 'scrollUp') {
+        if (currentView.type === 'feed') setFeedIdx(i => Math.max(0, i - 1));
+      } else if (evt.type === 'scrollDown') {
+        if (currentView.type === 'feed') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
+      }
+    };
+    process.stdin.on('data', onData);
+    return () => {
+      process.stdin.off('data', onData);
+      disableMouseTracking(stdout);
+    };
+  }, [stdout, currentView.type, posts.length]);
 
   // ── Layout ──
   const sidebarW = Math.max(16, Math.floor(cols * 0.14));

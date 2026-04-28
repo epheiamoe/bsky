@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
+import { wrapLines } from '../utils/text.js';
 
 export interface PostLine {
   text: string;
@@ -17,20 +18,10 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
   // Author line
   lines.push({ text: `${name} @${post.author.handle} [${index}]`, isSelected, isName: true });
 
-  // Text lines (wrap to terminal width)
-  const maxW = Math.max(20, cols - 4);
-  let remaining = text;
-  while (remaining.length > 0) {
-    if (remaining.length <= maxW) {
-      lines.push({ text: remaining, isSelected, isName: false });
-      break;
-    }
-    let breakAt = maxW;
-    for (let i = maxW; i > maxW - 20 && i > 0; i--) {
-      if (remaining[i] === ' ') { breakAt = i + 1; break; }
-    }
-    lines.push({ text: remaining.slice(0, breakAt), isSelected, isName: false });
-    remaining = remaining.slice(breakAt);
+  // Text lines — CJK-aware wrapping
+  const maxCols = Math.max(20, cols - 4);
+  for (const l of wrapLines(text, maxCols)) {
+    lines.push({ text: l, isSelected, isName: false });
   }
 
   // Stats line
