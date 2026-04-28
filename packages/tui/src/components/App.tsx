@@ -133,7 +133,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
             <Box height={1}><Text bold>📋 时间线</Text><Text dimColor>{' ↑↓/jk:导航 Enter:查看 m:更多 r:刷新'}</Text></Box>
-            <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} />
+            <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
           </Box>
         );
       case 'thread':
