@@ -212,7 +212,7 @@ function footerHint(v: { type: string }, canGoBack: boolean): string {
   const esc = canGoBack ? ' Esc:返回' : '';
   const hints: Record<string, string> = {
     feed: `${esc} ↑↓/jk:导航 Enter:查看 m:更多 r:刷新`,
-    thread: `${esc} h:主题帖 ↑↓/jk:移动 Enter:聚焦 R:回复 l:赞 r:转发`,
+    thread: `${esc} h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发`,
     compose: `${esc} Enter:发送`,
     profile: `${esc}`,
     notifications: `${esc} R:刷新`,

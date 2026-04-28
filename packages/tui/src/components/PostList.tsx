@@ -15,7 +15,7 @@ export function PostList({ posts, loading, cursor, selectedIndex, width }: PostL
   return (
     <Box flexDirection="column" flexGrow={1}>
       {posts.length === 0 && !loading && (
-        <Text dimColor>没有帖子。按 Enter 选中，按 a 打开 AI 面板。</Text>
+        <Text dimColor>没有帖子。按 Enter 查看帖子。</Text>
       )}
       {posts.map((post, i) => (
         <PostItem
@@ -23,10 +23,10 @@ export function PostList({ posts, loading, cursor, selectedIndex, width }: PostL
           post={post}
           isSelected={i === selectedIndex}
           index={i}
-          width={width - 1}
+          width={width}
         />
       ))}
-      {loading && posts.length === 0 && <PostSkeleton width={width - 1} />}
+      {loading && posts.length === 0 && <PostSkeleton />}
       {loading && posts.length > 0 && (
         <Box><Text color="yellow">⏳ 加载更多...</Text></Box>
       )}
