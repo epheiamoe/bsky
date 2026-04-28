@@ -56,8 +56,11 @@ if (isRawMode) {
   inputStream = process.stdin as ReadStream;
 } else {
   const rs = new Readable({ read() {} });
-  (rs as unknown as Record<string, unknown>).isTTY = true;
-  (rs as unknown as Record<string, unknown>).setRawMode = ((_mode: boolean) => rs);
+  const rsObj = rs as unknown as Record<string, unknown>;
+  rsObj.isTTY = true;
+  rsObj.setRawMode = ((_mode: boolean) => rs);
+  rsObj.ref = (() => rs);
+  rsObj.unref = (() => rs);
   inputStream = rs as unknown as ReadStream;
   try { (process.stdin as ReadStream).resume(); } catch {}
   process.stdin.on('data', (c) => {
