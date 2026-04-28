@@ -16,6 +16,7 @@ Monorepo documentation for the Bluesky Terminal UI Client with AI integration.
 | [KEYBOARD.md](./KEYBOARD.md) | Centralized keyboard dispatch, focus management, handler priority |
 | [ENV.md](./ENV.md) | Environment variables (.env and PWA config) |
 | [API_CLIENT.md](./API_CLIENT.md) | BskyClient reference: all endpoints, auth, post structure |
+| [TERMINOLOGY.md](./TERMINOLOGY.md) | Terms and naming conventions (主题帖, 回复, 讨论串) |
 | [TESTING.md](./TESTING.md) | Test framework, test files, patterns, running tests |
 
 ## Project Structure
