@@ -6,7 +6,8 @@ export type AppView =
   | { type: 'profile'; actor: string }
   | { type: 'notifications' }
   | { type: 'search'; query?: string }
-  | { type: 'aiChat'; contextUri?: string };
+  | { type: 'aiChat'; contextUri?: string }
+  | { type: 'bookmarks' };
 
 export interface NavigationState {
   currentView: AppView;

@@ -15,6 +15,7 @@ const TABS = [
   { key: 'feed', label: '📋 时间线', shortcut: 't' },
   { key: 'notifications', label: '🔔 通知', shortcut: 'n' },
   { key: 'search', label: '🔍 搜索', shortcut: 's' },
+  { key: 'bookmarks', label: '🔖 书签', shortcut: 'b' },
   { key: 'aiChat', label: '🤖 AI', shortcut: 'a' },
   { key: 'compose', label: '✏️ 发帖', shortcut: 'c' },
 ];
@@ -41,6 +42,7 @@ export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCo
             (tab.key === 'feed' && currentView.type === 'feed') ||
             (tab.key === 'notifications' && currentView.type === 'notifications') ||
             (tab.key === 'search' && currentView.type === 'search') ||
+            (tab.key === 'bookmarks' && currentView.type === 'bookmarks') ||
             (tab.key === 'aiChat' && currentView.type === 'aiChat') ||
             (tab.key === 'compose' && currentView.type === 'compose')
           );
@@ -74,6 +76,7 @@ function viewBreadcrumb(v: AppView): string {
     case 'notifications': return '🔔 通知';
     case 'search': return '🔍 搜索';
     case 'aiChat': return '🤖 AI 对话';
+    case 'bookmarks': return '🔖 书签';
     default: return '';
   }
 }

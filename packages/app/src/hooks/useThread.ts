@@ -5,6 +5,7 @@ import type { ThreadViewPost, NotFoundPost as NFP, PostView } from '@bsky/core';
 export interface FlatLine {
   depth: number;
   uri: string;
+  cid: string;
   rkey: string;
   text: string;
   handle: string;
@@ -139,6 +140,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
     lines.push({
       depth: d,
       uri: post.uri,
+      cid: post.cid,
       rkey,
       text: post.record.text,
       handle: post.author.handle,
@@ -163,7 +165,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
       if (sortedReplies.length > 5) {
         const remaining = sortedReplies.length - 5;
         lines.push({
-          depth: d + 1, uri: '', rkey: '', text: `（还有 ${remaining} 条回复未显示）`,
+          depth: d + 1, uri: '', cid: '', rkey: '', text: `（还有 ${remaining} 条回复未显示）`,
           handle: '', displayName: '', hasReplies: false, mediaTags: [],
           isRoot: false, likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
         });

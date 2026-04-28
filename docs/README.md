@@ -18,6 +18,7 @@ Monorepo documentation for the Bluesky Terminal UI Client with AI integration.
 | [API_CLIENT.md](./API_CLIENT.md) | BskyClient reference: all endpoints, auth, post structure |
 | [TERMINOLOGY.md](./TERMINOLOGY.md) | Terms and naming conventions (主题帖, 回复, 讨论串) |
 | [TESTING.md](./TESTING.md) | Test framework, test files, patterns, running tests |
+| [USER_ISSUSES.md](在这里，我会记录我遇到的不严重但影响体验的问题，请你查看，修复对应ISSUSE 后请标记，类似github 那样。你可以在认为需要的时候查看它，提示：检查这个文件的末尾即可，因为新问题会显示在末尾。)
 
 ## Project Structure
 

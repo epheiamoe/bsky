@@ -14,6 +14,8 @@ export type {
   NotFoundPost,
   CreateSessionResponse,
   PostRecord,
+  GetBookmarksResponse,
+  BookmarkResult,
 } from './at/types.js';
 
 // AI exports

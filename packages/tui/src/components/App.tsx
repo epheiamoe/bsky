@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { Sidebar } from './Sidebar.jsx';
@@ -41,6 +41,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { currentView, canGoBack, goTo, goBack, goHome } = useNavigation();
   const { client, loading: authLoading, login } = useAuth();
   const { unreadCount } = useNotifications(client);
+  const bookmarks = useBookmarks(client);
 
   // Feed
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client);
@@ -119,6 +120,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 's') { goTo({ type: 'search' }); return; }
     if (k === 'a') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
     if (k === 'c') { goTo({ type: 'compose' }); return; }
+    if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
 
     // ── Feed-specific ──
     if (currentView.type === 'feed') {
@@ -126,6 +128,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
       else if (k === 'm') loadMore?.();
       else if (k === 'r') refresh?.();
+      else if (k === 'v') {
+        const p = posts[feedIdx];
+        if (p) bookmarks.toggleBookmark(p.uri, p.cid);
+      }
     }
 
     // PgUp/PgDn: scroll feed
@@ -180,6 +186,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             goTo={(v) => goTo(v as AppView)}
             refreshThread={(newUri) => { goTo({ type: 'thread', uri: newUri }); setThreadKey(k => k + 1); }}
             cols={mainW}
+            isBookmarked={bookmarks.isBookmarked}
+            toggleBookmark={bookmarks.toggleBookmark}
           />
         );
       case 'compose':
@@ -210,6 +218,17 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return <SearchView client={client} query={(currentView as { query?: string }).query} goBack={goBack} cols={mainW} rows={rows} goTo={goTo} />;
       case 'aiChat':
         return <AIChatView client={client} aiConfig={config.aiConfig} contextUri={(currentView as { contextUri?: string }).contextUri} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} />;
+      case 'bookmarks':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>
+            <Box height={1}><Text bold color="yellow">🔖 书签</Text><Text dimColor>{' b:刷新'}</Text></Box>
+            {bookmarks.loading && <Text dimColor>加载中...</Text>}
+            {!bookmarks.loading && bookmarks.bookmarks.length === 0 && <Text dimColor>暂无书签。在帖子页面按 v 收藏帖子。</Text>}
+            {bookmarks.bookmarks.slice(0, rows - 5).map((post, i) => (
+              <Box key={post.uri} height={1}><Text color="green">{post.author.handle}</Text><Text>: </Text><Text>{(post.record.text || '').slice(0, cols - post.author.handle.length - 35)}</Text></Box>
+            ))}
+          </Box>
+        );
       default:
         return <Text>Unknown view</Text>;
     }
@@ -245,20 +264,21 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 }
 
 function viewLabel(v: { type: string }): string {
-  const labels: Record<string, string> = { feed: '📋 时间线', thread: '🧵 讨论', compose: '✏️ 发帖', profile: '👤 资料', notifications: '🔔 通知', search: '🔍 搜索', aiChat: '🤖 AI' };
+  const labels: Record<string, string> = { feed: '📋 时间线', thread: '🧵 讨论', compose: '✏️ 发帖', profile: '👤 资料', notifications: '🔔 通知', search: '🔍 搜索', aiChat: '🤖 AI', bookmarks: '🔖 书签' };
   return labels[v.type] ?? v.type;
 }
 
 function footerHint(v: { type: string }, canGoBack: boolean): string {
   const esc = canGoBack ? ' Esc:返回' : '';
   const hints: Record<string, string> = {
-    feed: `${esc} ↑↓/jk:导航 Enter:查看 m:更多 r:刷新`,
-    thread: `${esc} h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发`,
+    feed: `${esc} ↑↓/jk:导航 Enter:查看 m:更多 r:刷新 v:收藏`,
+    thread: `${esc} h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏`,
     compose: `${esc} Enter:发送`,
     profile: `${esc}`,
     notifications: `${esc} R:刷新`,
     search: `${esc}`,
     aiChat: `${esc} Enter:发送 Tab:切面板`,
+    bookmarks: `${esc} b:刷新`,
   };
   return hints[v.type] ?? esc;
 }

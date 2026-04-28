@@ -19,3 +19,4 @@ export type { TargetLang } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';
 export { useSearch } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';
+export { useBookmarks } from './hooks/useBookmarks.js';

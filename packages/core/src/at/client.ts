@@ -21,6 +21,8 @@ import type {
   GetRecordResponse,
   UploadBlobResponse,
   CreateRecordResponse,
+  CreateBookmarkResponse,
+  GetBookmarksResponse,
 } from './types.js';
 
 const BSKY_SERVICE = 'https://bsky.social';
@@ -282,5 +284,32 @@ export class BskyClient {
 
   isAuthenticated(): boolean {
     return this.session !== null;
+  }
+
+  async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {
+    return this.ky.post('app.bsky.bookmark.createBookmark', {
+      headers: this.getAuthHeaders(),
+      json: { uri, cid },
+    }).json<CreateBookmarkResponse>();
+  }
+
+  async deleteBookmark(uri: string): Promise<void> {
+    try {
+      await this.ky.post('app.bsky.bookmark.deleteBookmark', {
+        headers: this.getAuthHeaders(),
+        json: { uri },
+      });
+    } catch {
+      // silently ignore if bookmark doesn't exist
+    }
+  }
+
+  async getBookmarks(limit = 50, cursor?: string): Promise<GetBookmarksResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.ky.get('app.bsky.bookmark.getBookmarks', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetBookmarksResponse>();
   }
 }

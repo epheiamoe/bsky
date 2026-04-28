@@ -11,9 +11,11 @@ interface UnifiedThreadViewProps {
   goTo: (v: { type: string; replyTo?: string }) => void;
   refreshThread: (newUri: string) => void;
   cols: number;
+  isBookmarked: (uri: string) => boolean;
+  toggleBookmark: (uri: string, cid: string) => Promise<void>;
 }
 
-export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols }: UnifiedThreadViewProps) {
+export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols, isBookmarked, toggleBookmark }: UnifiedThreadViewProps) {
   const { flatLines, loading, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted } = useThread(client, uri);
 
   // Cursor = arrow movement target (highlighted in replies); focused = current post (only changes on Enter/h)
@@ -62,6 +64,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       if (input === 'l' || input === 'L') { void handleLike(cursorLine.uri, cursorLine.rkey); return; }
       if (input === 'r') { setConfirmRepost({ uri: cursorLine.uri, handle: cursorLine.handle }); return; }
       if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
+      if (input === 'v') { void toggleBookmark(cursorLine.uri, cursorLine.cid); return; }
       if (input === 'y') {
         const rkey = cursorLine.uri.split('/').pop() ?? '';
         const url = `@${cursorLine.handle} ${cursorLine.uri} https://bsky.app/profile/${cursorLine.handle}/post/${rkey}`;
@@ -104,6 +107,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           <Box><Text backgroundColor="#1e40af">{focused.text}</Text></Box>
           <Box>
             <Text dimColor>♥ {glc(focused)}  ♺ {focused.repostCount + (isReposted(focused.uri) ? 1 : 0)}  💬 {focused.replyCount}</Text>
+            {isBookmarked(focused.uri) && <Text color="yellow">{'  🔖 已收藏'}</Text>}
             {focused.indexedAt && <Text dimColor>{' · '}{new Date(focused.indexedAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}</Text>}
           </Box>
         </Box>

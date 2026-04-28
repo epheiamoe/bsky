@@ -239,3 +239,21 @@ export interface CreateRecordResponse {
   uri: string;
   cid: string;
 }
+
+export interface CreateBookmarkResponse {
+  uri: string;
+}
+
+export interface DeleteBookmarkRequest {
+  uri: string;
+}
+
+export interface BookmarkResult {
+  subject: { uri: string; cid: string };
+  createdAt: string;
+  item: PostView;
+}
+export interface GetBookmarksResponse {
+  cursor?: string;
+  bookmarks: BookmarkResult[];
+}
