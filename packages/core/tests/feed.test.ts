@@ -13,11 +13,11 @@ const APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD!;
 
 describe('Feed Reading & Serialization', () => {
   let client: BskyClient;
-  let testPostUri: string;
-  let testPostRkey: string;
-  const testPostUris: string[] = [];
-  let uploadedBlobCid = '';
-  let uploadedBlobDid = '';
+  // let testPostUri: string;
+  // let testPostRkey: string;
+  // const testPostUris: string[] = [];
+  // let uploadedBlobCid = '';
+  // let uploadedBlobDid = '';
 
   beforeAll(async () => {
     if (!HANDLE || !APP_PASSWORD) throw new Error('Missing env vars');
@@ -29,6 +29,9 @@ describe('Feed Reading & Serialization', () => {
     // Clean up test posts (optional - can't delete records via API easily)
   });
 
+  // ── POST CREATION (commented out — no need to create posts on Bluesky) ──
+
+  /*
   it('should create a test post with [TEST 测试] marker', async () => {
     const timestamp = Date.now();
     const text = `[TEST 测试] Automated integration test ${timestamp}\n[TEST 测试标记]`;
@@ -45,7 +48,9 @@ describe('Feed Reading & Serialization', () => {
     testPostUris.push(res.uri);
     console.log(`Created test post: ${res.uri}`);
   }, 30000);
+  */
 
+  /*
   it('should get post thread for the created post', async () => {
     expect(testPostUri).toBeTruthy();
     const thread = await client.getPostThread(testPostUri);
@@ -55,7 +60,9 @@ describe('Feed Reading & Serialization', () => {
       expect(thread.thread.post.record.text).toContain('[TEST 测试]');
     }
   }, 30000);
+  */
 
+  /*
   it('should flatten thread with get_post_thread_flat', async () => {
     const tools = createTools(client);
     const flatTool = tools.find(t => t.definition.name === 'get_post_thread_flat')!;
@@ -66,32 +73,29 @@ describe('Feed Reading & Serialization', () => {
     expect(result).toContain('[TEST 测试]');
     expect(result).toContain('depth:0');
   }, 30000);
+  */
 
-  it('should search posts and find the test post', async () => {
-    // Search may take some time to index
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    const searchRes = await client.searchPosts({ q: 'TEST 测试', limit: 25, sort: 'latest' });
+  it('should search posts and find some results', async () => {
+    const searchRes = await client.searchPosts({ q: 'Bluesky', limit: 25, sort: 'latest' });
     console.log(`Search found ${searchRes.posts.length} posts, hitsTotal: ${searchRes.hitsTotal}`);
-    // At least some results
     expect(searchRes.posts.length).toBeGreaterThanOrEqual(0);
-    // The test post might or might not be indexed yet; this is best-effort
   }, 30000);
 
+  // ── IMAGE UPLOAD (commented out — don't upload blobs to Bluesky) ──
+
+  /*
   it('should upload blob and create post with image', async () => {
-    // Create a minimal 1x1 PNG pixel
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       'base64'
     );
 
-    // Upload blob
     const uploadRes = await client.uploadBlob(png, 'image/png');
     expect(uploadRes.blob.ref.$link).toBeTruthy();
     uploadedBlobCid = uploadRes.blob.ref.$link;
     uploadedBlobDid = client.getDID();
     console.log(`Uploaded blob: ${uploadedBlobCid}`);
 
-    // Create post with image embed
     const record = {
       text: `[TEST 测试] Image post ${Date.now()}`,
       createdAt: new Date().toISOString(),
@@ -113,7 +117,6 @@ describe('Feed Reading & Serialization', () => {
   }, 30000);
 
   it('should extract images from post', async () => {
-    // Use the last created image post
     const imageUri = testPostUris[testPostUris.length - 1]!;
     const tools = createTools(client);
     const extractTool = tools.find(t => t.definition.name === 'extract_images_from_post')!;
@@ -127,7 +130,6 @@ describe('Feed Reading & Serialization', () => {
     expect(uploadedBlobCid).toBeTruthy();
     const tools = createTools(client);
     const downloadTool = tools.find(t => t.definition.name === 'download_image')!;
-    // Wait a bit for blob to be available
     await new Promise(resolve => setTimeout(resolve, 2000));
     const downloadResult = await downloadTool.handler({
       did: uploadedBlobDid,
@@ -138,7 +140,11 @@ describe('Feed Reading & Serialization', () => {
     expect(downloadParsed.mimeType).toBe('image/png');
     expect(downloadParsed.size).toBeGreaterThan(0);
   }, 60000);
+  */
 
+  // ── POST CONTEXT (commented out — depends on created post) ──
+
+  /*
   it('should get post context', async () => {
     const tools = createTools(client);
     const contextTool = tools.find(t => t.definition.name === 'get_post_context')!;
@@ -147,4 +153,5 @@ describe('Feed Reading & Serialization', () => {
     expect(parsed.text).toContain('[TEST 测试]');
     expect(parsed.thread).toBeTruthy();
   }, 30000);
+  */
 });

@@ -20,12 +20,12 @@ const AI_CONFIG: AIConfig = {
   model: process.env.LLM_MODEL || 'deepseek-chat',
 };
 
-let sharedTestPostUri = '';
+// let sharedTestPostUri = '';
 
 describe('AI Assistant - Tool Calling Full Flow', () => {
   let client: BskyClient;
   let tools: ToolDescriptor[];
-  let testPostUri: string;
+  // let testPostUri: string;
 
   beforeAll(async () => {
     if (!HANDLE || !APP_PASSWORD) throw new Error('Missing Bluesky env vars');
@@ -35,7 +35,8 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     await client.login(HANDLE, APP_PASSWORD);
     tools = createTools(client);
 
-    // Create a test post for AI to analyze
+    // ── POST CREATION (commented out) ──
+    /*
     const text = `[TEST 测试] AI Analysis Test ${Date.now()}\nThis post is for testing the AI tool-calling ability with Bluesky.`;
     const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', {
       text,
@@ -44,6 +45,7 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     testPostUri = res.uri;
     sharedTestPostUri = res.uri;
     console.log(`AI test post: ${testPostUri}`);
+    */
   }, 30000);
 
   it('should load all tool definitions', () => {
@@ -56,6 +58,8 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     expect(names).toContain('get_profile');
   });
 
+  // ── AI POST ANALYSIS (commented out — depends on created post) ──
+  /*
   it('should send message to AI and get tool calls', async () => {
     const assistant = new AIAssistant(AI_CONFIG);
     assistant.setTools(tools);
@@ -72,12 +76,11 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     console.log('Tool calls executed:', result.toolCallsExecuted);
     console.log('Intermediate steps:', result.intermediateSteps.map(s => `${s.type}: ${s.content.slice(0, 150)}`));
 
-    // Should have made at least one tool call to get the post
     expect(result.toolCallsExecuted).toBeGreaterThanOrEqual(1);
     expect(result.content).toBeTruthy();
-    // Should mention the test content
     expect(result.content.toLowerCase()).toContain('test');
   }, 120000);
+  */
 
   it('should search posts via AI tool call', async () => {
     const assistant = new AIAssistant(AI_CONFIG);
@@ -88,7 +91,7 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     );
 
     const result = await assistant.sendMessage(
-      '在 Bluesky 上搜索包含 "TEST 测试" 的帖子，告诉我找到了多少条。'
+      '在 Bluesky 上搜索包含 "Bluesky" 的帖子，告诉我找到了多少条。'
     );
 
     console.log('Search AI Response:', result.content);
@@ -128,7 +131,6 @@ describe('AI Translation & Polish (Single Turn)', () => {
     const result = await translateToChinese(AI_CONFIG, 'Hello, this is a test post about Bluesky and the AT Protocol.');
     console.log('Translation result:', result);
     expect(result).toBeTruthy();
-    // Should contain Chinese characters
     expect(/[\u4e00-\u9fff]/.test(result)).toBe(true);
   }, 60000);
 
@@ -138,7 +140,6 @@ describe('AI Translation & Polish (Single Turn)', () => {
     const result = await polishDraft(AI_CONFIG, draft, requirement);
     console.log('Polish result:', result);
     expect(result).toBeTruthy();
-    // Should be different from the original (polished)
     expect(result.length).toBeGreaterThan(0);
   }, 60000);
 
@@ -159,7 +160,8 @@ describe('AI Guiding Questions', () => {
   }
 
   it('should generate guiding questions for a post', async () => {
-    const postUri = sharedTestPostUri || 'at://did:plc:example/app.bsky.feed.post/example';
+    // Use a well-known public post for generating questions
+    const postUri = 'at://did:plc:z72i7hdynmk6rud22u6t3k24/app.bsky.feed.post/3lkpbwgqgbt2x';
     const questions = await singleTurnAI(
       AI_CONFIG,
       `你是一个深度集成 Bluesky 的终端助手。用户正在查看这个帖子: ${postUri}。请生成 3 个引导性问题，帮助用户深入了解这个帖子。只输出问题列表，每个问题一行，不要编号。`,

@@ -22,7 +22,7 @@ const AI_CONFIG: AIConfig = {
 
 describe('E2E: Full Integration Test Suite', () => {
   let client: BskyClient;
-  const createdPostUris: string[] = [];
+  // const createdPostUris: string[] = [];
 
   beforeAll(async () => {
     client = new BskyClient();
@@ -31,7 +31,7 @@ describe('E2E: Full Integration Test Suite', () => {
 
   afterAll(async () => {
     // Note: AT Protocol doesn't support easy post deletion via API
-    console.log(`Created ${createdPostUris.length} posts during testing`);
+    // console.log(`Created ${createdPostUris.length} posts during testing`);
   });
 
   // ======== 1. AUTH ========
@@ -46,7 +46,9 @@ describe('E2E: Full Integration Test Suite', () => {
     expect(profile.handle).toBe(HANDLE);
   }, 15000);
 
-  // ======== 2. FEED ========
+  // ======== 2. FEED (read-only) ========
+  // ── POST CREATION (commented out) ──
+  /*
   it('[2] Feed: post, read, search, thread flatten', async () => {
     const postText = `[TEST E2E] Full integration test ${Date.now()}`;
     const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', {
@@ -70,8 +72,17 @@ describe('E2E: Full Integration Test Suite', () => {
     const searchRes = await client.searchPosts({ q: 'TEST E2E', limit: 5, sort: 'latest' });
     expect(searchRes.posts.length).toBeGreaterThanOrEqual(0);
   }, 60000);
+  */
 
-  // ======== 3. IMAGE ========
+  it('[2] Feed: read timeline', async () => {
+    const timeline = await client.getTimeline(10);
+    expect(timeline.feed.length).toBeGreaterThan(0);
+    const tools = createTools(client);
+    expect(tools.length).toBeGreaterThan(20);
+  }, 15000);
+
+  // ======== 3. IMAGE (commented out) ========
+  /*
   it('[3] Image: upload blob, embed in post, extract images, download', async () => {
     const png = Buffer.from(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
@@ -108,8 +119,10 @@ describe('E2E: Full Integration Test Suite', () => {
     const downloadParsed = JSON.parse(download);
     expect(downloadParsed.mimeType).toBe('image/png');
   }, 60000);
+  */
 
-  // ======== 4. AI TOOL CALLING ========
+  // ======== 4. AI TOOL CALLING (commented out — depends on created post) ========
+  /*
   it('[4] AI: tool calling for post analysis', async () => {
     const tools = createTools(client);
     const assistant = new AIAssistant(AI_CONFIG);
@@ -124,6 +137,7 @@ describe('E2E: Full Integration Test Suite', () => {
     expect(result.toolCallsExecuted).toBeGreaterThanOrEqual(1);
     expect(result.content).toContain('TEST E2E');
   }, 120000);
+  */
 
   // ======== 5. AI TRANSLATION ========
   it('[5] AI: translation to Chinese', async () => {
@@ -164,7 +178,7 @@ describe('E2E: Full Integration Test Suite', () => {
   it('[10] AI: guiding questions', async () => {
     const questions = await singleTurnAI(
       AI_CONFIG,
-      `用户正在查看帖子: ${createdPostUris[0] ?? 'at://unknown'}`,
+      `用户正在查看一个 Bluesky 帖子。`,
       '请生成 2 个引导性问题',
       0.7, 500
     );
