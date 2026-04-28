@@ -63,6 +63,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (!authLoading) login(config.blueskyHandle, config.blueskyPassword);
   }, []);
 
+  // Refresh bookmarks when entering bookmarks page
+  useEffect(() => {
+    if (currentView.type === 'bookmarks') bookmarks.refresh();
+  }, [currentView.type]);
+
   // ═════════════════════ KEYBOARD ═════════════════════
   useInput((input, key) => {
     // Tab / Esc — always processed
