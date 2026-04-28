@@ -11,24 +11,27 @@ export interface PostListProps {
   width: number;
 }
 
-export function PostList({ posts, loading, cursor, selectedIndex, width }: PostListProps) {
+export function PostList({ posts, loading, selectedIndex, width }: PostListProps) {
   return (
     <Box flexDirection="column" flexGrow={1}>
       {posts.length === 0 && !loading && (
         <Text dimColor>没有帖子。按 Enter 查看帖子。</Text>
       )}
       {posts.map((post, i) => (
-        <PostItem
-          key={post.uri}
-          post={post}
-          isSelected={i === selectedIndex}
-          index={i}
-          width={width}
-        />
+        <Box key={post.uri}>
+          <PostItem
+            post={post}
+            isSelected={i === selectedIndex}
+            index={i}
+            width={width}
+          />
+        </Box>
       ))}
-      {loading && posts.length === 0 && <PostSkeleton />}
+      {loading && posts.length === 0 && (
+        <PostSkeleton />
+      )}
       {loading && posts.length > 0 && (
-        <Box><Text color="yellow">⏳ 加载更多...</Text></Box>
+        <Text color="yellow">⏳ 加载更多...</Text>
       )}
     </Box>
   );

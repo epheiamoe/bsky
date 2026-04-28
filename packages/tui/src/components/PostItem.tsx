@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
 
 export interface PostItemProps {
@@ -7,43 +7,31 @@ export interface PostItemProps {
   isSelected: boolean;
   index: number;
   width: number;
-  isCompact?: boolean;
 }
 
-export function PostItem({ post, isSelected, index, width, isCompact }: PostItemProps) {
-  const displayName = post.author.displayName || post.author.handle;
+export function PostItem({ post, isSelected, index, width }: PostItemProps) {
+  const name = post.author.displayName || post.author.handle;
   const handle = post.author.handle;
-  const bg = isSelected ? '#1e40af' : undefined;
-  const fg = isSelected ? 'cyanBright' : 'green';
-  const text = isCompact ? post.record.text.replace(/\n/g, ' ') : post.record.text;
-  const time = post.indexedAt ? new Date(post.indexedAt).toLocaleString('zh-CN', {
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-  }) : '';
+  const text = post.record.text.replace(/\n/g, ' ');
+  const time = post.indexedAt ? new Date(post.indexedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+
+  const authorLine = `${name} @${handle} [${index}]`;
+  const statsLine = `♥ ${post.likeCount ?? 0} ♺ ${post.repostCount ?? 0} 💬 ${post.replyCount ?? 0}${time ? ' · ' + time : ''}`;
+
+  // Estimate lines: name/handle/idx + text + stats. Add 1 for margin.
+  const textLines = Math.max(1, Math.ceil(text.length / (width || 60)));
+  const height = 3 + textLines; // author(1) + text(N) + stats(1) + margin(1)
+
+  // Build text as single string with newlines
+  const content = `${authorLine}\n${text}\n${statsLine}`;
 
   return (
-    <Box flexDirection="column" width={width}>
-      <Box>
-        <Text backgroundColor={bg} bold color={fg}>{displayName}</Text>
-        <Text backgroundColor={bg} dimColor>{' @'}{handle}</Text>
-        <Text backgroundColor={bg} dimColor>{' ['}{index}{']'}</Text>
-      </Box>
-      <Box>
-        <Text>{text}</Text>
-      </Box>
-      <Box>
-        <Text dimColor>♥ {post.likeCount ?? 0}  ♺ {post.repostCount ?? 0}  💬 {post.replyCount ?? 0}</Text>
-        {time ? <Text dimColor>{' · '}{time}</Text> : null}
-      </Box>
-    </Box>
+    <Text color={isSelected ? 'cyanBright' : undefined} dimColor={!isSelected}>
+      {content}
+    </Text>
   );
 }
 
 export function PostSkeleton() {
-  return (
-    <Box flexDirection="column">
-      <Box><Text dimColor>─────</Text></Box>
-      <Box><Text dimColor>Loading...</Text></Box>
-      <Box><Text dimColor>─────</Text></Box>
-    </Box>
-  );
+  return <Text dimColor>{'─────\nLoading...\n─────'}</Text>;
 }
