@@ -42,6 +42,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { client, loading: authLoading, login } = useAuth();
   const { unreadCount } = useNotifications(client);
   const bookmarks = useBookmarks(client);
+  const [bookmarkIdx, setBookmarkIdx] = useState(0);
 
   // Feed
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client);
@@ -65,7 +66,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
   // Refresh bookmarks when entering bookmarks page
   useEffect(() => {
-    if (currentView.type === 'bookmarks') bookmarks.refresh();
+    if (currentView.type === 'bookmarks') { bookmarks.refresh(); setBookmarkIdx(0); }
   }, [currentView.type]);
 
   // ═════════════════════ KEYBOARD ═════════════════════
@@ -86,11 +87,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     }
     if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
 
-    // Arrows — only feed; thread/view-specific arrows handled by child useInput
+    // Arrows — feed + bookmarks
     if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'feed') { setFeedIdx(i => Math.min(posts.length - 1, i + 1)); return; }
+    if (key.upArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1)); return; }
 
-    // Enter — feed + compose
+    // Enter — feed + compose + bookmarks
     if (key.return) {
       if (currentView.type === 'feed') {
         const p = posts[feedIdx];
@@ -99,6 +102,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       }
       if (currentView.type === 'compose') {
         if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo);
+        return;
+      }
+      if (currentView.type === 'bookmarks') {
+        const bm = bookmarks.bookmarks[bookmarkIdx];
+        if (bm) goTo({ type: 'thread', uri: bm.uri });
         return;
       }
       return;
@@ -137,6 +145,18 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const p = posts[feedIdx];
         if (p) bookmarks.toggleBookmark(p.uri, p.cid);
       }
+    }
+
+    // ── Bookmarks-specific ──
+    if (currentView.type === 'bookmarks') {
+      if (k === 'j') setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1));
+      else if (k === 'k') setBookmarkIdx(i => Math.max(0, i - 1));
+      else if (k === 'b') bookmarks.refresh();
+      else if (k === 'd') {
+        const bm = bookmarks.bookmarks[bookmarkIdx];
+        if (bm) bookmarks.removeBookmark(bm.uri);
+      }
+      return;
     }
 
     // PgUp/PgDn: scroll feed
@@ -226,12 +246,23 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'bookmarks':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>
-            <Box height={1}><Text bold color="yellow">🔖 书签</Text><Text dimColor>{' b:刷新'}</Text></Box>
+            <Box height={1}><Text bold color="yellow">🔖 书签</Text><Text dimColor>{' ↑↓/jk:导航 Enter:查看 d:删除 b:刷新'}</Text></Box>
             {bookmarks.loading && <Text dimColor>加载中...</Text>}
             {!bookmarks.loading && bookmarks.bookmarks.length === 0 && <Text dimColor>暂无书签。在帖子页面按 v 收藏帖子。</Text>}
-            {bookmarks.bookmarks.slice(0, rows - 5).map((post, i) => (
-              <Box key={post.uri} height={1}><Text color="green">{post.author.handle}</Text><Text>: </Text><Text>{(post.record.text || '').slice(0, cols - post.author.handle.length - 35)}</Text></Box>
-            ))}
+            {bookmarks.bookmarks.slice(0, rows - 5).map((post, i) => {
+              const isSel = i === bookmarkIdx;
+              const text = (post.record.text || '').slice(0, cols - post.author.handle.length - 30);
+              return (
+                <Box key={post.uri} height={1}>
+                  <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
+                    {isSel ? '▶' : ' '}{' '}
+                    <Text color={isSel ? 'cyanBright' : 'green'}>{post.author.handle}</Text>
+                    <Text>: </Text>
+                    <Text>{(post.record.text || '').slice(0, cols - post.author.handle.length - 35)}</Text>
+                  </Text>
+                </Box>
+              );
+            })}
           </Box>
         );
       default:
@@ -283,7 +314,7 @@ function footerHint(v: { type: string }, canGoBack: boolean): string {
     notifications: `${esc} R:刷新`,
     search: `${esc}`,
     aiChat: `${esc} Enter:发送 Tab:切面板`,
-    bookmarks: `${esc} b:刷新`,
+    bookmarks: `${esc} ↑↓/jk:导航 Enter:查看 d:删除 b:刷新`,
   };
   return hints[v.type] ?? esc;
 }
