@@ -20,6 +20,8 @@ const AI_CONFIG: AIConfig = {
   model: process.env.LLM_MODEL || 'deepseek-chat',
 };
 
+let sharedTestPostUri = '';
+
 describe('AI Assistant - Tool Calling Full Flow', () => {
   let client: BskyClient;
   let tools: ToolDescriptor[];
@@ -34,12 +36,13 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     tools = createTools(client);
 
     // Create a test post for AI to analyze
-    const text = `[TRST 测试] AI Analysis Test ${Date.now()}\nThis post is for testing the AI tool-calling ability with Bluesky.`;
+    const text = `[TEST 测试] AI Analysis Test ${Date.now()}\nThis post is for testing the AI tool-calling ability with Bluesky.`;
     const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', {
       text,
       createdAt: new Date().toISOString(),
     });
     testPostUri = res.uri;
+    sharedTestPostUri = res.uri;
     console.log(`AI test post: ${testPostUri}`);
   }, 30000);
 
@@ -73,7 +76,7 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     expect(result.toolCallsExecuted).toBeGreaterThanOrEqual(1);
     expect(result.content).toBeTruthy();
     // Should mention the test content
-    expect(result.content.toLowerCase()).toContain('trst');
+    expect(result.content.toLowerCase()).toContain('test');
   }, 120000);
 
   it('should search posts via AI tool call', async () => {
@@ -85,7 +88,7 @@ describe('AI Assistant - Tool Calling Full Flow', () => {
     );
 
     const result = await assistant.sendMessage(
-      '在 Bluesky 上搜索包含 "TRST 测试" 的帖子，告诉我找到了多少条。'
+      '在 Bluesky 上搜索包含 "TEST 测试" 的帖子，告诉我找到了多少条。'
     );
 
     console.log('Search AI Response:', result.content);
@@ -156,7 +159,7 @@ describe('AI Guiding Questions', () => {
   }
 
   it('should generate guiding questions for a post', async () => {
-    const postUri = 'at://did:plc:xxxxxxxxxxxxxxxxxxxxxxxx/app.bsky.feed.post/xxxxxxxxxxx';
+    const postUri = sharedTestPostUri || 'at://did:plc:example/app.bsky.feed.post/example';
     const questions = await singleTurnAI(
       AI_CONFIG,
       `你是一个深度集成 Bluesky 的终端助手。用户正在查看这个帖子: ${postUri}。请生成 3 个引导性问题，帮助用户深入了解这个帖子。只输出问题列表，每个问题一行，不要编号。`,

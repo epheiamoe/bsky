@@ -48,7 +48,7 @@ describe('E2E: Full Integration Test Suite', () => {
 
   // ======== 2. FEED ========
   it('[2] Feed: post, read, search, thread flatten', async () => {
-    const postText = `[TRST E2E] Full integration test ${Date.now()}`;
+    const postText = `[TEST E2E] Full integration test ${Date.now()}`;
     const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', {
       text: postText,
       createdAt: new Date().toISOString(),
@@ -63,11 +63,11 @@ describe('E2E: Full Integration Test Suite', () => {
     // Flatten
     const tools = createTools(client);
     const flat = await tools.find(t => t.definition.name === 'get_post_thread_flat')!.handler({ uri: res.uri });
-    expect(flat).toContain('[TRST E2E]');
+    expect(flat).toContain('[TEST E2E]');
 
     // Search (with delay for indexing)
     await new Promise(r => setTimeout(r, 2000));
-    const searchRes = await client.searchPosts({ q: 'TRST E2E', limit: 5, sort: 'latest' });
+    const searchRes = await client.searchPosts({ q: 'TEST E2E', limit: 5, sort: 'latest' });
     expect(searchRes.posts.length).toBeGreaterThanOrEqual(0);
   }, 60000);
 
@@ -81,7 +81,7 @@ describe('E2E: Full Integration Test Suite', () => {
     expect(uploadRes.blob.ref.$link).toBeTruthy();
 
     const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', {
-      text: `[TRST E2E] Image test ${Date.now()}`,
+      text: `[TEST E2E] Image test ${Date.now()}`,
       createdAt: new Date().toISOString(),
       embed: {
         $type: 'app.bsky.embed.images',
@@ -122,7 +122,7 @@ describe('E2E: Full Integration Test Suite', () => {
     );
 
     expect(result.toolCallsExecuted).toBeGreaterThanOrEqual(1);
-    expect(result.content).toContain('TRST E2E');
+    expect(result.content).toContain('TEST E2E');
   }, 120000);
 
   // ======== 5. AI TRANSLATION ========

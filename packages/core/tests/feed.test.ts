@@ -29,9 +29,9 @@ describe('Feed Reading & Serialization', () => {
     // Clean up test posts (optional - can't delete records via API easily)
   });
 
-  it('should create a test post with [TRST 测试] marker', async () => {
+  it('should create a test post with [TEST 测试] marker', async () => {
     const timestamp = Date.now();
-    const text = `[TRST 测试] Automated integration test ${timestamp}\n[TRST 更多请查看说明 bsky.app/profile/user-handle.example.com/post/xxxxxxxxxxx]`;
+    const text = `[TEST 测试] Automated integration test ${timestamp}\n[TEST 测试标记]`;
 
     const record = {
       text,
@@ -52,7 +52,7 @@ describe('Feed Reading & Serialization', () => {
     expect(thread.thread.$type).toBe('app.bsky.feed.defs#threadViewPost');
     if (thread.thread.$type === 'app.bsky.feed.defs#threadViewPost') {
       expect(thread.thread.post.uri).toBe(testPostUri);
-      expect(thread.thread.post.record.text).toContain('[TRST 测试]');
+      expect(thread.thread.post.record.text).toContain('[TEST 测试]');
     }
   }, 30000);
 
@@ -63,14 +63,14 @@ describe('Feed Reading & Serialization', () => {
 
     const result = await flatTool.handler({ uri: testPostUri, depth: 3 });
     console.log('Flattened thread:\n' + result);
-    expect(result).toContain('[TRST 测试]');
+    expect(result).toContain('[TEST 测试]');
     expect(result).toContain('depth:0');
   }, 30000);
 
   it('should search posts and find the test post', async () => {
     // Search may take some time to index
     await new Promise(resolve => setTimeout(resolve, 3000));
-    const searchRes = await client.searchPosts({ q: 'TRST 测试', limit: 25, sort: 'latest' });
+    const searchRes = await client.searchPosts({ q: 'TEST 测试', limit: 25, sort: 'latest' });
     console.log(`Search found ${searchRes.posts.length} posts, hitsTotal: ${searchRes.hitsTotal}`);
     // At least some results
     expect(searchRes.posts.length).toBeGreaterThanOrEqual(0);
@@ -93,7 +93,7 @@ describe('Feed Reading & Serialization', () => {
 
     // Create post with image embed
     const record = {
-      text: `[TRST 测试] Image post ${Date.now()}`,
+      text: `[TEST 测试] Image post ${Date.now()}`,
       createdAt: new Date().toISOString(),
       embed: {
         $type: 'app.bsky.embed.images',
@@ -144,7 +144,7 @@ describe('Feed Reading & Serialization', () => {
     const contextTool = tools.find(t => t.definition.name === 'get_post_context')!;
     const result = await contextTool.handler({ uri: testPostUri });
     const parsed = JSON.parse(result);
-    expect(parsed.text).toContain('[TRST 测试]');
+    expect(parsed.text).toContain('[TEST 测试]');
     expect(parsed.thread).toBeTruthy();
   }, 30000);
 });
