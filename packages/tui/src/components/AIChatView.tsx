@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useAIChat, useChatHistory, getDefaultStorage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
@@ -23,8 +23,17 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const { conversations, deleteConversation, refresh: refreshHistory } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
+  const [scrollOffset, setScrollOffset] = useState(0); // lines scrolled up from bottom
+  const prevMsgCount = useRef(0);
 
   useEffect(() => { if (messages.length > 0) setShowHistory(false); }, [messages]);
+
+  // Auto-scroll to bottom when new messages arrive
+  const totalMsgCount = useMemo(() => messages.length, [messages]);
+  useEffect(() => {
+    if (totalMsgCount > prevMsgCount.current) { setScrollOffset(0); }
+    prevMsgCount.current = totalMsgCount;
+  }, [totalMsgCount]);
 
   const handleSend = () => { if (input.trim() && !loading) { void send(input.trim()); setInput(''); } };
 
@@ -66,14 +75,24 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     return lines;
   }, [messages, loading, cols]);
 
-  // Viewport range
+  // Viewport range with scroll offset
   const maxVisible = Math.max(10, rows - 6);
-  const viewStart = Math.max(0, allMessageLines.length - maxVisible);
+  const viewStart = Math.max(0, allMessageLines.length - maxVisible - scrollOffset);
   const visibleLines = allMessageLines.slice(viewStart, viewStart + maxVisible);
+  const canScrollUp = viewStart > 0;
+  const canScrollDown = viewStart + maxVisible < allMessageLines.length;
 
   // History keyboard
   useInput((input, key) => {
-    if (!showHistory) return;
+    // Chat scroll keys (non-history mode)
+    if (!showHistory) {
+      if (key.upArrow && !focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
+      if (key.downArrow && !focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
+      if ((input === 'u' || input === 'U') && focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
+      if ((input === 'd' || input === 'D') && focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
+      return;
+    }
+    // History mode keyboard
     if (key.escape) { goBack(); return; }
     if (key.upArrow) { setHistoryIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow) { setHistoryIdx(i => Math.min(conversations.length - 1, i + 1)); return; }
@@ -118,14 +137,17 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
       )}
       {/* Messages as flat Text lines — no Box nesting */}
       <Box flexDirection="column" flexGrow={1} marginTop={0}>
-        {allMessageLines.length > maxVisible && (
-          <Text dimColor color="cyan">{`↑ ${allMessageLines.length - maxVisible} 行在上方`}</Text>
+        {canScrollUp && (
+          <Text dimColor color="cyan">{`↑ ${viewStart} 行在上方 [u]上翻`}</Text>
         )}
         {visibleLines.map((line, i) => (
           <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>
             {line || ' '}
           </Text>
         ))}
+        {canScrollDown && (
+          <Text dimColor color="cyan">{`↓ ${allMessageLines.length - viewStart - maxVisible} 行在下方 [d]下翻`}</Text>
+        )}
       </Box>
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>
         <Text color={focused ? 'yellow' : 'gray'}>{focused ? '▸ ' : '· '}</Text>
