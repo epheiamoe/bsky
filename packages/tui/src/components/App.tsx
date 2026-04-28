@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
+import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
@@ -83,7 +84,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'feed') { setFeedIdx(i => Math.min(posts.length - 1, i + 1)); return; }
 
-    // Enter — only feed + compose; thread Enter handled by UnifiedThreadView
+    // Enter — feed + compose
     if (key.return) {
       if (currentView.type === 'feed') {
         const p = posts[feedIdx];
@@ -108,7 +109,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
-    // ── Global navigation shortcuts (work from any view) ──
+    // When composing: let TextInput handle all single-char keys
+    if (currentView.type === 'compose') return;
+
+    // ── Global navigation shortcuts ──
     if (k === 't') { goHome(); return; }
     if (k === 'n') { goTo({ type: 'notifications' }); return; }
     if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
@@ -183,7 +187,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
             <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ 回复' : '✏️ 发帖'}</Text><Text dimColor>{' Enter 发送 · Esc 取消 · 最多 300 字符'}</Text></Box>
             {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>回复: </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
-            <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}><Text>{composeDraft || ' '}</Text></Box>
+            <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
+              <TextInput
+                value={composeDraft}
+                onChange={setComposeDraft}
+                onSubmit={() => { if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo); }}
+                placeholder="此刻的想法..."
+              />
+            </Box>
             <Box height={1}>
               <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text>
               {compose.submitting && <Text color="cyan"> 发送中...</Text>}
