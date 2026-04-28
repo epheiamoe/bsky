@@ -111,7 +111,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'n') { goTo({ type: 'notifications' }); return; }
     if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
     if (k === 's') { goTo({ type: 'search' }); return; }
-    if (k === 'a') { goTo({ type: 'aiChat' }); return; }
+    if (k === 'a') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
     if (k === 'c') { goTo({ type: 'compose' }); return; }
 
     // ── Feed-specific ──
