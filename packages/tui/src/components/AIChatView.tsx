@@ -40,7 +40,8 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   // ── Viewport: pre-compute message lines ──
   const allMessageLines = useMemo(() => {
     const lines: string[] = [];
-    const maxChars = Math.max(30, cols - 4);
+    // Conservative width: CJK chars take 2 cols, so use ~50% of cols
+    const maxChars = Math.max(20, Math.floor(cols * 0.55));
     for (const msg of messages) {
       if (msg.role === 'tool_call') {
         lines.push(`🔧 使用了 ${msg.toolName ?? ''}`);
@@ -82,17 +83,19 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const canScrollUp = viewStart > 0;
   const canScrollDown = viewStart + maxVisible < allMessageLines.length;
 
-  // History keyboard
+  // Chat scroll keys (non-history mode) — only process scroll, don't block others
   useInput((input, key) => {
-    // Chat scroll keys (non-history mode)
     if (!showHistory) {
       if (key.upArrow && !focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
       if (key.downArrow && !focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
       if ((input === 'u' || input === 'U') && focused) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + 3)); return; }
       if ((input === 'd' || input === 'D') && focused) { setScrollOffset(s => Math.max(0, s - 3)); return; }
-      return;
     }
-    // History mode keyboard
+  });
+
+  // History keyboard (separate handler)
+  useInput((input, key) => {
+    if (!showHistory) return;
     if (key.escape) { goBack(); return; }
     if (key.upArrow) { setHistoryIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow) { setHistoryIdx(i => Math.min(conversations.length - 1, i + 1)); return; }

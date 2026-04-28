@@ -24,23 +24,29 @@ export function useAIChat(
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
 
-  // Load existing conversation from storage on mount
+  // Keep chatIdRef in sync
+  useEffect(() => {
+    if (options?.chatId) chatIdRef.current = options.chatId;
+  }, [options?.chatId]);
+
+  // Load existing conversation from storage when chatId changes
   useEffect(() => {
     if (!storage || !options?.chatId) return;
     void (async () => {
       const record = await storage.loadChat(options.chatId!);
       if (record) {
         setMessages(record.messages);
-        // Restore AIAssistant internal state by replaying user messages
-        // (Tool calls and context will be re-fetched if needed on next send)
         if (contextUri) {
           assistant.addSystemMessage(
             `你是一个深度集成 Bluesky 的终端助手。用户正在查看帖子 ${contextUri}，如果需要请用工具获取上下文。回答简练，适合终端显示。`
           );
         }
+      } else {
+        // No record found — start fresh
+        setMessages([]);
       }
     })();
-  }, []);
+  }, [options?.chatId, storage]);
 
   // Initialize tools and system prompt
   useEffect(() => {
