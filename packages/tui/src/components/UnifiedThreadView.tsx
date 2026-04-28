@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useThread } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -14,11 +14,11 @@ interface UnifiedThreadViewProps {
 }
 
 export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols }: UnifiedThreadViewProps) {
-  const {
-    flatLines, loading, focusedIndex, themeUri,
-    focused, up, down,
-    likePost, repostPost, isLiked, isReposted,
-  } = useThread(client, uri);
+  const { flatLines, loading, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted } = useThread(client, uri);
+
+  // Cursor = arrow movement target (highlighted in replies); focused = current post (only changes on Enter/h)
+  const [cursorIndex, setCursorIndex] = useState(0);
+  useEffect(() => { setCursorIndex(focusedIndex); }, [focusedIndex]);
 
   const [confirmRepost, setConfirmRepost] = useState<{ uri: string; handle: string } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
@@ -26,155 +26,104 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   const focusedUri = focused?.uri;
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedDepth = focused?.depth ?? 0;
+  const cursorLine = flatLines[cursorIndex];
 
-  // Filter: theme posts are those ABOVE the focused post (exclude focused itself)
+  // Theme posts = above focused, excluding focused itself
   const themeLines = flatLines.filter(l => l.depth < 0 || (l.depth === 0 && l.isRoot && l.uri !== focusedUri));
-  // Reply lines: depth > 0 and depth <= focusedDepth + 1, excluding the focused post
-  const replyLines = flatLines.filter(l =>
-    l.uri && l.depth > 0 && l.depth <= focusedDepth + 1 && l.uri !== focusedUri
-  );
+  // Replies = replies to focused (depth <= focusedDepth+1), excluding focused
+  const replyLines = flatLines.filter(l => l.uri && l.depth > 0 && l.depth <= focusedDepth + 1 && l.uri !== focusedUri);
 
-  const handleLike = async (postUri: string, rkey: string) => {
-    if (isLiked(postUri)) return;
+  const handleLike = async (uri: string, rkey: string) => {
+    if (isLiked(uri)) return;
     setLocalLikeCounts(prev => ({ ...prev, [rkey]: (prev[rkey] ?? 0) + 1 }));
-    await likePost(postUri);
-  };
-
-  const handleRepost = async (uri: string) => {
-    await repostPost(uri);
-    setConfirmRepost(null);
+    await likePost(uri);
   };
 
   useInput((input, key) => {
-    if (key.upArrow) { up(); return; }
-    if (key.downArrow) { down(); return; }
-
-    const k = input;
-
     if (confirmRepost) {
-      if (k === 'y' || k === 'Y') { void handleRepost(confirmRepost.uri); return; }
-      if (k === 'n' || k === 'N') { setConfirmRepost(null); return; }
+      if (input === 'y' || input === 'Y') { void repostPost(confirmRepost.uri); setConfirmRepost(null); return; }
+      if (input === 'n' || input === 'N') { setConfirmRepost(null); return; }
       return;
     }
 
-    if (key.return) {
-      if (focused?.uri) refreshThread(focused.uri);
-      return;
-    }
+    // Arrows/jk move cursor (highlight) only — don't change current post
+    if (key.upArrow || input === 'k' || input === 'K') { setCursorIndex(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow || input === 'j' || input === 'J') { setCursorIndex(i => Math.min(flatLines.length - 1, i + 1)); return; }
 
-    if (k === 'h' || k === 'H') { if (themeUri) refreshThread(themeUri); return; }
-    if (k === 'l' || k === 'L') { if (focused?.uri) void handleLike(focused.uri, focused.rkey); return; }
-    // r: repost (lowercase), c: comment/reply
-    if (k === 'r') { if (focused?.uri) setConfirmRepost({ uri: focused.uri, handle: focused.handle }); return; }
-    if (k === 'c' || k === 'C') { if (focused?.uri) goTo({ type: 'compose', replyTo: focused.uri }); return; }
-    if (k === 'j') { down(); return; }
-    if (k === 'k') { up(); return; }
+    // Enter: make cursor line the NEW current post (full refocus)
+    if (key.return && cursorLine?.uri) { refreshThread(cursorLine.uri); return; }
+
+    // h: go back to theme post
+    if ((input === 'h' || input === 'H') && themeUri) { refreshThread(themeUri); return; }
+
+    // Actions on cursor line
+    if (cursorLine?.uri) {
+      if (input === 'l' || input === 'L') { void handleLike(cursorLine.uri, cursorLine.rkey); return; }
+      if (input === 'r') { setConfirmRepost({ uri: cursorLine.uri, handle: cursorLine.handle }); return; }
+      if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
+    }
   });
 
-  if (loading && flatLines.length === 0) {
-    return (
-      <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
-        <Text dimColor>加载讨论串...</Text>
-      </Box>
-    );
-  }
+  if (loading && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>加载讨论串...</Text></Box>;
 
-  const getLikeCount = (line: FlatLine) => {
-    const extra = localLikeCounts[line.rkey] ?? 0;
-    return line.likeCount + extra;
-  };
-
-  const getRepostCount = (line: FlatLine) => {
-    const liked = isLiked(line.uri) ? 1 : 0;
-    return line.repostCount + (isReposted(line.uri) ? 1 : 0);
-  };
+  const glc = (l: FlatLine) => l.likeCount + (localLikeCounts[l.rkey] ?? 0);
 
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
-      {/* Header */}
-      <Box>
-        <Text bold color="cyan">
-          🧵 讨论 - {isTheme ? '主题帖' : '回复'}
-        </Text>
-      </Box>
+      <Box><Text bold color="cyan">🧵 讨论 - {isTheme ? '主题帖' : '回复'}</Text></Box>
 
-      {/* Theme posts (above current, excluding focused) */}
+      {/* ── Theme posts ── */}
       {themeLines.length > 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Box><Text dimColor>── 讨论源 ──</Text></Box>
-          {themeLines.map((line, i) => {
-            const isFocused = line.uri === focusedUri;
-            const lc = getLikeCount(line);
-            return (
-              <Box key={i} flexDirection="column" marginBottom={0}>
-                <Box>
-                  <Text backgroundColor={isFocused ? '#1e40af' : undefined} bold>{line.displayName}</Text>
-                  <Text dimColor>{' @'}{line.handle}</Text>
-                </Box>
-                <Box>
-                  <Text backgroundColor={isFocused ? '#1e40af' : undefined}>{line.text}</Text>
-                </Box>
-                <Box>
-                  <Text dimColor>♥ {lc}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
-                  {line.indexedAt && <Text dimColor>{' · '}{new Date(line.indexedAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}</Text>}
-                </Box>
-              </Box>
-            );
-          })}
+          {themeLines.map((line, i) => (
+            <Box key={i} flexDirection="column" marginBottom={0}>
+              <Box><Text>{line.displayName}</Text><Text dimColor>{' @'}{line.handle}</Text></Box>
+              <Box><Text>{line.text}</Text></Box>
+              <Box><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
+            </Box>
+          ))}
         </Box>
       )}
 
-      {/* Current focused post */}
+      {/* ── Current focused post ── */}
       {focused && (
         <Box flexDirection="column" marginTop={0}>
           <Box><Text dimColor>{isTheme ? '── 主题帖 ──' : '── 当前帖子 ──'}</Text></Box>
+          <Box><Text backgroundColor="#1e40af" color="cyanBright" bold>{focused.displayName}</Text><Text backgroundColor="#1e40af" dimColor>{' @'}{focused.handle}</Text></Box>
+          <Box><Text backgroundColor="#1e40af">{focused.text}</Text></Box>
           <Box>
-            <Text backgroundColor="#1e40af" color="cyanBright" bold>{focused.displayName}</Text>
-            <Text backgroundColor="#1e40af" dimColor>{' @'}{focused.handle}</Text>
-          </Box>
-          <Box>
-            <Text backgroundColor="#1e40af">{focused.text}</Text>
-          </Box>
-          <Box>
-            <Text dimColor>♥ {getLikeCount(focused)}  ♺ {getRepostCount(focused)}  💬 {focused.replyCount}</Text>
+            <Text dimColor>♥ {glc(focused)}  ♺ {focused.repostCount + (isReposted(focused.uri) ? 1 : 0)}  💬 {focused.replyCount}</Text>
             {focused.indexedAt && <Text dimColor>{' · '}{new Date(focused.indexedAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}</Text>}
           </Box>
         </Box>
       )}
 
-      {/* Replies */}
+      {/* ── Replies ── */}
       <Box flexDirection="column" marginTop={0}>
         <Box><Text dimColor>── 回复 ──</Text></Box>
         {replyLines.length === 0 && <Box><Text dimColor>  没有回复</Text></Box>}
         {replyLines.map((line, i) => {
-          if (!line.uri) {
-            return <Box key={i}><Text dimColor>{'  '}{line.text}</Text></Box>;
-          }
-          const isFocused = line.uri === focusedUri;
+          if (!line.uri) return <Box key={i}><Text dimColor>{'  '}{line.text}</Text></Box>;
+          const isCursor = line.uri === cursorLine?.uri;
           const indent = '  '.repeat(Math.min(line.depth - 1, 3));
-          const lc = getLikeCount(line);
           return (
             <Box key={i} flexDirection="column" marginBottom={0}>
               <Box>
                 <Text dimColor>{indent}↳ </Text>
-                <Text backgroundColor={isFocused ? '#1e40af' : undefined} bold={isFocused}>{line.displayName}</Text>
+                <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} bold={isCursor}>{line.displayName}</Text>
                 <Text dimColor>{' @'}{line.handle}</Text>
+                <Text dimColor>{isCursor ? ' ← 光标' : ''}</Text>
                 {line.hasReplies && <Text color="cyan">{' [+]'}</Text>}
               </Box>
-              <Box>
-                <Text dimColor>{indent}{'  '}</Text>
-                <Text backgroundColor={isFocused ? '#1e40af' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text>
-              </Box>
-              <Box>
-                <Text dimColor>{indent}{'  '}</Text>
-                <Text dimColor>♥ {lc}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
-              </Box>
+              <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>
+              <Box><Text dimColor>{indent}{'  '}</Text><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
             </Box>
           );
         })}
       </Box>
 
-      {/* Repost confirmation */}
+      {/* ── Repost confirm ── */}
       {confirmRepost && (
         <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={1} marginTop={0}>
           <Text bold color="yellow">⚠ 确认转发 @{confirmRepost.handle} 的回复？</Text>

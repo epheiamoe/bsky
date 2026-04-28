@@ -61,6 +61,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
   // ═════════════════════ KEYBOARD ═════════════════════
   useInput((input, key) => {
+    // Tab / Esc — always processed
     if (key.tab) {
       if (currentView.type === 'aiChat') setFocusedPanel(f => f === 'ai' ? 'main' : 'ai');
       return;
@@ -76,32 +77,26 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     }
     if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
 
-    // Arrows
-    if (key.upArrow) {
-      if (currentView.type === 'feed') setFeedIdx(i => Math.max(0, i - 1));
-      return;
-    }
-    if (key.downArrow) {
-      if (currentView.type === 'feed') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
-      return;
-    }
+    // Arrows — only feed; thread/view-specific arrows handled by child useInput
+    if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow && currentView.type === 'feed') { setFeedIdx(i => Math.min(posts.length - 1, i + 1)); return; }
 
-    // Enter
+    // Enter — only feed + compose; thread Enter handled by UnifiedThreadView
     if (key.return) {
       if (currentView.type === 'feed') {
         const p = posts[feedIdx];
         if (p) goTo({ type: 'thread', uri: p.uri });
-      } else if (currentView.type === 'compose') {
+        return;
+      }
+      if (currentView.type === 'compose') {
         if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo);
+        return;
       }
       return;
     }
 
     // Ctrl+G
-    if (input === '\x07') {
-      goTo({ type: 'aiChat', contextUri: threadUri ?? undefined });
-      return;
-    }
+    if (input === '\x07') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
 
     const k = input.toLowerCase();
     if (!k) return;
@@ -111,13 +106,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
-    switch (currentView.type) {
-      case 'feed':
-        if (k === 'j') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
-        else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
-        else if (k === 'm') loadMore?.();
-        else if (k === 'r') refresh?.();
-        break;
+    // ── Global navigation shortcuts (work from any view) ──
+    if (k === 't') { goHome(); return; }
+    if (k === 'n') { goTo({ type: 'notifications' }); return; }
+    if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
+    if (k === 's') { goTo({ type: 'search' }); return; }
+    if (k === 'a') { goTo({ type: 'aiChat' }); return; }
+    if (k === 'c') { goTo({ type: 'compose' }); return; }
+
+    // ── Feed-specific ──
+    if (currentView.type === 'feed') {
+      if (k === 'j') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
+      else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
+      else if (k === 'm') loadMore?.();
+      else if (k === 'r') refresh?.();
     }
   });
 
