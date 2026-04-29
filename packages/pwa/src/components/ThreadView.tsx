@@ -201,8 +201,9 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
             {focused.imageUrls?.length > 0 && (
               <div className="mt-2 rounded-lg overflow-hidden border border-border">
                 {focused.imageUrls.map((url, i) => (
-                  <img key={i} src={url} alt={`图片 ${i + 1}`} loading="lazy"
-                    className="w-full max-h-96 object-cover"
+                  <img key={i} src={url} alt={`图片 ${i + 1}`}
+                    width="800" height="600"
+                    className="w-full h-auto max-h-96 object-cover"
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 ))}

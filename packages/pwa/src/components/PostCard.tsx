@@ -153,8 +153,9 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
                   key={i}
                   src={img.url}
                   alt={img.alt || `图片 ${i + 1}`}
-                  loading="lazy"
-                  className="w-full max-h-80 object-cover"
+                  width="800"
+                  height="600"
+                  className="w-full h-auto max-h-80 object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               ))}
