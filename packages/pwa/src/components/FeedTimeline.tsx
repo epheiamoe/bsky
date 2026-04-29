@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { PostCard } from './PostCard';
@@ -28,11 +29,35 @@ function SkeletonCard() {
   );
 }
 
+const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
+
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh }: FeedTimelineProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // ── Virtual scroll ──
+  const virtualizer = useVirtualizer({
+    count: loading && posts.length === 0 ? 5 : posts.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_POST_HEIGHT,
+    overscan: 5,
+  });
+
+  // ── Auto-load-more sentinel ──
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !loadMore || !cursor) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry?.isIntersecting) loadMore(); },
+      { root: scrollRef.current, rootMargin: '200px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [loadMore, cursor, posts.length]);
 
   return (
-    <div className="flex flex-col">
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] px-4 py-3 flex items-center justify-between border-b border-border">
+    <div className="flex flex-col h-[calc(100vh-3rem)]">
+      <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0">
         <h1 className="text-lg font-bold text-text-primary">📋 时间线</h1>
         <button
           onClick={refresh}
@@ -42,7 +67,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         </button>
       </div>
 
-      <div className="flex-1">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {error && (
           <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
             {error}
@@ -64,13 +89,40 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
           </div>
         )}
 
-        {posts.map((post) => (
-          <PostCard
-            key={post.uri}
-            post={post}
-            onClick={() => goTo({ type: 'thread', uri: post.uri })}
-          />
-        ))}
+        <div
+          style={{
+            height: `${virtualizer.getTotalSize()}px`,
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const post = posts[virtualItem.index];
+            if (!post) return null;
+            return (
+              <div
+                key={post.uri}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualItem.start}px)`,
+                }}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+              >
+                <PostCard
+                  post={post}
+                  onClick={() => goTo({ type: 'thread', uri: post.uri })}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Auto-load sentinel */}
+        <div ref={sentinelRef} className="h-px" />
 
         {cursor && (
           <div className="flex justify-center py-4">
