@@ -34,8 +34,50 @@ export class BskyClient {
   private publicKy: KyInstance;
 
   constructor() {
-    this.ky = ky.create({ prefixUrl: BSKY_SERVICE + '/xrpc', timeout: 30000 });
-    this.publicKy = ky.create({ prefixUrl: PUBLIC_API + '/xrpc', timeout: 30000 });
+    const self = this;
+
+    const withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void> = async (request, _options, response) => {
+      // Log any error
+      if (!response.ok) {
+        const body = await response.clone().text();
+        console.error(`[bsky] ${response.status} ${request.method} ${request.url} → ${body}`);
+
+        // Auto-refresh on ExpiredToken
+        if (response.status === 400 && self.session) {
+          try {
+            const err = JSON.parse(body);
+            if (err.error === 'ExpiredToken') {
+              const session = self.session; // capture before async gap
+              // Use raw fetch to bypass ky hooks (avoid recursion)
+              const refreshRes = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${session.refreshJwt}` },
+              });
+              if (refreshRes.ok) {
+                self.session = await refreshRes.json() as CreateSessionResponse;
+                // Retry with new JWT — clone request + replace auth header
+                const retryReq = new Request(request, {
+                  headers: { ...Object.fromEntries(request.headers.entries()), Authorization: `Bearer ${self.session.accessJwt}` },
+                });
+                return fetch(retryReq);
+              }
+              // Refresh also failed — clear session
+              self.session = null;
+            }
+          } catch { /* parse error, not ExpiredToken */ }
+        }
+      }
+    };
+
+    this.ky = ky.create({
+      prefixUrl: BSKY_SERVICE + '/xrpc',
+      timeout: 30000,
+      hooks: { afterResponse: [withRefresh] },
+    });
+    this.publicKy = ky.create({
+      prefixUrl: PUBLIC_API + '/xrpc',
+      timeout: 30000,
+    });
   }
 
   private getAuthHeaders(): Record<string, string> {
