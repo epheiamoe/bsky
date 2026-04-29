@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
 import { getCdnImageUrl } from '@bsky/app';
@@ -54,6 +54,62 @@ function extractEmbeds(post: PostView): { images: ImageData[]; external: Externa
 
 function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
+}
+
+function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10">✕</button>
+      <img
+        src={images[initial]!.url}
+        alt={images[initial]!.alt}
+        className="max-w-full max-h-[90vh] object-contain rounded-lg"
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>
+  );
+}
+
+function ImageGrid({ images }: { images: ImageData[] }) {
+  const [lightbox, setLightbox] = useState<number | null>(null);
+
+  const grid = (() => {
+    const n = images.length;
+    if (n === 1) return 'grid-cols-1';
+    if (n === 2) return 'grid-cols-2 gap-[2px]';
+    if (n === 3) return 'grid-cols-2 gap-[2px]'; // 2-col grid, first 2 in row 1, 3rd spans
+    return 'grid-cols-2 gap-[2px]';
+  })();
+
+  return (
+    <>
+      <div className="mt-2 rounded-xl overflow-hidden border border-border">
+        <div className={`grid ${grid}`}>
+          {images.map((img, i) => {
+            const spanFull = images.length === 3 && i === 2;
+            return (
+              <img
+                key={i}
+                src={img.url}
+                alt={img.alt || `图片 ${i + 1}`}
+                width="800" height="600"
+                className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
+                onClick={(e) => { e.stopPropagation(); setLightbox(i); }}
+              />
+            );
+          })}
+        </div>
+        {images.length > 4 && (
+          <div className="text-center text-xs text-text-secondary py-1.5 bg-surface">
+            +{images.length - 4} 张
+          </div>
+        )}
+      </div>
+      {lightbox !== null && (
+        <ImageLightbox images={images} initial={lightbox} onClose={() => setLightbox(null)} />
+      )}
+    </>
+  );
 }
 
 interface PostCardBaseProps {
@@ -146,20 +202,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
           <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap line-clamp-6">
             {text}
           </p>
-          {hasImages && (
-            <div className="mt-2 rounded-lg overflow-hidden border border-border">
-              {images.map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt={img.alt || `图片 ${i + 1}`}
-                  width="800"
-                  height="600"
-                  className="w-full h-auto max-h-80 object-cover"
-                />
-              ))}
-            </div>
-          )}
+          {hasImages && <ImageGrid images={images} />}
           {externalLink && (
             <a
               href={externalLink.uri}
@@ -184,3 +227,5 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     </div>
   );
 }
+
+export { ImageGrid, ImageLightbox };

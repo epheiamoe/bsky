@@ -4,6 +4,7 @@ import { useBookmarks } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { PostCard } from './PostCard.js';
+import { ImageGrid } from './PostCard.js';
 import { formatTime, uriToRkey, getPostUrl } from '../utils/format.js';
 
 interface ThreadViewProps {
@@ -48,8 +49,7 @@ function ActionButtons({
   toggleBookmark: (uri: string, cid: string) => void;
   goTo: (v: AppView) => void;
 }) {
-  const isSmall = depth > 0;
-  const sizeClass = isSmall ? 'text-xs gap-2' : 'text-sm gap-3';
+  const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
 
   return (
     <div className={`flex items-center ${sizeClass} text-text-secondary mt-2`}>
@@ -100,12 +100,11 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
   const {
     flatLines,
     loading,
-    focusedIndex,
+    focused,
     likePost,
     repostPost,
     isLiked,
     isReposted,
-    focused,
   } = useThread(client, uri);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
@@ -128,6 +127,9 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
     return { parentLines: parents, replyLines: replies };
   }, [flatLines]);
 
+  const isTheme = focused?.isRoot && focused?.depth === 0;
+  const focusedTitle = isTheme ? '主题帖' : '当前帖子';
+
   if (loading) return <Spinner />;
 
   return (
@@ -138,13 +140,7 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
             onClick={goBack}
             className="flex items-center gap-1 text-text-secondary hover:text-text-primary transition-colors"
           >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
             <span className="text-sm">返回</span>
@@ -154,12 +150,15 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
       </header>
 
       <main className="max-w-content mx-auto px-4 py-6 space-y-4">
+        {/* ── 讨论源 (parent chain) ── */}
         {parentLines.length > 0 && (
           <section className="space-y-2">
+            <p className="text-xs text-text-secondary font-medium pl-4">── 讨论源 ──</p>
             {parentLines.map((line) => (
               <div
                 key={line.uri || line.rkey}
-                className="pl-4 border-l-2 border-border opacity-60 hover:opacity-100 transition-opacity rounded-r-lg py-3"
+                onClick={() => goTo({ type: 'thread', uri: line.uri })}
+                className="pl-4 border-l-2 border-border opacity-60 hover:opacity-100 transition-opacity rounded-r-lg py-3 cursor-pointer"
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium text-text-primary">
@@ -181,8 +180,10 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
           </section>
         )}
 
+        {/* ── 主题帖 / 当前帖子 ── */}
         {focused && (
           <article className="border-l-4 border-primary pl-4 py-3 rounded-r-lg bg-surface/50">
+            <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-base font-semibold text-text-primary">
                 {focused.displayName}
@@ -199,14 +200,7 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
               {focused.text}
             </p>
             {focused.imageUrls?.length > 0 && (
-              <div className="mt-2 rounded-lg overflow-hidden border border-border">
-                {focused.imageUrls.map((url, i) => (
-                  <img key={i} src={url} alt={`图片 ${i + 1}`}
-                    width="800" height="600"
-                    className="w-full h-auto max-h-96 object-cover"
-                  />
-                ))}
-              </div>
+              <ImageGrid images={focused.imageUrls.map(url => ({ url, alt: '' }))} />
             )}
             {focused.externalLink && (
               <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
@@ -248,13 +242,16 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
           </article>
         )}
 
+        {/* ── 回复 ── */}
         {replyLines.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-sm font-semibold text-text-secondary ml-4">
-              回复 ({replyLines.length})
-            </h2>
+            <p className="text-xs text-text-secondary font-medium pl-4">── 回复 ({replyLines.length}) ──</p>
             {replyLines.map((line) => (
-              <PostCard key={line.uri || line.rkey} line={line}>
+              <PostCard
+                key={line.uri || line.rkey}
+                line={line}
+                onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+              >
                 <ActionButtons
                   uri={line.uri}
                   cid={line.cid}
