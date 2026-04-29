@@ -1,6 +1,8 @@
-type ImageSize = 'plain' | 'full' | 'large' | 'small' | 'thumb';
-
-export function getCdnImageUrl(did: string, cid: string, mimeType: string, size: ImageSize = 'plain'): string {
-  const fmt = mimeType.split('/')[1] ?? 'jpeg';
-  return `https://cdn.bsky.social/imgz/${size}/${fmt}/${did}/${cid}@${fmt}`;
+/**
+ * Construct a Bluesky blob download URL.
+ * Uses the PDS endpoint which auto-redirects to the hosting server.
+ * Works in browser <img> tags (browsers follow 302 redirects).
+ */
+export function getCdnImageUrl(did: string, cid: string, _mimeType?: string): string {
+  return `https://bsky.social/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`;
 }
