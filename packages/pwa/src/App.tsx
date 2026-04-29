@@ -20,6 +20,11 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
 
+  // ── Sync dark mode on mount ──
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', getAppConfig().darkMode);
+  }, []);
+
   // ── Restore session from localStorage on mount ──
   useEffect(() => {
     const saved = getSession();
@@ -56,6 +61,15 @@ export function App() {
     setIsLoggedIn(false);
     goHome();
   }, [goHome]);
+
+  const handleRelogin = useCallback(async (handle: string, password: string) => {
+    clearSession();
+    try {
+      await login(handle, password);
+    } catch {
+      // will be caught by caller
+    }
+  }, [login]);
 
   // ── Loading ──
   if (authLoading) {
@@ -139,6 +153,9 @@ export function App() {
       goTo={goTo}
       client={client}
       onLogout={handleLogout}
+      config={appConfig}
+      onConfigChange={setAppConfig}
+      onRelogin={handleRelogin}
     >
       {renderView()}
     </Layout>

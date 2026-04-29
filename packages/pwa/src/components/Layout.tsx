@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
+import type { AppConfig } from '../hooks/useAppConfig.js';
 import { Sidebar } from './Sidebar';
+import { SettingsModal } from './SettingsModal';
 
 interface LayoutProps {
   currentView: AppView;
@@ -12,6 +14,9 @@ interface LayoutProps {
   client: BskyClient;
   onLogout: () => void;
   children: React.ReactNode;
+  config: AppConfig;
+  onConfigChange: (config: AppConfig) => void;
+  onRelogin: (handle: string, password: string) => Promise<void>;
 }
 
 const MOBILE_TABS = [
@@ -30,11 +35,15 @@ export function Layout({
   client,
   onLogout,
   children,
+  config,
+  onConfigChange,
+  onRelogin,
 }: LayoutProps) {
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false;
     return document.documentElement.classList.contains('dark');
   });
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const authenticated = client.isAuthenticated();
   const handle = authenticated ? client.getHandle() : null;
@@ -78,14 +87,21 @@ export function Layout({
             }`}
             title={authenticated ? '已连接' : '未连接'}
           />
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={toggleDark}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
-              aria-label={dark ? '切换亮色模式' : '切换暗色模式'}
-            >
-              {dark ? '☀️' : '🌙'}
-            </button>
+           <div className="ml-auto flex items-center gap-2">
+             <button
+               onClick={() => setSettingsOpen(true)}
+               className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
+               aria-label="设置"
+             >
+               ⚙️
+             </button>
+             <button
+               onClick={toggleDark}
+               className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
+               aria-label={dark ? '切换亮色模式' : '切换暗色模式'}
+             >
+               {dark ? '☀️' : '🌙'}
+             </button>
             <button
               onClick={onLogout}
               className="text-text-secondary hover:text-red-500 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-surface"
@@ -137,7 +153,16 @@ export function Layout({
             );
           })}
         </div>
-      </nav>
-    </div>
-  );
-}
+       </nav>
+
+       <SettingsModal
+         open={settingsOpen}
+         onClose={() => setSettingsOpen(false)}
+         config={config}
+         onConfigChange={onConfigChange}
+         onRelogin={onRelogin}
+         onLogout={onLogout}
+       />
+     </div>
+   );
+ }
