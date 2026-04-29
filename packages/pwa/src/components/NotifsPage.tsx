@@ -1,0 +1,125 @@
+import React from 'react';
+import type { BskyClient, Notification } from '@bsky/core';
+import { useNotifications } from '@bsky/app';
+
+interface NotifsPageProps {
+  client: BskyClient;
+  goBack: () => void;
+}
+
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo`;
+  return `${Math.floor(months / 12)}y`;
+}
+
+const REASON_EMOJI: Record<string, string> = {
+  like: '♥',
+  repost: '♻',
+  follow: '👤',
+  reply: '💬',
+  mention: '@',
+  quote: '💬',
+};
+
+const REASON_TEXT: Record<string, string> = {
+  like: '喜欢了你的帖子',
+  repost: '转发了你的帖子',
+  follow: '关注了你',
+  reply: '回复了你的帖子',
+  mention: '提到了你',
+  quote: '引用了你的帖子',
+};
+
+function avatarLetter(author: { displayName?: string; handle: string }): string {
+  const name = author.displayName || author.handle;
+  return name.charAt(0).toUpperCase();
+}
+
+function NotifItem({ n }: { n: Notification }) {
+  const emoji = REASON_EMOJI[n.reason] ?? '🔔';
+  const reasonText = REASON_TEXT[n.reason] ?? n.reason;
+
+  return (
+    <div className="border-b border-border px-4 py-3 hover:bg-surface transition-colors">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
+          {avatarLetter(n.author)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1">
+            <span className="text-lg shrink-0">{emoji}</span>
+            <span className="text-text-primary font-semibold text-sm truncate">
+              {n.author.displayName || n.author.handle}
+            </span>
+          </div>
+          <p className="text-text-secondary text-xs mt-0.5">
+            @{n.author.handle}{' '}
+            {reasonText}
+          </p>
+          <p className="text-text-secondary text-xs mt-0.5">
+            {timeAgo(n.indexedAt)}
+          </p>
+        </div>
+        {!n.isRead && (
+          <div className="shrink-0 self-center">
+            <div className="w-2 h-2 rounded-full bg-primary" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function NotifsPage({ client, goBack }: NotifsPageProps) {
+  const { notifications, loading, refresh } = useNotifications(client);
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+      <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={goBack}
+            className="text-text-secondary hover:text-text-primary transition-colors text-lg"
+          >
+            ←
+          </button>
+          <h1 className="text-text-primary font-semibold text-lg">🔔 通知</h1>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
+        >
+          刷新
+        </button>
+      </div>
+
+      {loading && notifications.length === 0 ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : notifications.length > 0 ? (
+        <div>
+          {notifications.map((n) => (
+            <NotifItem key={n.uri} n={n} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <p className="text-text-secondary text-sm">暂无通知</p>
+        </div>
+      )}
+    </div>
+  );
+}
