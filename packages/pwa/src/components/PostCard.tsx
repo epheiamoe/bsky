@@ -9,12 +9,24 @@ interface ImageData {
   alt: string;
 }
 
-function extractImages(post: PostView): ImageData[] {
-  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
-  const images: ImageData[] = [];
-  if (!embed) return images;
+interface ExternalLink {
+  uri: string;
+  title: string;
+  description: string;
+}
 
-  const processEmbed = (e: typeof embed) => {
+function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null } {
+  const images: ImageData[] = [];
+  let external: ExternalLink | null = null;
+  const embed = post.record.embed as {
+    $type?: string;
+    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
+    external?: { uri: string; title: string; description: string };
+  } | undefined;
+  if (!embed) return { images, external };
+
+  const collectImages = (e: typeof embed) => {
     if (!e) return;
     if (e.$type === 'app.bsky.embed.images' && e.images) {
       for (const img of e.images) {
@@ -24,11 +36,20 @@ function extractImages(post: PostView): ImageData[] {
         });
       }
     } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
-      processEmbed(e.media);
+      collectImages(e.media);
     }
   };
-  processEmbed(embed);
-  return images;
+  collectImages(embed);
+
+  if (embed.$type === 'app.bsky.embed.external' && embed.external) {
+    external = {
+      uri: embed.external.uri,
+      title: embed.external.title,
+      description: embed.external.description,
+    };
+  }
+
+  return { images, external };
 }
 
 function avatarLetter(name: string): string {
@@ -62,8 +83,8 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
   let repostCount: number | undefined;
   let replyCount: number | undefined;
   let hasImages = false;
-  let imageCount = 0;
   let images: ImageData[] = [];
+  let externalLink: ExternalLink | null = null;
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -73,9 +94,10 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     likeCount = post.likeCount;
     repostCount = post.repostCount;
     replyCount = post.replyCount;
-    images = extractImages(post);
+    const embeds = extractEmbeds(post);
+    images = embeds.images;
     hasImages = images.length > 0;
-    imageCount = images.length;
+    externalLink = embeds.external;
   } else if (line) {
     displayName = line.displayName || line.handle;
     handle = line.handle;
@@ -130,6 +152,19 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
                 />
               ))}
             </div>
+          )}
+          {externalLink && (
+            <a
+              href={externalLink.uri}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+            >
+              <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
+              {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
+              <p className="text-primary text-xs mt-1 truncate">🔗 {externalLink.uri}</p>
+            </a>
           )}
           <div className="flex items-center gap-4 mt-2 text-text-secondary text-xs">
             <span>💬 {replyCount ?? 0}</span>

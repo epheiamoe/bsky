@@ -100,8 +100,8 @@ elevation:
 
 - **桌面布局**（≥1024px）：
   - 左侧导航栏：固定 280px（包含 时间线、通知、搜索、**AI**、发帖）
-  - 主内容区：最大 680px（Feed / Profile / 搜索结果）
-  - 右侧面板：300px（趋势、AI 建议、谁在关注）
+  - 主内容区：最大 880px（Feed / Profile / 搜索结果）
+  - 右侧面板：300px，但可收起（趋势、AI 建议、谁在关注，这部分作为TODO，目前先留白）
 
 - **移动端**（≤768px）：
   - 顶部 App Bar + 底部 Tab Bar（Home / Search / Notifications / AI / Post）
@@ -133,16 +133,11 @@ elevation:
 ### 2. Feed Card（帖子）
 - Avatar（圆形，带在线状态可选）
 - 内容区：用户名 + Handle + 时间 + 正文（支持富文本、图片、视频）
-- 互动栏：回复 / 转发 / 点赞 / 书签 / **AI 回复建议**（单独蓝色按钮）
+- 互动栏：回复 / 转发 / 点赞 / 书签
 - Hover / 按压反馈明显
 
 ### 3. Post Composer（发帖）
-- 多行输入 + 媒体预览 + AI 润色按钮（醒目 Primary 色）
-
-### 4. AI 专属组件
-- **AI 浮窗** / **侧边 AI Panel**：半透明玻璃态（backdrop-blur）
-- **AI 回复建议卡**：蓝色渐变边框 + “由 AI 生成” 水印
-- **AI 总结**：Feed 顶部一键按钮，展开卡片式总结
+- 多行输入 + 媒体预览(TODO) + AI 润色按钮（醒目 Primary 色）
 
 ### 5. Button 变体
 - Primary（实色）
@@ -173,13 +168,3 @@ elevation:
 
 **使用方式**（给 AI 提示时直接引用）：
 > 请严格参考项目根目录的 DESIGN.md 生成所有 UI 组件。使用 CSS 变量实现主题切换，默认 primary 为 #00A5E0，支持 Light/Dark 自动适配。
-
-依菲雅，这个 DESIGN.md 已完整、可直接复制到项目根目录。  
-它同时覆盖了你 TUI 中已实现的功能（时间线、通知、搜索、AI、发帖），但视觉完全对齐 Bluesky Web 的现代风格。
-
-需要我立刻帮你：
-- 生成配套的 `tailwind.config.js` / CSS 变量文件？
-- 补充具体组件的 Figma 描述或代码示例？
-- 或者调整成更偏 X 黑色的暗黑主题？
-
-随时说，我继续迭代！🚀
