@@ -286,10 +286,6 @@ export class BskyClient {
     return this.session !== null;
   }
 
-  restoreSession(session: CreateSessionResponse): void {
-    this.session = session;
-  }
-
   async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {
     return this.ky.post('app.bsky.bookmark.createBookmark', {
       headers: this.getAuthHeaders(),
