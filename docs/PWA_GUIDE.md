@@ -1,8 +1,56 @@
 # PWA Migration Guide
 
-## What to Reuse (100%)
+## Quick Start
 
-All of these can be imported directly from `@bsky/app`:
+```bash
+cd packages/pwa
+pnpm dev        # dev server at http://localhost:5173
+pnpm build      # production build → dist/
+pnpm preview    # preview production build
+```
+
+**Static hosting**: Upload `dist/` to any static host (Netlify, Vercel, Cloudflare Pages, GitHub Pages). Set base path in `vite.config.ts` if needed.
+
+**No backend required** — all Bluesky API calls go directly from the browser. CORS is supported by Bluesky's public API and PDS endpoints.
+
+**No `.env` needed** — credentials are entered via the login form and persisted in `localStorage`. AI API key is configured in-app via a settings page.
+
+## Architecture
+
+The PWA (`@bsky/pwa`) is now implemented. It shares 100% of business logic with the TUI via `@bsky/app` hooks.
+
+```
+packages/pwa/
+├── package.json
+├── vite.config.ts
+├── tailwind.config.ts
+├── index.html
+├── public/manifest.json & sw.js
+└── src/
+    ├── main.tsx
+    ├── App.tsx                  # View router + session restore
+    ├── index.css                # CSS variables (light/dark)
+    ├── components/
+    │   ├── Layout.tsx           # 3-column desktop + mobile bottom bar
+    │   ├── Sidebar.tsx          # 6-tab nav
+    │   ├── LoginPage.tsx        # Handle + App Password form
+    │   ├── PostCard.tsx         # Dual PostView/FlatLine card
+    │   ├── FeedTimeline.tsx     # Timeline with load more
+    │   ├── ThreadView.tsx       # Thread + reply tree + actions
+    │   ├── ComposePage.tsx      # Post/reply composer
+    │   ├── AIChatPage.tsx       # AI chat + history sidebar
+    │   ├── ProfilePage.tsx      # User profile
+    │   ├── SearchPage.tsx       # Post search
+    │   ├── NotifsPage.tsx       # Notifications list
+    │   └── BookmarkPage.tsx     # Bookmark list
+    ├── hooks/
+    │   ├── useSessionPersistence.ts  # localStorage session store
+    │   └── useAppConfig.ts           # localStorage config
+    ├── services/
+    │   └── indexeddb-chat-storage.ts # ChatStorage IndexedDB impl
+    └── utils/
+        └── format.ts            # time formatting, URI helpers
+```
 
 ```
 import {
