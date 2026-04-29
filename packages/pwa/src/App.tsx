@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigation, useAuth, useNotifications, useBookmarks } from '@bsky/app';
+import { useAuth } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import { getSession, saveSession, clearSession, type StoredSession } from './hooks/useSessionPersistence.js';
+import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
+import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
 import { FeedTimeline } from './components/FeedTimeline.js';
@@ -15,7 +16,7 @@ import { NotifsPage } from './components/NotifsPage.js';
 import { BookmarkPage } from './components/BookmarkPage.js';
 
 export function App() {
-  const { currentView, canGoBack, goTo, goBack, goHome } = useNavigation();
+  const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
