@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
@@ -10,16 +11,17 @@ interface SidebarProps {
 }
 
 const SIDEBAR_TABS = [
-  { emoji: '📋', label: '时间线', type: 'feed' as const, needsHandle: false },
-  { emoji: '🔔', label: '通知', type: 'notifications' as const, needsHandle: false },
-  { emoji: '🔍', label: '搜索', type: 'search' as const, needsHandle: false },
-  { emoji: '🔖', label: '书签', type: 'bookmarks' as const, needsHandle: false },
-  { emoji: '👤', label: '我', type: 'profile' as const, needsHandle: true },
-  { emoji: '🤖', label: 'AI 对话', type: 'aiChat' as const, needsHandle: false },
-  { emoji: '✏️', label: '发帖', type: 'compose' as const, needsHandle: false },
-];
+  { emoji: '📋', key: 'nav.feed', type: 'feed' as const, needsHandle: false },
+  { emoji: '🔔', key: 'nav.notifications', type: 'notifications' as const, needsHandle: false },
+  { emoji: '🔍', key: 'nav.search', type: 'search' as const, needsHandle: false },
+  { emoji: '🔖', key: 'nav.bookmarks', type: 'bookmarks' as const, needsHandle: false },
+  { emoji: '👤', key: 'nav.profile', type: 'profile' as const, needsHandle: true },
+  { emoji: '🤖', key: 'nav.aiChat', type: 'aiChat' as const, needsHandle: false },
+  { emoji: '✏️', key: 'nav.compose', type: 'compose' as const, needsHandle: false },
+] as const;
 
 export function Sidebar({ currentView, goTo, client, notifCount }: SidebarProps) {
+  const { t } = useI18n();
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
   return (
@@ -45,7 +47,7 @@ export function Sidebar({ currentView, goTo, client, notifCount }: SidebarProps)
             }`}
           >
             <span className="text-lg w-6 text-center leading-none">{tab.emoji}</span>
-            <span className="flex-1">{tab.label}</span>
+            <span className="flex-1">{t(tab.key)}</span>
             {tab.type === 'notifications' && notifCount != null && notifCount > 0 && (
               <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
                 {notifCount > 99 ? '99+' : notifCount}

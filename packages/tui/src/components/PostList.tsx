@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Box, Text } from 'ink';
 import type { PostView } from '@bsky/core';
+import { useI18n } from '@bsky/app';
 import { postToLines, PostListItem, PostSkeleton } from './PostItem.js';
 import type { PostLine } from './PostItem.js';
 
@@ -14,15 +15,17 @@ export interface PostListProps {
 }
 
 export function PostList({ posts, loading, selectedIndex, width, height }: PostListProps) {
+  const { t, locale } = useI18n();
+
   // Pre-compute all lines for all posts
   const allLines = useMemo(() => {
     const lines: PostLine[] = [];
     for (let i = 0; i < posts.length; i++) {
-      const postLines = postToLines(posts[i]!, i, i === selectedIndex, width);
+      const postLines = postToLines(posts[i]!, i, i === selectedIndex, width, t, locale);
       for (const l of postLines) lines.push(l);
     }
     return lines;
-  }, [posts, selectedIndex, width]);
+  }, [posts, selectedIndex, width, t, locale]);
 
   // Find which range of lines is visible. selectedIndex should be centered.
   const visibleLines = height - 4; // header + margins
@@ -45,10 +48,10 @@ export function PostList({ posts, loading, selectedIndex, width, height }: PostL
   return (
     <Box flexDirection="column" flexGrow={1}>
       {posts.length === 0 && !loading && (
-        <Text dimColor>没有帖子。按 Enter 查看帖子。</Text>
+        <Text dimColor>{t('status.noPosts')}</Text>
       )}
       {hasAbove && (
-        <Text dimColor color="cyan">{`▲ ${scrollPct}% (${selectedIndex + 1}/${posts.length} 帖)`}</Text>
+        <Text dimColor color="cyan">{`▲ ${scrollPct}% (${selectedIndex + 1}/${posts.length})`}</Text>
       )}
       {visibleSlice.map((line, i) => (
         <PostListItem key={`${viewStart + i}`} line={line} />
@@ -56,9 +59,9 @@ export function PostList({ posts, loading, selectedIndex, width, height }: PostL
       {hasBelow && (
         <Text dimColor color="cyan">{`▼ ${100 - scrollPct}%`}</Text>
       )}
-      {loading && posts.length === 0 && <PostSkeleton />}
+      {loading && posts.length === 0 && <PostSkeleton t={t} />}
       {loading && posts.length > 0 && (
-        <Text color="yellow">⏳ 加载更多...</Text>
+        <Text color="yellow">{'⏳ '}{t('action.loading')}</Text>
       )}
     </Box>
   );

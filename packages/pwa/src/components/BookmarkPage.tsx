@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks } from '@bsky/app';
+import { useBookmarks, useI18n } from '@bsky/app';
 import { PostCard } from './PostCard.js';
 
 interface BookmarkPageProps {
@@ -11,6 +11,7 @@ interface BookmarkPageProps {
 }
 
 export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
+  const { t } = useI18n();
   const { bookmarks, loading, removeBookmark, refresh } = useBookmarks(client);
 
   return (
@@ -23,14 +24,14 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
           >
             ←
           </button>
-          <h1 className="text-text-primary font-semibold text-lg">🔖 书签</h1>
+          <h1 className="text-text-primary font-semibold text-lg">🔖 {t('bookmarks.title')}</h1>
         </div>
         <button
           onClick={refresh}
           disabled={loading}
           className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
         >
-          刷新
+          {t('action.refresh')}
         </button>
       </div>
 
@@ -52,7 +53,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
                   removeBookmark(post.uri);
                 }}
                 className="absolute top-2 right-3 w-7 h-7 rounded-full bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-red-500 hover:border-red-300 transition-colors text-xs"
-                title="移除书签"
+                title={t('action.removeBookmark')}
               >
                 ✕
               </button>
@@ -61,7 +62,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <p className="text-text-secondary text-sm">暂无书签</p>
+          <p className="text-text-secondary text-sm">{t('bookmarks.empty')}</p>
         </div>
       )}
     </div>

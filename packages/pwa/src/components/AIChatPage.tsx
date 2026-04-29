@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useAIChat, useChatHistory } from '@bsky/app';
+import { useAIChat, useChatHistory, useI18n } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { IndexedDBChatStorage } from '../services/indexeddb-chat-storage.js';
@@ -15,6 +15,7 @@ interface AIChatPageProps {
 }
 
 export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageProps) {
+  const { t } = useI18n();
   const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [chatId, setChatId] = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,7 +105,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
         }`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-sm font-semibold text-text-primary">🤖 AI 对话历史</h2>
+          <h2 className="text-sm font-semibold text-text-primary">🤖 {t('ai.history')}</h2>
           <button
             className="md:hidden text-text-secondary hover:text-text-primary p-1"
             onClick={() => setSidebarOpen(false)}
@@ -118,13 +119,13 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
             onClick={handleNewChat}
             className="w-full py-2 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
           >
-            ＋ 新对话
+            ＋ {t('ai.newChat')}
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 pb-2">
           {conversations.length === 0 ? (
-            <p className="text-text-secondary text-xs text-center mt-8 px-4">暂无对话历史</p>
+            <p className="text-text-secondary text-xs text-center mt-8 px-4">{t('ai.emptyHistory')}</p>
           ) : (
             conversations.map((c) => (
               <div
@@ -140,7 +141,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                   <p className="text-sm text-text-primary truncate">{c.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
                     <span className="text-xs text-text-secondary">
-                      {c.messageCount} 条消息
+                      {t('ai.messageCount', { n: c.messageCount })}
                     </span>
                     <span className="text-xs text-text-secondary/60">
                       {formatTime(c.updatedAt)}
@@ -150,7 +151,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                 <button
                   onClick={(e) => handleDeleteChat(e, c.id)}
                   className="opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-500 p-0.5 transition-all shrink-0"
-                  title="删除对话"
+                  title={t('ai.deleteChat')}
                 >
                   🗑
                 </button>
@@ -167,20 +168,20 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary p-1 transition-colors"
-            title="返回"
+            title={t('nav.back')}
           >
             ←
           </button>
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             className="md:hidden text-text-secondary hover:text-text-primary p-1 transition-colors"
-            title="对话历史"
+            title={t('ai.history')}
           >
             ☰
           </button>
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-lg">🤖</span>
-            <h1 className="text-base font-semibold text-text-primary truncate">AI 对话</h1>
+            <h1 className="text-base font-semibold text-text-primary truncate">{t('nav.aiChat')}</h1>
           </div>
           {contextUri && (
             <span className="ml-auto text-xs text-text-secondary bg-surface border border-border rounded-full px-2.5 py-0.5 truncate max-w-[200px]">
@@ -199,7 +200,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
               {guidingQuestions.length > 0 ? (
                 <div className="space-y-3 w-full max-w-sm">
-                  <p className="text-text-secondary text-sm mb-4">快速提问：</p>
+                  <p className="text-text-secondary text-sm mb-4">{t('ai.quickQuestions')}</p>
                   {guidingQuestions.map((q, i) => (
                     <button
                       key={i}
@@ -211,7 +212,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                   ))}
                 </div>
               ) : (
-                <p className="text-text-secondary text-sm">开始与 AI 对话，分析帖子内容</p>
+                <p className="text-text-secondary text-sm">{t('ai.emptyPrompt')}</p>
               )}
             </div>
           )}
@@ -259,7 +260,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
           {loading && (
             <div className="flex justify-start">
               <div className="bg-surface rounded-lg px-4 py-2.5 border border-border flex items-center gap-1.5">
-                <span className="text-sm text-text-secondary">🤖 思考中</span>
+                <span className="text-sm text-text-secondary">🤖 {t('ai.thinking')}</span>
                 <span className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms' }} />
@@ -279,7 +280,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="输入消息，Enter 发送，Shift+Enter 换行..."
+              placeholder={t('ai.placeholder')}
               disabled={loading}
               rows={1}
               className="flex-1 resize-none rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 max-h-32"
@@ -295,7 +296,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               disabled={!input.trim() || loading}
               className="shrink-0 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors disabled:opacity-50"
             >
-              发送
+              {t('action.send')}
             </button>
           </div>
         </div>

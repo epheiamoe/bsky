@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
@@ -32,6 +33,7 @@ export function Layout({
   onConfigChange,
   onRelogin,
 }: LayoutProps) {
+  const { t } = useI18n();
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false;
     return document.documentElement.classList.contains('dark');
@@ -57,7 +59,7 @@ export function Layout({
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none"
-            aria-label="菜单"
+            aria-label={t('nav.menu')}
           >
             ☰
           </button>
@@ -66,7 +68,7 @@ export function Layout({
             <button
               onClick={goBack}
               className="text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none hidden md:block"
-              aria-label="返回"
+              aria-label={t('nav.back')}
             >
               ←
             </button>
@@ -80,20 +82,20 @@ export function Layout({
             className={`w-2 h-2 rounded-full flex-shrink-0 ${
               authenticated ? 'bg-green-500' : 'bg-gray-400'
             }`}
-            title={authenticated ? '已连接' : '未连接'}
+            title={authenticated ? t('status.connected') : t('status.disconnected')}
           />
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setSettingsOpen(true)}
               className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
-              aria-label="设置"
+              aria-label={t('nav.settings')}
             >
               ⚙️
             </button>
             <button
               onClick={toggleDark}
               className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
-              aria-label={dark ? '切换亮色模式' : '切换暗色模式'}
+              aria-label={dark ? t('theme.switchLight') : t('theme.switchDark')}
             >
               {dark ? '☀️' : '🌙'}
             </button>
@@ -101,7 +103,7 @@ export function Layout({
               onClick={onLogout}
               className="text-text-secondary hover:text-red-500 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-surface hidden md:block"
             >
-              退出
+              {t('settings.logout')}
             </button>
           </div>
         </div>
@@ -122,7 +124,7 @@ export function Layout({
                 onClick={() => { onLogout(); setSidebarOpen(false); }}
                 className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"
               >
-                退出登录
+                {t('settings.logout')}
               </button>
             </div>
           </div>
@@ -142,7 +144,7 @@ export function Layout({
         <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100vh-3rem)] sticky top-12 border-l border-border flex-shrink-0 p-4">
           <div className="text-text-secondary text-sm">
             <p className="text-lg mb-2">🤖</p>
-            <p className="font-semibold text-text-primary mb-1">AI 建议</p>
+            <p className="font-semibold text-text-primary mb-1">{t('layout.aiSuggestions')}</p>
             <p className="text-xs">(TODO)</p>
           </div>
         </aside>

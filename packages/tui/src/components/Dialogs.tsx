@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
+import { useI18n } from '@bsky/app';
 
 export interface ConfirmDialogProps {
   visible: boolean;
@@ -11,16 +12,17 @@ export interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ visible, title, message, onConfirm, onReject }: ConfirmDialogProps) {
+  const { t } = useI18n();
   if (!visible) return null;
 
   return (
     <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={2} paddingY={1}>
-      <Text bold color="yellow">⚠ {title}</Text>
+      <Text bold color="yellow">{'⚠ '}{title}</Text>
       <Text>{message}</Text>
       <Box marginTop={1}>
-        <Text color="green">[Y/Enter] 确认</Text>
+        <Text color="green">{'[Y/Enter] '}{t('action.confirm')}</Text>
         <Text>  </Text>
-        <Text color="red">[N] 取消</Text>
+        <Text color="red">{'[N] '}{t('action.cancel')}</Text>
       </Box>
     </Box>
   );
@@ -35,6 +37,7 @@ export interface ComposePanelProps {
 
 export function ComposePanel({ visible, onPost, onClose, focused = true }: ComposePanelProps) {
   const [text, setText] = useState('');
+  const { t } = useI18n();
 
   if (!visible) return null;
 
@@ -44,8 +47,8 @@ export function ComposePanel({ visible, onPost, onClose, focused = true }: Compo
   return (
     <Box flexDirection="column" borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
       <Box height={1}>
-        <Text bold color="yellow">✏️ 发帖</Text>
-        <Text dimColor>  Enter 发送 · Esc 取消 · 最多 300 字符</Text>
+        <Text bold color="yellow">{'✏️ '}{t('compose.title')}</Text>
+        <Text dimColor>{'  '}{t('keys.compose')}</Text>
       </Box>
 
       <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
@@ -56,7 +59,7 @@ export function ComposePanel({ visible, onPost, onClose, focused = true }: Compo
             onSubmit={() => {
               if (text.trim()) { onPost(text.trim()); setText(''); }
             }}
-            placeholder="此刻的想法..."
+            placeholder={t('compose.placeholder')}
           />
         ) : (
           <Text>{text || ' '}</Text>
@@ -65,7 +68,7 @@ export function ComposePanel({ visible, onPost, onClose, focused = true }: Compo
 
       <Box height={1}>
         <Text color={counterColor}>{text.length}/300</Text>
-        {text.length > 280 && <Text color="yellow">  ⚠ 接近上限</Text>}
+        {text.length > 280 && <Text color="yellow">{'  ⚠ '}{t('compose.charWarn')}</Text>}
       </Box>
     </Box>
   );

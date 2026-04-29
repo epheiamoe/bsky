@@ -2,8 +2,11 @@
 import React from 'react';
 import { render } from 'ink';
 import { App } from './components/App.jsx';
+import { SetupWizard } from './components/SetupWizard.jsx';
+import type { SetupConfig } from './components/SetupWizard.jsx';
 import dotenv from 'dotenv';
 import path from 'path';
+import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
@@ -23,22 +26,68 @@ const HANDLE = process.env.BLUESKY_HANDLE;
 const APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD;
 const LLM_API_KEY = process.env.LLM_API_KEY;
 
-if (!HANDLE || !APP_PASSWORD) {
-  console.error('Error: BLUESKY_HANDLE and BLUESKY_APP_PASSWORD must be set in .env');
-  console.error('Copy .env.example to .env and fill in your credentials.');
-  process.exit(1);
+interface AppConfig {
+  blueskyHandle: string;
+  blueskyPassword: string;
+  aiConfig: {
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+  };
+  targetLang?: string;
 }
 
-const config = {
-  blueskyHandle: HANDLE,
-  blueskyPassword: APP_PASSWORD,
-  aiConfig: {
-    apiKey: LLM_API_KEY || '',
-    baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
-    model: process.env.LLM_MODEL || 'deepseek-v4-flash',
-  },
-  targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
-};
+function getConfigFromEnv(): AppConfig | null {
+  const handle = process.env.BLUESKY_HANDLE;
+  const password = process.env.BLUESKY_APP_PASSWORD;
+  if (!handle || !password) return null;
+  return {
+    blueskyHandle: handle,
+    blueskyPassword: password,
+    aiConfig: {
+      apiKey: process.env.LLM_API_KEY || '',
+      baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
+      model: process.env.LLM_MODEL || 'deepseek-v4-flash',
+    },
+    targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
+  };
+}
+
+function writeEnvFile(config: SetupConfig): string {
+  const envPath = path.resolve(process.cwd(), '.env');
+  const lines = [
+    `BLUESKY_HANDLE=${config.blueskyHandle}`,
+    `BLUESKY_APP_PASSWORD=${config.blueskyPassword}`,
+    `LLM_API_KEY=${config.llmApiKey}`,
+    `LLM_BASE_URL=${config.llmBaseUrl || 'https://api.deepseek.com'}`,
+    `LLM_MODEL=${config.llmModel || 'deepseek-v4-flash'}`,
+    config.locale ? `TRANSLATE_TARGET_LANG=${config.locale}` : '',
+  ].filter(Boolean);
+  writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
+  return envPath;
+}
+
+function Root({ isRawModeSupported }: { isRawModeSupported: boolean }) {
+  const [appConfig, setAppConfig] = React.useState<AppConfig | null>(getConfigFromEnv);
+
+  if (!appConfig) {
+    return React.createElement(SetupWizard, {
+      onComplete: (config: SetupConfig) => {
+        const envPath = writeEnvFile(config);
+        dotenv.config({ path: envPath, override: true });
+        const newConfig = getConfigFromEnv();
+        if (newConfig) {
+          setAppConfig(newConfig);
+        } else {
+          console.error('Failed to load config after setup');
+          process.exit(1);
+        }
+      },
+    });
+  }
+
+  return React.createElement(App, { config: appConfig, isRawModeSupported });
+}
 
 // Check raw mode support
 let isRawMode = false;
@@ -68,7 +117,7 @@ if (isRawMode) {
   });
 }
 
-const { waitUntilExit } = render(React.createElement(App, { config, isRawModeSupported: isRawMode }), {
+const { waitUntilExit } = render(React.createElement(Root, { isRawModeSupported: isRawMode }), {
   stdin: inputStream,
   stdout: process.stdout,
   stderr: process.stderr,

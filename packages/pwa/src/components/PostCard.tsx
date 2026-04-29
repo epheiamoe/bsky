@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
-import { getCdnImageUrl } from '@bsky/app';
+import { getCdnImageUrl, useI18n } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 
 interface ImageData {
@@ -71,6 +71,7 @@ function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; init
 }
 
 function ImageGrid({ images }: { images: ImageData[] }) {
+  const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   const grid = (() => {
@@ -91,7 +92,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
               <img
                 key={i}
                 src={img.url}
-                alt={img.alt || `图片 ${i + 1}`}
+                alt={img.alt || t('post.imageAlt', { n: i + 1 })}
                 width="800" height="600"
                 className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
                 onClick={(e) => { e.stopPropagation(); setLightbox(i); }}
@@ -101,7 +102,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
         </div>
         {images.length > 4 && (
           <div className="text-center text-xs text-text-secondary py-1.5 bg-surface">
-            +{images.length - 4} 张
+            +{images.length - 4} {t('post.imageCount', { n: images.length - 4 })}
           </div>
         )}
       </div>

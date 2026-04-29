@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 
 export interface SidebarProps {
@@ -11,17 +12,34 @@ export interface SidebarProps {
   notifCount?: number;
 }
 
+const TAB_EMOJI: Record<string, string> = {
+  feed: '📋', notifications: '🔔', search: '🔍', profile: '👤', bookmarks: '🔖', aiChat: '🤖', compose: '✏️',
+};
+
+const TAB_NAV_KEY: Record<string, string> = {
+  feed: 'nav.feed', notifications: 'nav.notifications', search: 'nav.search', profile: 'nav.profile', bookmarks: 'nav.bookmarks', aiChat: 'nav.aiChat', compose: 'nav.compose',
+};
+
 const TABS = [
-  { key: 'feed', label: '📋 时间线', shortcut: 't' },
-  { key: 'notifications', label: '🔔 通知', shortcut: 'n' },
-  { key: 'search', label: '🔍 搜索', shortcut: 's' },
-  { key: 'profile', label: '👤 我', shortcut: 'p' },
-  { key: 'bookmarks', label: '🔖 书签', shortcut: 'b' },
-  { key: 'aiChat', label: '🤖 AI', shortcut: 'a' },
-  { key: 'compose', label: '✏️ 发帖', shortcut: 'c' },
+  { key: 'feed', shortcut: 't' },
+  { key: 'notifications', shortcut: 'n' },
+  { key: 'search', shortcut: 's' },
+  { key: 'profile', shortcut: 'p' },
+  { key: 'bookmarks', shortcut: 'b' },
+  { key: 'aiChat', shortcut: 'a' },
+  { key: 'compose', shortcut: 'c' },
 ];
 
+const BREADCRUMB_EMOJI: Record<string, string> = {
+  detail: '📄', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖',
+};
+
+const BREADCRUMB_KEY: Record<string, string> = {
+  detail: 'breadcrumb.detail', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks',
+};
+
 export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCount = 0 }: SidebarProps) {
+  const { t } = useI18n();
   const innerW = width - 2;
 
   return (
@@ -32,7 +50,7 @@ export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCo
       {/* Breadcrumb */}
       <Box height={1}>
         <Text dimColor>
-          {currentView.type === 'feed' ? ' 时间线' : ` ${viewBreadcrumb(currentView)}`}
+          {currentView.type === 'feed' ? ' ' + t('breadcrumb.feed') : ' ' + viewBreadcrumb(currentView, t)}
         </Text>
       </Box>
 
@@ -49,11 +67,12 @@ export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCo
             (tab.key === 'compose' && currentView.type === 'compose')
           );
           const badge = tab.key === 'notifications' && notifCount > 0 ? ` ${notifCount}` : '';
+          const label = (TAB_EMOJI[tab.key] ?? '') + ' ' + t(TAB_NAV_KEY[tab.key] ?? tab.key);
 
           return (
             <Box key={tab.key} height={1}>
               <Text backgroundColor={isActive ? '#1e40af' : undefined} color={isActive ? 'cyanBright' : undefined}>
-                {isActive ? '▶' : ' '}{tab.label}{badge}
+                {isActive ? '▶' : ' '}{label}{badge}
                 <Text dimColor> [{tab.shortcut}]</Text>
               </Text>
             </Box>
@@ -63,22 +82,14 @@ export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCo
 
       <Text dimColor>{'─'.repeat(innerW)}</Text>
       {canGoBack && (
-        <Text color="yellow" dimColor>{'← Esc/Backspace 返回'}</Text>
+        <Text color="yellow" dimColor>{'← '}{t('common.escBack')}</Text>
       )}
     </Box>
   );
 }
 
-function viewBreadcrumb(v: AppView): string {
-  switch (v.type) {
-    case 'detail': return '📄 帖子详情';
-    case 'thread': return '🧵 对话树';
-    case 'compose': return '✏️ 发帖';
-    case 'profile': return '👤 资料';
-    case 'notifications': return '🔔 通知';
-    case 'search': return '🔍 搜索';
-    case 'aiChat': return '🤖 AI 对话';
-    case 'bookmarks': return '🔖 书签';
-    default: return '';
-  }
+function viewBreadcrumb(v: AppView, t: (key: string) => string): string {
+  const emoji = BREADCRUMB_EMOJI[v.type] ?? '';
+  const key = BREADCRUMB_KEY[v.type];
+  return key ? emoji + ' ' + t(key) : '';
 }

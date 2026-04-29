@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
+import { useI18n } from '@bsky/app';
 import { PostCard } from './PostCard';
 
 interface FeedTimelineProps {
@@ -12,6 +13,8 @@ interface FeedTimelineProps {
   error: string | null;
   loadMore?: () => Promise<void>;
   refresh?: () => Promise<void>;
+  initialScrollIndex?: number;
+  onFirstVisibleIndexChange?: (index: number) => void;
 }
 
 function SkeletonCard() {
@@ -31,9 +34,11 @@ function SkeletonCard() {
 
 const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange }: FeedTimelineProps) {
+  const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const lastReportedRef = useRef(-1);
 
   // ── Virtual scroll ──
   const virtualizer = useVirtualizer({
@@ -42,6 +47,41 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     estimateSize: () => ESTIMATED_POST_HEIGHT,
     overscan: 5,
   });
+
+  // ── Scroll position restoration (on mount, after navigating back) ──
+  useEffect(() => {
+    if (initialScrollIndex !== undefined && initialScrollIndex > 0 && posts.length > 0) {
+      const target = Math.min(initialScrollIndex, posts.length - 1);
+      const raf = requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(target, { align: 'start' });
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, []); // Only on mount
+
+  // ── Report first visible index to parent ──
+  const reportVisibleIndex = useCallback(() => {
+    if (!onFirstVisibleIndexChange) return;
+    const items = virtualizer.getVirtualItems();
+    if (items.length === 0) return;
+    const idx = items[0]!.index;
+    if (idx !== lastReportedRef.current) {
+      lastReportedRef.current = idx;
+      onFirstVisibleIndexChange(idx);
+    }
+  }, [virtualizer, onFirstVisibleIndexChange]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', reportVisibleIndex, { passive: true });
+    // Report initial position after virtualizer has items
+    const raf = requestAnimationFrame(reportVisibleIndex);
+    return () => {
+      el.removeEventListener('scroll', reportVisibleIndex);
+      cancelAnimationFrame(raf);
+    };
+  }, [reportVisibleIndex]);
 
   // ── Auto-load-more sentinel ──
   useEffect(() => {
@@ -58,12 +98,12 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
       <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0">
-        <h1 className="text-lg font-bold text-text-primary">📋 时间线</h1>
+        <h1 className="text-lg font-bold text-text-primary">📋 {t('nav.feed')}</h1>
         <button
           onClick={refresh}
           className="rounded-full bg-surface hover:bg-primary/10 text-text-primary text-sm px-4 py-1.5 transition-colors"
         >
-          刷新
+          {t('action.refresh')}
         </button>
       </div>
 
@@ -85,7 +125,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         {!loading && !error && posts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-text-secondary">
             <span className="text-4xl mb-3">🕊️</span>
-            <p className="text-sm">没有帖子</p>
+            <p className="text-sm">{t('status.noPosts')}</p>
           </div>
         )}
 
@@ -131,14 +171,14 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
               disabled={loading}
               className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-6 py-2 disabled:opacity-50 transition-colors"
             >
-              {loading ? '加载中…' : '加载更多'}
+              {loading ? t('action.loading') : t('action.loadMore')}
             </button>
           </div>
         )}
 
         {posts.length > 0 && (
           <p className="text-center text-text-secondary text-xs py-4">
-            已加载 {posts.length} 条帖子
+            {t('post.postsCount', { n: posts.length })}
           </p>
         )}
       </div>

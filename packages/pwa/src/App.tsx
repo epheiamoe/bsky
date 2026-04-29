@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth, useTimeline } from '@bsky/app';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth, useTimeline, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
@@ -20,8 +20,10 @@ export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
   const timeline = useTimeline(client);
+  const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
+  const feedScrollIndexRef = useRef(0);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {
@@ -78,7 +80,7 @@ export function App() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#0A0A0A]">
-        <p className="text-text-secondary text-lg animate-pulse">🦋 正在连接 Bluesky…</p>
+        <p className="text-text-secondary text-lg animate-pulse">🦋 {t('login.connecting')}</p>
       </div>
     );
   }
@@ -101,6 +103,8 @@ export function App() {
             error={timeline.error}
             loadMore={timeline.loadMore}
             refresh={timeline.refresh}
+            initialScrollIndex={feedScrollIndexRef.current}
+            onFirstVisibleIndexChange={(idx) => { feedScrollIndexRef.current = idx; }}
           />
         );
       case 'thread':
@@ -156,7 +160,7 @@ export function App() {
       case 'bookmarks':
         return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
       default:
-        return <div className="p-6 text-text-secondary">未知页面</div>;
+        return <div className="p-6 text-text-secondary">{t('common.unknownPage')}</div>;
     }
   };
 

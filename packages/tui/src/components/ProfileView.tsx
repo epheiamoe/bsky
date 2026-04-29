@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-import { useProfile } from '@bsky/app';
+import { useProfile, useI18n } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
 interface ProfileViewProps {
@@ -12,22 +12,23 @@ interface ProfileViewProps {
 
 export function ProfileView({ client, actor, cols }: ProfileViewProps) {
   const { profile, follows, followers, loading } = useProfile(client, actor);
+  const { t } = useI18n();
 
   if (loading || !profile) {
-    return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>加载资料...</Text></Box>;
+    return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>{t('profile.loading')}</Text></Box>;
   }
 
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
-      <Box height={1}><Text bold>👤 {profile.displayName || profile.handle}</Text></Box>
+      <Box height={1}><Text bold>{'👤 '}{profile.displayName || profile.handle}</Text></Box>
       <Box><Text dimColor>@{profile.handle}</Text></Box>
-      <Box marginY={1}><Text>{profile.description || '无简介'}</Text></Box>
+      <Box marginY={1}><Text>{profile.description || t('profile.noBio')}</Text></Box>
       <Box>
-        <Text bold>{profile.postsCount ?? 0}</Text><Text dimColor> 帖子  </Text>
-        <Text bold>{followers.length}</Text><Text dimColor> 粉丝  </Text>
-        <Text bold>{follows.length}</Text><Text dimColor> 关注</Text>
+        <Text bold>{profile.postsCount ?? 0}</Text><Text dimColor>{' '}{t('profile.posts')}  </Text>
+        <Text bold>{followers.length}</Text><Text dimColor>{' '}{t('profile.followers')}  </Text>
+        <Text bold>{follows.length}</Text><Text dimColor>{' '}{t('profile.following')}</Text>
       </Box>
-      <Box marginTop={1}><Text dimColor>Esc 返回</Text></Box>
+      <Box marginTop={1}><Text dimColor>{t('keys.profile')}</Text></Box>
     </Box>
   );
 }

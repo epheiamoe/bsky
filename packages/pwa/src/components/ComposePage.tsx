@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCompose } from '@bsky/app';
+import { useCompose, useI18n } from '@bsky/app';
 import type { ComposeImage } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
@@ -21,6 +21,7 @@ interface LocalImage {
 }
 
 export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProps) {
+  const { t } = useI18n();
   const { draft, setDraft, submitting, error, setReplyTo, submit } = useCompose(client, goBack, goHome);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [images, setImages] = useState<LocalImage[]>([]);
@@ -48,14 +49,14 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (images.length + files.length > MAX_IMAGES) {
-      alert(`最多 ${MAX_IMAGES} 张图片`);
+      alert(t('compose.maxImages', { n: MAX_IMAGES }));
       return;
     }
     const newImages: LocalImage[] = [];
     for (const file of files) {
       if (!file.type.startsWith('image/')) continue;
       if (file.size > MAX_SIZE) {
-        alert(`"${file.name}" 超过 1MB 限制`);
+        alert(`"${file.name}" ${t('compose.imageOverLimit')}`);
         continue;
       }
       newImages.push({
@@ -91,7 +92,7 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
           alt: '',
         });
       } catch (err) {
-        setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: '上传失败' } : i));
+        setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: t('compose.uploadFailed') } : i));
         return; // Don't post if upload fails
       }
     }
@@ -103,8 +104,8 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
-          <button onClick={goBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">取消</button>
-          <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '✏️ 回复' : '✏️ 发帖'}</h1>
+          <button onClick={goBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+          <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</h1>
           <div className="w-10" />
         </div>
       </header>
@@ -113,14 +114,14 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
         <form onSubmit={handleSubmit} className="space-y-4">
           {replyTo && replyHandle && (
             <div className="text-sm text-text-secondary bg-surface rounded-lg px-3 py-2 border border-border">
-              回复: <span className="text-primary font-medium">@{replyHandle}</span>
+              {t('compose.replyTo')} <span className="text-primary font-medium">@{replyHandle}</span>
             </div>
           )}
 
           <textarea
             value={draft}
             onChange={e => { if (e.target.value.length <= 300) setDraft(e.target.value); }}
-            rows={4} maxLength={300} placeholder="此刻的想法..." disabled={submitting}
+            rows={4} maxLength={300} placeholder={t('compose.placeholder')} disabled={submitting}
             className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-base leading-relaxed"
           />
 
@@ -147,14 +148,14 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={images.length >= MAX_IMAGES || submitting}
                 className="text-text-secondary hover:text-primary transition-colors text-sm disabled:opacity-30">
-                🖼 图片{images.length > 0 ? ` (${images.length}/${MAX_IMAGES})` : ''}
+                🖼 {t('compose.addImage')}{images.length > 0 ? ` (${images.length}/${MAX_IMAGES})` : ''}
               </button>
               <span className={`text-sm tabular-nums ${charLen >= 280 ? 'text-yellow-500' : 'text-text-secondary'}`}>{charLen}/300</span>
             </div>
 
             <button type="submit" disabled={isEmpty || submitting}
               className="px-6 py-2 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold disabled:opacity-50 transition-colors text-sm">
-              {submitting ? '发送中...' : '发送'}
+              {submitting ? t('action.sending') : t('action.send')}
             </button>
           </div>
 

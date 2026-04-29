@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useProfile } from '@bsky/app';
+import { useProfile, useI18n } from '@bsky/app';
 
 interface ProfilePageProps {
   client: BskyClient;
@@ -11,6 +11,7 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
+  const { t } = useI18n();
   const { profile, loading } = useProfile(client, actor);
 
   if (loading) {
@@ -24,7 +25,7 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
   if (!profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0A0A0A] px-4">
-        <p className="text-text-secondary text-lg">用户未找到</p>
+        <p className="text-text-secondary text-lg">{t('profile.notFound')}</p>
       </div>
     );
   }
@@ -86,15 +87,15 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
         <div className="flex items-center gap-4 text-sm mb-4">
           <span className="text-text-primary">
             <strong>{profile.postsCount ?? 0}</strong>{' '}
-            <span className="text-text-secondary">帖子</span>
+            <span className="text-text-secondary">{t('profile.posts')}</span>
           </span>
           <span className="text-text-primary">
             <strong>{profile.followersCount ?? 0}</strong>{' '}
-            <span className="text-text-secondary">粉丝</span>
+            <span className="text-text-secondary">{t('profile.followers')}</span>
           </span>
           <span className="text-text-primary">
             <strong>{profile.followsCount ?? 0}</strong>{' '}
-            <span className="text-text-secondary">关注</span>
+            <span className="text-text-secondary">{t('profile.following')}</span>
           </span>
         </div>
       </div>

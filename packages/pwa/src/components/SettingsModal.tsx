@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useI18n } from '@bsky/app';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { updateAppConfig } from '../hooks/useAppConfig.js';
-import type { TargetLang } from '@bsky/app';
+import type { TargetLang, Locale } from '@bsky/app';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
   { value: 'zh', label: '中文' },
@@ -25,6 +26,7 @@ interface SettingsModalProps {
 type Tab = 'bluesky' | 'ai' | 'general';
 
 export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin, onLogout }: SettingsModalProps) {
+  const { t, locale, setLocale, localeLabels, availableLocales } = useI18n();
   const [tab, setTab] = useState<Tab>('bluesky');
 
   const [handle, setHandle] = useState('');
@@ -44,9 +46,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     if (!handle.trim() || !password.trim()) return;
     try {
       await onRelogin(handle.trim(), password);
-      setLoginMsg('✅ 已更新凭证');
+      setLoginMsg('✅ ' + t('settings.updated'));
     } catch (e) {
-      setLoginMsg(e instanceof Error ? e.message : '失败');
+      setLoginMsg(e instanceof Error ? e.message : t('settings.updateFailed'));
     }
   };
 
@@ -63,10 +65,10 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     document.documentElement.classList.toggle('dark', darkMode);
   };
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'bluesky', label: '🦋 账号' },
-    { key: 'ai', label: '🤖 AI' },
-    { key: 'general', label: '⚙️ 通用' },
+  const tabs: { key: Tab; emoji: string; labelKey: string }[] = [
+    { key: 'bluesky', emoji: '🦋', labelKey: 'settings.tabAccount' },
+    { key: 'ai', emoji: '🤖', labelKey: 'settings.tabAI' },
+    { key: 'general', emoji: '⚙️', labelKey: 'settings.tabGeneral' },
   ];
 
   return (
@@ -74,22 +76,22 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-text-primary">设置</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('settings.title')}</h2>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1">✕</button>
         </div>
 
         <div className="flex border-b border-border">
-          {tabs.map(t => (
+          {tabs.map(tabItem => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
+              key={tabItem.key}
+              onClick={() => setTab(tabItem.key)}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.key
+                tab === tabItem.key
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
             >
-              {t.label}
+              {tabItem.emoji}{' '}{t(tabItem.labelKey)}
             </button>
           ))}
         </div>
@@ -97,7 +99,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {tab === 'bluesky' && (
             <>
-              <p className="text-text-secondary text-xs">更新 Bluesky 登录凭证（重新登录后将刷新 session）</p>
+              <p className="text-text-secondary text-xs">{t('settings.blueskyDesc')}</p>
               <input
                 type="text" value={handle} onChange={e => setHandle(e.target.value)}
                 placeholder="handle.bsky.social"
@@ -114,23 +116,23 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 disabled={!handle.trim() || !password.trim()}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium disabled:opacity-50 transition-colors"
               >
-                更新登录
+                {t('settings.updateLogin')}
               </button>
               <hr className="border-border" />
               <button
                 onClick={onLogout}
                 className="w-full py-2 rounded-lg border border-red-300 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium transition-colors"
               >
-                退出登录
+                {t('settings.logout')}
               </button>
             </>
           )}
 
           {tab === 'ai' && (
             <>
-              <p className="text-text-secondary text-xs">AI 功能需要配置 DeepSeek（或其他兼容 OpenAI 的）API</p>
+              <p className="text-text-secondary text-xs">{t('settings.aiDesc')}</p>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">API Key</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.apiKey')}</label>
                 <input
                   type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
                   placeholder="sk-..."
@@ -138,7 +140,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 />
               </div>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">Base URL</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.baseUrl')}</label>
                 <input
                   type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}
                   placeholder="https://api.deepseek.com"
@@ -146,7 +148,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 />
               </div>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">Model</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.model')}</label>
                 <input
                   type="text" value={model} onChange={e => setModel(e.target.value)}
                   placeholder="deepseek-v4-flash"
@@ -157,7 +159,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 onClick={saveAi}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
               >
-                保存 AI 设置
+                {t('settings.saveAI')}
               </button>
             </>
           )}
@@ -165,7 +167,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
           {tab === 'general' && (
             <>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">翻译目标语言</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.targetLang')}</label>
                 <select
                   value={targetLang}
                   onChange={e => setTargetLang(e.target.value)}
@@ -177,7 +179,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 </select>
               </div>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">翻译模式</label>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.translateMode')}</label>
                 <select
                   value={config.translateMode ?? 'simple'}
                   onChange={e => {
@@ -187,8 +189,20 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   }}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
-                  <option value="simple">简单 — 仅显示译文</option>
-                  <option value="json">JSON — 显示源语言 + 译文</option>
+                  <option value="simple">{t('settings.translateModeSimple')}</option>
+                  <option value="json">{t('settings.translateModeJson')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-text-secondary mb-1 block">UI Language</label>
+                <select
+                  value={locale}
+                  onChange={e => setLocale(e.target.value as typeof locale)}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {availableLocales.map((l: Locale) => (
+                    <option key={l} value={l}>{localeLabels[l]}</option>
+                  ))}
                 </select>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
@@ -198,13 +212,13 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   onChange={e => setDarkMode(e.target.checked)}
                   className="w-4 h-4 accent-primary"
                 />
-                <span className="text-sm text-text-primary">深色模式</span>
+                <span className="text-sm text-text-primary">{t('settings.darkMode')}</span>
               </label>
               <button
                 onClick={saveGeneral}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
               >
-                保存通用设置
+                {t('settings.saveGeneral')}
               </button>
             </>
           )}

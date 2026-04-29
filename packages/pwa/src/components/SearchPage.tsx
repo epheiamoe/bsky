@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useSearch } from '@bsky/app';
+import { useSearch, useI18n } from '@bsky/app';
 import { PostCard } from './PostCard.js';
 
 interface SearchPageProps {
@@ -12,6 +12,7 @@ interface SearchPageProps {
 }
 
 export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPageProps) {
+  const { t } = useI18n();
   const { results, loading, search } = useSearch(client);
   const [input, setInput] = useState(initialQuery ?? '');
 
@@ -39,7 +40,7 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
         >
           ←
         </button>
-        <h1 className="text-text-primary font-semibold text-lg">🔍 搜索</h1>
+        <h1 className="text-text-primary font-semibold text-lg">🔍 {t('search.title')}</h1>
       </div>
 
       <div className="px-4 py-3 flex gap-2">
@@ -49,7 +50,7 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="🔍 搜索 Bluesky 帖子..."
+            placeholder={t('search.placeholder')}
             autoFocus
             className="w-full px-4 py-2 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
@@ -59,7 +60,7 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
           disabled={!input.trim() || loading}
           className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-sm disabled:opacity-50 transition-colors shrink-0"
         >
-          搜索
+          {t('nav.search')}
         </button>
       </div>
 
@@ -79,7 +80,7 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <p className="text-text-secondary text-sm">输入关键词搜索</p>
+          <p className="text-text-secondary text-sm">{t('search.startTyping')}</p>
         </div>
       )}
     </div>

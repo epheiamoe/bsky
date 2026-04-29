@@ -22,3 +22,6 @@ export { useSearch } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';
 export { useBookmarks } from './hooks/useBookmarks.js';
 export { getCdnImageUrl } from './utils/imageUrl.js';
+export { useI18n } from './i18n/index.js';
+export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';
+export { availableLocales, localeLabels } from './i18n/index.js';

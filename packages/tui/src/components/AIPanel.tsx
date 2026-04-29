@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
 import type { AIAssistant } from '@bsky/core';
+import { useI18n } from '@bsky/app';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 
@@ -24,12 +25,13 @@ export function AIPanel({ visible, assistant, postContext, onClose, focused, wid
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (visible && postContext && guidingQuestions.length === 0 && messages.length === 0) {
-      setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
+      setGuidingQuestions([t('ai.summarizePost'), t('ai.authorFeed'), t('ai.sentiment')]);
     }
-  }, [visible, postContext]);
+  }, [visible, postContext, t]);
 
   if (!visible) return null;
 
@@ -66,15 +68,15 @@ export function AIPanel({ visible, assistant, postContext, onClose, focused, wid
       {/* Header */}
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>
-          {focused ? '🤖 AI [聚焦中]' : '🤖 AI'}
+          {'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}
         </Text>
-        <Text dimColor> [Esc 返回主面板 · Tab 切换焦点]</Text>
+        <Text dimColor>{' '}{t('ai.escReturn')}</Text>
       </Box>
 
       {/* Guiding questions */}
       {guidingQuestions.length > 0 && (
         <Box flexDirection="column" marginTop={0}>
-          <Text dimColor>快速提问：</Text>
+          <Text dimColor>{t('ai.quickQuestions')}</Text>
           {guidingQuestions.map((q, i) => (
             <Text key={i} color="cyan">
               {'  '}[{i + 1}] {q}
@@ -97,7 +99,7 @@ export function AIPanel({ visible, assistant, postContext, onClose, focused, wid
           <Box height={1}>
             <Text color="cyan">
               <Spinner type="dots" />
-              {' AI 思考中...'}
+              {' '}{t('ai.thinking')}
             </Text>
           </Box>
         )}
@@ -113,10 +115,10 @@ export function AIPanel({ visible, assistant, postContext, onClose, focused, wid
             value={input}
             onChange={setInput}
             onSubmit={handleSend}
-            placeholder="输入消息，Enter 发送..."
+            placeholder={t('ai.placeholder')}
           />
         ) : (
-          <Text dimColor>按 Tab 聚焦此处输入</Text>
+          <Text dimColor>{t('ai.tabFocus')}</Text>
         )}
       </Box>
     </Box>

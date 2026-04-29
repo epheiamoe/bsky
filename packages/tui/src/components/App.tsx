@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks } from '@bsky/app';
-import type { ComposeImage } from '@bsky/app';
-import type { AppView } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n } from '@bsky/app';
+import type { ComposeImage, AppView, Locale } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
@@ -45,6 +44,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { unreadCount } = useNotifications(client);
   const bookmarks = useBookmarks(client);
   const [bookmarkIdx, setBookmarkIdx] = useState(0);
+  const { t, locale } = useI18n(config.targetLang as Locale);
+  const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
   // Feed
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client);
@@ -143,11 +144,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           const path = imagePathInput.trim();
           if (path) {
             try {
-              if (!existsSync(path)) { setComposeUploadError('文件不存在: ' + path); }
-              else if (composeImages.length >= 4) { setComposeUploadError('最多 4 张图片'); }
+              if (!existsSync(path)) { setComposeUploadError(t('compose.fileNotFound', { path })); }
+              else if (composeImages.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
               else {
                 const stat = statSync(path);
-                if (stat.size > 1024 * 1024) { setComposeUploadError('图片超过 1MB 限制'); }
+                if (stat.size > 1024 * 1024) { setComposeUploadError(t('compose.imageOverLimit', { name: path })); }
                 else {
                   const data = readFileSync(path);
                   const mime = path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : path.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
@@ -155,7 +156,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                     setComposeImages(prev => [...prev, { blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: stat.size }, alt: '' }]);
                     setImagePathInput(null);
                     setComposeUploadError(null);
-                  }).catch(e => setComposeUploadError('上传失败: ' + e.message));
+                  }).catch(e => setComposeUploadError(t('compose.uploadFailed') + ': ' + e.message));
                 }
               }
             } catch (e) { setComposeUploadError(String(e)); }
@@ -237,7 +238,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // ── Layout ──
   const sidebarW = Math.max(16, Math.floor(cols * 0.14));
   const mainW = cols - sidebarW - 2;
-  const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = new Date().toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
   const onlineStatus = client ? '🟢' : '🔴';
 
   const renderView = () => {
@@ -245,7 +246,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'feed':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
-            <Box height={1}><Text bold>📋 时间线</Text><Text dimColor>{' ↑↓/jk:导航 Enter:查看 m:更多 r:刷新'}</Text></Box>
+            <Box height={1}><Text bold>{'📋 '}{t('nav.feed')}</Text><Text dimColor>{' '}{t('keys.feed')}</Text></Box>
             <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
           </Box>
         );
@@ -266,20 +267,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'compose':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
-            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ 回复' : '✏️ 发帖'}</Text><Text dimColor>{imagePathInput !== null ? ' 输入图片路径 · Enter 确认 · Esc 取消' : ' Enter 发送 · Esc 取消 · i 添加图片'}</Text></Box>
-            {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>回复: </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
+            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</Text><Text dimColor>{imagePathInput !== null ? ' ' + t('keys.composeImage') : ' ' + t('keys.compose')}</Text></Box>
+            {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>{t('compose.replyTo')} </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
             <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
               <TextInput
                 value={imagePathInput !== null ? imagePathInput : composeDraft}
                 onChange={imagePathInput !== null ? setImagePathInput : setComposeDraft}
                 onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeImages.length > 0 ? composeImages : undefined); }}
-                placeholder={imagePathInput !== null ? '图片路径 (e.g., /path/to/image.png)' : '此刻的想法...'}
+                placeholder={imagePathInput !== null ? t('compose.imagePathPlaceholder') : t('compose.placeholder')}
               />
             </Box>
             <Box height={1}>
-              {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>🖼 图片模式</Text>}
-              {composeImages.length > 0 && <Text color="green">{' 📎 ' + composeImages.length + ' 图'}</Text>}
-              {compose.submitting && <Text color="cyan"> 发送中...</Text>}
+              {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>{'🖼 '}{t('compose.imageMode')}</Text>}
+              {composeImages.length > 0 && <Text color="green">{' 📎 ' + composeImages.length + ' ' + t('compose.imageCount')}</Text>}
+              {compose.submitting && <Text color="cyan">{' '}{t('action.sending')}</Text>}
               {composeUploadError && <Text color="red">{' '}{composeUploadError}</Text>}
             </Box>
           </Box>
@@ -295,9 +296,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'bookmarks':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>
-            <Box height={1}><Text bold color="yellow">🔖 书签</Text><Text dimColor>{' ↑↓/jk:导航 Enter:查看 d:删除 b:刷新'}</Text></Box>
-            {bookmarks.loading && <Text dimColor>加载中...</Text>}
-            {!bookmarks.loading && bookmarks.bookmarks.length === 0 && <Text dimColor>暂无书签。在帖子页面按 v 收藏帖子。</Text>}
+            <Box height={1}><Text bold color="yellow">{'🔖 '}{t('bookmarks.title')}</Text><Text dimColor>{' '}{t('keys.bookmarks')}</Text></Box>
+            {bookmarks.loading && <Text dimColor>{t('status.loading')}</Text>}
+            {!bookmarks.loading && bookmarks.bookmarks.length === 0 && <Text dimColor>{t('bookmarks.empty')}</Text>}
             {bookmarks.bookmarks.slice(0, rows - 5).map((post, i) => {
               const isSel = i === bookmarkIdx;
               const text = (post.record.text || '').slice(0, cols - post.author.handle.length - 30);
@@ -315,7 +316,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           </Box>
         );
       default:
-        return <Text>Unknown view</Text>;
+        return <Text>{t('common.unknownPage')}</Text>;
     }
   };
 
@@ -326,44 +327,46 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         <Text backgroundColor="#1a56db" color="white">{' @'}{config.blueskyHandle}{' '}</Text>
         <Text backgroundColor="#1a56db" color="cyanBright">{onlineStatus}</Text>
         <Box flexGrow={1}><Text backgroundColor="#1a56db">{' '}</Text></Box>
-        {currentView.type !== 'feed' && <Text backgroundColor="#1a56db" color="yellow">{'  '}{viewLabel(currentView)}{' '}</Text>}
+        {currentView.type !== 'feed' && <Text backgroundColor="#1a56db" color="yellow">{'  '}{viewLabel(currentView, t)}{' '}</Text>}
         <Box flexGrow={1}><Text backgroundColor="#1a56db">{' '}</Text></Box>
         <Text backgroundColor="#1a56db" color="gray" dimColor>{timeStr}{' '}</Text>
       </Box>
       <Box flexDirection="row" flexGrow={1}>
         <Sidebar currentView={currentView} goBack={goBack} canGoBack={canGoBack} goHome={goHome} width={sidebarW} notifCount={unreadCount} />
         {authLoading ? (
-          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>正在登录 Bluesky...</Text></Box>
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>{t('login.connecting')}</Text></Box>
         ) : renderView()}
       </Box>
       <Box width={cols} height={1}>
-        <Text backgroundColor="#1a56db" color="white" dimColor>{footerHint(currentView, canGoBack)}</Text>
+        <Text backgroundColor="#1a56db" color="white" dimColor>{footerHint(currentView, canGoBack, t)}</Text>
         <Box flexGrow={1}><Text backgroundColor="#1a56db">{' '}</Text></Box>
         <Text backgroundColor="#1a56db" color="white" dimColor>{timeStr}{' '}</Text>
       </Box>
       {!isRawModeSupported && (
-        <Box width={cols} height={1}><Text backgroundColor="#92400e" color="yellow">⚠ 当前终端不支持 raw mode。请在 Windows Terminal / iTerm2 中运行。</Text></Box>
+        <Box width={cols} height={1}><Text backgroundColor="#92400e" color="yellow">{'⚠ '}{t('common.rawModeWarning')}</Text></Box>
       )}
     </Box>
   );
 }
 
-function viewLabel(v: { type: string }): string {
-  const labels: Record<string, string> = { feed: '📋 时间线', thread: '🧵 讨论', compose: '✏️ 发帖', profile: '👤 资料', notifications: '🔔 通知', search: '🔍 搜索', aiChat: '🤖 AI', bookmarks: '🔖 书签' };
-  return labels[v.type] ?? v.type;
+const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖' };
+const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks' };
+
+function viewLabel(v: { type: string }, t: (key: string) => string): string {
+  const emoji = VIEW_EMOJI[v.type] ?? '';
+  const key = VIEW_KEY[v.type];
+  return key ? emoji + ' ' + t(key) : v.type;
 }
 
-function footerHint(v: { type: string }, canGoBack: boolean): string {
-  const esc = canGoBack ? ' Esc:返回' : '';
-  const hints: Record<string, string> = {
-    feed: `${esc} ↑↓/jk:导航 Enter:查看 m:更多 r:刷新 v:收藏`,
-    thread: `${esc} h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏`,
-    compose: `${esc} Enter:发送`,
-    profile: `${esc}`,
-    notifications: `${esc} R:刷新`,
-    search: `${esc}`,
-    aiChat: `${esc} Enter:发送 Tab:切面板`,
-    bookmarks: `${esc} ↑↓/jk:导航 Enter:查看 d:删除 b:刷新`,
-  };
-  return hints[v.type] ?? esc;
+const KEY_MAP: Record<string, string> = {
+  feed: 'keys.feed', thread: 'keys.thread', compose: 'keys.compose',
+  profile: 'keys.profile', notifications: 'keys.notifications', search: 'keys.search',
+  aiChat: 'keys.aiChat', bookmarks: 'keys.bookmarks',
+};
+
+function footerHint(v: { type: string }, canGoBack: boolean, t: (key: string) => string): string {
+  const back = canGoBack ? ' Esc:' + t('nav.back') : '';
+  const key = KEY_MAP[v.type];
+  const hint = key ? t(key) : '';
+  return hint ? back + ' ' + hint : back;
 }

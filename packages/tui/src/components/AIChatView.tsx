@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useAIChat, useChatHistory, getDefaultStorage } from '@bsky/app';
+import { useAIChat, useChatHistory, getDefaultStorage, useI18n } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { wrapLines } from '../utils/text.js';
 import { renderMarkdown } from '../utils/markdown.js';
@@ -28,6 +28,8 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const [scrollOffset, setScrollOffset] = useState(0);
   const prevMsgCount = useRef(0);
   const wasAtBottom = useRef(true);
+  const { t, locale } = useI18n();
+  const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
   useEffect(() => { if (messages.length > 0) setShowHistory(false); }, [messages]);
 
@@ -39,7 +41,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     const lines: Array<string | React.ReactNode> = [];
     for (const msg of messages) {
       if (msg.role === 'tool_call') {
-        lines.push(`\u{1f527} 使用了 ${msg.toolName ?? ''}`);
+        lines.push(`\u{1f527} ${t('ai.toolUsed')} ${msg.toolName ?? ''}`);
       } else if (msg.role === 'tool_result') {
         for (const l of wrapLines(msg.content, maxCols, 4)) {
           lines.push(`  \u21a1  ${l}`);
@@ -58,9 +60,9 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
       }
       lines.push(' ');
     }
-    if (loading) lines.push('... AI \u601d\u8003\u4e2d ...');
+    if (loading) lines.push('... ' + t('ai.thinking'));
     return lines;
-  }, [messages, loading, maxCols]);
+  }, [messages, loading, maxCols, t]);
 
   const maxVisible = Math.max(10, rows - 6);
 
@@ -110,19 +112,19 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   if (showHistory && conversations.length > 0 && messages.length === 0) {
     return (
       <Box flexDirection="column" width={cols} borderStyle="single" borderColor="magenta" paddingX={1}>
-        <Box height={1}><Text bold color="magentaBright">🤖 AI 对话历史</Text><Text dimColor> Esc 返回 ↑↓:选 N:新建 L:加载 D:删除</Text></Box>
+        <Box height={1}><Text bold color="magentaBright">{'🤖 '}{t('ai.history')}</Text><Text dimColor>{' '}{t('keys.aiHistory')}</Text></Box>
         <Box flexDirection="column" flexGrow={1}>
           {conversations.map((c, i) => (
             <Box key={c.id} height={1}>
               <Text color={i === historyIdx ? 'cyanBright' : undefined}>{i === historyIdx ? '▸' : ' '}</Text>
-              <Text dimColor>{' '}{new Date(c.updatedAt).toLocaleDateString('zh-CN')}</Text>
+              <Text dimColor>{' '}{new Date(c.updatedAt).toLocaleDateString(dateLocale)}</Text>
               <Text>{' '}</Text>
               <Text color="yellow">{c.title.slice(0, 50)}</Text>
               <Text dimColor>{' ('}{c.messageCount} msg)</Text>
             </Box>
           ))}
         </Box>
-        <Box marginTop={1}><Text dimColor>历史在 ~/.bsky-tui/chats/</Text></Box>
+        <Box marginTop={1}><Text dimColor>{t('ai.historyPath')}</Text></Box>
       </Box>
     );
   }
@@ -130,18 +132,18 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
-        <Text bold color={focused ? 'magentaBright' : 'magenta'}>🤖 AI 对话{focused ? ' [聚焦]' : ''}</Text>
-        <Text dimColor> Esc 返回  PgUp/PgDn:滚动</Text>
+        <Text bold color={focused ? 'magentaBright' : 'magenta'}>{'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}</Text>
+        <Text dimColor>{' '}{t('keys.aiChat')}</Text>
       </Box>
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
-          <Text dimColor>快速提问：</Text>
+          <Text dimColor>{t('ai.quickQuestions')}</Text>
           {guidingQuestions.map((q, i) => <Text key={i} color="cyan">{'  '}[{i + 1}] {q}</Text>)}
         </Box>
       )}
       <Box flexDirection="column" flexGrow={1} marginTop={0}>
         {canScrollUp && (
-          <Text dimColor color="cyan">↑ {viewStart} 行在上方</Text>
+          <Text dimColor color="cyan">{'↑ '}{t('ai.scrollAbove', { n: viewStart })}</Text>
         )}
         {visibleLines.map((line, i) => {
           if (typeof line === 'string') {
@@ -150,15 +152,15 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
           return <React.Fragment key={viewStart + i}>{line}</React.Fragment>;
         })}
         {canScrollDown && (
-          <Text dimColor color="cyan">↓ {allMessageLines.length - viewStart - maxVisible} 行在下方</Text>
+          <Text dimColor color="cyan">{'↓ '}{t('ai.scrollBelow', { n: allMessageLines.length - viewStart - maxVisible })}</Text>
         )}
       </Box>
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>
         <Text color={focused ? 'yellow' : 'gray'}>{focused ? '▸ ' : '· '}</Text>
         {focused ? (
-          <TextInput value={input} onChange={setInput} onSubmit={handleSend} placeholder="输入消息，Enter 发送..." />
+          <TextInput value={input} onChange={setInput} onSubmit={handleSend} placeholder={t('ai.placeholder')} />
         ) : (
-          <Text dimColor>按 Tab 聚焦此处输入</Text>
+          <Text dimColor>{t('ai.tabFocus')}</Text>
         )}
       </Box>
     </Box>

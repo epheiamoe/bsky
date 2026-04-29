@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
-import { useSearch } from '@bsky/app';
+import { useSearch, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
@@ -13,10 +13,11 @@ interface SearchViewProps {
   goTo: (v: AppView) => void;
 }
 
-export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchViewProps) {
+export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProps) {
   const { results, loading, search } = useSearch(client);
   const [input, setInput] = useState(query ?? '');
   const [searched, setSearched] = useState(!!query);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (query && !searched) {
@@ -28,11 +29,10 @@ export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchVi
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box height={1}>
-        <Text bold>🔍 搜索</Text>
-        <Text dimColor>{' Esc 返回'}</Text>
+        <Text bold>{'🔍 '}{t('search.title')}</Text>
+        <Text dimColor>{' '}{t('common.escBack')}</Text>
       </Box>
-      <Text dimColor>搜索功能：请使用命令行 test 进行搜索。TUI 搜索栏需要 raw mode。</Text>
-      {loading && <Text dimColor>搜索中...</Text>}
+      {loading && <Text dimColor>{t('search.searching')}</Text>}
       {results.slice(0, 15).map((p, i) => (
         <Box key={p.uri}>
           <Text color="green">{p.author.handle}</Text>

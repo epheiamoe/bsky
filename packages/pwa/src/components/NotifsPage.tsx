@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
-import { useNotifications } from '@bsky/app';
+import { useNotifications, useI18n } from '@bsky/app';
 
 interface NotifsPageProps {
   client: BskyClient;
@@ -32,23 +32,26 @@ const REASON_EMOJI: Record<string, string> = {
   quote: '💬',
 };
 
-const REASON_TEXT: Record<string, string> = {
-  like: '喜欢了你的帖子',
-  repost: '转发了你的帖子',
-  follow: '关注了你',
-  reply: '回复了你的帖子',
-  mention: '提到了你',
-  quote: '引用了你的帖子',
-};
+function reasonText(reason: string, t: (key: string) => string): string {
+  const map: Record<string, string> = {
+    like: 'notifications.reason.like',
+    repost: 'notifications.reason.repost',
+    follow: 'notifications.reason.follow',
+    reply: 'notifications.reason.reply',
+    mention: 'notifications.reason.mention',
+    quote: 'notifications.reason.quote',
+  };
+  return t(map[reason] ?? reason);
+}
 
 function avatarLetter(author: { displayName?: string; handle: string }): string {
   const name = author.displayName || author.handle;
   return name.charAt(0).toUpperCase();
 }
 
-function NotifItem({ n }: { n: Notification }) {
+function NotifItem({ n, t }: { n: Notification; t: (key: string) => string }) {
   const emoji = REASON_EMOJI[n.reason] ?? '🔔';
-  const reasonText = REASON_TEXT[n.reason] ?? n.reason;
+  const reasonLabel = reasonText(n.reason, t);
 
   return (
     <div className="border-b border-border px-4 py-3 hover:bg-surface transition-colors">
@@ -65,7 +68,7 @@ function NotifItem({ n }: { n: Notification }) {
           </div>
           <p className="text-text-secondary text-xs mt-0.5">
             @{n.author.handle}{' '}
-            {reasonText}
+            {reasonLabel}
           </p>
           <p className="text-text-secondary text-xs mt-0.5">
             {timeAgo(n.indexedAt)}
@@ -82,6 +85,7 @@ function NotifItem({ n }: { n: Notification }) {
 }
 
 export function NotifsPage({ client, goBack }: NotifsPageProps) {
+  const { t } = useI18n();
   const { notifications, loading, refresh } = useNotifications(client);
 
   return (
@@ -94,14 +98,14 @@ export function NotifsPage({ client, goBack }: NotifsPageProps) {
           >
             ←
           </button>
-          <h1 className="text-text-primary font-semibold text-lg">🔔 通知</h1>
+          <h1 className="text-text-primary font-semibold text-lg">🔔 {t('notifications.title')}</h1>
         </div>
         <button
           onClick={refresh}
           disabled={loading}
           className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
         >
-          刷新
+          {t('action.refresh')}
         </button>
       </div>
 
@@ -112,12 +116,12 @@ export function NotifsPage({ client, goBack }: NotifsPageProps) {
       ) : notifications.length > 0 ? (
         <div>
           {notifications.map((n) => (
-            <NotifItem key={n.uri} n={n} />
+            <NotifItem key={n.uri} n={n} t={t} />
           ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <p className="text-text-secondary text-sm">暂无通知</p>
+          <p className="text-text-secondary text-sm">{t('notifications.empty')}</p>
         </div>
       )}
     </div>

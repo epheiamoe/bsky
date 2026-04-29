@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
-import { getCdnImageUrl } from '@bsky/app';
+import { getCdnImageUrl, useI18n } from '@bsky/app';
 import { wrapLines } from '../utils/text.js';
 
 export interface PostLine {
@@ -10,11 +10,12 @@ export interface PostLine {
   isName: boolean;
 }
 
-export function postToLines(post: PostView, index: number, isSelected: boolean, cols: number): PostLine[] {
+export function postToLines(post: PostView, index: number, isSelected: boolean, cols: number, t: (key: string, params?: Record<string, string | number>) => string, locale: string): PostLine[] {
   const lines: PostLine[] = [];
   const name = post.author.displayName || post.author.handle;
   const text = post.record.text.replace(/\n/g, ' ');
-  const time = post.indexedAt ? new Date(post.indexedAt).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
+  const time = post.indexedAt ? new Date(post.indexedAt).toLocaleString(dateLocale, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
 
   // Author line
   lines.push({ text: `${name} @${post.author.handle} [${index}]`, isSelected, isName: true });
@@ -44,7 +45,7 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
   for (let i = 0; i < imageUrls.length; i++) {
     const url = imageUrls[i]!;
     // OSC 8 — clickable hyperlink in modern terminals
-    lines.push({ text: '\x1b]8;;' + url + '\x07🖼 图片' + (imageUrls.length > 1 ? ` ${i + 1}` : '') + ' (Ctrl+点击在浏览器查看)\x1b]8;;\x07', isSelected, isName: false });
+    lines.push({ text: '\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: imageUrls.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
   }
 
   // Stats line
@@ -69,11 +70,11 @@ export function PostListItem({ line }: PostListItemProps) {
   );
 }
 
-export function PostSkeleton() {
+export function PostSkeleton({ t }: { t: (key: string) => string }) {
   return (
     <>
       <Text dimColor>─────</Text>
-      <Text dimColor>Loading...</Text>
+      <Text dimColor>{t('status.loading')}</Text>
       <Text dimColor>─────</Text>
     </>
   );

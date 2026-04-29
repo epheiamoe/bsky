@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useThread } from '@bsky/app';
+import { useThread, useI18n } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
 
@@ -25,6 +25,9 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   const [confirmRepost, setConfirmRepost] = useState<{ uri: string; handle: string } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
+  const { t, locale } = useI18n();
+  const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
+  const dateTimeOpts: Intl.DateTimeFormatOptions = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
 
   const focusedUri = focused?.uri;
   const isTheme = focused?.isRoot && focused?.depth === 0;
@@ -69,7 +72,6 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         const rkey = cursorLine.uri.split('/').pop() ?? '';
         const url = `@${cursorLine.handle} ${cursorLine.uri} https://bsky.app/profile/${cursorLine.handle}/post/${rkey}`;
         setYankedUri(url);
-        // Also write to stderr so it survives TUI exit
         process.stderr.write(`\n📋 ${url}\n`);
         setTimeout(() => setYankedUri(null), 5000);
         return;
@@ -77,24 +79,55 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
     }
   });
 
-  if (loading && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>加载讨论串...</Text></Box>;
+  if (loading && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>{t('thread.loadFailed')}</Text></Box>;
 
   const glc = (l: FlatLine) => l.likeCount + (localLikeCounts[l.rkey] ?? 0);
 
+  const renderPostBody = (line: FlatLine, bg?: string) => (
+    <Box flexDirection="column">
+      {/* Name + media tags */}
+      <Box>
+        <Text backgroundColor={bg} color={bg ? 'cyanBright' : 'green'} bold={!!bg}>
+          {line.displayName}
+        </Text>
+        <Text backgroundColor={bg} dimColor>{' @'}{line.handle}</Text>
+        {line.mediaTags.length > 0 && (
+          <Text backgroundColor={bg} color="yellow">{'  '}{line.mediaTags.join(' ')}</Text>
+        )}
+      </Box>
+      {/* Text */}
+      <Box><Text backgroundColor={bg}>{line.text}</Text></Box>
+      {/* Images — OSC 8 clickable hyperlinks */}
+      {line.imageUrls?.map((url, i) => (
+        <Box key={i}><Text backgroundColor={bg}>
+          {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}
+        </Text></Box>
+      ))}
+      {/* External link */}
+      {line.externalLink && (
+        <Box><Text backgroundColor={bg}>
+          {'\x1b]8;;' + line.externalLink.uri + '\x07🔗 ' + (line.externalLink.title || line.externalLink.uri) + '\x1b]8;;\x07'}
+        </Text></Box>
+      )}
+      {/* Stats */}
+      <Box>
+        <Text backgroundColor={bg} dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
+        {bg && isBookmarked(line.uri) && <Text backgroundColor={bg} color="yellow">{'  🔖 '}{t('action.bookmarked')}</Text>}
+        {bg && line.indexedAt && <Text backgroundColor={bg} dimColor>{' · '}{new Date(line.indexedAt).toLocaleString(dateLocale, dateTimeOpts)}</Text>}
+      </Box>
+    </Box>
+  );
+
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
-      <Box><Text bold color="cyan">🧵 讨论 - {isTheme ? '主题帖' : '回复'}</Text></Box>
+      <Box><Text bold color="cyan">{'🧵 '}{t('breadcrumb.thread')} - {isTheme ? t('thread.rootPost') : t('action.reply')}</Text></Box>
 
       {/* ── Theme posts ── */}
       {themeLines.length > 0 && (
         <Box flexDirection="column" marginTop={0}>
-          <Box><Text dimColor>── 讨论源 ──</Text></Box>
+          <Box><Text dimColor>{'── ' + t('thread.discussionSource') + ' ──'}</Text></Box>
           {themeLines.map((line, i) => (
-            <Box key={i} flexDirection="column" marginBottom={0}>
-              <Box><Text>{line.displayName}</Text><Text dimColor>{' @'}{line.handle}</Text></Box>
-              <Box><Text>{line.text}</Text></Box>
-              <Box><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
-            </Box>
+            <Box key={i} marginBottom={0}>{renderPostBody(line)}</Box>
           ))}
         </Box>
       )}
@@ -102,35 +135,41 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       {/* ── Current focused post ── */}
       {focused && (
         <Box flexDirection="column" marginTop={0}>
-          <Box><Text dimColor>{isTheme ? '── 主题帖 ──' : '── 当前帖子 ──'}</Text></Box>
-          <Box><Text backgroundColor="#1e40af" color="cyanBright" bold>{focused.displayName}</Text><Text backgroundColor="#1e40af" dimColor>{' @'}{focused.handle}</Text></Box>
-          <Box><Text backgroundColor="#1e40af">{focused.text}</Text></Box>
-          <Box>
-            <Text dimColor>♥ {glc(focused)}  ♺ {focused.repostCount + (isReposted(focused.uri) ? 1 : 0)}  💬 {focused.replyCount}</Text>
-            {isBookmarked(focused.uri) && <Text color="yellow">{'  🔖 已收藏'}</Text>}
-            {focused.indexedAt && <Text dimColor>{' · '}{new Date(focused.indexedAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' })}</Text>}
-          </Box>
+          <Box><Text dimColor>{isTheme ? '── ' + t('thread.rootPost') + ' ──' : '── ' + t('thread.currentPost') + ' ──'}</Text></Box>
+          {renderPostBody(focused, '#1e40af')}
         </Box>
       )}
 
       {/* ── Replies ── */}
       <Box flexDirection="column" marginTop={0}>
-        <Box><Text dimColor>── 回复 ──</Text></Box>
-        {replyLines.length === 0 && <Box><Text dimColor>  没有回复</Text></Box>}
+        <Box><Text dimColor>{'── ' + t('thread.replies') + ' ──'}</Text></Box>
+        {replyLines.length === 0 && <Box><Text dimColor>{'  '}{t('thread.noReplies')}</Text></Box>}
         {replyLines.map((line, i) => {
           if (!line.uri) return <Box key={i}><Text dimColor>{'  '}{line.text}</Text></Box>;
           const isCursor = line.uri === cursorLine?.uri;
           const indent = '  '.repeat(Math.min(line.depth - 1, 3));
           return (
             <Box key={i} flexDirection="column" marginBottom={0}>
+              {/* Name line with cursor */}
               <Box>
                 <Text dimColor>{indent}↳ </Text>
                 <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} bold={isCursor}>{line.displayName}</Text>
                 <Text dimColor>{' @'}{line.handle}</Text>
-                <Text dimColor>{isCursor ? ' ← 光标' : ''}</Text>
+                {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
                 {line.hasReplies && <Text color="cyan">{' [+]'}</Text>}
+                {line.mediaTags.length > 0 && (
+                  <Text color="yellow">{'  '}{line.mediaTags.join(' ')}</Text>
+                )}
               </Box>
+              {/* Text */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>
+              {/* Images */}
+              {line.imageUrls?.map((url, idx) => (
+                <Box key={idx}><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>
+                  {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? idx + 1 : 1 }) + '\x1b]8;;\x07'}
+                </Text></Box>
+              ))}
+              {/* Stats */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
             </Box>
           );
@@ -140,15 +179,15 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       {/* ── Repost confirm ── */}
       {confirmRepost && (
         <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={1} marginTop={0}>
-          <Text bold color="yellow">⚠ 确认转发 @{confirmRepost.handle} 的回复？</Text>
-          <Box><Text color="green">[Y] 确认转发</Text><Text>{'  '}</Text><Text color="red">[N] 取消</Text></Box>
+          <Text bold color="yellow">{'⚠ '}{t('thread.confirmRepost', { handle: confirmRepost.handle })}</Text>
+          <Box><Text color="green">{t('thread.confirmRepostYes')}</Text><Text>{'  '}</Text><Text color="red">{t('thread.confirmRepostNo')}</Text></Box>
         </Box>
       )}
 
       {/* ── Yanked URI ── */}
       {yankedUri && (
         <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1} marginTop={0}>
-          <Text color="cyan" bold>📋 已复制到 stderr + 下方：</Text>
+          <Text color="cyan" bold>{'📋 '}{t('thread.copiedToStderr')}</Text>
           <Text color="white">{yankedUri}</Text>
         </Box>
       )}

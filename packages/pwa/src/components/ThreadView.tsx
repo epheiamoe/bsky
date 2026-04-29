@@ -1,7 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread } from '@bsky/app';
-import { useBookmarks } from '@bsky/app';
-import { useTranslation } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
@@ -55,6 +53,7 @@ function ActionButtons({
   goTo: (v: AppView) => void;
   onTranslate?: () => void;
 }) {
+  const { t } = useI18n();
   const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
 
   return (
@@ -63,38 +62,38 @@ function ActionButtons({
         onClick={() => likePost(uri)}
         className={`hover:text-red-500 transition-colors ${isLiked(uri) ? 'text-red-500' : ''}`}
       >
-        ❤️ {isLiked(uri) ? '已赞' : 'Like'}
+        ❤️ {isLiked(uri) ? t('action.liked') : t('action.like')}
       </button>
       <button
         onClick={() => repostPost(uri)}
         className={`hover:text-green-500 transition-colors ${isReposted(uri) ? 'text-green-500' : ''}`}
       >
-        ♻️ {isReposted(uri) ? '已转' : 'Repost'}
+        ♻️ {isReposted(uri) ? t('action.reposted') : t('action.repost')}
       </button>
       <button
         onClick={() => goTo({ type: 'compose', replyTo: uri })}
         className="hover:text-primary transition-colors"
       >
-        💬 Reply
+        💬 {t('action.reply')}
       </button>
       <button
         onClick={() => toggleBookmark(uri, cid)}
         className={`hover:text-yellow-500 transition-colors ${isBookmarked(uri) ? 'text-yellow-500' : ''}`}
       >
-        {isBookmarked(uri) ? '🔖 已收藏' : '🔖 Bookmark'}
+        {isBookmarked(uri) ? '🔖 ' + t('action.bookmarked') : '🔖 ' + t('action.bookmark')}
       </button>
       <button
         onClick={() => goTo({ type: 'aiChat', contextUri: uri })}
         className="hover:text-primary transition-colors"
       >
-        🤖 AI 分析
+        🤖 {t('thread.aiAnalyze')}
       </button>
       <button
         onClick={onTranslate}
         disabled={!onTranslate}
         className={`hover:text-primary transition-colors ${!onTranslate ? 'opacity-30 cursor-not-allowed' : ''}`}
       >
-        🌐 翻译
+        🌐 {t('action.translate')}
       </button>
       <button
         onClick={() => {
@@ -103,7 +102,7 @@ function ActionButtons({
         }}
         className="hover:text-primary transition-colors"
       >
-        📋 复制链接
+        📋 {t('action.copyLink')}
       </button>
     </div>
   );
@@ -166,8 +165,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     return { parentLines: parents, replyLines: replies };
   }, [flatLines]);
 
+  const { t } = useI18n();
   const isTheme = focused?.isRoot && focused?.depth === 0;
-  const focusedTitle = isTheme ? '主题帖' : '当前帖子';
+  const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
 
   if (loading) return <Spinner />;
 
@@ -182,9 +182,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="text-sm">返回</span>
+            <span className="text-sm">{t('nav.back')}</span>
           </button>
-          <h1 className="text-lg font-semibold text-text-primary">帖子</h1>
+          <h1 className="text-lg font-semibold text-text-primary">{t('thread.title')}</h1>
         </div>
       </header>
 
@@ -192,7 +192,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {/* ── 讨论源 (parent chain) ── */}
         {parentLines.length > 0 && (
           <section className="space-y-2">
-            <p className="text-xs text-text-secondary font-medium pl-4">── 讨论源 ──</p>
+            <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.discussionSource')} ──</p>
             {parentLines.map((line) => (
               <div
                 key={line.uri || line.rkey}
@@ -238,13 +238,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap">
               {focused.text}
             </p>
-            {translating && <p className="text-text-secondary text-sm mt-1">🌐 翻译中…</p>}
+            {translating && <p className="text-text-secondary text-sm mt-1">🌐 {t('action.translating')}</p>}
             {translationResult && !translating && (
               <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
                 <p className="text-xs text-primary font-medium mb-1">
-                  🌐 翻译 ({targetLang})
+                  🌐 {t('action.translate')} ({targetLang})
                   {translationResult.sourceLang && (
-                    <span className="text-text-secondary ml-2">源语言: {translationResult.sourceLang}</span>
+                    <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
                   )}
                 </p>
                 <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
@@ -297,7 +297,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {/* ── 回复 ── */}
         {replyLines.length > 0 && (
           <section className="space-y-3">
-            <p className="text-xs text-text-secondary font-medium pl-4">── 回复 ({replyLines.length}) ──</p>
+            <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.replies')} ({replyLines.length}) ──</p>
             {replyLines.map((line) => (
               <PostCard
                 key={line.uri || line.rkey}
@@ -326,7 +326,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {!loading && flatLines.length === 0 && (
           <div className="text-center py-16 text-text-secondary">
             <p className="text-4xl mb-3">📭</p>
-            <p>无法加载帖子</p>
+            <p>{t('thread.loadFailed')}</p>
           </div>
         )}
       </main>
