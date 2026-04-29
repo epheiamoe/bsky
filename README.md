@@ -12,7 +12,8 @@ Built with TypeScript, Ink (React), React DOM, and AT Protocol.
 
 ## 🚀 Live Demo
 
-**PWA Online**: *（即将部署到 Cloudflare Pages）*
+**PWA Online**: [ai-bsky.pages.dev](https://ai-bsky.pages.dev)
+*（Cloudflare Pages 手动部署 — 见下方「Deploy PWA to Static Host」）*
 
 ---
 
@@ -104,17 +105,19 @@ cd packages/pwa && pnpm build    # output → dist/
 Upload `dist/` to any static host:
 
 ```bash
-# Cloudflare Pages (Wrangler)
-npx wrangler pages deploy dist
+# Cloudflare Pages (Wrangler CLI)
+npx wrangler pages deploy dist --project-name ai-bsky
+
+# Cloudflare Pages (Manual — if network blocks API)
+# 1. Open https://dash.cloudflare.com → Workers & Pages → Create → Pages → Direct Upload
+# 2. Drag packages/pwa/dist/ folder to the upload area
+# 3. Set project name: ai-bsky, deploy
 
 # Netlify
 npx netlify deploy --dir dist --prod
 
 # Vercel
 npx vercel dist --prod
-
-# GitHub Pages
-cp -r dist /path/to/gh-pages && git push
 ```
 
 ---
