@@ -20,8 +20,10 @@
 | **AI 润色** | ✅ | ✅ | 草稿润色 |
 | **深色/浅色主题** | N/A | ✅ | CSS 变量，localStorage |
 | **PWA 安装** | N/A | ✅ | manifest.json + Service Worker |
-| **图片贴** | ✅ | ⬜ | 显示标记 → PWA `<img>` CDN |
-| **图片显示** | ⬜ | ⬜ | CDN URL 渲染 |
+| **图片贴** | ✅ | ✅ | 显示标记 → PWA `<img>` CDN |
+| **图片显示** | ✅ | ✅ | CDN URL 渲染 |
+| **头像显示** | ✅ | ✅ | PWA: `<img>` + 字母 fallback |
+| **头像缓存** | ⬜ | ⬜ | Service Worker / IndexedDB 缓存头像 URL |
 | **草稿** | ⬜ | ⬜ | AT 内置 draft API |
 | **多语言 UI** | ⬜ | ⬜ | i18n: zh/en/ja |
 | **关注/取关** | ⬜ | ⬜ | 用户资料页操作 |

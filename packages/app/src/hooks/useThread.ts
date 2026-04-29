@@ -11,6 +11,7 @@ export interface FlatLine {
   text: string;
   handle: string;
   displayName: string;
+  authorAvatar?: string;
   hasReplies: boolean;
   mediaTags: string[];
   imageUrls: string[];
@@ -148,6 +149,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
       text: post.record.text,
       handle: post.author.handle,
       displayName: post.author.displayName ?? post.author.handle,
+      authorAvatar: post.author.avatar,
       hasReplies: !!node.replies && node.replies.length > 0,
       mediaTags: getMediaTags(post),
       imageUrls: getImageUrls(post),
@@ -171,7 +173,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
         const remaining = sortedReplies.length - 5;
         lines.push({
           depth: d + 1, uri: '', cid: '', rkey: '', text: `（还有 ${remaining} 条回复未显示）`,
-          handle: '', displayName: '', hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null,
+          handle: '', displayName: '', authorAvatar: undefined, hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null,
           isRoot: false, likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
         });
       }

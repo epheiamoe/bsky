@@ -141,6 +141,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
   let hasImages = false;
   let images: ImageData[] = [];
   let externalLink: ExternalLink | null = null;
+  let avatarUrl: string | undefined;
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -150,6 +151,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     likeCount = post.likeCount;
     repostCount = post.repostCount;
     replyCount = post.replyCount;
+    avatarUrl = post.author.avatar;
     const embeds = extractEmbeds(post);
     images = embeds.images;
     hasImages = images.length > 0;
@@ -162,6 +164,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     likeCount = line.likeCount;
     repostCount = line.repostCount;
     replyCount = line.replyCount;
+    avatarUrl = line.authorAvatar;
     if (line.imageUrls?.length) {
       images = line.imageUrls.map(url => ({ url, alt: '' }));
       hasImages = true;
@@ -181,8 +184,12 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
       } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
-          {avatarLetter(displayName)}
+        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            avatarLetter(displayName)
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 flex-wrap">
