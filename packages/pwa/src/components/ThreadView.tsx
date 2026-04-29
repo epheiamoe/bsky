@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { useThread } from '@bsky/app';
 import { useBookmarks } from '@bsky/app';
+import { useTranslation } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { ImageGrid } from './PostCard.js';
 import { formatTime, uriToRkey, getPostUrl } from '../utils/format.js';
@@ -12,6 +13,8 @@ interface ThreadViewProps {
   uri: string;
   goBack: () => void;
   goTo: (v: AppView) => void;
+  aiConfig: AIConfig;
+  targetLang: string;
 }
 
 function Spinner() {
@@ -35,6 +38,7 @@ function ActionButtons({
   isBookmarked,
   toggleBookmark,
   goTo,
+  onTranslate,
 }: {
   uri: string;
   cid: string;
@@ -48,6 +52,7 @@ function ActionButtons({
   isBookmarked: (uri: string) => boolean;
   toggleBookmark: (uri: string, cid: string) => void;
   goTo: (v: AppView) => void;
+  onTranslate?: () => void;
 }) {
   const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
 
@@ -84,6 +89,12 @@ function ActionButtons({
         🤖 AI 分析
       </button>
       <button
+        onClick={onTranslate}
+        className="hover:text-primary transition-colors"
+      >
+        🌐 翻译
+      </button>
+      <button
         onClick={() => {
           const url = getPostUrl(handle, rkey);
           navigator.clipboard.writeText(url).catch(() => {});
@@ -96,7 +107,7 @@ function ActionButtons({
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -108,6 +119,18 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
   } = useThread(client, uri);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
+  const { translate, loading: translating } = useTranslation(aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es');
+
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+
+  const handleTranslate = useCallback(async () => {
+    if (!focused || translating) return;
+    if (translatedText) { setTranslatedText(null); return; }
+    try {
+      const result = await translate(focused.text, targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es');
+      setTranslatedText(result);
+    } catch { /* ignore */ }
+  }, [focused, translating, translatedText, translate, targetLang]);
 
   const { parentLines, replyLines } = useMemo(() => {
     const parents: typeof flatLines = [];
@@ -199,6 +222,13 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap">
               {focused.text}
             </p>
+            {translating && <p className="text-text-secondary text-sm mt-1">🌐 翻译中…</p>}
+            {translatedText && !translating && (
+              <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <p className="text-xs text-primary font-medium mb-1">🌐 翻译 ({targetLang})</p>
+                <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translatedText}</p>
+              </div>
+            )}
             {focused.imageUrls?.length > 0 && (
               <ImageGrid images={focused.imageUrls.map(url => ({ url, alt: '' }))} />
             )}
@@ -238,6 +268,7 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
               isBookmarked={isBookmarked}
               toggleBookmark={toggleBookmark}
               goTo={goTo}
+              onTranslate={handleTranslate}
             />
           </article>
         )}

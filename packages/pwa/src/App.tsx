@@ -98,6 +98,8 @@ export function App() {
             uri={(currentView as { uri: string }).uri}
             goBack={goBack}
             goTo={goTo}
+            aiConfig={appConfig.aiConfig}
+            targetLang={appConfig.targetLang}
           />
         );
       case 'compose':
