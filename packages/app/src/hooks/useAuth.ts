@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createAuthStore } from '../stores/auth.js';
 import type { AuthStore } from '../stores/auth.js';
+import type { CreateSessionResponse } from '@bsky/core';
 
 export function useAuth() {
   const [store] = useState(() => createAuthStore());
@@ -16,5 +17,6 @@ export function useAuth() {
     loading: store.loading,
     error: store.error,
     login: (h: string, p: string) => store.login(h, p),
+    restoreSession: (s: CreateSessionResponse) => store.restoreSession(s),
   };
 }

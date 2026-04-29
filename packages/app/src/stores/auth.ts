@@ -8,6 +8,7 @@ export interface AuthStore {
   loading: boolean;
   error: string | null;
   login: (handle: string, password: string) => Promise<void>;
+  restoreSession: (session: CreateSessionResponse) => void;
   listener: (() => void) | null;
 
   _notify(): void;
@@ -38,6 +39,17 @@ export function createAuthStore(): AuthStore {
         store.loading = false;
         store._notify();
       }
+    },
+
+    restoreSession(session: CreateSessionResponse) {
+      const c = new BskyClient();
+      c.restoreSession(session);
+      store.session = session;
+      store.client = c;
+      c.getProfile(session.handle).then(p => {
+        store.profile = p;
+        store._notify();
+      }).catch(() => {});
     },
 
     _notify() { if (store.listener) store.listener(); },
