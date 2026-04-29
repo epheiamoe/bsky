@@ -204,7 +204,6 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
                   <img key={i} src={url} alt={`图片 ${i + 1}`}
                     width="800" height="600"
                     className="w-full h-auto max-h-96 object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                   />
                 ))}
               </div>

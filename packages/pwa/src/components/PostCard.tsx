@@ -156,7 +156,6 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
                   width="800"
                   height="600"
                   className="w-full h-auto max-h-80 object-cover"
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               ))}
             </div>

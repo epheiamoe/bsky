@@ -6,6 +6,7 @@ export interface ChatMessage {
   name?: string;
   tool_call_id?: string;
   tool_calls?: ToolCall[];
+  reasoning_content?: string;
 }
 
 export interface ToolCall {
@@ -40,6 +41,7 @@ export interface ChatCompletionChoice {
     role: 'assistant';
     content: string | null;
     tool_calls?: ToolCall[];
+    reasoning_content?: string;
   };
   finish_reason: 'stop' | 'tool_calls' | 'length';
 }
@@ -144,6 +146,7 @@ export class AIAssistant {
           role: 'assistant',
           content: message.content || '',
           tool_calls: message.tool_calls,
+          ...(message.reasoning_content ? { reasoning_content: message.reasoning_content } : {}),
         });
 
         for (const tc of message.tool_calls) {
@@ -187,7 +190,11 @@ export class AIAssistant {
 
       // No tool calls - final response
       const finalContent = message.content || '';
-      this.messages.push({ role: 'assistant', content: finalContent });
+      this.messages.push({
+        role: 'assistant',
+        content: finalContent,
+        ...(message.reasoning_content ? { reasoning_content: message.reasoning_content } : {}),
+      });
 
       intermediateSteps.push({
         type: 'assistant',
@@ -299,6 +306,7 @@ export class AIAssistant {
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
+      let reasoningContent = '';
       let toolCallAccum: Map<number, { id: string; name: string; arguments: string }> = new Map();
 
       while (true) {
@@ -316,6 +324,10 @@ export class AIAssistant {
             const chunk = JSON.parse(data);
             const delta = chunk.choices?.[0]?.delta;
             if (!delta) continue;
+
+            if (delta.reasoning_content) {
+              reasoningContent += delta.reasoning_content;
+            }
 
             if (delta.content) {
               fullContent += delta.content;
@@ -352,6 +364,7 @@ export class AIAssistant {
           role: 'assistant',
           content: fullContent || '',
           tool_calls: toolCalls,
+          ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
         });
 
         for (const tc of toolCalls) {
@@ -385,7 +398,11 @@ export class AIAssistant {
       }
 
       // No tool calls — done
-      this.messages.push({ role: 'assistant', content: fullContent });
+      this.messages.push({
+        role: 'assistant',
+        content: fullContent,
+        ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
+      });
       yield { type: 'done', content: fullContent };
       return;
     }
