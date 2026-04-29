@@ -86,3 +86,53 @@ useEffect(() => {
 - ✅ Windows Terminal, iTerm2, Kitty, WezTerm, tmux 3.3+
 - ❌ ConEmu, traditional cmd.exe (harmless — write ignored)
 - Fallback (passthrough stream) unaffected
+
+## markdown.tsx — Ink Markdown Renderer
+
+**File**: `packages/tui/src/utils/markdown.tsx`
+**PWA**: Not needed. Pre-built Ink components are incompatible with browsers.
+
+```typescript
+function renderMarkdown(md: string): ReactNode[]
+```
+
+### Purpose
+A zero-dependency Markdown-to-Ink renderer. Converts a markdown string into an array of Ink `ReactNode` elements (`<Text>`, `<Box>`) suitable for rendering in a TUI context. No external markdown parsing libraries are used.
+
+### Supported Syntax
+
+| Element | Rendered Output |
+|---------|-----------------|
+| `# Heading 1` – `###### Heading 6` | Bold `<Text>` with adjusted color/brightness |
+| `**bold**` / `*italic*` | `<Text bold>` / `<Text italic>` |
+| ` ``` ` fenced code blocks | Cyan-colored `<Text>` on dark gray background `<Box>` |
+| Inline `` `code` `` | Cyan-colored `<Text>` |
+| Unordered lists (`-`, `*`, `+`) | Indented line with `•` prefix |
+| Ordered lists (`1.`, `2.`, etc.) | Indented line with `1.`, `2.` prefix |
+| `> blockquote` | Gray/dimmed `<Text>` with `│` vertical bar prefix |
+| `---` horizontal rule | Full-width gray `─` separator line |
+| Paragraph breaks (blank lines) | Empty `<Text>{' '}</Text>` spacer |
+| Escaped characters (`\+`, `\*`, etc.) | Literal character without formatting |
+
+### Usage in AIChatView
+
+```typescript
+import { renderMarkdown } from '../utils/markdown';
+
+// Inside AIChatView render:
+{msg.role === 'assistant'
+  ? renderMarkdown(msg.content.trimEnd())
+  : wrapLines(msg.content, maxCols, 2).map((l, i) => (
+      <Text key={i}>{'  ' + l}</Text>
+    ))
+}
+```
+
+User messages use `wrapLines` for plain text wrapping. Assistant messages use `renderMarkdown` for rich formatting (code blocks, headings, lists, etc.).
+
+### Implementation Notes
+- Lines are parsed sequentially with minimal lookahead
+- Code block state is tracked via `inCodeBlock` flag
+- Color constants: `cyan` (#00ffff) for code, `dim` (#888888) for blockquotes, `brightYellow` (#ffff00) for bold text
+- Horizontal rules drawn to terminal width (`process.stdout.columns || 80`)
+- Block-level elements separated by empty `<Text>` nodes for visual spacing

@@ -62,15 +62,139 @@ interface AIConfig {
 ## Single-Turn Functions
 
 ```typescript
-// Translation (no tools, fast response)
-translateToChinese(config: AIConfig, text: string): Promise<string>
-
-// Draft polish
+// Polish draft
 polishDraft(config: AIConfig, draft: string, requirement: string): Promise<string>
 
 // Generic single-turn
 singleTurnAI(config: AIConfig, systemPrompt: string, userPrompt: string,
              temperature?: number, maxTokens?: number): Promise<string>
+```
+
+## Translation
+
+**File**: `packages/core/src/ai/assistant.ts`
+
+### Dual-Mode Architecture
+
+`translateText` operates in two modes, selected automatically:
+
+| Mode | Condition | Behaviour |
+|------|-----------|-----------|
+| **Simple** | Target language is CJK or the text is short (<200 chars) | Standard `system` + `user` prompt, no JSON wrapping |
+| **JSON** | All other cases (European languages, long text) | `response_format: { type: 'json_object' }` with `source_lang` field |
+
+```typescript
+translateText(config: AIConfig, text: string, targetLang: string): Promise<{
+  translation: string;
+  source_lang?: string;  // only in JSON mode
+  mode: 'simple' | 'json';
+}>
+```
+
+### JSON Mode Prompt
+
+```
+Translate the following text to {targetLang}.
+Return ONLY a JSON object with fields:
+  - "translation": the translated text
+  - "source_lang": ISO 639-1 code of the source language (e.g. "en", "fr", "de")
+
+Do NOT include any other text or explanation.
+```
+
+Request body includes `response_format: { type: 'json_object' }` to enforce structured output.
+
+### Retry Logic
+
+DeepSeek's JSON mode occasionally returns empty content. Retry with exponential backoff:
+
+| Attempt | Delay before send |
+|---------|-------------------|
+| 1 (initial) | — |
+| 2 | 800 ms |
+| 3 | 1,600 ms |
+| 4 (final) | 2,400 ms |
+
+Max retries: **3** (4 total attempts). Each retry re-sends the identical prompt. If all attempts fail, the function throws with `translateText failed after 4 attempts`.
+
+One special retry trigger: **empty `choices[0].message.content`** — treated as a failure even if HTTP 200, because DeepSeek JSON mode can return `200 OK` with a blank body.
+
+```typescript
+const MAX_RETRIES = 3;
+const BACKOFF_MS = 800;
+for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  if (attempt > 0) await sleep(BACKOFF_MS * attempt);
+  const resp = await ky.post(...);
+  const content = resp.choices[0]?.message?.content;
+  if (content) return parseContent(content);  // success
+  // else blank content → retry
+}
+throw new Error('translateText failed after 4 attempts');
+```
+
+## Streaming
+
+**File**: `packages/core/src/ai/assistant.ts`
+
+### sendMessageStreaming
+
+A separate method on `AIAssistant` for real-time token delivery. Unlike `sendMessage` (which waits for the full response), this method returns a `ReadableStream` that yields tokens as they arrive.
+
+```typescript
+sendMessageStreaming(content: string): Promise<ReadableStream<StreamChunk>>
+
+interface StreamChunk {
+  type: 'token' | 'tool_call' | 'tool_result' | 'done' | 'error';
+  content?: string;
+  toolCallId?: string;
+  error?: string;
+}
+```
+
+### SSE Parser
+
+The stream is parsed as Server-Sent Events (SSE). Each line prefixed with `data: ` is a JSON object matching the OpenAI-compatible streaming format (`choices[0].delta`).
+
+```
+data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hello"}}]}
+
+data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" world"}}]}
+
+data: [DONE]
+```
+
+### Reasoning Content Preservation
+
+DeepSeek models return `reasoning_content` in streaming chunks (separate from `content`). The parser preserves this:
+
+```
+data: {"choices":[{"delta":{"reasoning_content":"Let me think about this..."}}]}
+data: {"choices":[{"delta":{"content":"The answer is..."}}]}
+```
+
+Both fields are accumulated separately and exposed in the final `StreamChunk` of type `done`:
+
+```typescript
+interface StreamDoneChunk extends StreamChunk {
+  type: 'done';
+  fullContent: string;
+  reasoningContent?: string;   // DeepSeek R1 reasoning trace
+  toolCalls: ToolCallResult[];
+  tokensUsed: number;
+}
+```
+
+### Integration with useAIChat
+
+The `useAIChat` hook in `@bsky/app` can consume the streaming method when `options.streaming = true`:
+
+```typescript
+const { messages, loading, send } = useAIChat(client, aiConfig, contextUri, {
+  streaming: true,
+  onToken: (token) => {
+    // append token to the current assistant message in real-time
+  },
+});
 ```
 
 ## Tool System
@@ -152,11 +276,3 @@ depth:0 | alice.bsky.social (Alice) (post:abc123)
 **Translation**: `将以下文本翻译成{目标语言}，保持原意，仅输出翻译结果，不做解释。`
 
 **Draft Polish**: `你是一个文字润色助手，根据用户要求调整以下帖子草稿，只返回润色后的文本。`
-
-## TODO: Streaming
-
-Currently non-streaming (waits for full response). TODO in `makeRequest()`:
-```typescript
-// TODO: streaming support — set stream:true, use ReadableStream + SSE parser
-// to yield tokens in real-time instead of waiting for full response
-```

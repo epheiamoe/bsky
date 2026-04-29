@@ -1,16 +1,33 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 import { useNotifications } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
+import type { AppView } from '@bsky/app';
 
 interface NotifViewProps {
   client: BskyClient | null;
   goBack: () => void;
+  goTo: (v: AppView) => void;
   cols: number;
 }
 
-export function NotifView({ client, cols }: NotifViewProps) {
-  const { notifications, loading } = useNotifications(client);
+export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
+  const { notifications, loading, refresh } = useNotifications(client);
+  const [cursorIdx, setCursorIdx] = useState(0);
+
+  useInput((input, key) => {
+    if (key.escape) { goBack(); return; }
+    if (key.upArrow || input === 'k') { setCursorIdx(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow || input === 'j') { setCursorIdx(i => Math.min(notifications.length - 1, i + 1)); return; }
+    if (input === 'r' || input === 'R') { void refresh(); return; }
+    if (key.return) {
+      const n = notifications[cursorIdx];
+      if (n?.reasonSubject) {
+        goTo({ type: 'thread', uri: n.reasonSubject });
+      }
+      return;
+    }
+  });
 
   if (loading) {
     return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>加载通知...</Text></Box>;
@@ -20,19 +37,42 @@ export function NotifView({ client, cols }: NotifViewProps) {
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box height={1}>
         <Text bold>🔔 通知</Text>
-        <Text dimColor>{' ('}{notifications.length}{' 条) Esc 返回  R 刷新'}</Text>
+        <Text dimColor>{' ('}{notifications.length}{' 条) ↑↓/jk:导航 Enter:查看帖子 R:刷新'}</Text>
       </Box>
       {notifications.length === 0 && <Text dimColor>暂无通知</Text>}
-      {notifications.map((n, i) => (
-        <Box key={i} height={1}>
-          <Text color={n.isRead ? undefined : 'cyan'}>{n.isRead ? '○' : '●'}</Text>
-          <Text color="green">{' '}{n.author?.handle ?? ''}</Text>
-          <Text>{' '}{reasonLabel(n.reason)}</Text>
-          <Text dimColor>{' · '}{n.indexedAt ? new Date(n.indexedAt).toLocaleString('zh-CN') : ''}</Text>
-        </Box>
-      ))}
+      {notifications.map((n, i) => {
+        const isSel = i === cursorIdx;
+        const preview = getNotificationPreview(n);
+        return (
+          <Box key={i} flexDirection="column">
+            <Box height={1}>
+              <Text
+                backgroundColor={isSel ? '#1e40af' : undefined}
+                color={isSel ? 'cyanBright' : n.isRead ? undefined : 'cyan'}
+              >
+                {isSel ? '▶' : ' '}{n.isRead ? '○' : '●'}
+              </Text>
+              <Text color="green" backgroundColor={isSel ? '#1e40af' : undefined}> {n.author?.handle ?? ''}</Text>
+              <Text backgroundColor={isSel ? '#1e40af' : undefined}> {reasonLabel(n.reason)}</Text>
+              <Text dimColor backgroundColor={isSel ? '#1e40af' : undefined}>{' · '}{n.indexedAt ? new Date(n.indexedAt).toLocaleString('zh-CN') : ''}</Text>
+            </Box>
+            {preview && (
+              <Box height={1}>
+                <Text dimColor>  {preview}</Text>
+              </Box>
+            )}
+          </Box>
+        );
+      })}
     </Box>
   );
+}
+
+function getNotificationPreview(n: { reason?: string; reasonSubject?: string }): string | null {
+  // TUI can't fetch the post text without an API call, but we can show the reason
+  // For now, show a hint that Enter will open the post
+  if (n.reasonSubject) return '↳ 按 Enter 查看帖子';
+  return null;
 }
 
 function reasonLabel(reason: string): string {

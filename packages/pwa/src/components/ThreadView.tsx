@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useThread } from '@bsky/app';
 import { useBookmarks } from '@bsky/app';
 import { useTranslation } from '@bsky/app';
@@ -91,7 +91,8 @@ function ActionButtons({
       </button>
       <button
         onClick={onTranslate}
-        className="hover:text-primary transition-colors"
+        disabled={!onTranslate}
+        className={`hover:text-primary transition-colors ${!onTranslate ? 'opacity-30 cursor-not-allowed' : ''}`}
       >
         🌐 翻译
       </button>
@@ -128,8 +129,15 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   const [translationResult, setTranslationResult] = useState<{ translated: string; sourceLang?: string } | null>(null);
 
+  // Clear translation when focused post changes
+  useEffect(() => {
+    setTranslationResult(null);
+  }, [focused?.uri]);
+
+  const hasText = (focused?.text?.trim().length ?? 0) > 0;
+
   const handleTranslate = useCallback(async () => {
-    if (!focused || translating) return;
+    if (!focused || translating || !hasText) return;
     if (translationResult) { setTranslationResult(null); return; }
     try {
       const result = await translate(
@@ -281,7 +289,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               isBookmarked={isBookmarked}
               toggleBookmark={toggleBookmark}
               goTo={goTo}
-              onTranslate={handleTranslate}
+              onTranslate={hasText ? handleTranslate : undefined}
             />
           </article>
         )}

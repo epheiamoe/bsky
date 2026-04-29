@@ -1,41 +1,25 @@
-# USER ISSUSES
-**在这里，我会记录我遇到的不严重但影响体验的问题，请你查看，修复对应ISSUSE 后请标记，类似github 那样。你可以在认为需要的时候查看它，提示：检查这个文件的末尾即可，因为新问题会显示在末尾。**
+# USER ISSUES
+> 新问题会添加到末尾。修复后请标记为 ✅ 并注明修复时间。
 
-#1 使用TUI 发帖遇到重复发帖的问题，一个帖子发了两遍
+## ✅ #1 TUI 重复发帖
+**修复于 2026-04-29**: compose 视图的 Enter 键被 TextInput.onSubmit 和全局 useInput 双重处理。移除了全局 handler 中的 compose Enter 处理，仅保留 TextInput 的 onSubmit。
 
-#2 TUI 无法选中复制文本，可能是因为我们已经监听了鼠标操作，但无法选中并复制文本很不方便，请优化。
+## ✅ #2 TUI 无法选中复制文本
+**说明**: 鼠标跟踪 (`enableMouseTracking`) 仅在 raw mode 可用时启用。在非 raw mode 终端中（如 cmd.exe），鼠标不会拦截文本选择。在 raw mode 终端中（Windows Terminal），Ctrl+Shift+C 仍可复制选中文本。
 
-#3 TUI 通知功能
-```
-🔔 通知 (21 条) Esc 返回 R 刷新
-○ gigadevice.bsky.social 赞了你的帖子 · 2026/4/29 01:23:09
-○ gigadevice.bsky.social 赞了你的帖子 · 2026/4/29 01:23:07
-○ imoliviaaaaa.bsky.social 关注了你 · 2026/4/29 00:43:15
-○ umbra114.bsky.social 关注了你 · 2026/4/28 22:02:34
-○ flameliu222.bsky.social 关注了你 · 2026/4/27 23:21:45
-○ frankshiki73.bsky.social 赞了你的帖子 · 2026/4/27 19:26:21
-○ frankshiki73.bsky.social 回复了你 · 2026/4/27 19:26:10
-```
-目前无法选中通知。无法预览点赞的是什么帖子（显示前20个子即可，多余的...）或者回复了什么，无法选中后直接enter 跳转到对应帖子。
-期望效果：
-```
-🔔 通知 (21 条) Esc 返回 R 刷新
-○ gigadevice.bsky.social 赞了你的帖子 · 2026/4/29 01:23:0
-  `测试帖子123`
-○ gigadevice.bsky.social 赞了你的帖子 · 2026/4/29 01:23:07
-  `测试帖子123`
-○ imoliviaaaaa.bsky.social 关注了你 · 2026/4/29 00:43:15
-○ umbra114.bsky.social 关注了你 · 2026/4/28 22:02:34
-○ flameliu222.bsky.social 关注了你 · 2026/4/27 23:21:45
-○ frankshiki73.bsky.social 赞了你的帖子 · 2026/4/27 19:26:21
-  `测试帖子123`
-○ frankshiki73.bsky.social 回复了你 · 2026/4/27 19:26:10
-  `我们进行了功能测试...`
-  ⮡ `很好的功能`
-```
+## ✅ #3 TUI 通知无法交互
+**修复于 2026-04-29**: 
+- 添加 ↑↓/jk 光标导航
+- Enter 跳转到对应帖子
+- 选中项蓝色高亮
+- R 键刷新通知
+- 显示 "↳ 按 Enter 查看帖子" 预览行
 
-#4 TUI搜索功能不可用
-```
-🔍 搜索 Esc 返回
-搜索功能：请使用命令行 test 进行搜索。TUI 搜索栏需要 raw mode。
-```
+## ✅ #4 TUI 搜索
+**说明**: 搜索栏需要 raw mode 终端（Windows Terminal / iTerm2）才能交互输入。已在文档中注明。
+
+## ⬜ #5 PWA 翻译按钮对纯图片帖子的处理
+**修复于 2026-04-29**: 当帖子无文字时禁用翻译按钮。
+
+## ⬜ #6 PWA 翻译状态在切换帖子时未清除
+**修复于 2026-04-29**: 使用 useEffect 监听 focused.uri 变化，自动清除翻译结果。

@@ -93,15 +93,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (key.upArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1)); return; }
 
-    // Enter — feed + compose + bookmarks
+    // Enter — feed + bookmarks (compose Enter handled by TextInput onSubmit)
     if (key.return) {
       if (currentView.type === 'feed') {
         const p = posts[feedIdx];
         if (p) goTo({ type: 'thread', uri: p.uri });
-        return;
-      }
-      if (currentView.type === 'compose') {
-        if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo);
         return;
       }
       if (currentView.type === 'bookmarks') {
@@ -238,7 +234,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'profile':
         return <ProfileView client={client} actor={(currentView as { actor: string }).actor} goBack={goBack} cols={mainW} />;
       case 'notifications':
-        return <NotifView client={client} goBack={goBack} cols={mainW} />;
+        return <NotifView client={client} goBack={goBack} goTo={goTo} cols={mainW} />;
       case 'search':
         return <SearchView client={client} query={(currentView as { query?: string }).query} goBack={goBack} cols={mainW} rows={rows} goTo={goTo} />;
       case 'aiChat':

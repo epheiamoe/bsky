@@ -6,8 +6,10 @@
 - `BskyClient` — AT Protocol HTTP client
 - `createTools(tools)` — 31 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling
-- `singleTurnAI`, `translateToChinese`, `polishDraft`
-- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, etc.
+- `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
+- `translateText` — dual-mode translation (simple/JSON) with retry logic
+- `singleTurnAI`, `polishDraft`
+- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `StreamChunk`, etc.
 
 **Key files**:
 
@@ -16,7 +18,7 @@
 | `src/at/client.ts` | BskyClient class. Auth (createSession), all AT endpoints via `ky`. |
 | `src/at/tools.ts` | `createTools()` → 31 ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
 | `src/at/types.ts` | All AT Protocol TypeScript types. |
-| `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (up to 10 rounds). `singleTurnAI()` for translation/polish. |
+| `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (up to 10 rounds). `translateText()` with dual-mode + retry. `sendMessageStreaming()` for real-time token delivery. |
 
 **Dependencies**: `ky`, `dotenv` (dev), `@types/node` (dev).
 **Zero UI deps**: No React, no Ink, no DOM.
@@ -98,6 +100,65 @@
 | `SearchView.tsx` | Search results display |
 
 **Dependencies**: `@bsky/core`, `@bsky/app`, `ink`, `ink-text-input`, `ink-spinner`, `react`, `tsx` (dev).
+
+---
+
+## `packages/pwa` — Progressive Web App (React/DOM)
+
+**Package name**: `@bsky/pwa`
+
+**Dependencies**: `@bsky/app`, `@bsky/core`, `react`, `react-dom`, `react-markdown`, `remark-gfm`, `rehype-raw`, `rehype-sanitize`
+
+### Key Components
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| `Layout` | `components/Layout.tsx` | Shell: sidebar + header + content area |
+| `Sidebar` | `components/Sidebar.tsx` | Persistent nav with route links, unread badge |
+| `PostCard` | `components/PostCard.tsx` | Single post card with media, links, markdown rendering |
+| `FeedTimeline` | `components/FeedTimeline.tsx` | Infinite-scroll feed with PostCard list + cursor pagination |
+| `ThreadView` | `components/ThreadView.tsx` | Nested thread display with depth indentation |
+| `ComposePage` | `components/ComposePage.tsx` | Post/reply/quote composer with image upload |
+| `AIChatPage` | `components/AIChatPage.tsx` | AI assistant chat with markdown rendering, tool call cards |
+| `ProfilePage` | `components/ProfilePage.tsx` | User profile, follows/followers, author feed |
+| `SearchPage` | `components/SearchPage.tsx` | Search actors + posts |
+| `NotifsPage` | `components/NotifsPage.tsx` | Notification feed with read/unread grouping |
+| `BookmarkPage` | `components/BookmarkPage.tsx` | Bookmarks list |
+| `LoginPage` | `components/LoginPage.tsx` | Bluesky handle + app-password auth form |
+| `SettingsModal` | `components/SettingsModal.tsx` | AI key, base URL, model, language preferences |
+
+### Hooks
+
+| Hook | File | Purpose |
+|------|------|---------|
+| `useHashRouter` | `hooks/useHashRouter.ts` | URL hash-based routing (`#/profile/alice.bsky.social`) with back/forward navigation |
+| `useSessionPersistence` | `hooks/useSessionPersistence.ts` | Session restore from `localStorage` on page load |
+| `useAppConfig` | `hooks/useAppConfig.ts` | Read/write app settings (AI config, target language) to `localStorage` |
+
+### Services
+
+| Service | File | Purpose |
+|---------|------|---------|
+| `IndexedDBChatStorage` | `services/IndexedDBChatStorage.ts` | Implements `ChatStorage` interface using IndexedDB for persisting chat conversations with full message history |
+
+### Routing
+
+Hash-based SPA routing (no server required):
+
+```
+#/                         → FeedTimeline (home timeline)
+#/post/{uri}               → ThreadView (post + replies)
+#/compose                  → ComposePage (new post)
+#/compose?reply={uri}      → ComposePage (reply)
+#/compose?quote={uri}      → ComposePage (quote post)
+#/profile/{actor}          → ProfilePage
+#/search                   → SearchPage (or #/search?q={term})
+#/notifications            → NotifsPage
+#/bookmarks                → BookmarkPage
+#/chat                     → AIChatPage
+#/chat/{chatId}            → AIChatPage (restore saved conversation)
+#/login                    → LoginPage
+```
 
 ---
 

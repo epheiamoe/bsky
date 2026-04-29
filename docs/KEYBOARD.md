@@ -31,11 +31,13 @@ useInput((input, key) => {
 
   // 7. View-specific single-character keys
   switch (currentView.type) {
-    case 'feed':    j/k/m/r
-    case 'detail':  r/h/a/t
-    case 'thread':  j/k/r
-    case 'compose': (Enter handled above)
-    case 'aiChat':  a/t (when main focused)
+    case 'feed':          j/k/m/r/b
+    case 'detail':        r/h/a/t
+    case 'thread':        j/k/r/v
+    case 'bookmarks':     j/k/d
+    case 'notifications': j/k
+    case 'compose':       (TextInput onSubmit handles submission)
+    case 'aiChat':        a/t (when main focused)
   }
 });
 ```
@@ -55,6 +57,77 @@ useInput((input, key) => {
 **DO NOT** register `process.stdin.on('data')` in child components. Always use App.tsx's centralized `useInput`.
 
 **DO NOT** use raw `process.stdin.setRawMode()` — Ink's `useInput` handles it internally.
+
+## View-Specific Keymaps
+
+### Feed View
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | View selected post |
+| `m` | Mark/unmark for quote |
+| `r` | Refresh feed |
+| `b` | Open bookmarks page |
+| `v` | Toggle bookmark on selected post |
+
+### Detail View
+| Key | Action |
+|-----|--------|
+| `r` | Reply |
+| `h` | Like |
+| `a` | Repost |
+| `t` | View thread |
+| `v` | Toggle bookmark |
+
+### Thread View
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `r` | Refresh thread |
+| `v` | Toggle bookmark on selected post |
+
+### Bookmarks Page
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | View bookmarked post |
+| `d` | Delete bookmark |
+| `r` | Refresh list |
+
+### Notifications
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | View post |
+| `r` | Refresh notifications |
+
+### Compose View
+Keyboard focus delegated to `TextInput` (via `onSubmit`). Arrow keys / single-character keys are inactive while composing.
+
+### AI Chat
+| Key (main focused) | Action |
+|--------------------|--------|
+| `a` | Copy last AI response |
+| `t` | Copy full conversation transcript |
+
+## Footer Hints
+
+Each view renders a bottom hint bar showing current key bindings:
+
+| View | Footer |
+|------|--------|
+| Feed | `j/k:nav  m:mark  b:bookmarks  r:refresh  v:bookmark  Ctrl+G:AI` |
+| Detail | `r:reply  h:like  a:repost  t:thread  v:bookmark  Ctrl+G:AI` |
+| Thread | `j/k:nav  r:refresh  v:bookmark  Ctrl+G:AI` |
+| Bookmarks | `j/k:nav  Enter:view  d:delete  r:refresh  Ctrl+G:AI` |
+| Notifications | `j/k:nav  Enter:view  r:refresh  Ctrl+G:AI` |
+| Compose | `Tab/Esc only — TextInput active` |
+| AI Chat (main) | `a:copy  t:transcript  Tab:focus AI` |
+| AI Chat (ai) | `Esc:return` |
 
 ## For PWA
 
