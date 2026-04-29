@@ -25,17 +25,17 @@ import type {
   GetBookmarksResponse,
 } from './types.js';
 
-const BSKY_PDS = 'https://bsky.social';
-const BSKY_APPVIEW = 'https://public.api.bsky.app';
+const BSKY_SERVICE = 'https://bsky.social';
+const PUBLIC_API = 'https://public.api.bsky.app';
 
 export class BskyClient {
   private session: CreateSessionResponse | null = null;
-  private pds: KyInstance;   // PDS — for login, createRecord, uploadBlob (write ops)
-  private api: KyInstance;   // AppView — for all other requests (supports CORS)
+  private ky: KyInstance;
+  private publicKy: KyInstance;
 
   constructor() {
-    this.pds = ky.create({ prefixUrl: BSKY_PDS + '/xrpc', timeout: 30000 });
-    this.api = ky.create({ prefixUrl: BSKY_APPVIEW + '/xrpc', timeout: 30000 });
+    this.ky = ky.create({ prefixUrl: BSKY_SERVICE + '/xrpc', timeout: 30000 });
+    this.publicKy = ky.create({ prefixUrl: PUBLIC_API + '/xrpc', timeout: 30000 });
   }
 
   private getAuthHeaders(): Record<string, string> {
@@ -44,7 +44,7 @@ export class BskyClient {
   }
 
   async login(handle: string, password: string): Promise<CreateSessionResponse> {
-    const res = await this.pds.post('com.atproto.server.createSession', {
+    const res = await this.ky.post('com.atproto.server.createSession', {
       json: { identifier: handle, password },
     }).json<CreateSessionResponse>();
     this.session = res;
@@ -52,14 +52,15 @@ export class BskyClient {
   }
 
   async resolveHandle(handle: string): Promise<ResolveHandleResponse> {
-    return this.api.get('com.atproto.identity.resolveHandle', {
+    return this.publicKy.get('com.atproto.identity.resolveHandle', {
       searchParams: { handle },
     }).json<ResolveHandleResponse>();
   }
 
   async getProfile(actor: string): Promise<ProfileView> {
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.actor.getProfile', {
+    return kyInstance.get('app.bsky.actor.getProfile', {
       searchParams: { actor },
       ...headers,
     }).json<ProfileView>();
@@ -68,7 +69,7 @@ export class BskyClient {
   async getTimeline(limit = 50, cursor?: string): Promise<TimelineResponse> {
     const params: Record<string, string | number> = { limit };
     if (cursor) params.cursor = cursor;
-    return this.api.get('app.bsky.feed.getTimeline', {
+    return this.ky.get('app.bsky.feed.getTimeline', {
       headers: this.getAuthHeaders(),
       searchParams: params,
     }).json<TimelineResponse>();
@@ -77,16 +78,18 @@ export class BskyClient {
   async getAuthorFeed(actor: string, limit = 50, cursor?: string): Promise<AuthorFeedResponse> {
     const params: Record<string, string | number> = { actor, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getAuthorFeed', {
+    return kyInstance.get('app.bsky.feed.getAuthorFeed', {
       searchParams: params,
       ...headers,
     }).json<AuthorFeedResponse>();
   }
 
   async getPostThread(uri: string, depth = 6, parentHeight = 80): Promise<PostThreadResponse> {
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getPostThread', {
+    return kyInstance.get('app.bsky.feed.getPostThread', {
       searchParams: { uri, depth, parentHeight },
       ...headers,
     }).json<PostThreadResponse>();
@@ -95,8 +98,9 @@ export class BskyClient {
   async getLikes(uri: string, limit = 50, cursor?: string): Promise<GetLikesResponse> {
     const params: Record<string, string | number> = { uri, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getLikes', {
+    return kyInstance.get('app.bsky.feed.getLikes', {
       searchParams: params,
       ...headers,
     }).json<GetLikesResponse>();
@@ -105,8 +109,9 @@ export class BskyClient {
   async getRepostedBy(uri: string, limit = 50, cursor?: string): Promise<GetRepostedByResponse> {
     const params: Record<string, string | number> = { uri, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getRepostedBy', {
+    return kyInstance.get('app.bsky.feed.getRepostedBy', {
       searchParams: params,
       ...headers,
     }).json<GetRepostedByResponse>();
@@ -116,8 +121,9 @@ export class BskyClient {
     const searchParams: Record<string, string | number> = { q: params.q, limit: params.limit ?? 50 };
     if (params.cursor) searchParams.cursor = params.cursor;
     if (params.sort) searchParams.sort = params.sort;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.searchPosts', {
+    return kyInstance.get('app.bsky.feed.searchPosts', {
       searchParams,
       ...headers,
     }).json<SearchPostsResponse>();
@@ -126,8 +132,9 @@ export class BskyClient {
   async searchActors(params: { q: string; limit?: number; cursor?: string }): Promise<SearchActorsResponse> {
     const searchParams: Record<string, string | number> = { q: params.q, limit: params.limit ?? 25 };
     if (params.cursor) searchParams.cursor = params.cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.actor.searchActors', {
+    return kyInstance.get('app.bsky.actor.searchActors', {
       searchParams,
       ...headers,
     }).json<SearchActorsResponse>();
@@ -136,8 +143,9 @@ export class BskyClient {
   async getFollows(actor: string, limit = 50, cursor?: string): Promise<GetFollowsResponse> {
     const params: Record<string, string | number> = { actor, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.graph.getFollows', {
+    return kyInstance.get('app.bsky.graph.getFollows', {
       searchParams: params,
       ...headers,
     }).json<GetFollowsResponse>();
@@ -146,15 +154,16 @@ export class BskyClient {
   async getFollowers(actor: string, limit = 50, cursor?: string): Promise<GetFollowersResponse> {
     const params: Record<string, string | number> = { actor, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.graph.getFollowers', {
+    return kyInstance.get('app.bsky.graph.getFollowers', {
       searchParams: params,
       ...headers,
     }).json<GetFollowersResponse>();
   }
 
   async getSuggestedFollows(actor: string): Promise<GetSuggestedFollowsResponse> {
-    return this.api.get('app.bsky.graph.getSuggestedFollowsByActor', {
+    return this.ky.get('app.bsky.graph.getSuggestedFollowsByActor', {
       headers: this.getAuthHeaders(),
       searchParams: { actor },
     }).json<GetSuggestedFollowsResponse>();
@@ -164,7 +173,7 @@ export class BskyClient {
     const params: Record<string, string | number | boolean> = { limit };
     if (cursor) params.cursor = cursor;
     if (priority !== undefined) params.priority = priority;
-    return this.api.get('app.bsky.notification.listNotifications', {
+    return this.ky.get('app.bsky.notification.listNotifications', {
       headers: this.getAuthHeaders(),
       searchParams: params,
     }).json<ListNotificationsResponse>();
@@ -173,16 +182,18 @@ export class BskyClient {
   async getPopularFeedGenerators(limit = 50, cursor?: string): Promise<GetFeedGeneratorsResponse> {
     const params: Record<string, string | number> = { limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.unspecced.getPopularFeedGenerators', {
+    return kyInstance.get('app.bsky.unspecced.getPopularFeedGenerators', {
       searchParams: params,
       ...headers,
     }).json<GetFeedGeneratorsResponse>();
   }
 
   async getFeedGenerator(feed: string): Promise<GetFeedGeneratorResponse> {
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getFeedGenerator', {
+    return kyInstance.get('app.bsky.feed.getFeedGenerator', {
       searchParams: { feed },
       ...headers,
     }).json<GetFeedGeneratorResponse>();
@@ -191,8 +202,9 @@ export class BskyClient {
   async getFeed(feedUri: string, limit = 50, cursor?: string): Promise<GetFeedResponse> {
     const params: Record<string, string | number> = { feed: feedUri, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('app.bsky.feed.getFeed', {
+    return kyInstance.get('app.bsky.feed.getFeed', {
       searchParams: params,
       ...headers,
     }).json<GetFeedResponse>();
@@ -201,16 +213,18 @@ export class BskyClient {
   async listRecords(repo: string, collection: string, limit = 50, cursor?: string): Promise<ListRecordsResponse> {
     const params: Record<string, string | number> = { repo, collection, limit };
     if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('com.atproto.repo.listRecords', {
+    return kyInstance.get('com.atproto.repo.listRecords', {
       searchParams: params,
       ...headers,
     }).json<ListRecordsResponse>();
   }
 
   async getRecord(repo: string, collection: string, rkey: string): Promise<GetRecordResponse> {
+    const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return this.api.get('com.atproto.repo.getRecord', {
+    return kyInstance.get('com.atproto.repo.getRecord', {
       searchParams: { repo, collection, rkey },
       ...headers,
     }).json<GetRecordResponse>();
@@ -226,14 +240,14 @@ export class BskyClient {
     const body: Record<string, unknown> = { repo, collection, record };
     if (rkey) body.rkey = rkey;
     if (swapCommit) body.swapCommit = swapCommit;
-    return this.pds.post('com.atproto.repo.createRecord', {
+    return this.ky.post('com.atproto.repo.createRecord', {
       headers: this.getAuthHeaders(),
       json: body,
     }).json<CreateRecordResponse>();
   }
 
   async uploadBlob(data: Uint8Array, mimeType: string): Promise<UploadBlobResponse> {
-    return this.pds.post('com.atproto.repo.uploadBlob', {
+    return this.ky.post('com.atproto.repo.uploadBlob', {
       headers: {
         ...this.getAuthHeaders(),
         'Content-Type': mimeType,
@@ -243,7 +257,9 @@ export class BskyClient {
   }
 
   async downloadBlob(did: string, cid: string): Promise<Uint8Array> {
-    const res = await ky.get(`${BSKY_PDS}/xrpc/com.atproto.sync.getBlob`, {
+    // Use the PDS directly for blob download with a longer timeout
+    const blobUrl = `${BSKY_SERVICE}/xrpc/com.atproto.sync.getBlob`;
+    const res = await ky.get(blobUrl, {
       searchParams: { did, cid },
       timeout: 30000,
       ...(this.session ? { headers: this.getAuthHeaders() } : {}),
@@ -275,7 +291,7 @@ export class BskyClient {
   }
 
   async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {
-    return this.api.post('app.bsky.bookmark.createBookmark', {
+    return this.ky.post('app.bsky.bookmark.createBookmark', {
       headers: this.getAuthHeaders(),
       json: { uri, cid },
     }).json<CreateBookmarkResponse>();
@@ -283,7 +299,7 @@ export class BskyClient {
 
   async deleteBookmark(uri: string): Promise<void> {
     try {
-      await this.api.post('app.bsky.bookmark.deleteBookmark', {
+      await this.ky.post('app.bsky.bookmark.deleteBookmark', {
         headers: this.getAuthHeaders(),
         json: { uri },
       });
@@ -295,7 +311,7 @@ export class BskyClient {
   async getBookmarks(limit = 50, cursor?: string): Promise<GetBookmarksResponse> {
     const params: Record<string, string | number> = { limit };
     if (cursor) params.cursor = cursor;
-    return this.api.get('app.bsky.bookmark.getBookmarks', {
+    return this.ky.get('app.bsky.bookmark.getBookmarks', {
       headers: this.getAuthHeaders(),
       searchParams: params,
     }).json<GetBookmarksResponse>();
