@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { ThreadViewPost, NotFoundPost as NFP, PostView } from '@bsky/core';
+import { getCdnImageUrl } from '../utils/imageUrl.js';
 
 export interface FlatLine {
   depth: number;
@@ -179,15 +180,35 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
 
 function getMediaTags(post: PostView): string[] {
   const tags: string[] = [];
-  const embed = post.record.embed;
+  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
   if (!embed) return tags;
-  const type = (embed as { $type?: string }).$type;
-  if (type === 'app.bsky.embed.images') {
-    tags.push(`[图片: ${(embed as { images: unknown[] }).images.length}张]`);
-  } else if (type === 'app.bsky.embed.external') {
-    tags.push('[链接]');
-  } else if (type === 'app.bsky.embed.record') {
-    tags.push('[引用]');
+
+  const collectImages = (e: typeof embed): Array<{ url: string }> => {
+    const imgs: Array<{ url: string }> = [];
+    if (!e) return imgs;
+    if (e.$type === 'app.bsky.embed.images' && e.images) {
+      for (const img of e.images) {
+        imgs.push({ url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType) });
+      }
+    } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
+      return collectImages(e.media);
+    }
+    return imgs;
+  };
+
+  const images = collectImages(embed);
+  if (images.length > 0) {
+    const label = images.length === 1 ? '🖼 图片' : `🖼 ${images.length}张图片`;
+    const firstUrl = images[0]!;
+    // OSC 8 hyperlink — Ctrl+click in terminal
+    tags.push(`\x1b]8;;${firstUrl}\x07${label}\x1b]8;;\x07`);
   }
+
+  if (embed.$type === 'app.bsky.embed.external') {
+    tags.push('[🔗 链接]');
+  } else if (embed.$type === 'app.bsky.embed.record') {
+    tags.push('[📌 引用]');
+  }
+
   return tags;
 }

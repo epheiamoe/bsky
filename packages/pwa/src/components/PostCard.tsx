@@ -1,7 +1,35 @@
 import React from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
+import { getCdnImageUrl } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
+
+interface ImageData {
+  url: string;
+  alt: string;
+}
+
+function extractImages(post: PostView): ImageData[] {
+  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
+  const images: ImageData[] = [];
+  if (!embed) return images;
+
+  const processEmbed = (e: typeof embed) => {
+    if (!e) return;
+    if (e.$type === 'app.bsky.embed.images' && e.images) {
+      for (const img of e.images) {
+        images.push({
+          url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
+          alt: img.alt || '',
+        });
+      }
+    } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
+      processEmbed(e.media);
+    }
+  };
+  processEmbed(embed);
+  return images;
+}
 
 function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
@@ -35,6 +63,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
   let replyCount: number | undefined;
   let hasImages = false;
   let imageCount = 0;
+  let images: ImageData[] = [];
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -44,11 +73,9 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     likeCount = post.likeCount;
     repostCount = post.repostCount;
     replyCount = post.replyCount;
-    const embed = post.record.embed as { $type?: string; images?: Array<unknown> } | undefined;
-    if (embed?.$type === 'app.bsky.embed.images') {
-      hasImages = true;
-      imageCount = (embed.images ?? []).length;
-    }
+    images = extractImages(post);
+    hasImages = images.length > 0;
+    imageCount = images.length;
   } else if (line) {
     displayName = line.displayName || line.handle;
     handle = line.handle;
@@ -91,7 +118,18 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
             {text}
           </p>
           {hasImages && (
-            <p className="text-text-secondary text-xs mt-1">🖼 {imageCount} 张图片</p>
+            <div className="mt-2 rounded-lg overflow-hidden border border-border">
+              {images.map((img, i) => (
+                <img
+                  key={i}
+                  src={img.url}
+                  alt={img.alt || `图片 ${i + 1}`}
+                  loading="lazy"
+                  className="w-full max-h-80 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+              ))}
+            </div>
           )}
           <div className="flex items-center gap-4 mt-2 text-text-secondary text-xs">
             <span>💬 {replyCount ?? 0}</span>

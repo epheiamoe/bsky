@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
+import { getCdnImageUrl } from '@bsky/app';
 import { wrapLines } from '../utils/text.js';
 
 export interface PostLine {
@@ -22,6 +23,28 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
   const maxCols = Math.max(20, cols - 4);
   for (const l of wrapLines(text, maxCols)) {
     lines.push({ text: l, isSelected, isName: false });
+  }
+
+  // Image embed — show clickable URLs (Ctrl+click in terminal)
+  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
+  const imageUrls: string[] = [];
+
+  const extract = (e: typeof embed) => {
+    if (!e) return;
+    if (e.$type === 'app.bsky.embed.images' && e.images) {
+      for (const img of e.images) {
+        imageUrls.push(getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType));
+      }
+    } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
+      extract(e.media);
+    }
+  };
+  extract(embed);
+
+  for (let i = 0; i < imageUrls.length; i++) {
+    const url = imageUrls[i]!;
+    // OSC 8 — clickable hyperlink in modern terminals
+    lines.push({ text: '\x1b]8;;' + url + '\x07🖼 图片' + (imageUrls.length > 1 ? ` ${i + 1}` : '') + ' (Ctrl+点击在浏览器查看)\x1b]8;;\x07', isSelected, isName: false });
   }
 
   // Stats line
