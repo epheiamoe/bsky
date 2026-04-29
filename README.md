@@ -50,6 +50,18 @@ cd packages/pwa && pnpm dev    # http://localhost:5173
 
 ---
 
+## 🤖 AI Integration
+
+DeepSeek V4 Flash powers a suite of AI features not found in the official Bluesky client:
+
+- **AI 对话** — Full multi-turn chat with tool calling (31 Bluesky API tools). Reads posts, profiles, notifications; writes likes, reposts, bookmarks
+- **实时流式输出** — PWA uses SSE streaming for real-time AI response display
+- **智能翻译** — 7 种语言双模式翻译（simple / JSON with source language detection）
+- **Markdown 渲染** — PWA: full GFM (tables, code highlight) via react-markdown; TUI: structured terminal rendering
+- **AI 草稿润色** — Polish post drafts with style requirements (formal, humorous, etc.)
+- **引导式提问** — Context-aware guiding questions when opening AI from a post
+- **工具调用透明** — Real-time display of tool calls and results in the chat UI
+
 ## Features
 
 | Feature | TUI | PWA |
@@ -84,7 +96,7 @@ BLUESKY_HANDLE=user.bsky.social
 BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 LLM_API_KEY=sk-your-api-key
 LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-chat
+LLM_MODEL=deepseek-v4-flash
 ```
 
 ### PWA — Browser Login + Settings

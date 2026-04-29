@@ -55,7 +55,7 @@ class AIAssistant {
 interface AIConfig {
   apiKey: string;
   baseUrl: string;     // default: 'https://api.deepseek.com'
-  model: string;       // default: 'deepseek-chat'
+  model: string;       // default: 'deepseek-v4-flash'
 }
 ```
 

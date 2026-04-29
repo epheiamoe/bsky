@@ -15,7 +15,7 @@ export interface TranslationResult {
 export function useTranslation(
   aiKey: string,
   aiBaseUrl: string,
-  aiModel = 'deepseek-chat',
+  aiModel = 'deepseek-v4-flash',
   targetLang: TargetLang = 'zh',
   initialMode: 'simple' | 'json' = 'simple',
 ) {

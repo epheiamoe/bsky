@@ -13,7 +13,7 @@
 |----------|---------|-------------|
 | `LLM_API_KEY` | (required) | API key for OpenAI-compatible API |
 | `LLM_BASE_URL` | `https://api.deepseek.com` | API base URL |
-| `LLM_MODEL` | `deepseek-chat` | Model name |
+| `LLM_MODEL` | `deepseek-v4-flash` | Model name |
 
 ## Translation
 
@@ -28,7 +28,7 @@ BLUESKY_HANDLE=your-handle.bsky.social
 BLUESKY_APP_PASSWORD=your-app-password
 LLM_API_KEY=sk-your-api-key
 LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-chat
+LLM_MODEL=deepseek-v4-flash
 TRANSLATE_TARGET_LANG=zh
 ```
 

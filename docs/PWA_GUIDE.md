@@ -190,7 +190,7 @@ const config: { aiConfig: AIConfig; targetLang: string } = {
   aiConfig: {
     apiKey: localStorage.getItem('ai_api_key') ?? '',
     baseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
   },
   targetLang: localStorage.getItem('target_lang') ?? 'zh',
 };

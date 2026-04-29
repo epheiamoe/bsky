@@ -67,7 +67,7 @@ export type AIConfig = {
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {
   baseUrl: 'https://api.deepseek.com',
-  model: 'deepseek-chat',
+  model: 'deepseek-v4-flash',
 };
 
 export class AIAssistant {

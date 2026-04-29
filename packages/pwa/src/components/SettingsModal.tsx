@@ -149,7 +149,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 <label className="text-xs text-text-secondary mb-1 block">Model</label>
                 <input
                   type="text" value={model} onChange={e => setModel(e.target.value)}
-                  placeholder="deepseek-chat"
+                  placeholder="deepseek-v4-flash"
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>

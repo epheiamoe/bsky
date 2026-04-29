@@ -168,7 +168,7 @@ export interface TranslationResult {
 function useTranslation(
   aiKey: string,
   aiBaseUrl: string,
-  aiModel?: string,           // default 'deepseek-chat'
+  aiModel?: string,           // default 'deepseek-v4-flash'
   targetLang?: TargetLang,    // default 'zh'
   initialMode?: 'simple' | 'json'  // default 'simple'
 ): {

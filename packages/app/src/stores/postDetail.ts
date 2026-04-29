@@ -71,7 +71,7 @@ export function createPostDetailStore(): PostDetailStore {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${aiKey}` },
         body: JSON.stringify({
-          model: 'deepseek-chat',
+          model: 'deepseek-v4-flash',
           messages: [
             { role: 'system', content: prompts[targetLang] ?? prompts['zh']! },
             { role: 'user', content: text },

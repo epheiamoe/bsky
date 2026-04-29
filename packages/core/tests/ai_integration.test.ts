@@ -17,7 +17,7 @@ const LLM_API_KEY = process.env.LLM_API_KEY!;
 const AI_CONFIG: AIConfig = {
   apiKey: LLM_API_KEY,
   baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
-  model: process.env.LLM_MODEL || 'deepseek-chat',
+  model: process.env.LLM_MODEL || 'deepseek-v4-flash',
 };
 
 // let sharedTestPostUri = '';

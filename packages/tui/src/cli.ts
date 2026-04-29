@@ -35,7 +35,7 @@ const config = {
   aiConfig: {
     apiKey: LLM_API_KEY || '',
     baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
-    model: process.env.LLM_MODEL || 'deepseek-chat',
+    model: process.env.LLM_MODEL || 'deepseek-v4-flash',
   },
   targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
 };
