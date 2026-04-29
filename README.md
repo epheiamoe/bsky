@@ -13,7 +13,6 @@ Built with TypeScript, Ink (React), React DOM, and AT Protocol.
 ## 🚀 Live Demo
 
 **PWA Online**: [ai-bsky.pages.dev](https://ai-bsky.pages.dev)
-*（Cloudflare Pages 手动部署 — 见下方「Deploy PWA to Static Host」）*
 
 ---
 
