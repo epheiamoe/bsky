@@ -1,150 +1,76 @@
-# 🦋 Bluesky TUI Client with AI Integration
+# 🦋 Bluesky Client
 
-A terminal-based Bluesky client with deep AI integration, built with TypeScript, Ink (React), and AT Protocol.
+A dual-UI (TUI + PWA) Bluesky client with deep AI integration. Built with TypeScript, Ink (React), React DOM, and AT Protocol.
+
+```
+@bsky/core ──→ @bsky/app ──→ @bsky/tui (terminal)
+                          └─→ @bsky/pwa (browser, installable)
+```
+
+## Quick Start
+
+```bash
+pnpm install
+pnpm -r build
+
+# Terminal UI
+cd packages/tui && npx tsx src/cli.ts
+
+# Web PWA
+cd packages/pwa && pnpm dev        # http://localhost:5173
+cd packages/pwa && pnpm build      # static deploy → dist/
+```
+
+## Features
+
+| Feature | TUI | PWA |
+|---------|-----|-----|
+| Timeline with virtual scroll | ✅ | ✅ |
+| Thread view with reply tree | ✅ | ✅ |
+| Compose with image upload | ✅ | ✅ |
+| Like / Repost / Reply | ✅ | ✅ |
+| Notifications | ✅ | ✅ |
+| Search | ✅ | ✅ |
+| Profile view | ✅ | ✅ |
+| Bookmarks | ✅ | ✅ |
+| AI Chat (tool calling, streaming) | ✅ | ✅ |
+| AI Translation (7 languages) | ✅ | ✅ |
+| Markdown rendering | ✅ | ✅ |
+| Image display (CDN) | ✅ | ✅ |
+| Dark mode | N/A | ✅ |
+| PWA installable | N/A | ✅ |
+| Hash-based routing | N/A | ✅ |
 
 ## Architecture
 
-```
-bsky/
-├── packages/
-│   ├── core/          # API-agnostic logic: AT Protocol client, AI assistant, tools
-│   └── tui/           # Terminal UI built with Ink (React)
-├── contracts/         # Shared JSON Schemas, system prompts, AT endpoint lists
-├── .env.example       # Environment variable template
-└── README.md
-```
-
-**Core layer** exports pure functions/classes with zero UI dependencies, enabling future PWA development.
-
-## Installation
-
-```bash
-# Prerequisites: Node.js >= 18, pnpm
-npm install -g pnpm
-
-# Clone and install
-pnpm install
-
-# Build core package
-pnpm --filter @bsky/core build
-```
+See `docs/ARCHITECTURE.md` for full details. Key principle: **business logic lives ONCE** in `@bsky/core` + `@bsky/app`. TUI and PWA are pure render layers consuming the same hooks.
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your credentials:
-
+**TUI**: Copy `.env.example` to `.env` and fill in credentials:
 ```env
-BLUESKY_HANDLE=your-handle.bsky.social
-BLUESKY_APP_PASSWORD=your-app-password
-
-LLM_API_KEY=sk-your-api-key
-LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-chat
+BLUESKY_HANDLE=user.bsky.social
+BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
+LLM_API_KEY=sk-...
 ```
 
-- To get a Bluesky App Password: Settings → App Passwords → Add App Password
-- For LLM: Get an API key from [DeepSeek](https://platform.deepseek.com/) or any OpenAI-compatible API
+**PWA**: No `.env` needed. Credentials entered via browser login form. AI API key configured in Settings.
 
-## Running
+## Tests
 
 ```bash
-# Development mode (TUI) - requires a terminal with raw mode support
-pnpm --filter @bsky/tui dev
-
-# Note: The TUI uses Ink (React) which requires raw mode stdin.
-# If you see "Raw mode is not supported", run in a proper terminal:
-# - Windows: Windows Terminal, ConEmu
-# - macOS: iTerm2, Terminal.app
-# - Linux: GNOME Terminal, Konsole, tmux
-
-# Run all tests
-pnpm test
-
-# Run tests with verbose output
-pnpm test:e2e
+pnpm test     # all tests (real API calls, no mocks)
 ```
 
-## TUI Controls
+## Docs
 
-| Key | Action |
-|-----|--------|
-| `t` | Timeline |
-| `n` | Notifications |
-| `p` | Profile |
-| `s` | Search |
-| `a` | Toggle AI Panel |
-| `c` | Compose Post |
-| `Ctrl+G` | Open AI with current post context |
-| `↑/↓` | Navigate posts |
-| `Enter` | Select post |
-| `Esc` | Close / Back |
-| `Ctrl+C` | Quit |
-
-## AI Features
-
-### Tool Calling
-The AI assistant can autonomously use 30 Bluesky API tools:
-- Read: get_timeline, search_posts, get_profile, get_post_thread_flat, etc.
-- Write: create_post, like, repost, follow (with confirmation)
-
-### Translation
-- Per-post translation to Chinese
-- Translation cache to reduce API usage
-
-### Draft Polish
-- Single-turn AI refinement of post drafts
-- Supports style requirements (formal, humorous, etc.)
-
-### AI Dialog Panel
-- Full multi-turn chat with tool calling
-- Context-aware: automatically loads post context when opened from a post
-- Guiding questions for quick interaction
-
-## Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Run specific test suite
-pnpm --filter @bsky/core test
-
-# Tests include:
-# - auth.test.ts: Authentication & session management
-# - feed.test.ts: Post reading, thread flattening, image handling
-# - ai_integration.test.ts: AI tool calling, translation, polish
-```
-
-All tests use **real API calls** against Bluesky and DeepSeek. No mocks.
-
-## Project Structure
-
-```
-packages/core/src/
-├── at/
-│   ├── client.ts    # BskyClient: AT Protocol HTTP client
-│   ├── tools.ts     # 30+ tool definitions & handlers
-│   └── types.ts     # TypeScript type definitions
-├── ai/
-│   └── assistant.ts # AIAssistant, singleTurnAI, translateToChinese, polishDraft
-└── index.ts         # Public API exports
-
-packages/tui/src/
-├── cli.ts           # Entry point
-└── components/
-    ├── App.tsx      # Main app layout
-    ├── Sidebar.tsx  # Navigation sidebar
-    ├── PostList.tsx # Feed display
-    ├── PostItem.tsx # Single post card
-    ├── AIPanel.tsx  # AI chat panel
-    └── Dialogs.tsx  # Compose & confirm dialogs
-```
-
-## Tech Stack
-
-- **TypeScript 5.x** with strict mode
-- **pnpm workspace** monorepo
-- **Ink 5** (React-based TUI framework)
-- **ky** (HTTP client for AT Protocol)
-- **DeepSeek v3** (AI via OpenAI-compatible API)
-- **Vitest** (test runner)
+| File | Purpose |
+|------|---------|
+| `docs/CONTEXT.md` | Context compression recovery guide |
+| `docs/ARCHITECTURE.md` | System architecture |
+| `docs/DESIGN.md` | PWA design system |
+| `docs/PWA_GUIDE.md` | PWA quick start + deployment |
+| `docs/TODO.md` | Feature roadmap |
+| `docs/KEYBOARD.md` | TUI shortcuts |
+| `AGENTS.md` | AI agent / contributor guide |
+| `AGENTS.local.md` | Local dev notes (gitignored) |
