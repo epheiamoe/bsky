@@ -19,5 +19,6 @@ export type {
 } from './at/types.js';
 
 // AI exports
-export { AIAssistant, singleTurnAI, translateToChinese, polishDraft } from './ai/assistant.js';
+export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft } from './ai/assistant.js';
+export type { TranslationResult } from './ai/assistant.js';
 export type { AIConfig, ChatMessage, ToolCall } from './ai/assistant.js';

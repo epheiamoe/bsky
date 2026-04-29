@@ -453,16 +453,122 @@ export async function singleTurnAI(
 }
 
 /**
- * Translate text to Chinese
+ * Translation result with optional source language detection.
+ */
+export interface TranslationResult {
+  translated: string;
+  sourceLang?: string; // ISO 639-1 code, or 'und' if unknown; only in 'json' mode
+}
+
+/**
+ * Single-turn AI translation with retry and dual mode support.
+ * - 'simple': plain text translation (current behavior)
+ * - 'json': structured JSON output with source language detection
+ *
+ * Retries up to maxRetries times on empty content or network errors,
+ * with exponential backoff.
+ */
+export async function translateText(
+  config: AIConfig,
+  text: string,
+  targetLang: string,
+  mode: 'simple' | 'json' = 'simple',
+  maxRetries = 3,
+): Promise<TranslationResult> {
+  const LANG_LABELS: Record<string, string> = {
+    zh: '中文', en: 'English', ja: '日本語', ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español',
+  };
+  const langLabel = LANG_LABELS[targetLang] ?? targetLang;
+
+  const systemPrompt = mode === 'json'
+    ? `You are a translator. Translate the user's text to ${langLabel}. Output valid JSON with these keys: {"source_lang": "<ISO 639-1 code, use 'und' if unsure>", "translated": "<the translation>"}. Output ONLY the JSON object. The response must be a valid JSON object containing the word json.`
+    : `Translate the following text to ${langLabel}. Keep the original meaning, output only the translation, no explanations.`;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const body: Record<string, unknown> = {
+        model: config.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+        temperature: 0.3,
+        max_tokens: 2000,
+      };
+
+      if (mode === 'json') {
+        body.response_format = { type: 'json_object' };
+      }
+
+      const res = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        throw new Error(`AI API error ${res.status}`);
+      }
+
+      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const content = data.choices?.[0]?.message?.content ?? '';
+
+      if (!content.trim()) {
+        // Empty content — retry
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+          continue;
+        }
+        throw new Error('Translation returned empty content after retries');
+      }
+
+      if (mode === 'json') {
+        try {
+          const parsed = JSON.parse(content) as { translated?: string; source_lang?: string };
+          if (!parsed.translated) {
+            // Missing translated field — retry
+            if (attempt < maxRetries - 1) {
+              await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+              continue;
+            }
+            return { translated: content, sourceLang: 'und' };
+          }
+          return {
+            translated: parsed.translated,
+            sourceLang: parsed.source_lang || 'und',
+          };
+        } catch {
+          // JSON parse failed — retry
+          if (attempt < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
+            continue;
+          }
+          return { translated: content, sourceLang: 'und' };
+        }
+      }
+
+      return { translated: content };
+    } catch (e) {
+      if (attempt < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+  }
+
+  throw new Error('Translation failed after all retries');
+}
+
+/**
+ * Convenience: translate to Chinese (simple mode, backward compatible).
  */
 export async function translateToChinese(config: AIConfig, text: string): Promise<string> {
-  return singleTurnAI(
-    config,
-    '你是一个专业翻译，将以下文本翻译成中文，保持原意，仅输出翻译结果，不做解释。',
-    text,
-    0.3,
-    2000,
-  );
+  const result = await translateText(config, text, 'zh', 'simple');
+  return result.translated;
 }
 
 /**

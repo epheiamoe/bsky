@@ -5,6 +5,7 @@ const CONFIG_KEY = 'bsky_app_config';
 export interface AppConfig {
   aiConfig: AIConfig;
   targetLang: string;
+  translateMode: 'simple' | 'json';
   darkMode: boolean;
 }
 
@@ -15,6 +16,7 @@ const DEFAULT_CONFIG: AppConfig = {
     model: 'deepseek-chat',
   },
   targetLang: 'zh',
+  translateMode: 'simple',
   darkMode: false,
 };
 

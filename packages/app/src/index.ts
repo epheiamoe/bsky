@@ -15,7 +15,7 @@ export { useChatHistory, getDefaultStorage } from './hooks/useChatHistory.js';
 export { FileChatStorage } from './services/chatStorage.js';
 export type { ChatStorage, ChatRecord, ChatSummary } from './services/chatStorage.js';
 export { useTranslation } from './hooks/useTranslation.js';
-export type { TargetLang } from './hooks/useTranslation.js';
+export type { TargetLang, TranslationResult } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';
 export { useSearch } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';

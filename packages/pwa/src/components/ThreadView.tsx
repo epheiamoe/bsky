@@ -15,6 +15,7 @@ interface ThreadViewProps {
   goTo: (v: AppView) => void;
   aiConfig: AIConfig;
   targetLang: string;
+  translateMode: 'simple' | 'json';
 }
 
 function Spinner() {
@@ -107,7 +108,7 @@ function ActionButtons({
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -119,18 +120,25 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang }: 
   } = useThread(client, uri);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
-  const { translate, loading: translating } = useTranslation(aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es');
+  const { translate, loading: translating } = useTranslation(
+    aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model,
+    targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es',
+    translateMode,
+  );
 
-  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [translationResult, setTranslationResult] = useState<{ translated: string; sourceLang?: string } | null>(null);
 
   const handleTranslate = useCallback(async () => {
     if (!focused || translating) return;
-    if (translatedText) { setTranslatedText(null); return; }
+    if (translationResult) { setTranslationResult(null); return; }
     try {
-      const result = await translate(focused.text, targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es');
-      setTranslatedText(result);
+      const result = await translate(
+        focused.text,
+        targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es',
+      );
+      setTranslationResult(result);
     } catch { /* ignore */ }
-  }, [focused, translating, translatedText, translate, targetLang]);
+  }, [focused, translating, translationResult, translate, targetLang]);
 
   const { parentLines, replyLines } = useMemo(() => {
     const parents: typeof flatLines = [];
@@ -223,10 +231,15 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang }: 
               {focused.text}
             </p>
             {translating && <p className="text-text-secondary text-sm mt-1">🌐 翻译中…</p>}
-            {translatedText && !translating && (
+            {translationResult && !translating && (
               <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <p className="text-xs text-primary font-medium mb-1">🌐 翻译 ({targetLang})</p>
-                <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translatedText}</p>
+                <p className="text-xs text-primary font-medium mb-1">
+                  🌐 翻译 ({targetLang})
+                  {translationResult.sourceLang && (
+                    <span className="text-text-secondary ml-2">源语言: {translationResult.sourceLang}</span>
+                  )}
+                </p>
+                <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
               </div>
             )}
             {focused.imageUrls?.length > 0 && (

@@ -176,6 +176,21 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-text-secondary mb-1 block">翻译模式</label>
+                <select
+                  value={config.translateMode ?? 'simple'}
+                  onChange={e => {
+                    const updated = { ...config, translateMode: e.target.value as 'simple' | 'json' };
+                    updateAppConfig(updated);
+                    onConfigChange(updated);
+                  }}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="simple">简单 — 仅显示译文</option>
+                  <option value="json">JSON — 显示源语言 + 译文</option>
+                </select>
+              </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"

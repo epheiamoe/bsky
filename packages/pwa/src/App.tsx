@@ -100,6 +100,7 @@ export function App() {
             goTo={goTo}
             aiConfig={appConfig.aiConfig}
             targetLang={appConfig.targetLang}
+            translateMode={appConfig.translateMode}
           />
         );
       case 'compose':
