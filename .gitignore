@@ -1,4 +1,9 @@
 node_modules/
 dist/
 .env
+.env.local
+.env.production
 *.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
