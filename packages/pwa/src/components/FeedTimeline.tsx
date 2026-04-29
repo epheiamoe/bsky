@@ -1,12 +1,16 @@
 import React from 'react';
-import { useTimeline } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { PostCard } from './PostCard';
 
 interface FeedTimelineProps {
-  client: BskyClient;
   goTo: (v: AppView) => void;
+  posts: PostView[];
+  loading: boolean;
+  cursor?: string;
+  error: string | null;
+  loadMore?: () => Promise<void>;
+  refresh?: () => Promise<void>;
 }
 
 function SkeletonCard() {
@@ -24,8 +28,7 @@ function SkeletonCard() {
   );
 }
 
-export function FeedTimeline({ client, goTo }: FeedTimelineProps) {
-  const { posts, loading, cursor, error, loadMore, refresh } = useTimeline(client);
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh }: FeedTimelineProps) {
 
   return (
     <div className="flex flex-col">

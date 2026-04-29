@@ -9,6 +9,7 @@ export type { PostDetailActions } from './hooks/usePostDetail.js';
 export { useThread } from './hooks/useThread.js';
 export type { FlatLine } from './hooks/useThread.js';
 export { useCompose } from './hooks/useCompose.js';
+export type { ComposeImage } from './hooks/useCompose.js';
 export { useAIChat } from './hooks/useAIChat.js';
 export type { AIChatMessage } from './hooks/useAIChat.js';
 export { useChatHistory, getDefaultStorage } from './hooks/useChatHistory.js';

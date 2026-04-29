@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks } from '@bsky/app';
+import type { ComposeImage } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
+import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
 import { PostList } from './PostList.jsx';
 import { ProfileView } from './ProfileView.jsx';
@@ -55,6 +57,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Compose
   const compose = useCompose(client, goBack, () => { goHome(); });
   const [composeDraft, setComposeDraft] = useState('');
+  const [composeImages, setComposeImages] = useState<ComposeImage[]>([]);
+  const [imagePathInput, setImagePathInput] = useState<string | null>(null);
+  const [composeUploadError, setComposeUploadError] = useState<string | null>(null);
 
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
@@ -69,6 +74,15 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (currentView.type === 'bookmarks') { bookmarks.refresh(); setBookmarkIdx(0); }
   }, [currentView.type]);
 
+  // Reset images when entering compose
+  useEffect(() => {
+    if (currentView.type === 'compose') {
+      setComposeImages([]);
+      setImagePathInput(null);
+      setComposeUploadError(null);
+    }
+  }, [currentView.type]);
+
   // ═════════════════════ KEYBOARD ═════════════════════
   useInput((input, key) => {
     // Tab / Esc — always processed
@@ -81,7 +95,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (focusedPanel === 'ai') { setFocusedPanel('main'); return; }
         goBack(); return;
       }
-      if (currentView.type === 'compose') { goBack(); return; }
+      if (currentView.type === 'compose') {
+        if (imagePathInput !== null) { setImagePathInput(null); return; }
+        goBack(); return;
+      }
       if (currentView.type !== 'feed') { goBack(); return; }
       return;
     }
@@ -119,8 +136,43 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
-    // When composing: let TextInput handle all single-char keys
-    if (currentView.type === 'compose') return;
+    // When composing: handle image path input or pass to TextInput
+    if (currentView.type === 'compose') {
+      if (imagePathInput !== null) {
+        if (key.return) {
+          const path = imagePathInput.trim();
+          if (path) {
+            try {
+              if (!existsSync(path)) { setComposeUploadError('文件不存在: ' + path); }
+              else if (composeImages.length >= 4) { setComposeUploadError('最多 4 张图片'); }
+              else {
+                const stat = statSync(path);
+                if (stat.size > 1024 * 1024) { setComposeUploadError('图片超过 1MB 限制'); }
+                else {
+                  const data = readFileSync(path);
+                  const mime = path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : path.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+                  client?.uploadBlob(data, mime).then(res => {
+                    setComposeImages(prev => [...prev, { blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: stat.size }, alt: '' }]);
+                    setImagePathInput(null);
+                    setComposeUploadError(null);
+                  }).catch(e => setComposeUploadError('上传失败: ' + e.message));
+                }
+              }
+            } catch (e) { setComposeUploadError(String(e)); }
+          } else {
+            setImagePathInput(null);
+          }
+          return;
+        }
+        if (key.escape) { setImagePathInput(null); return; }
+        return;
+      }
+      if (input === 'i' || input === 'I') {
+        if (composeImages.length < 4) setImagePathInput('');
+        return;
+      }
+      return;
+    }
 
     // ── Global navigation shortcuts ──
     if (k === 't') { goHome(); return; }
@@ -214,20 +266,21 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'compose':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
-            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ 回复' : '✏️ 发帖'}</Text><Text dimColor>{' Enter 发送 · Esc 取消 · 最多 300 字符'}</Text></Box>
+            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ 回复' : '✏️ 发帖'}</Text><Text dimColor>{imagePathInput !== null ? ' 输入图片路径 · Enter 确认 · Esc 取消' : ' Enter 发送 · Esc 取消 · i 添加图片'}</Text></Box>
             {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>回复: </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
             <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
               <TextInput
-                value={composeDraft}
-                onChange={setComposeDraft}
-                onSubmit={() => { if (composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo); }}
-                placeholder="此刻的想法..."
+                value={imagePathInput !== null ? imagePathInput : composeDraft}
+                onChange={imagePathInput !== null ? setImagePathInput : setComposeDraft}
+                onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeImages.length > 0 ? composeImages : undefined); }}
+                placeholder={imagePathInput !== null ? '图片路径 (e.g., /path/to/image.png)' : '此刻的想法...'}
               />
             </Box>
             <Box height={1}>
-              <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text>
+              {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>🖼 图片模式</Text>}
+              {composeImages.length > 0 && <Text color="green">{' 📎 ' + composeImages.length + ' 图'}</Text>}
               {compose.submitting && <Text color="cyan"> 发送中...</Text>}
-              {compose.error && <Text color="red">{' '}{compose.error}</Text>}
+              {composeUploadError && <Text color="red">{' '}{composeUploadError}</Text>}
             </Box>
           </Box>
         );

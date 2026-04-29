@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@bsky/app';
+import { useAuth, useTimeline } from '@bsky/app';
 import type { AppView } from '@bsky/app';
+import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { useHashRouter } from './hooks/useHashRouter.js';
@@ -18,6 +19,7 @@ import { BookmarkPage } from './components/BookmarkPage.js';
 export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
+  const timeline = useTimeline(client);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
 
@@ -90,7 +92,17 @@ export function App() {
   const renderView = () => {
     switch (currentView.type) {
       case 'feed':
-        return <FeedTimeline client={client} goTo={goTo} />;
+        return (
+          <FeedTimeline
+            goTo={goTo}
+            posts={timeline.posts}
+            loading={timeline.loading}
+            cursor={timeline.cursor}
+            error={timeline.error}
+            loadMore={timeline.loadMore}
+            refresh={timeline.refresh}
+          />
+        );
       case 'thread':
         return (
           <ThreadView
