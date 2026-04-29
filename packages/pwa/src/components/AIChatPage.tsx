@@ -21,6 +21,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   const { messages, loading, guidingQuestions, send } = useAIChat(client, aiConfig, contextUri, {
     chatId,
     storage,
+    stream: true,
   });
   const { conversations, deleteConversation } = useChatHistory(storage);
 

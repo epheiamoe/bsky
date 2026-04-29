@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from './uuid.js';
 interface UseAIChatOptions {
   chatId?: string;
   storage?: ChatStorage;
+  stream?: boolean;
 }
 
 export function useAIChat(
@@ -101,6 +102,67 @@ export function useAIChat(
     });
     setGuidingQuestions([]);
     setLoading(true);
+
+    if (options?.stream) {
+      try {
+        const stream = assistant.sendMessageStreaming(text);
+        let streamingContent = '';
+
+        for await (const event of stream) {
+          if (event.type === 'tool_call') {
+            setMessages(prev => {
+              const newMsgs: AIChatMessage[] = [
+                ...prev,
+                { role: 'tool_call', content: `🔧 ${event.content}`, toolName: event.toolName },
+              ];
+              return newMsgs;
+            });
+          } else if (event.type === 'tool_result') {
+            const summary = tryJsonSummary(event.content);
+            setMessages(prev => {
+              const newMsgs: AIChatMessage[] = [
+                ...prev,
+                { role: 'tool_result', content: summary.length > 300 ? summary.slice(0, 300) + '...' : summary, toolName: event.toolName },
+              ];
+              return newMsgs;
+            });
+          } else if (event.type === 'token') {
+            streamingContent += event.content;
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.role === 'assistant') {
+                // Append to existing assistant message
+                const updated = [...prev];
+                updated[updated.length - 1] = { ...last, content: streamingContent };
+                return updated;
+              }
+              // First token — create new assistant message
+              return [...prev, { role: 'assistant', content: streamingContent }];
+            });
+          } else if (event.type === 'done') {
+            // Already updated via tokens
+          }
+        }
+
+        // Auto-save after streaming complete
+        setMessages(prev => {
+          void autoSave(prev);
+          return prev;
+        });
+      } catch (e) {
+        setMessages(prev => {
+          const errMsg: AIChatMessage = { role: 'assistant', content: `Error: ${e instanceof Error ? e.message : String(e)}` };
+          const updated = [...prev, errMsg];
+          void autoSave(updated);
+          return updated;
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Non-streaming path (original, for TUI)
     try {
       const result = await assistant.sendMessage(text);
 
@@ -129,7 +191,7 @@ export function useAIChat(
     } finally {
       setLoading(false);
     }
-  }, [assistant, autoSave]);
+  }, [assistant, autoSave, options?.stream]);
 
   return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current };
 }

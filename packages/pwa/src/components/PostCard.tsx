@@ -106,6 +106,13 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     likeCount = line.likeCount;
     repostCount = line.repostCount;
     replyCount = line.replyCount;
+    if (line.imageUrls?.length) {
+      images = line.imageUrls.map(url => ({ url, alt: '' }));
+      hasImages = true;
+    }
+    if (line.externalLink) {
+      externalLink = line.externalLink;
+    }
   } else {
     return null;
   }

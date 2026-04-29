@@ -31,7 +31,7 @@ export interface ChatCompletionRequest {
   tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
   temperature?: number;
   max_tokens?: number;
-  stream?: false;
+  stream?: boolean;
 }
 
 export interface ChatCompletionChoice {
@@ -244,6 +244,153 @@ export class AIAssistant {
     }
 
     return res.json() as Promise<ChatCompletionResponse>;
+  }
+
+  /**
+   * Send a message with streaming.
+   * Yields intermediate steps (tool_call/tool_result) and tokens.
+   */
+  async *sendMessageStreaming(content: string): AsyncGenerator<{
+    type: 'tool_call' | 'tool_result' | 'token' | 'done';
+    content: string;
+    toolName?: string;
+  }> {
+    this.addUserMessage(content);
+
+    const MAX_TOOL_ROUNDS = 10;
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const body: ChatCompletionRequest = {
+        model: this.config.model,
+        messages: this.messages,
+        temperature: 0.7,
+        max_tokens: 4096,
+        stream: true,
+      };
+
+      if (this.tools.length > 0) {
+        body.tools = this.tools.map((t) => ({
+          type: 'function' as const,
+          function: {
+            name: t.definition.name,
+            description: t.definition.description,
+            parameters: t.definition.inputSchema as Record<string, unknown>,
+          },
+        }));
+        body.tool_choice = 'auto';
+      }
+
+      const url = `${this.config.baseUrl}/v1/chat/completions`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`AI API error ${res.status}: ${errorText}`);
+      }
+
+      // Parse SSE stream
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+      let toolCallAccum: Map<number, { id: string; name: string; arguments: string }> = new Map();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const text = decoder.decode(value, { stream: true });
+        const lines = text.split('\n');
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+
+          try {
+            const chunk = JSON.parse(data);
+            const delta = chunk.choices?.[0]?.delta;
+            if (!delta) continue;
+
+            if (delta.content) {
+              fullContent += delta.content;
+              yield { type: 'token', content: delta.content };
+            }
+
+            if (delta.tool_calls) {
+              for (const tc of delta.tool_calls) {
+                const idx = tc.index;
+                if (!toolCallAccum.has(idx)) {
+                  toolCallAccum.set(idx, { id: tc.id || '', name: tc.function?.name || '', arguments: '' });
+                }
+                const acc = toolCallAccum.get(idx)!;
+                if (tc.id) acc.id = tc.id;
+                if (tc.function?.name) acc.name = tc.function.name;
+                if (tc.function?.arguments) acc.arguments += tc.function.arguments;
+              }
+            }
+          } catch { /* skip unparseable chunks */ }
+        }
+      }
+
+      // Check if we got tool calls
+      if (toolCallAccum.size > 0) {
+        const toolCalls = Array.from(toolCallAccum.entries())
+          .sort(([a], [b]) => a - b)
+          .map(([, v]) => ({
+            id: v.id,
+            type: 'function' as const,
+            function: { name: v.name, arguments: v.arguments },
+          }));
+
+        this.messages.push({
+          role: 'assistant',
+          content: fullContent || '',
+          tool_calls: toolCalls,
+        });
+
+        for (const tc of toolCalls) {
+          const toolName = tc.function.name;
+          const toolArgs = JSON.parse(tc.function.arguments);
+          const toolDesc = this.toolMap.get(toolName);
+
+          yield { type: 'tool_call', content: `${toolName}(${JSON.stringify(toolArgs)})`, toolName };
+
+          let toolResult: string;
+          if (toolDesc) {
+            try {
+              toolResult = await toolDesc.handler(toolArgs);
+            } catch (err) {
+              toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
+            }
+          } else {
+            toolResult = `Unknown tool: ${toolName}`;
+          }
+
+          yield { type: 'tool_result', content: toolResult.slice(0, 500), toolName };
+
+          this.messages.push({
+            role: 'tool',
+            content: toolResult,
+            tool_call_id: tc.id,
+          });
+        }
+        // Continue loop for next round
+        continue;
+      }
+
+      // No tool calls — done
+      this.messages.push({ role: 'assistant', content: fullContent });
+      yield { type: 'done', content: fullContent };
+      return;
+    }
+
+    throw new Error('Max tool calling rounds exceeded');
   }
 }
 

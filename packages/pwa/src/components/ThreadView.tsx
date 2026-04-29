@@ -198,13 +198,29 @@ export function ThreadView({ client, uri, goBack, goTo }: ThreadViewProps) {
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap">
               {focused.text}
             </p>
+            {focused.imageUrls?.length > 0 && (
+              <div className="mt-2 rounded-lg overflow-hidden border border-border">
+                {focused.imageUrls.map((url, i) => (
+                  <img key={i} src={url} alt={`图片 ${i + 1}`} loading="lazy"
+                    className="w-full max-h-96 object-cover"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                ))}
+              </div>
+            )}
+            {focused.externalLink && (
+              <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+              >
+                <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                <p className="text-primary text-xs mt-1 truncate">🔗 {focused.externalLink.uri}</p>
+              </a>
+            )}
             {focused.mediaTags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1">
                 {focused.mediaTags.map((tag, i) => (
-                  <span
-                    key={i}
-                    className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
-                  >
+                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                     {tag}
                   </span>
                 ))}
