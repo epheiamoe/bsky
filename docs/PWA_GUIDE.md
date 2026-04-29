@@ -9,11 +9,23 @@ pnpm build      # production build → dist/
 pnpm preview    # preview production build
 ```
 
-**Static hosting**: Upload `dist/` to any static host (Netlify, Vercel, Cloudflare Pages, GitHub Pages). Set base path in `vite.config.ts` if needed.
+## Deployment
 
-**No backend required** — all Bluesky API calls go directly from the browser. CORS is supported by Bluesky's public API and PDS endpoints.
+**Live demo**: https://ai-bsky.pages.dev (Cloudflare Pages)
 
-**No `.env` needed** — credentials are entered via the login form and persisted in `localStorage`. AI API key is configured in-app via a settings page.
+```bash
+# Deploy to Cloudflare Pages
+pnpm build
+npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true
+
+# Manual (if network blocks API):
+# 1. Cloudflare Dash → Workers & Pages → Pages → Direct Upload
+# 2. Drag dist/ folder → set project name → deploy
+```
+
+**Static hosting**: Upload `dist/` to any static host (Cloudflare Pages, Netlify, Vercel). No backend required — all Bluesky API calls go directly from the browser. CORS is supported by Bluesky's public API and PDS endpoints.
+
+**No `.env` needed** — credentials are entered via the login form and persisted in `localStorage`. AI API key is configured via the Settings (⚙️) page.
 
 ## Architecture
 
@@ -31,23 +43,27 @@ packages/pwa/
     ├── App.tsx                  # View router + session restore
     ├── index.css                # CSS variables (light/dark)
     ├── components/
-    │   ├── Layout.tsx           # 3-column desktop + mobile bottom bar
-    │   ├── Sidebar.tsx          # 6-tab nav
+    │   ├── Layout.tsx           # Header + hamburger sidebar (mobile) + 3-col desktop
+    │   ├── Sidebar.tsx          # Unified 7-tab nav (incl. 👤我)
     │   ├── LoginPage.tsx        # Handle + App Password form
-    │   ├── PostCard.tsx         # Dual PostView/FlatLine card
-    │   ├── FeedTimeline.tsx     # Timeline with load more
-    │   ├── ThreadView.tsx       # Thread + reply tree + actions
-    │   ├── ComposePage.tsx      # Post/reply composer
-    │   ├── AIChatPage.tsx       # AI chat + history sidebar
-    │   ├── ProfilePage.tsx      # User profile
+    │   ├── PostCard.tsx         # Dual PostView/FlatLine + avatar + image grid + lightbox
+    │   ├── FeedTimeline.tsx     # Virtual scroll + auto-load (IntersectionObserver)
+    │   ├── ThreadView.tsx       # Thread + labels + reply tree + translate
+    │   ├── ComposePage.tsx      # Post/reply + image upload (max 4)
+    │   ├── AIChatPage.tsx       # AI chat + history + streaming + markdown
+    │   ├── ProfilePage.tsx      # User profile + avatar
     │   ├── SearchPage.tsx       # Post search
     │   ├── NotifsPage.tsx       # Notifications list
-    │   └── BookmarkPage.tsx     # Bookmark list
+    │   ├── BookmarkPage.tsx     # Bookmark list
+    │   └── SettingsModal.tsx    # Bluesky/AI/General config
     ├── hooks/
     │   ├── useSessionPersistence.ts  # localStorage session store
-    │   └── useAppConfig.ts           # localStorage config
+    │   ├── useAppConfig.ts           # localStorage config (AI, lang, theme)
+    │   └── useHashRouter.ts          # Hash-based router (pushState+popstate)
     ├── services/
     │   └── indexeddb-chat-storage.ts # ChatStorage IndexedDB impl
+    ├── stubs/
+    │   └── os.ts, fs.ts, path.ts     # Node module stubs (never called)
     └── utils/
         └── format.ts            # time formatting, URI helpers
 ```
