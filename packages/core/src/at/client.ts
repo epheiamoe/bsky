@@ -37,35 +37,37 @@ export class BskyClient {
     const self = this;
 
     const withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void> = async (request, _options, response) => {
-      // Log any error
       if (!response.ok) {
         const body = await response.clone().text();
-        console.error(`[bsky] ${response.status} ${request.method} ${request.url} → ${body}`);
-
-        // Auto-refresh on ExpiredToken
         if (response.status === 400 && self.session) {
           try {
             const err = JSON.parse(body);
-            if (err.error === 'ExpiredToken') {
-              const session = self.session; // capture before async gap
-              // Use raw fetch to bypass ky hooks (avoid recursion)
-              const refreshRes = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
-                method: 'POST',
-                headers: { Authorization: `Bearer ${session.refreshJwt}` },
-              });
-              if (refreshRes.ok) {
-                self.session = await refreshRes.json() as CreateSessionResponse;
-                // Retry with new JWT — clone request + replace auth header
-                const retryReq = new Request(request, {
-                  headers: { ...Object.fromEntries(request.headers.entries()), Authorization: `Bearer ${self.session.accessJwt}` },
+            if (err.error === 'ExpiredToken' || err.error === 'InvalidToken') {
+              const session = self.session;
+              // Small delay avoids TLS connection contention with ky's keep-alive
+              await new Promise(r => setTimeout(r, 200));
+              try {
+                const refreshRes = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${session.refreshJwt}` },
                 });
-                return fetch(retryReq);
+                if (refreshRes.ok) {
+                  self.session = await refreshRes.json() as CreateSessionResponse;
+                  const retryRes = await fetch(request.url, {
+                    method: request.method,
+                    headers: { Authorization: `Bearer ${self.session.accessJwt}` },
+                  });
+                  if (retryRes.ok) return retryRes;
+                }
+                // Refresh or retry failed — clear session
+                self.session = null;
+              } catch {
+                // Network error during refresh — keep session, let caller retry
               }
-              // Refresh also failed — clear session
-              self.session = null;
             }
-          } catch { /* parse error, not ExpiredToken */ }
+          } catch { /* non-JSON body */ }
         }
+        console.error(`[bsky] ${response.status} ${request.method} ${request.url} → ${body}`);
       }
     };
 
