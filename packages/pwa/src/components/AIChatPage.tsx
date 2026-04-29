@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useAIChat, useChatHistory } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
@@ -246,7 +248,9 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
             return (
               <div key={i} className="flex justify-start">
                 <div className="bg-surface rounded-lg px-3 py-2 max-w-[85%] border border-border">
-                  <p className="text-sm text-text-primary whitespace-pre-wrap break-words">{msg.content}</p>
+                  <div className="text-sm text-text-primary markdown-body">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                  </div>
                 </div>
               </div>
             );

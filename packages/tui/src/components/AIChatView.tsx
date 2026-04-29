@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { useAIChat, useChatHistory, getDefaultStorage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { wrapLines } from '../utils/text.js';
+import { renderMarkdown } from '../utils/markdown.js';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 
@@ -34,8 +35,8 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
 
   // ── CJK-safe viewport with conditional auto-scroll ──
   const maxCols = Math.max(20, cols - 6);
-  const allMessageLines = useMemo(() => {
-    const lines: string[] = [];
+  const allMessageLines = useMemo((): Array<string | React.ReactNode> => {
+    const lines: Array<string | React.ReactNode> = [];
     for (const msg of messages) {
       if (msg.role === 'tool_call') {
         lines.push(`\u{1f527} 使用了 ${msg.toolName ?? ''}`);
@@ -43,13 +44,19 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
         for (const l of wrapLines(msg.content, maxCols, 4)) {
           lines.push(`  \u21a1  ${l}`);
         }
-      } else {
-        const prefix = msg.role === 'user' ? '\u25b8 ' : '\u{1f916} ';
+      } else if (msg.role === 'user') {
         for (const l of wrapLines(msg.content, maxCols, 2)) {
-          lines.push(prefix + l);
+          lines.push('\u25b8 ' + l);
+        }
+      } else {
+        // Assistant message — render as markdown
+        lines.push(<Text key={`ml-${lines.length}`} color="cyan">🤖</Text>);
+        const elements = renderMarkdown(msg.content);
+        for (const el of elements) {
+          lines.push(el);
         }
       }
-      lines.push('');
+      lines.push(' ');
     }
     if (loading) lines.push('... AI \u601d\u8003\u4e2d ...');
     return lines;
@@ -136,9 +143,12 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
         {canScrollUp && (
           <Text dimColor color="cyan">↑ {viewStart} 行在上方</Text>
         )}
-        {visibleLines.map((line, i) => (
-          <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>{line || ' '}</Text>
-        ))}
+        {visibleLines.map((line, i) => {
+          if (typeof line === 'string') {
+            return <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>{line || ' '}</Text>;
+          }
+          return <React.Fragment key={viewStart + i}>{line}</React.Fragment>;
+        })}
         {canScrollDown && (
           <Text dimColor color="cyan">↓ {allMessageLines.length - viewStart - maxVisible} 行在下方</Text>
         )}
