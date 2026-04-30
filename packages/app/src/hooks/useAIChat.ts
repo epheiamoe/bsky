@@ -21,6 +21,10 @@ export function useAIChat(
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    toolName: string;
+    description: string;
+  } | null>(null);
   const lastContext = useRef<string | undefined>();
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
@@ -122,6 +126,13 @@ export function useAIChat(
         let streamingContent = '';
 
         for await (const event of stream) {
+          if ((event as any).type === 'confirmation_needed') {
+            setPendingConfirmation({
+              toolName: (event as any).toolName || '',
+              description: event.content,
+            });
+            continue;
+          }
           if (event.type === 'tool_call') {
             streamingContent = ''; // Reset for next assistant turn
             setMessages(prev => {
@@ -211,7 +222,49 @@ export function useAIChat(
     }
   }, [assistant, autoSave, options?.stream]);
 
-  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current };
+  const confirmAction = useCallback(() => {
+    assistant.confirmAction(true);
+    setPendingConfirmation(null);
+  }, [assistant]);
+
+  const rejectAction = useCallback(() => {
+    assistant.confirmAction(false);
+    setPendingConfirmation(null);
+  }, [assistant]);
+
+  const undoLastMessage = useCallback(() => {
+    const allMsgs = assistant.getMessages();
+    let lastUserIdx = -1;
+    for (let i = allMsgs.length - 1; i >= 0; i--) {
+      if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx < 0) return;
+    const keep = allMsgs.slice(0, lastUserIdx);
+    assistant.loadMessages(keep);
+    setMessages(keep.map(m => ({
+      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
+      content: m.content,
+    })));
+  }, [assistant]);
+
+  const retry = useCallback(async () => {
+    const allMsgs = assistant.getMessages();
+    let lastUserIdx = -1;
+    for (let i = allMsgs.length - 1; i >= 0; i--) {
+      if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx < 0) return;
+    const lastUserContent = allMsgs[lastUserIdx]!.content;
+    const keep = allMsgs.slice(0, lastUserIdx);
+    assistant.loadMessages(keep);
+    setMessages(keep.map(m => ({
+      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
+      content: m.content,
+    })));
+    await send(lastUserContent);
+  }, [assistant, send]);
+
+  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry };
 }
 
 // Re-export the AIChatMessage type for consumers

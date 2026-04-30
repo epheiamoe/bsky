@@ -21,7 +21,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const storage = getDefaultStorage();
   const [chatId, setChatId] = useState<string | undefined>();
   const [showHistory, setShowHistory] = useState(!contextUri);
-  const { messages, loading, guidingQuestions, send } = useAIChat(client, aiConfig, contextUri, { chatId, storage });
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, contextUri, { chatId, storage });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
@@ -93,6 +93,17 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   // Scroll keys: PgUp/PgDn always, ↑/↓ when unfocused
   useInput((input, key) => {
     if (showHistory) return;
+    // Confirmation dialog active — only Y/N/Esc
+    if (pendingConfirmation) {
+      if (input === 'y' || input === 'Y' || key.return) { confirmAction(); return; }
+      if (input === 'n' || input === 'N' || key.escape) { rejectAction(); return; }
+      return;
+    }
+    // Undo / Retry (u = undo last, r = retry last)
+    if (!focused && !loading) {
+      if (input === 'u' || input === 'U') { undoLastMessage(); return; }
+      if (input === 'r' || input === 'R') { retry(); return; }
+    }
     const page = Math.floor(maxVisible * 0.7);
     if (key.pageUp) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + page)); return; }
     if (key.pageDown) { setScrollOffset(s => Math.max(0, s - page)); return; }
@@ -138,12 +149,19 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>{'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}</Text>
-        <Text dimColor>{' '}{t('keys.aiChat')}</Text>
+        <Text dimColor>{' '}{pendingConfirmation ? 'Y:确认 N:取消' : t('keys.aiChat') + ' u:撤销'}</Text>
       </Box>
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Text dimColor>{t('ai.quickQuestions')}</Text>
           {guidingQuestions.map((q, i) => <Text key={i} color="cyan">{'  '}[{i + 1}] {q}</Text>)}
+        </Box>
+      )}
+      {/* ── Write confirmation banner ── */}
+      {pendingConfirmation && (
+        <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={1} marginTop={0}>
+          <Text bold color="yellow">{'⚠ '}{t('ai.toolUsed')}: {pendingConfirmation.description}</Text>
+          <Box><Text color="green">[Y/Enter] {t('action.confirm')}</Text><Text>{'  '}</Text><Text color="red">[N/Esc] {t('action.cancel')}</Text></Box>
         </Box>
       )}
       <Box flexDirection="column" flexGrow={1} marginTop={0}>

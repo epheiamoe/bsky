@@ -21,7 +21,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
 
-  const { messages, loading, guidingQuestions, send } = useAIChat(client, aiConfig, contextUri, {
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, contextUri, {
     chatId,
     storage,
     stream: true,
@@ -190,6 +190,20 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
           )}
         </header>
 
+        {/* ── Write confirmation modal ── */}
+        {pendingConfirmation && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={rejectAction}>
+            <div className="bg-white dark:bg-[#1a1a2e] rounded-xl p-6 max-w-md mx-4 border-2 border-yellow-500 shadow-xl" onClick={e => e.stopPropagation()}>
+              <p className="text-yellow-600 dark:text-yellow-400 font-semibold text-lg mb-2">⚠ Confirm Action</p>
+              <p className="text-sm text-text-primary mb-4">{pendingConfirmation.description}</p>
+              <div className="flex gap-3 justify-end">
+                <button onClick={rejectAction} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-surface transition-colors">{t('action.cancel')}</button>
+                <button onClick={confirmAction} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors">{t('action.confirm')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Messages area */}
         <div
           ref={scrollContainerRef}
@@ -238,8 +252,17 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               );
             }
             if (msg.role === 'user') {
+              const isLastUser = i === messages.length - 1 || (i < messages.length - 1 && messages.slice(i + 1).every(m => m.role !== 'user'));
               return (
-                <div key={i} className="flex justify-end">
+                <div key={i} className="flex justify-end items-start gap-2">
+                  {isLastUser && !loading && msg.content && (
+                    <div className="flex flex-col gap-1 pt-1">
+                      <button onClick={retry} title="Retry" className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1">↻</button>
+                      {i > 0 && (
+                        <button onClick={undoLastMessage} title="Undo" className="text-xs text-text-secondary/60 hover:text-red-500 transition-colors px-1">↩</button>
+                      )}
+                    </div>
+                  )}
                   <div className="bg-primary text-white rounded-lg px-3 py-2 max-w-[75%]">
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                   </div>

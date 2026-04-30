@@ -76,6 +76,10 @@ export class AIAssistant {
   private toolMap: Map<string, ToolDescriptor> = new Map();
   private messages: ChatMessage[] = [];
 
+  // Write confirmation gate
+  private _confirmPromise: Promise<boolean> | null = null;
+  private _confirmResolve: ((v: boolean) => void) | null = null;
+
   constructor(config?: Partial<AIConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config } as AIConfig;
   }
@@ -120,6 +124,27 @@ export class AIAssistant {
     this.messages = [...msgs];
   }
 
+  /** Whether a write-tool confirmation dialog is currently open. */
+  get hasPendingConfirmation(): boolean {
+    return this._confirmPromise !== null;
+  }
+
+  /** Signal the pending confirmation: true = execute, false = cancel. */
+  confirmAction(approved: boolean): void {
+    if (this._confirmResolve) {
+      this._confirmResolve(approved);
+      this._confirmPromise = null;
+      this._confirmResolve = null;
+    }
+  }
+
+  private async _waitForConfirmation(): Promise<boolean> {
+    this._confirmPromise = new Promise<boolean>((resolve) => {
+      this._confirmResolve = resolve;
+    });
+    return this._confirmPromise;
+  }
+
   async sendMessage(content: string): Promise<{
     content: string;
     toolCallsExecuted: number;
@@ -161,6 +186,28 @@ export class AIAssistant {
 
           let toolResult: string;
           if (toolDesc) {
+            // ── Write confirmation gate ──
+            if (toolDesc.requiresWrite) {
+              intermediateSteps.push({
+                type: 'tool_call',
+                content: `⚡ PENDING: ${toolDesc.definition.description}`,
+              });
+              const approved = await this._waitForConfirmation();
+              if (!approved) {
+                toolResult = 'User cancelled the operation.';
+                toolCallsExecuted++;
+                intermediateSteps.push({
+                  type: 'tool_result',
+                  content: `Cancelled: ${toolName}`,
+                });
+                this.messages.push({
+                  role: 'tool',
+                  content: toolResult,
+                  tool_call_id: tc.id,
+                });
+                continue;
+              }
+            }
             try {
               toolResult = await toolDesc.handler(toolArgs);
             } catch (err) {
@@ -367,7 +414,7 @@ export class AIAssistant {
         }
       }
 
-      // Check if we got tool calls
+       // Check if we got tool calls
       if (toolCallAccum.size > 0) {
         const toolCalls = Array.from(toolCallAccum.entries())
           .sort(([a], [b]) => a - b)
@@ -393,6 +440,22 @@ export class AIAssistant {
 
           let toolResult: string;
           if (toolDesc) {
+            // ── Write confirmation gate (streaming) ──
+            if (toolDesc.requiresWrite) {
+              const desc = buildToolDescription(toolName, toolArgs);
+              yield { type: 'confirmation_needed' as any, content: desc, toolName };
+              const approved = await this._waitForConfirmation();
+              if (!approved) {
+                toolResult = 'User cancelled the operation.';
+                yield { type: 'tool_result', content: toolResult, toolName };
+                this.messages.push({
+                  role: 'tool',
+                  content: toolResult,
+                  tool_call_id: tc.id,
+                });
+                continue;
+              }
+            }
             try {
               toolResult = await toolDesc.handler(toolArgs);
             } catch (err) {
@@ -425,6 +488,17 @@ export class AIAssistant {
     }
 
     throw new Error('Max tool calling rounds exceeded');
+  }
+}
+
+function buildToolDescription(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'create_post': return `创建帖子: "${String(args.text || '').slice(0, 100)}"`;
+    case 'like': return `点赞帖子: ${String(args.uri || '')}`;
+    case 'repost': return `转发帖子: ${String(args.uri || '')}`;
+    case 'follow': return `关注用户: ${String(args.subject || '')}`;
+    case 'upload_blob': return '上传图片';
+    default: return `${toolName}: ${JSON.stringify(args).slice(0, 100)}`;
   }
 }
 

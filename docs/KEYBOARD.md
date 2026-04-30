@@ -192,12 +192,20 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 | `PgDn` | Scroll down ~70% of visible height | Always |
 | `↑` | Scroll up 3 lines | Only when `focused === false` (not typing) |
 | `↓` | Scroll down 3 lines | Only when `focused === false` |
+| `u` / `U` | Undo last message pair (remove last user+assistant) | When `!loading` and `!focused` |
+| `r` / `R` | Retry last message (re-send last user input) | When `!loading` and `!focused` |
+
+**Write confirmation dialog** (when open, blocks all other keys):
+| Key | Action |
+|-----|--------|
+| `y` / `Y` / `Enter` | Confirm — execute the write operation |
+| `n` / `N` / `Esc` | Reject — cancel the operation |
 
 When `focused === true` (Tab switched focus to AI panel), arrow keys pass through to TextInput.
 
 **Note**: While `focusedPanel === 'main'`, keys `a` and `t` navigate to feed (overriding their global meaning).
 
-**Footer hint**: `Tab:切换 Esc:返回 PgUp/PgDn:滚动`
+**Footer hint**: `Tab:切换 Esc:返回 PgUp/PgDn:滚动 u:撤销`
 
 ### When Chat History is Open
 
