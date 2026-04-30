@@ -132,10 +132,14 @@ function uriToParts(uri: string) {
 
 function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] {
   const lines: FlatLine[] = [];
+  const visitedUris = new Set<string>();
 
   function walk(node: ThreadViewPost | NFP, d: number) {
     if (node.$type !== 'app.bsky.feed.defs#threadViewPost') return;
     const post = node.post as PostView;
+
+    if (visitedUris.has(post.uri)) return;
+    visitedUris.add(post.uri);
 
     if (node.parent && node.parent.$type === 'app.bsky.feed.defs#threadViewPost') {
       walk(node.parent, d - 1);
