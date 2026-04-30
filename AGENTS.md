@@ -78,10 +78,16 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - **BskyClient**: Two `ky` instances — `this.ky` (bsky.social for writes) and `this.publicKy` (public.api.bsky.app for reads). Auto JWT refresh via `afterResponse` hook.
 - **PWA routing**: `useHashRouter()` — `history.pushState` + `popstate`, format `#/view?param=value`
 - **PWA timeline**: `useTimeline` held at App.tsx level (persists across navigation), virtual scroll via `@tanstack/react-virtual`
-- **Images**: PDS blob endpoint `bsky.social/xrpc/com.atproto.sync.getBlob?did=...&cid=...` (302 redirect, browser follows)
+- **Images**: Bluesky CDN `cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}@{ext}`. (Old PDS blob endpoint required JWT; CDN serves inline, works in `<img>` and OSC 8 terminals.)
 - **Tailwind**: Colors use CSS variables (`var(--color-primary)`). `@apply` doesn't work with opacity modifiers on CSS variables — use plain CSS instead.
 - **PWA stubs**: `fs`, `os`, `path` are stubbed via Vite alias (FileChatStorage's Node imports that are never called in browser)
 - **ChatStorage interface**: TUI uses `FileChatStorage` (JSON files), PWA uses `IndexedDBChatStorage` (IndexedDB)
+- **Keyboard shortcuts**: Full reference at `docs/KEYBOARD.md`. When adding NEW shortcuts, you MUST:
+  1. Check the Global Key Reserve and Conflict tables in `docs/KEYBOARD.md` — DO NOT reuse reserved or already-bound keys
+  2. Update `docs/KEYBOARD.md` with the new binding
+  3. Update the i18n `keys.*` footer hint strings in `packages/app/src/i18n/locales/*.ts`
+  4. Verify no conflicts by checking the key across ALL views (feed, thread, bookmarks, notifications, aiChat, compose, profile, search)
+  Note: Ink fires ALL `useInput` callbacks on every keystroke; 5 handlers coexist. Guards must be view-specific.
 
 ## Local Development Notes
 
