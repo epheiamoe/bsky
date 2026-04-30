@@ -117,6 +117,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     repostPost,
     isLiked,
     isReposted,
+    expandReplies,
   } = useThread(client, uri);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
@@ -153,7 +154,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
     for (const line of flatLines) {
       if (line.depth < 0) parents.push(line);
-      else if (line.depth === 1) replies.push(line);
+      else if (line.depth > 0) replies.push(line);
     }
 
     parents.sort((a, b) => a.depth - b.depth);
@@ -298,28 +299,46 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {replyLines.length > 0 && (
           <section className="space-y-3">
             <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.replies')} ({replyLines.length}) ──</p>
-            {replyLines.map((line) => (
-              <PostCard
-                key={line.uri || line.rkey}
-                line={line}
-                onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
-              >
-                <ActionButtons
-                  uri={line.uri}
-                  cid={line.cid}
-                  handle={line.handle}
-                  rkey={line.rkey}
-                  depth={line.depth}
-                  likePost={likePost}
-                  repostPost={repostPost}
-                  isLiked={isLiked}
-                  isReposted={isReposted}
-                  isBookmarked={isBookmarked}
-                  toggleBookmark={toggleBookmark}
-                  goTo={goTo}
-                />
-              </PostCard>
-            ))}
+            {replyLines.map((line) => {
+              if (line.isTruncation) {
+                return (
+                  <div key={line.text} className="flex justify-center py-3">
+                    <button
+                      onClick={expandReplies}
+                      className="text-sm text-primary hover:text-primary-hover cursor-pointer transition-colors"
+                    >
+                      {line.text.replace('（', '').replace('）', '')}
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={line.uri || line.rkey}
+                  style={{ marginLeft: Math.min((line.depth - 1) * 16, 48) }}
+                >
+                  <PostCard
+                    line={line}
+                    onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+                  >
+                    <ActionButtons
+                      uri={line.uri}
+                      cid={line.cid}
+                      handle={line.handle}
+                      rkey={line.rkey}
+                      depth={line.depth}
+                      likePost={likePost}
+                      repostPost={repostPost}
+                      isLiked={isLiked}
+                      isReposted={isReposted}
+                      isBookmarked={isBookmarked}
+                      toggleBookmark={toggleBookmark}
+                      goTo={goTo}
+                    />
+                  </PostCard>
+                </div>
+              );
+            })}
           </section>
         )}
 

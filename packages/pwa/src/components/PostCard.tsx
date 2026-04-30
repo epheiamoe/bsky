@@ -16,6 +16,18 @@ interface ExternalLink {
   description: string;
 }
 
+interface QuotedPostData {
+  uri: string;
+  cid: string;
+  text: string;
+  handle: string;
+  displayName: string;
+  authorAvatar?: string;
+  mediaTags: string[];
+  imageUrls: string[];
+  externalLink: ExternalLink | null;
+}
+
 function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null } {
   const images: ImageData[] = [];
   let external: ExternalLink | null = null;
@@ -51,6 +63,63 @@ function extractEmbeds(post: PostView): { images: ImageData[]; external: Externa
   }
 
   return { images, external };
+}
+
+function extractQuotedPost(post: PostView): QuotedPostData | undefined {
+  const embed = post.record.embed as {
+    $type?: string;
+    record?: {
+      $type?: string;
+      uri?: string;
+      cid?: string;
+      author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
+      value?: { text?: string };
+      embeds?: Array<{
+        $type?: string;
+        images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+        external?: { uri: string; title: string; description: string };
+      }>;
+    };
+  } | undefined;
+  if (!embed) return undefined;
+
+  const isRecord = embed.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia';
+  if (!isRecord && !isRecordWithMedia) return undefined;
+
+  const rec = embed.record;
+  if (!rec?.uri) return undefined;
+
+  const imageUrls: string[] = [];
+  let externalLink: ExternalLink | null = null;
+  const mediaTags: string[] = [];
+
+  if (rec.embeds?.[0]) {
+    const e = rec.embeds[0]!;
+    if (e.$type === 'app.bsky.embed.images' && e.images) {
+      const count = e.images.length;
+      mediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
+      const did = rec.author?.did ?? '';
+      for (const img of e.images) {
+        imageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
+      }
+    } else if (e.$type === 'app.bsky.embed.external' && e.external) {
+      mediaTags.push('🔗 链接');
+      externalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
+    }
+  }
+
+  return {
+    uri: rec.uri,
+    cid: rec.cid ?? '',
+    text: rec.value?.text ?? '',
+    handle: rec.author?.handle ?? '',
+    displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
+    authorAvatar: rec.author?.avatar,
+    mediaTags,
+    imageUrls,
+    externalLink,
+  };
 }
 
 function avatarLetter(name: string): string {
@@ -145,6 +214,8 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
   let images: ImageData[] = [];
   let externalLink: ExternalLink | null = null;
   let avatarUrl: string | undefined;
+  let quotedPost: FlatLine['quotedPost'];
+  let mediaTags: string[] = [];
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -159,6 +230,8 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     images = embeds.images;
     hasImages = images.length > 0;
     externalLink = embeds.external;
+    quotedPost = extractQuotedPost(post);
+    mediaTags = [];
   } else if (line) {
     displayName = line.displayName || line.handle;
     handle = line.handle;
@@ -175,6 +248,8 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
     if (line.externalLink) {
       externalLink = line.externalLink;
     }
+    quotedPost = line.quotedPost;
+    mediaTags = line.mediaTags ?? [];
   } else {
     return null;
   }
@@ -225,6 +300,34 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
               {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
               <p className="text-primary text-xs mt-1 truncate">🔗 {externalLink.uri}</p>
             </a>
+          )}
+          {mediaTags.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {mediaTags.map((tag, i) => (
+                <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+          {quotedPost && (
+            <div className="mt-2 border border-border rounded-lg p-3 bg-surface overflow-hidden">
+              <div className="flex items-center gap-2 mb-1">
+                {quotedPost.authorAvatar && (
+                  <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                )}
+                <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
+                <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
+              </div>
+              <p className="text-xs text-text-primary line-clamp-3">{quotedPost.text}</p>
+              {quotedPost.imageUrls && quotedPost.imageUrls.length > 0 && (
+                <div className="mt-1 flex gap-1">
+                  {quotedPost.imageUrls.slice(0, 2).map((url, idx) => (
+                    <img key={idx} src={url} className="w-16 h-16 object-cover rounded-md" alt="" />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
           <div className="flex items-center gap-4 mt-2 text-text-secondary text-xs">
             <span>💬 {replyCount ?? 0}</span>
