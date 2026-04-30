@@ -22,12 +22,25 @@ export function useAIChat(
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
   const lastContext = useRef<string | undefined>();
+  const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
 
   // Keep chatIdRef in sync
   useEffect(() => {
     if (options?.chatId) chatIdRef.current = options.chatId;
+  }, [options?.chatId]);
+
+  // Reset assistant state when chatId changes
+  useEffect(() => {
+    if (options?.chatId === lastChatId.current) return;
+    lastChatId.current = options?.chatId;
+
+    assistant.clearMessages();
+    setMessages([]);
+    setGuidingQuestions([]);
+
+    assistant.addSystemMessage('你是一个深度集成 Bluesky 的终端助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。回答简练，适合终端显示，支持 Markdown（由 ink 渲染）。');
   }, [options?.chatId]);
 
   // Load existing conversation from storage when chatId changes
@@ -110,6 +123,7 @@ export function useAIChat(
 
         for await (const event of stream) {
           if (event.type === 'tool_call') {
+            streamingContent = ''; // Reset for next assistant turn
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
@@ -150,8 +164,10 @@ export function useAIChat(
           return prev;
         });
       } catch (e) {
+        const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
+        console.error('[useAIChat] stream error:', errorText);
         setMessages(prev => {
-          const errMsg: AIChatMessage = { role: 'assistant', content: `Error: ${e instanceof Error ? e.message : String(e)}` };
+          const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
           const updated = [...prev, errMsg];
           void autoSave(updated);
           return updated;
@@ -182,8 +198,10 @@ export function useAIChat(
         return updated;
       });
     } catch (e) {
+      const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
+      console.error('[useAIChat] non-stream error:', errorText);
       setMessages(prev => {
-        const errMsg: AIChatMessage = { role: 'assistant', content: `Error: ${e instanceof Error ? e.message : String(e)}` };
+        const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
         const updated = [...prev, errMsg];
         void autoSave(updated);
         return updated;

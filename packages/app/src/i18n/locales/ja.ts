@@ -180,8 +180,8 @@ const ja: LocaleMessages = {
   'common.escBack': 'Esc で戻る',
 
   'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新',
-  'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 b:更新',
-  'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク',
+  'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 r:更新',
+  'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳',
   'keys.compose': 'Enter:送信 · Esc:取消 · i:画像追加',
   'keys.composeImage': '画像パス入力 · Enter:確認 · Esc:取消',
   'keys.profile': 'Esc:戻る',

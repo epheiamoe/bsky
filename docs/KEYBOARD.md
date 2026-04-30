@@ -28,6 +28,7 @@ Processed in App.tsx:87 in this order. Each returns immediately.
 |-----|--------|---------|
 | `Tab` | Toggle `focusedPanel` between `'main'` and `'ai'` | Only in aiChat view |
 | `Esc` | See table below | Varies by view |
+| `,` (comma) | Open Settings view (.env editor) | Global |
 
 ### Esc Behavior by View
 
@@ -115,6 +116,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `c` / `C` | Reply (opens compose with reply context) |
 | `v` | Toggle bookmark |
 | `y` | Yank URI — copies `@handle uri bsky.app/...` to stderr (5s display) |
+| `f` / `F` | Translate cursor line text via AI |
 
 ### Repost Confirmation Dialog (when open)
 
@@ -123,9 +125,9 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `y` / `Y` | Confirm repost |
 | `n` / `N` | Cancel repost |
 
-**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏`
+**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译`
 
-**Note**: `t` is GLOBAL (`goHome`) and NOT available for thread-local translation. Use `f` or `z` for translation.
+**Note**: `t` is GLOBAL (`goHome`) and NOT available for thread-local translation. Use `f` for translation.
 
 ---
 
@@ -138,8 +140,6 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `Enter` | View bookmarked post in thread |
 | `d` | Delete selected bookmark |
 | `r` | Refresh bookmarks list |
-
-**Known bug**: `b` (global → `goTo bookmarks`) consumes the key before the view-specific `b` (refresh) handler runs. Pressing `b` in bookmarks view is a no-op. Use `r` to refresh instead.
 
 **Footer hint**: `↑↓/jk:导航 Enter:查看 d:删除 r:刷新`
 
@@ -258,16 +258,18 @@ Keys that have **different meanings** depending on view:
 | `t` | goHome | goHome | goHome | goHome | feed (main-focus) | blocked |
 | `a` | goTo AI | goTo AI | goTo AI | goTo AI | feed (main-focus) | blocked |
 | `c` | goTo compose | reply (conflict*) | goTo compose | goTo compose | goTo compose | blocked |
-| `b` | goTo bm | goTo bm | goTo bm (broken) | goTo bm | goTo bm | blocked |
+| `b` | goTo bm | goTo bm | goTo bm (global) | goTo bm | goTo bm | blocked |
 | `r` | refresh | repost confirm | — | refresh notifs | — | blocked |
 | `l` | — | like | — | — | load conv (hist) | blocked |
 | `d` | — | — | delete bm | — | delete conv (hist) | blocked |
 | `h` | — | go to root | — | — | — | blocked |
 | `y` | — | yank URI | — | — | — | blocked |
+| `f` | — | translate | — | — | — | blocked |
 | `i` | — | — | — | — | — | add image |
+| `,` | settings | settings | settings | settings | settings | settings |
 | `Enter` | view thread | refocus post | view thread | view post | TextInput | submit |
 
-\* In thread, `c` fires BOTH the global `goTo compose` (no replyTo) and the thread-local `goTo compose` (with replyTo). The second push wins due to navigation stack ordering, so the reply context is preserved. This is a benign double-navigation.
+\* In thread, `c` is now guarded: global handler skips when `currentView.type === 'thread'`, so only the thread-local `c` (with replyTo) fires. Fixed 2026-04-30.
 
 ---
 

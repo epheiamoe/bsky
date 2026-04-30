@@ -29,6 +29,7 @@ export function useThread(
 ) {
   const [flatLines, setFlatLines] = useState<FlatLine[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [themeUri, setThemeUri] = useState<string | undefined>(uri);
   const [likedUris, setLikedUris] = useState<Set<string>>(new Set());
@@ -42,6 +43,7 @@ export function useThread(
     setLoading(true);
 
     try {
+      setError(null);
       const res = await client.getPostThread(uri, 5, 80);
       const lines = flattenThreadTree(res.thread);
       setFlatLines(lines);
@@ -50,6 +52,7 @@ export function useThread(
       // Set theme URI on first load
       if (!themeUri) setThemeUri(uri);
     } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
       console.error('Thread load error:', e);
     } finally {
       setLoading(false);
@@ -112,7 +115,7 @@ export function useThread(
   const focusedLine = flatLines[focusedIndex];
 
   return {
-    flatLines, loading, focusedIndex, themeUri,
+    flatLines, loading, error, focusedIndex, themeUri,
     focused: focusedLine,
     up, down, focus,
     likePost, repostPost,
@@ -161,7 +164,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
       indexedAt: post.indexedAt,
     });
 
-    if (node.replies) {
+    if (node.replies && d >= 0) {
       const sortedReplies = [...node.replies]
         .filter((r): r is ThreadViewPost => r.$type === 'app.bsky.feed.defs#threadViewPost')
         .sort((a, b) => new Date(a.post.indexedAt).getTime() - new Date(b.post.indexedAt).getTime());

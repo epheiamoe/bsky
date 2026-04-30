@@ -146,7 +146,7 @@ export function App() {
           />
         );
       case 'notifications':
-        return <NotifsPage client={client} goBack={goBack} />;
+        return <NotifsPage client={client} goBack={goBack} goTo={goTo} />;
       case 'search':
         return (
           <SearchPage

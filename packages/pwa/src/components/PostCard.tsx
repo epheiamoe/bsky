@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { PostView } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
 import { getCdnImageUrl, useI18n } from '@bsky/app';
@@ -58,7 +59,7 @@ function avatarLetter(name: string): string {
 
 function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
       <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10">✕</button>
       <img
         src={images[initial]!.url}
@@ -106,8 +107,9 @@ function ImageGrid({ images }: { images: ImageData[] }) {
           </div>
         )}
       </div>
-      {lightbox !== null && (
-        <ImageLightbox images={images} initial={lightbox} onClose={() => setLightbox(null)} />
+      {lightbox !== null && createPortal(
+        <ImageLightbox images={images} initial={lightbox} onClose={() => setLightbox(null)} />,
+        document.body
       )}
     </>
   );
@@ -207,7 +209,7 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
               </>
             )}
           </div>
-          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap line-clamp-6">
+          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
             {text}
           </p>
           {hasImages && <ImageGrid images={images} />}

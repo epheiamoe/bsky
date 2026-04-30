@@ -40,6 +40,11 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const allMessageLines = useMemo((): Array<string | React.ReactNode> => {
     const lines: Array<string | React.ReactNode> = [];
     for (const msg of messages) {
+      const isError = (msg as any).isError === true;
+      if (isError) {
+        lines.push(<Text key={`err-${lines.length}`} color="red">❌ {msg.content}</Text>);
+        continue;
+      }
       if (msg.role === 'tool_call') {
         lines.push(`\u{1f527} ${t('ai.toolUsed')} ${msg.toolName ?? ''}`);
       } else if (msg.role === 'tool_result') {

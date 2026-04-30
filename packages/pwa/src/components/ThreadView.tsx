@@ -153,7 +153,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
     for (const line of flatLines) {
       if (line.depth < 0) parents.push(line);
-      else if (line.depth > 0) replies.push(line);
+      else if (line.depth === 1) replies.push(line);
     }
 
     parents.sort((a, b) => a.depth - b.depth);

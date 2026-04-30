@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useThread, useI18n } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import type { BskyClient, AIConfig } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
 
 interface UnifiedThreadViewProps {
@@ -13,18 +13,24 @@ interface UnifiedThreadViewProps {
   cols: number;
   isBookmarked: (uri: string) => boolean;
   toggleBookmark: (uri: string, cid: string) => Promise<void>;
+  aiConfig?: AIConfig;
+  targetLang?: string;
+  translateMode?: 'simple' | 'json';
 }
 
-export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols, isBookmarked, toggleBookmark }: UnifiedThreadViewProps) {
-  const { flatLines, loading, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted } = useThread(client, uri);
+export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols, isBookmarked, toggleBookmark, aiConfig, targetLang, translateMode }: UnifiedThreadViewProps) {
+  const { flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted } = useThread(client, uri);
 
   // Cursor = arrow movement target (highlighted in replies); focused = current post (only changes on Enter/h)
   const [cursorIndex, setCursorIndex] = useState(0);
   useEffect(() => { setCursorIndex(focusedIndex); }, [focusedIndex]);
+  useEffect(() => { setTranslatedText(null); }, [cursorIndex]);
 
   const [confirmRepost, setConfirmRepost] = useState<{ uri: string; handle: string } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
   const { t, locale } = useI18n();
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
   const dateTimeOpts: Intl.DateTimeFormatOptions = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
@@ -76,10 +82,23 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         setTimeout(() => setYankedUri(null), 5000);
         return;
       }
+      if (input === 'f' || input === 'F') {
+        setTranslatedText(null);
+        setTranslating(true);
+        import('@bsky/core').then(({ translateText: tt }) => {
+          const cfg = { apiKey: aiConfig?.apiKey || '', baseUrl: aiConfig?.baseUrl || 'https://api.deepseek.com', model: aiConfig?.model || 'deepseek-v4-flash' };
+          tt(cfg, cursorLine.text, targetLang || 'zh', translateMode || 'simple').then(r => {
+            setTranslatedText(`[${r.sourceLang ?? '?'}→${targetLang || 'zh'}] ${r.translated}`);
+            setTranslating(false);
+          }).catch(() => setTranslating(false));
+        }).catch(() => setTranslating(false));
+        return;
+      }
     }
   });
 
-  if (loading && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>{t('thread.loadFailed')}</Text></Box>;
+  if (loading && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="gray" paddingX={1}><Text dimColor>{t('status.loading')}</Text></Box>;
+  if (!loading && error && flatLines.length === 0) return <Box width={cols} borderStyle="single" borderColor="red" paddingX={1}><Text dimColor>{t('thread.loadFailed')}</Text></Box>;
 
   const glc = (l: FlatLine) => l.likeCount + (localLikeCounts[l.rkey] ?? 0);
 
@@ -175,6 +194,17 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           );
         })}
       </Box>
+
+      {/* ── Translation ── */}
+      {(translatedText || translating) && (
+        <Box flexDirection="column" borderStyle="single" borderColor="cyan" paddingX={1} marginTop={0}>
+          {translating ? (
+            <Text dimColor>{'🔄 '}{t('action.translating')}</Text>
+          ) : (
+            <Text color="white">{translatedText}</Text>
+          )}
+        </Box>
+      )}
 
       {/* ── Repost confirm ── */}
       {confirmRepost && (

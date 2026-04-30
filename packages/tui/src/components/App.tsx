@@ -12,6 +12,7 @@ import { SearchView } from './SearchView.jsx';
 import { NotifView } from './NotifView.jsx';
 import { AIChatView } from './AIChatView.jsx';
 import { UnifiedThreadView } from './UnifiedThreadView.jsx';
+import { SettingsView } from './SettingsView.jsx';
 import { enableMouseTracking, disableMouseTracking, parseMouseEvent } from '../utils/mouse.js';
 import type { MouseEvent } from '../utils/mouse.js';
 
@@ -64,6 +65,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Auto-login
   const [wasAuthenticated, setWasAuthenticated] = useState(false);
@@ -140,9 +142,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     // Ctrl+G
     if (input === '\x07') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
 
+    // Settings
+    if (input === ',') { setShowSettings(true); return; }
+
     const k = input.toLowerCase();
     if (!k) return;
 
+    // INCOMPLETE: a/t should do copy/transcript per keys.aiMain i18n, but impl not wired
     if (currentView.type === 'aiChat' && focusedPanel === 'main') {
       if (k === 'a' || k === 't') { goBack(); goTo({ type: 'feed' }); }
       return;
@@ -192,7 +198,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
     if (k === 's') { goTo({ type: 'search' }); return; }
     if (k === 'a') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
-    if (k === 'c') { goTo({ type: 'compose' }); return; }
+    if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
 
     // ── Feed-specific ──
@@ -211,7 +217,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (currentView.type === 'bookmarks') {
       if (k === 'j') setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1));
       else if (k === 'k') setBookmarkIdx(i => Math.max(0, i - 1));
-      else if (k === 'b') bookmarks.refresh();
+      else if (k === 'r') bookmarks.refresh();
       else if (k === 'd') {
         const bm = bookmarks.bookmarks[bookmarkIdx];
         if (bm) bookmarks.removeBookmark(bm.uri);
@@ -253,6 +259,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const onlineStatus = client ? '🟢' : '🔴';
 
   const renderView = () => {
+    if (showSettings) return <SettingsView goBack={() => setShowSettings(false)} />;
+
     switch (currentView.type) {
       case 'feed':
         return (
@@ -273,6 +281,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             cols={mainW}
             isBookmarked={bookmarks.isBookmarked}
             toggleBookmark={bookmarks.toggleBookmark}
+            aiConfig={config.aiConfig}
+            targetLang={config.targetLang}
           />
         );
       case 'compose':
@@ -349,7 +359,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         ) : renderView()}
       </Box>
       <Box width={cols} height={1}>
-        <Text backgroundColor="#1a56db" color="white" dimColor>{footerHint(currentView, canGoBack, t)}</Text>
+        <Text backgroundColor="#1a56db" color="white" dimColor>{footerHint(currentView, canGoBack, focusedPanel, t)}</Text>
         <Box flexGrow={1}><Text backgroundColor="#1a56db">{' '}</Text></Box>
         <Text backgroundColor="#1a56db" color="white" dimColor>{timeStr}{' '}</Text>
       </Box>
@@ -375,9 +385,9 @@ const KEY_MAP: Record<string, string> = {
   aiChat: 'keys.aiChat', bookmarks: 'keys.bookmarks',
 };
 
-function footerHint(v: { type: string }, canGoBack: boolean, t: (key: string) => string): string {
+function footerHint(v: { type: string }, canGoBack: boolean, focusedPanel: FocusTarget, t: (key: string) => string): string {
   const back = canGoBack ? ' Esc:' + t('nav.back') : '';
-  const key = KEY_MAP[v.type];
+  const key = v.type === 'aiChat' ? (focusedPanel === 'ai' ? KEY_MAP['aiChat'] : 'keys.aiMain') : KEY_MAP[v.type];
   const hint = key ? t(key) : '';
   return hint ? back + ' ' + hint : back;
 }

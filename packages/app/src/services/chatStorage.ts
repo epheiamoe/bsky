@@ -6,6 +6,7 @@ export interface AIChatMessage {
   role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
   content: string;
   toolName?: string;
+  isError?: boolean;
 }
 
 export interface ChatRecord {

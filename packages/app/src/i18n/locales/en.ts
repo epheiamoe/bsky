@@ -180,8 +180,8 @@ const en: LocaleMessages = {
   'common.escBack': 'Esc to go back',
 
   'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh',
-  'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete b:Refresh',
-  'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark',
+  'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete r:Refresh',
+  'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark f:Translate',
   'keys.compose': 'Enter:Send · Esc:Cancel · i:Add Image',
   'keys.composeImage': 'Enter image path · Enter:Confirm · Esc:Cancel',
   'keys.profile': 'Esc:Back',

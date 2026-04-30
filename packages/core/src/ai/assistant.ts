@@ -236,14 +236,22 @@ export class AIAssistant {
 
     const url = `${this.config.baseUrl}/v1/chat/completions`;
 
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.config.apiKey}`,
-      },
-      body: JSON.stringify(body),
-    });
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.config.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      if (e instanceof TypeError && e.message === 'fetch failed') {
+        throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+      }
+      throw e;
+    }
 
     if (!res.ok) {
       const errorText = await res.text();
@@ -288,14 +296,23 @@ export class AIAssistant {
       }
 
       const url = `${this.config.baseUrl}/v1/chat/completions`;
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify(body),
-      });
+
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.config.apiKey}`,
+          },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        if (e instanceof TypeError && e.message === 'fetch failed') {
+          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+        }
+        throw e;
+      }
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -434,14 +451,22 @@ export async function singleTurnAI(
 
   const url = `${config.baseUrl}/v1/chat/completions`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    if (e instanceof TypeError && e.message === 'fetch failed') {
+      throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+    }
+    throw e;
+  }
 
   if (!res.ok) {
     const errorText = await res.text();
@@ -510,7 +535,8 @@ export async function translateText(
       });
 
       if (!res.ok) {
-        throw new Error(`AI API error ${res.status}`);
+        const errorText = await res.text();
+        throw new Error(`Translate API error ${res.status}: ${errorText.slice(0, 200)}`);
       }
 
       const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };

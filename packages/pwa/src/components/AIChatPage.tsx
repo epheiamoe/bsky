@@ -61,7 +61,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   );
 
   const handleNewChat = useCallback(() => {
-    setChatId(undefined);
+    setChatId(crypto.randomUUID());
     setSidebarOpen(false);
     setInput('');
   }, []);
@@ -89,7 +89,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   );
 
   return (
-    <div className="flex h-[100dvh] bg-white dark:bg-[#0A0A0A] font-sans">
+    <div className="flex h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] font-sans">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
@@ -164,7 +164,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
       {/* Main chat area */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="flex items-center gap-3 px-4 py-3 border-b border-border bg-white dark:bg-[#0A0A0A]">
+        <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border bg-white dark:bg-[#0A0A0A] flex-shrink-0">
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary p-1 transition-colors"
@@ -231,7 +231,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               const display = msg.content.length > 300 ? msg.content.slice(0, 300) + '...' : msg.content;
               return (
                 <div key={i} className="flex justify-center">
-                  <div className="text-xs text-text-secondary/50 px-3 py-0.5 max-w-lg text-center">
+                  <div className="text-xs text-text-secondary/50 px-3 py-0.5 max-w-lg text-center break-words overflow-hidden">
                     ⮡ {display}
                   </div>
                 </div>
@@ -246,9 +246,14 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                 </div>
               );
             }
+            const isError = (msg as any).isError === true;
             return (
               <div key={i} className="flex justify-start">
-                <div className="bg-surface rounded-lg px-3 py-2 max-w-[85%] border border-border">
+                <div className={`rounded-lg px-3 py-2 max-w-[85%] border ${
+                  isError
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
+                    : 'bg-surface border-border'
+                }`}>
                   <div className="text-sm text-text-primary markdown-body">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>

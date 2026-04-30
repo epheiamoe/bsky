@@ -1,10 +1,12 @@
 import React from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
 import { useNotifications, useI18n } from '@bsky/app';
+import type { AppView } from '@bsky/app';
 
 interface NotifsPageProps {
   client: BskyClient;
   goBack: () => void;
+  goTo: (v: AppView) => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -49,12 +51,15 @@ function avatarLetter(author: { displayName?: string; handle: string }): string 
   return name.charAt(0).toUpperCase();
 }
 
-function NotifItem({ n, t }: { n: Notification; t: (key: string) => string }) {
+function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void }) {
   const emoji = REASON_EMOJI[n.reason] ?? '🔔';
   const reasonLabel = reasonText(n.reason, t);
+  const reasonSubject = n.reasonSubject;
 
   return (
-    <div className="border-b border-border px-4 py-3 hover:bg-surface transition-colors">
+    <div
+      onClick={reasonSubject ? () => goTo({ type: 'thread', uri: reasonSubject! }) : undefined}
+      className={`border-b border-border px-4 py-3 hover:bg-surface transition-colors ${reasonSubject ? 'cursor-pointer' : ''}`}>
       <div className="flex gap-3">
         <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
           {avatarLetter(n.author)}
@@ -84,7 +89,7 @@ function NotifItem({ n, t }: { n: Notification; t: (key: string) => string }) {
   );
 }
 
-export function NotifsPage({ client, goBack }: NotifsPageProps) {
+export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
   const { t } = useI18n();
   const { notifications, loading, refresh } = useNotifications(client);
 
@@ -116,7 +121,7 @@ export function NotifsPage({ client, goBack }: NotifsPageProps) {
       ) : notifications.length > 0 ? (
         <div>
           {notifications.map((n) => (
-            <NotifItem key={n.uri} n={n} t={t} />
+            <NotifItem key={n.uri} n={n} t={t} goTo={goTo} />
           ))}
         </div>
       ) : (
