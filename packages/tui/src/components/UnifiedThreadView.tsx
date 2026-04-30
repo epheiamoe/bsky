@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useThread, useI18n } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
@@ -39,6 +39,8 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedDepth = focused?.depth ?? 0;
   const cursorLine = flatLines[cursorIndex];
+  const flatLen = useRef(0);
+  useEffect(() => { flatLen.current = flatLines.length; });
 
   // Theme posts = above focused, excluding focused itself
   const themeLines = flatLines.filter(l => l.depth < 0 || (l.depth === 0 && l.isRoot && l.uri !== focusedUri));
@@ -60,10 +62,10 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
     // Arrows/jk move cursor (highlight) only — don't change current post
     if (key.upArrow || input === 'k' || input === 'K') { setCursorIndex(i => Math.max(0, i - 1)); return; }
-    if (key.downArrow || input === 'j' || input === 'J') { setCursorIndex(i => Math.min(flatLines.length - 1, i + 1)); return; }
+    if (key.downArrow || input === 'j' || input === 'J') { setCursorIndex(i => Math.min(Math.max(0, flatLen.current - 1), i + 1)); return; }
 
     // Enter: make cursor line the NEW current post (full refocus)
-    if (key.return && cursorLine?.uri) { refreshThread(cursorLine.uri); return; }
+    if (key.return && cursorLine?.uri && cursorLine.uri !== uri) { refreshThread(cursorLine.uri); return; }
 
     // h: go back to theme post
     if ((input === 'h' || input === 'H') && themeUri) { refreshThread(themeUri); return; }
