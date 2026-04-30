@@ -2,7 +2,7 @@ export type AppView =
   | { type: 'feed' }
   | { type: 'detail'; uri: string }
   | { type: 'thread'; uri: string }
-  | { type: 'compose'; replyTo?: string }
+  | { type: 'compose'; replyTo?: string; quoteUri?: string }
   | { type: 'profile'; actor: string }
   | { type: 'notifications' }
   | { type: 'search'; query?: string }

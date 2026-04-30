@@ -6,13 +6,23 @@ export interface ComposeImage {
   alt: string;
 }
 
+export interface Draft {
+  id: string;
+  text: string;
+  replyTo?: string;
+  quoteUri?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export function useCompose(client: BskyClient | null, goBack: () => void, onSuccess?: () => void) {
   const [draft, setDraft] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | undefined>();
+  const [quoteUri, setQuoteUri] = useState<string | undefined>();
 
-  const submit = useCallback(async (text: string, replyUri?: string, images?: ComposeImage[]) => {
+  const submit = useCallback(async (text: string, replyUri?: string, images?: ComposeImage[], qUri?: string) => {
     if (!client) return;
     setSubmitting(true);
     setError(null);
@@ -32,7 +42,36 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
         };
       }
 
-      if (images && images.length > 0) {
+      // Handle embed: images OR quote OR quote+images
+      const effectiveQuoteUri = qUri ?? quoteUri;
+      if (effectiveQuoteUri) {
+        const parts = uriToParts(effectiveQuoteUri);
+        const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
+        const quoteEmbed: Record<string, unknown> = {
+          $type: 'app.bsky.embed.record',
+          record: { uri: effectiveQuoteUri, cid: rec.cid ?? '' },
+        };
+        if (images && images.length > 0) {
+          record.embed = {
+            $type: 'app.bsky.embed.recordWithMedia',
+            record: quoteEmbed,
+            media: {
+              $type: 'app.bsky.embed.images',
+              images: images.map(img => ({
+                image: {
+                  $type: 'blob',
+                  ref: { $link: img.blobRef.$link },
+                  mimeType: img.blobRef.mimeType,
+                  size: img.blobRef.size,
+                },
+                alt: img.alt,
+              })),
+            },
+          };
+        } else {
+          record.embed = quoteEmbed;
+        }
+      } else if (images && images.length > 0) {
         record.embed = {
           $type: 'app.bsky.embed.images',
           images: images.map(img => ({
@@ -49,6 +88,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
 
       await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
       setDraft('');
+      setQuoteUri(undefined);
       goBack();
       onSuccess?.();
     } catch (e) {
@@ -56,9 +96,9 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     } finally {
       setSubmitting(false);
     }
-  }, [client, goBack, onSuccess]);
+  }, [client, goBack, onSuccess, quoteUri]);
 
-  return { draft, setDraft, submitting, error, replyTo, setReplyTo, submit };
+  return { draft, setDraft, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, submit };
 }
 
 function uriToParts(uri: string) {
