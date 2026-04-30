@@ -79,6 +79,19 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
         images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
         external?: { uri: string; title: string; description: string };
       }>;
+      // For recordWithMedia, the record is double-nested
+      record?: {
+        $type?: string;
+        uri?: string;
+        cid?: string;
+        author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
+        value?: { text?: string };
+        embeds?: Array<{
+          $type?: string;
+          images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+          external?: { uri: string; title: string; description: string };
+        }>;
+      };
     };
   } | undefined;
   if (!embed) return undefined;
@@ -87,7 +100,8 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
   const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia';
   if (!isRecord && !isRecordWithMedia) return undefined;
 
-  const rec = embed.record;
+  // For recordWithMedia, the actual record is double-nested: embed.record.record
+  const rec = isRecordWithMedia ? embed.record?.record : embed.record;
   if (!rec?.uri) return undefined;
 
   const imageUrls: string[] = [];
