@@ -19,7 +19,7 @@ interface UnifiedThreadViewProps {
 }
 
 export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols, isBookmarked, toggleBookmark, aiConfig, targetLang, translateMode }: UnifiedThreadViewProps) {
-  const { flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted } = useThread(client, uri);
+  const { flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted, expandReplies } = useThread(client, uri);
 
   // Cursor = arrow movement target (highlighted in replies); focused = current post (only changes on Enter/h)
   const [cursorIndex, setCursorIndex] = useState(0);
@@ -45,7 +45,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   // Theme posts = above focused, excluding focused itself
   const themeLines = flatLines.filter(l => l.depth < 0 || (l.depth === 0 && l.isRoot && l.uri !== focusedUri));
   // Replies = replies to focused (depth <= focusedDepth+1), excluding focused
-  const replyLines = flatLines.filter(l => l.uri && l.depth > 0 && l.depth <= focusedDepth + 1 && l.uri !== focusedUri);
+  const replyLines = flatLines.filter(l => (l.uri || l.isTruncation) && l.depth > 0 && l.depth <= focusedDepth + 1 && l.uri !== focusedUri);
 
   const handleLike = async (uri: string, rkey: string) => {
     if (isLiked(uri)) return;
@@ -66,6 +66,8 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
     // Enter: make cursor line the NEW current post (full refocus)
     if (key.return && cursorLine?.uri && cursorLine.uri !== uri) { refreshThread(cursorLine.uri); return; }
+    // Enter on truncation line: expand replies
+    if (key.return && cursorLine?.isTruncation) { expandReplies(); return; }
 
     // h: go back to theme post
     if ((input === 'h' || input === 'H') && themeUri) { refreshThread(themeUri); return; }
@@ -136,6 +138,18 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         {bg && isBookmarked(line.uri) && <Text backgroundColor={bg} color="yellow">{'  🔖 '}{t('action.bookmarked')}</Text>}
         {bg && line.indexedAt && <Text backgroundColor={bg} dimColor>{' · '}{new Date(line.indexedAt).toLocaleString(dateLocale, dateTimeOpts)}</Text>}
       </Box>
+      {/* Quoted post */}
+      {line.quotedPost && renderQuotedPost(line.quotedPost)}
+    </Box>
+  );
+
+  const renderQuotedPost = (qp: NonNullable<FlatLine['quotedPost']>) => (
+    <Box flexDirection="column" marginTop={0} borderStyle="single" borderColor="magenta" paddingX={1}>
+      <Box><Text color="magenta">{'📌 '}{qp.displayName}{' @'}{qp.handle}</Text></Box>
+      <Box><Text>{qp.text}</Text></Box>
+      {qp.imageUrls?.map((url, idx) => (
+        <Box key={idx}><Text>{'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: qp.imageUrls!.length > 1 ? idx + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}</Text></Box>
+      ))}
     </Box>
   );
 
@@ -159,6 +173,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                   {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
                 </Box>
                 <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text}</Text></Box>
+                {line.quotedPost && renderQuotedPost(line.quotedPost)}
                 <Box>
                   <Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
                 </Box>
@@ -181,6 +196,15 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         <Box><Text dimColor>{'── ' + t('thread.replies') + ' ──'}</Text></Box>
         {replyLines.length === 0 && <Box><Text dimColor>{'  '}{t('thread.noReplies')}</Text></Box>}
         {replyLines.map((line, i) => {
+          if (line.isTruncation) {
+            const isCursor = cursorIndex === i;
+            return (
+              <Box key={i} height={1}>
+                <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="cyan">{'  ↳ '}{line.text}</Text>
+                <Text color="yellow">{' [Enter '}{t('action.loadMore')}{']'}</Text>
+              </Box>
+            );
+          }
           if (!line.uri) return <Box key={i}><Text dimColor>{'  '}{line.text}</Text></Box>;
           const isCursor = line.uri === cursorLine?.uri;
           const indent = '  '.repeat(Math.min(line.depth - 1, 3));
@@ -205,6 +229,8 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                   {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? idx + 1 : 1 }) + '\x1b]8;;\x07'}
                 </Text></Box>
               ))}
+              {/* Quoted post */}
+              {line.quotedPost && renderQuotedPost(line.quotedPost)}
               {/* Stats */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
             </Box>

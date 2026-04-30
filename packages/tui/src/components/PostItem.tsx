@@ -42,6 +42,23 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
   };
   extract(embed);
 
+  // Quote embed — show quoted post summary
+  const quoteEmbed = post.record.embed as {
+    $type?: string;
+    record?: { uri?: string; cid?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string }; record?: { uri?: string; cid?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string } } };
+  } | undefined;
+  const isRecord = quoteEmbed?.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = quoteEmbed?.$type === 'app.bsky.embed.recordWithMedia';
+  if (isRecord || isRecordWithMedia) {
+    const rec = isRecordWithMedia ? quoteEmbed?.record?.record : quoteEmbed?.record;
+    if (rec?.uri) {
+      const quotedAuthor = rec.author?.displayName || rec.author?.handle || '';
+      const quotedText = rec.value?.text?.replace(/\n/g, ' ').slice(0, 80) || '';
+      const extra = rec.value?.text && rec.value.text.length > 80 ? '…' : '';
+      lines.push({ text: `📌 引用 @${quotedAuthor}: ${quotedText}${extra}`, isSelected, isName: false });
+    }
+  }
+
   for (let i = 0; i < imageUrls.length; i++) {
     const url = imageUrls[i]!;
     // OSC 8 — clickable hyperlink in modern terminals
