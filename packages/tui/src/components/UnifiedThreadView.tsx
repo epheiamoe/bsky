@@ -8,7 +8,7 @@ interface UnifiedThreadViewProps {
   client: BskyClient | null;
   uri: string;
   goBack: () => void;
-  goTo: (v: { type: string; replyTo?: string }) => void;
+  goTo: (v: { type: string; replyTo?: string; quoteUri?: string }) => void;
   refreshThread: (newUri: string) => void;
   cols: number;
   isBookmarked: (uri: string) => boolean;
@@ -26,7 +26,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   useEffect(() => { setCursorIndex(focusedIndex); }, [focusedIndex]);
   useEffect(() => { setTranslatedText(null); }, [cursorIndex]);
 
-  const [confirmRepost, setConfirmRepost] = useState<{ uri: string; handle: string } | null>(null);
+  const [repostDialog, setRepostDialog] = useState<{ uri: string; handle: string; phase: 'choice' | 'confirm' } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
@@ -54,9 +54,22 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   };
 
   useInput((input, key) => {
-    if (confirmRepost) {
-      if (input === 'y' || input === 'Y') { void repostPost(confirmRepost.uri); setConfirmRepost(null); return; }
-      if (input === 'n' || input === 'N') { setConfirmRepost(null); return; }
+    if (repostDialog) {
+      if (input === 'q' || input === 'Q') {
+        goTo({ type: 'compose', quoteUri: repostDialog.uri });
+        setRepostDialog(null);
+        return;
+      }
+      if (key.escape) { setRepostDialog(null); return; }
+      if (input === 'r' || input === 'R' || key.return) {
+        if (repostDialog.phase === 'choice') { setRepostDialog({ ...repostDialog, phase: 'confirm' }); return; }
+        if (repostDialog.phase === 'confirm') { void repostPost(repostDialog.uri); setRepostDialog(null); return; }
+        return;
+      }
+      if (repostDialog.phase === 'confirm') {
+        if (input === 'y' || input === 'Y') { void repostPost(repostDialog.uri); setRepostDialog(null); return; }
+        if (input === 'n' || input === 'N') { setRepostDialog(null); return; }
+      }
       return;
     }
 
@@ -75,7 +88,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
     // Actions on cursor line
     if (cursorLine?.uri) {
       if (input === 'l' || input === 'L') { void handleLike(cursorLine.uri, cursorLine.rkey); return; }
-      if (input === 'r') { setConfirmRepost({ uri: cursorLine.uri, handle: cursorLine.handle }); return; }
+      if (input === 'r') { setRepostDialog({ uri: cursorLine.uri, handle: cursorLine.handle, phase: 'choice' }); return; }
       if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
       if (input === 'v') { void toggleBookmark(cursorLine.uri, cursorLine.cid); return; }
       if (input === 'y') {
@@ -249,11 +262,20 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         </Box>
       )}
 
-      {/* ── Repost confirm ── */}
-      {confirmRepost && (
+      {/* ── Repost/Quote choice dialog ── */}
+      {repostDialog && (
         <Box flexDirection="column" borderStyle="double" borderColor="yellow" paddingX={1} marginTop={0}>
-          <Text bold color="yellow">{'⚠ '}{t('thread.confirmRepost', { handle: confirmRepost.handle })}</Text>
-          <Box><Text color="green">{t('thread.confirmRepostYes')}</Text><Text>{'  '}</Text><Text color="red">{t('thread.confirmRepostNo')}</Text></Box>
+          {repostDialog.phase === 'choice' ? (
+            <Box flexDirection="column">
+              <Text bold color="yellow">{t('thread.repostChoice', { handle: repostDialog.handle })}</Text>
+              <Box><Text color="green">{t('thread.repostChoiceOpts')}</Text></Box>
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              <Text bold color="yellow">{t('thread.repostConfirm', { handle: repostDialog.handle })}</Text>
+              <Box><Text color="green">{t('thread.confirmRepostYes')}</Text><Text>{'  '}</Text><Text color="red">{t('thread.confirmRepostNo')}</Text></Box>
+            </Box>
+          )}
         </Box>
       )}
 

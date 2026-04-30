@@ -70,6 +70,10 @@ const zh: LocaleMessages = {
   'compose.addImage': '添加图片',
   'compose.imageCount': '图',
   'compose.replyTo': '回复:',
+  'compose.quoteTo': '引用:',
+  'compose.draftListHeader': '📝 草稿 (Esc: 返回, Enter: 载入, d: 删除, n: 新建)',
+  'compose.draftSavePrompt': '保存草稿？[y/n/esc]',
+  'compose.noDrafts': '暂无草稿',
 
   // ── Thread ──
   'thread.title': '帖子',
@@ -87,6 +91,9 @@ const zh: LocaleMessages = {
   'thread.confirmRepost': '确认转发 @{handle} 的回复？',
   'thread.confirmRepostYes': '[Y] 确认转发',
   'thread.confirmRepostNo': '[N] 取消',
+  'thread.repostChoice': '⚠ 转发/引用 @{handle} 的帖子？',
+  'thread.repostChoiceOpts': '[r] 转发  [q] 引用  [Esc] 取消',
+  'thread.repostConfirm': '确认转发 @{handle}？[y/n]',
 
   // ── Notifications ──
   'notifications.title': '通知',
@@ -197,7 +204,7 @@ const zh: LocaleMessages = {
   'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新',
   'keys.bookmarks': '↑↓/jk:导航 Enter:查看 d:删除 r:刷新',
   'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译',
-  'keys.compose': 'Enter 发送 · Esc 取消 · i 添加图片',
+  'keys.compose': 'Enter:发送 · Esc:取消 · i:图片 · D:草稿',
   'keys.composeImage': '输入图片路径 · Enter 确认 · Esc 取消',
   'keys.profile': 'Esc 返回',
   'keys.notifications': '↑↓/jk:导航 Enter:查看帖子 R:刷新',

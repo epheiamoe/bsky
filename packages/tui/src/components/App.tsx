@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeImage, AppView, Locale } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
@@ -45,6 +45,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { unreadCount } = useNotifications(client);
   const bookmarks = useBookmarks(client);
   const [bookmarkIdx, setBookmarkIdx] = useState(0);
+  const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts();
   const { t, locale } = useI18n(config.targetLang as Locale);
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
@@ -62,6 +63,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [composeImages, setComposeImages] = useState<ComposeImage[]>([]);
   const [imagePathInput, setImagePathInput] = useState<string | null>(null);
   const [composeUploadError, setComposeUploadError] = useState<string | null>(null);
+  const [draftListOpen, setDraftListOpen] = useState(false);
+  const [draftListIdx, setDraftListIdx] = useState(0);
+  const [draftSavePrompt, setDraftSavePrompt] = useState(false);
 
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
@@ -94,6 +98,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       setComposeImages([]);
       setImagePathInput(null);
       setComposeUploadError(null);
+      setDraftListOpen(false);
+      setDraftSavePrompt(false);
+      const qUri = (currentView as { quoteUri?: string }).quoteUri;
+      if (qUri) compose.setQuoteUri(qUri);
     }
   }, [currentView.type]);
 
@@ -110,7 +118,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         goBack(); return;
       }
       if (currentView.type === 'compose') {
+        if (draftSavePrompt) { setDraftSavePrompt(false); return; }
+        if (draftListOpen) { setDraftListOpen(false); return; }
         if (imagePathInput !== null) { setImagePathInput(null); return; }
+        if (composeDraft.trim()) { setDraftSavePrompt(true); return; }
         goBack(); return;
       }
       if (currentView.type !== 'feed') { goBack(); return; }
@@ -154,8 +165,52 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
-    // When composing: handle image path input or pass to TextInput
+    // When composing: handle image path input, draft list, save prompt, or pass to TextInput
     if (currentView.type === 'compose') {
+      if (draftSavePrompt) {
+        if (input === 'y' || input === 'Y') {
+          const replyTo = (currentView as { replyTo?: string }).replyTo;
+          saveDraft({ id: crypto.randomUUID(), text: composeDraft, replyTo, quoteUri: compose.quoteUri });
+          setDraftSavePrompt(false);
+          goBack();
+          return;
+        }
+        if (input === 'n' || input === 'N') { setDraftSavePrompt(false); goBack(); return; }
+        if (key.escape) { setDraftSavePrompt(false); return; }
+        return;
+      }
+      if (draftListOpen) {
+        if (key.escape) { setDraftListOpen(false); return; }
+        if (key.upArrow || input === 'k' || input === 'K') { setDraftListIdx(i => Math.max(0, i - 1)); return; }
+        if (key.downArrow || input === 'j' || input === 'J') { setDraftListIdx(i => Math.min(drafts.length - 1, i + 1)); return; }
+        if (key.return) {
+          const d = drafts[draftListIdx];
+          if (d) {
+            setComposeDraft(d.text);
+            if (d.replyTo) compose.setReplyTo(d.replyTo);
+            if (d.quoteUri) compose.setQuoteUri(d.quoteUri);
+          }
+          setDraftListOpen(false);
+          return;
+        }
+        if (input === 'd' || input === 'D') {
+          const d = drafts[draftListIdx];
+          if (d) deleteDraft(d.id);
+          if (draftListIdx >= drafts.length - 1) setDraftListIdx(i => Math.max(0, i - 1));
+          return;
+        }
+        if (input === 'n' || input === 'N') {
+          const replyTo = (currentView as { replyTo?: string }).replyTo;
+          const qUri = (currentView as { quoteUri?: string }).quoteUri;
+          saveDraft({ id: crypto.randomUUID(), text: composeDraft, replyTo, quoteUri: compose.quoteUri });
+          setComposeDraft('');
+          compose.setReplyTo(undefined);
+          compose.setQuoteUri(undefined);
+          setDraftListOpen(false);
+          return;
+        }
+        return;
+      }
       if (imagePathInput !== null) {
         if (key.return) {
           const path = imagePathInput.trim();
@@ -189,6 +244,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (composeImages.length < 4) setImagePathInput('');
         return;
       }
+      if (input === 'D') { setDraftListOpen(true); setDraftListIdx(0); return; }
       return;
     }
 
@@ -288,16 +344,48 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'compose':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
-            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</Text><Text dimColor>{imagePathInput !== null ? ' ' + t('keys.composeImage') : ' ' + t('keys.compose')}</Text></Box>
+            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</Text><Text dimColor>{draftSavePrompt ? ' ' + t('compose.draftSavePrompt') : draftListOpen ? ' ' + t('compose.draftListHeader') : imagePathInput !== null ? ' ' + t('keys.composeImage') : ' ' + t('keys.compose')}</Text></Box>
             {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>{t('compose.replyTo')} </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
-            <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
-              <TextInput
-                value={imagePathInput !== null ? imagePathInput : composeDraft}
-                onChange={imagePathInput !== null ? setImagePathInput : setComposeDraft}
-                onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeImages.length > 0 ? composeImages : undefined); }}
-                placeholder={imagePathInput !== null ? t('compose.imagePathPlaceholder') : t('compose.placeholder')}
-              />
-            </Box>
+            {compose.quoteUri && (
+              <Box borderStyle="single" borderColor="magenta" paddingX={1} marginBottom={0}>
+                <Text color="magenta">{'📌 '}{t('compose.quoteTo')} </Text>
+                <Text color="white">{compose.quoteUri}</Text>
+              </Box>
+            )}
+            {draftSavePrompt ? (
+              <Box borderStyle="single" borderColor="yellow" padding={1} marginTop={0}>
+                <Text color="yellow">{t('compose.draftSavePrompt')}</Text>
+              </Box>
+            ) : draftListOpen ? (
+              <Box flexDirection="column" marginTop={0}>
+                {drafts.length === 0 ? (
+                  <Text dimColor>{t('compose.noDrafts')}</Text>
+                ) : (
+                  drafts.map((d, i) => {
+                    const isSel = i === draftListIdx;
+                    const preview = d.text.slice(0, 40).replace(/\n/g, ' ');
+                    return (
+                      <Box key={d.id} height={1}>
+                        <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
+                          {isSel ? '▶ ' : '  '}{preview}{d.text.length > 40 ? '…' : ''}
+                        </Text>
+                        {d.replyTo && <Text dimColor>{' 🔁'}</Text>}
+                        {d.quoteUri && <Text color="magenta">{' 📌'}</Text>}
+                      </Box>
+                    );
+                  })
+                )}
+              </Box>
+            ) : (
+              <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
+                <TextInput
+                  value={imagePathInput !== null ? imagePathInput : composeDraft}
+                  onChange={imagePathInput !== null ? setImagePathInput : setComposeDraft}
+                  onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeImages.length > 0 ? composeImages : undefined); }}
+                  placeholder={imagePathInput !== null ? t('compose.imagePathPlaceholder') : t('compose.placeholder')}
+                />
+              </Box>
+            )}
             <Box height={1}>
               {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>{'🖼 '}{t('compose.imageMode')}</Text>}
               {composeImages.length > 0 && <Text color="green">{' 📎 ' + composeImages.length + ' ' + t('compose.imageCount')}</Text>}
