@@ -55,6 +55,7 @@ function ActionButtons({
 }) {
   const { t } = useI18n();
   const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
+  const [showRepostMenu, setShowRepostMenu] = useState(false);
 
   return (
     <div className={`flex items-center ${sizeClass} text-text-secondary mt-2`}>
@@ -64,12 +65,20 @@ function ActionButtons({
       >
         ❤️ {isLiked(uri) ? t('action.liked') : t('action.like')}
       </button>
-      <button
-        onClick={() => repostPost(uri)}
-        className={`hover:text-green-500 transition-colors ${isReposted(uri) ? 'text-green-500' : ''}`}
-      >
-        ♻️ {isReposted(uri) ? t('action.reposted') : t('action.repost')}
-      </button>
+      <div className="relative inline-flex">
+        <button
+          onClick={() => setShowRepostMenu(!showRepostMenu)}
+          className={`hover:text-green-500 transition-colors ${isReposted(uri) ? 'text-green-500' : ''}`}
+        >
+          ♻️ {isReposted(uri) ? t('action.reposted') : t('action.repost')}
+        </button>
+        {showRepostMenu && (
+          <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-30 py-1 min-w-[120px]">
+            <button onClick={() => { repostPost(uri); setShowRepostMenu(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors">♻ Repost</button>
+            <button onClick={() => { goTo({ type: 'compose', quoteUri: uri }); setShowRepostMenu(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors">📌 Quote</button>
+          </div>
+        )}
+      </div>
       <button
         onClick={() => goTo({ type: 'compose', replyTo: uri })}
         className="hover:text-primary transition-colors"

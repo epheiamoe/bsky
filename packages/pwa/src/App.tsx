@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth, useTimeline, useI18n } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
@@ -20,6 +20,7 @@ export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
   const timeline = useTimeline(client);
+  const { drafts } = useDrafts();
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
@@ -132,6 +133,7 @@ export function App() {
           <ComposePage
             client={client}
             replyTo={(currentView as { replyTo?: string }).replyTo}
+            quoteUri={(currentView as { quoteUri?: string }).quoteUri}
             goBack={goBack}
             goHome={goHome}
           />
@@ -184,6 +186,7 @@ export function App() {
       config={appConfig}
       onConfigChange={setAppConfig}
       onRelogin={handleRelogin}
+      draftCount={drafts.length}
     >
       {renderView()}
     </Layout>

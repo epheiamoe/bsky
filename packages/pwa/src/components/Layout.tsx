@@ -18,6 +18,7 @@ interface LayoutProps {
   config: AppConfig;
   onConfigChange: (config: AppConfig) => void;
   onRelogin: (handle: string, password: string) => Promise<void>;
+  draftCount?: number;
 }
 
 export function Layout({
@@ -32,6 +33,7 @@ export function Layout({
   config,
   onConfigChange,
   onRelogin,
+  draftCount,
 }: LayoutProps) {
   const { t } = useI18n();
   const [dark, setDark] = useState(() => {
@@ -118,6 +120,7 @@ export function Layout({
               currentView={currentView}
               goTo={(v) => { goTo(v); setSidebarOpen(false); }}
               client={client}
+              draftCount={draftCount}
             />
             <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3">
               <button
@@ -134,7 +137,7 @@ export function Layout({
       <div className="flex">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex flex-col w-sidebar h-[calc(100vh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
-          <Sidebar currentView={currentView} goTo={goTo} client={client} />
+          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} />
         </aside>
 
         <main className="flex-1 max-w-content mx-auto w-full min-h-[calc(100vh-3rem)]">

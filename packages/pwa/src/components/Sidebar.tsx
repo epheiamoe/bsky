@@ -8,6 +8,7 @@ interface SidebarProps {
   goTo: (v: AppView) => void;
   client: BskyClient;
   notifCount?: number;
+  draftCount?: number;
 }
 
 const SIDEBAR_TABS = [
@@ -20,7 +21,7 @@ const SIDEBAR_TABS = [
   { emoji: '✏️', key: 'nav.compose', type: 'compose' as const, needsHandle: false },
 ] as const;
 
-export function Sidebar({ currentView, goTo, client, notifCount }: SidebarProps) {
+export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: SidebarProps) {
   const { t } = useI18n();
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
@@ -51,6 +52,11 @@ export function Sidebar({ currentView, goTo, client, notifCount }: SidebarProps)
             {tab.type === 'notifications' && notifCount != null && notifCount > 0 && (
               <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
                 {notifCount > 99 ? '99+' : notifCount}
+              </span>
+            )}
+            {tab.type === 'compose' && draftCount != null && draftCount > 0 && (
+              <span className="bg-yellow-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+                {draftCount > 99 ? '99+' : draftCount}
               </span>
             )}
           </button>

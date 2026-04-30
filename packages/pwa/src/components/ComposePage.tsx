@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCompose, useI18n } from '@bsky/app';
-import type { ComposeImage } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import { useCompose, useI18n, useDrafts, getCdnImageUrl } from '@bsky/app';
+import type { ComposeImage, Draft } from '@bsky/app';
+import type { BskyClient, PostView } from '@bsky/core';
 
 const MAX_IMAGES = 4;
 const MAX_SIZE = 1024 * 1024; // 1MB per image (generous for Bluesky)
@@ -9,6 +9,7 @@ const MAX_SIZE = 1024 * 1024; // 1MB per image (generous for Bluesky)
 interface ComposePageProps {
   client: BskyClient;
   replyTo?: string;
+  quoteUri?: string;
   goBack: () => void;
   goHome: () => void;
 }
@@ -20,17 +21,51 @@ interface LocalImage {
   error?: string;
 }
 
-export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProps) {
+interface QuotePreview {
+  authorName: string;
+  authorHandle: string;
+  authorAvatar?: string;
+  text: string;
+  images: Array<{ url: string; alt: string }>;
+  indexedAt: string;
+}
+
+function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string }> {
+  const images: Array<{ url: string; alt: string }> = [];
+  const embed = post.record.embed;
+  if (!embed) return images;
+  if (embed.$type === 'app.bsky.embed.images') {
+    for (const img of embed.images) {
+      images.push({
+        url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
+        alt: img.alt,
+      });
+    }
+  } else if (embed.$type === 'app.bsky.embed.recordWithMedia' && embed.media.$type === 'app.bsky.embed.images') {
+    for (const img of embed.media.images) {
+      images.push({
+        url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
+        alt: img.alt,
+      });
+    }
+  }
+  return images;
+}
+
+export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: ComposePageProps) {
   const { t } = useI18n();
-  const { draft, setDraft, submitting, error, setReplyTo, submit } = useCompose(client, goBack, goHome);
+  const { draft, setDraft, submitting, error, setReplyTo, setQuoteUri, submit } = useCompose(client, goBack, goHome);
+  const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts();
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [images, setImages] = useState<LocalImage[]>([]);
+  const [showDrafts, setShowDrafts] = useState(false);
+  const [quotePreview, setQuotePreview] = useState<QuotePreview | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (replyTo) {
       setReplyTo(replyTo);
-      // ...existing reply handle resolution...
       const parts = replyTo.match(/^at:\/\/(did:plc:[^/]+)\/([^/]+)\/([^/]+)$/);
       if (parts) {
         const did = parts[1]!;
@@ -45,6 +80,29 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
       setReplyHandle(null);
     }
   }, [replyTo, client, setReplyTo]);
+
+  useEffect(() => {
+    if (quoteUri) {
+      setQuoteUri(quoteUri);
+      setQuoteLoading(true);
+      client.getPostThread(quoteUri, 0, 0).then(res => {
+        if (res.thread.$type === 'app.bsky.feed.defs#threadViewPost') {
+          const post = res.thread.post;
+          setQuotePreview({
+            authorName: post.author.displayName || post.author.handle,
+            authorHandle: post.author.handle,
+            authorAvatar: post.author.avatar,
+            text: post.record.text,
+            images: extractQuotePreviews(post),
+            indexedAt: post.indexedAt,
+          });
+        }
+      }).catch(() => {}).finally(() => setQuoteLoading(false));
+    } else {
+      setQuoteUri(undefined);
+      setQuotePreview(null);
+    }
+  }, [quoteUri, client, setQuoteUri]);
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -76,6 +134,32 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
   const charLen = draft.length;
   const isEmpty = charLen === 0;
 
+  const handleBack = useCallback(() => {
+    if (draft.trim().length > 0) {
+      const shouldSave = confirm(t('compose.saveDraftBeforeLeave') || 'Save draft before leaving?');
+      if (shouldSave) {
+        saveDraft({
+          id: crypto.randomUUID(),
+          text: draft,
+          replyTo,
+          quoteUri,
+        });
+      }
+    }
+    goBack();
+  }, [draft, replyTo, quoteUri, goBack, saveDraft, t]);
+
+  const handleLoadDraft = useCallback((d: Draft) => {
+    setDraft(d.text);
+    if (d.replyTo) {
+      setReplyTo(d.replyTo);
+    }
+    if (d.quoteUri) {
+      setQuoteUri(d.quoteUri);
+    }
+    setShowDrafts(false);
+  }, [setDraft, setReplyTo, setQuoteUri]);
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEmpty || submitting) return;
@@ -93,28 +177,92 @@ export function ComposePage({ client, replyTo, goBack, goHome }: ComposePageProp
         });
       } catch (err) {
         setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: t('compose.uploadFailed') } : i));
-        return; // Don't post if upload fails
+        return;
       }
     }
 
     submit(draft.trim(), replyTo ?? undefined, uploadedImages.length > 0 ? uploadedImages : undefined);
   }, [draft, replyTo, isEmpty, submitting, submit, images, client]);
 
+  const truncate = (s: string, max = 40) => s.length > max ? s.slice(0, max) + '…' : s;
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
-          <button onClick={goBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
-          <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</h1>
+          <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</h1>
+            {drafts.length > 0 && (
+              <button onClick={() => setShowDrafts(!showDrafts)} className="text-sm text-text-secondary hover:text-primary transition-colors">
+                📝 {t('compose.drafts') || 'Drafts'}
+              </button>
+            )}
+          </div>
           <div className="w-10" />
         </div>
       </header>
 
       <main className="max-w-content mx-auto px-4 py-4">
+        {/* Drafts list */}
+        {showDrafts && (
+          <div className="mb-4 border border-border rounded-lg bg-surface p-3 space-y-2">
+            <p className="text-sm font-semibold text-text-primary">
+              📝 {t('compose.drafts') || 'Drafts'}
+            </p>
+            <div className="border-t border-border" />
+            {drafts.length === 0 && (
+              <p className="text-sm text-text-secondary">{t('compose.noDrafts') || 'No saved drafts'}</p>
+            )}
+            {drafts.map(d => (
+              <div key={d.id} className="flex items-center justify-between gap-2 py-1">
+                <span className="text-sm text-text-primary flex-1 truncate">{truncate(d.text.trim() || '(empty)')}</span>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button onClick={() => handleLoadDraft(d)} className="text-xs text-primary hover:text-primary-hover px-2 py-0.5 rounded border border-primary/30 hover:bg-primary/10 transition-colors">Load</button>
+                  <button onClick={() => deleteDraft(d.id)} className="text-xs text-red-500 hover:text-red-600 px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {replyTo && replyHandle && (
             <div className="text-sm text-text-secondary bg-surface rounded-lg px-3 py-2 border border-border">
               {t('compose.replyTo')} <span className="text-primary font-medium">@{replyHandle}</span>
+            </div>
+          )}
+
+          {/* Quote preview */}
+          {quoteLoading && (
+            <div className="border border-border rounded-lg p-3 bg-surface animate-pulse">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600" />
+                <div className="h-3 w-24 bg-gray-300 dark:bg-gray-600 rounded" />
+              </div>
+              <div className="h-3 w-full bg-gray-300 dark:bg-gray-600 rounded mb-1" />
+              <div className="h-3 w-2/3 bg-gray-300 dark:bg-gray-600 rounded" />
+            </div>
+          )}
+          {quotePreview && !quoteLoading && (
+            <div className="border border-border rounded-lg p-3 bg-surface">
+              <div className="flex items-center gap-2 mb-1">
+                {quotePreview.authorAvatar ? (
+                  <img src={quotePreview.authorAvatar} alt="" className="w-6 h-6 rounded-full object-cover" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gray-300 dark:bg-gray-600" />
+                )}
+                <span className="text-sm font-medium text-text-primary">{quotePreview.authorName}</span>
+                <span className="text-xs text-text-secondary">@{quotePreview.authorHandle}</span>
+              </div>
+              <p className="text-sm text-text-primary whitespace-pre-wrap line-clamp-3">{quotePreview.text}</p>
+              {quotePreview.images.length > 0 && (
+                <div className="grid grid-cols-2 gap-1 mt-2">
+                  {quotePreview.images.map((img, i) => (
+                    <img key={i} src={img.url} alt={img.alt} className="w-full h-20 object-cover rounded" />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

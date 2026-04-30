@@ -88,7 +88,11 @@ function parseHash(): AppView {
       return { type: 'bookmarks' };
     case '/compose': {
       const replyTo = params.get('replyTo');
-      return replyTo ? { type: 'compose', replyTo: decodeURIComponent(replyTo) } : { type: 'compose' };
+      const quoteUri = params.get('quoteUri');
+      const view: AppView = { type: 'compose' };
+      if (replyTo) (view as { replyTo?: string }).replyTo = decodeURIComponent(replyTo);
+      if (quoteUri) (view as { quoteUri?: string }).quoteUri = decodeURIComponent(quoteUri);
+      return view;
     }
     case '/ai': {
       const context = params.get('context');
@@ -116,8 +120,11 @@ function encodeView(view: AppView): string {
     case 'bookmarks':
       return '#/bookmarks';
     case 'compose': {
-      const base = '#/compose';
-      return view.replyTo ? `${base}?replyTo=${encodeURIComponent(view.replyTo)}` : base;
+      const params = new URLSearchParams();
+      if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));
+      if (view.quoteUri) params.set('quoteUri', encodeURIComponent(view.quoteUri));
+      const qs = params.toString();
+      return qs ? `#/compose?${qs}` : '#/compose';
     }
     case 'aiChat': {
       const base = '#/ai';
