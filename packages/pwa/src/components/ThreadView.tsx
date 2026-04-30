@@ -160,10 +160,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const { parentLines, replyLines } = useMemo(() => {
     const parents: typeof flatLines = [];
     const replies: typeof flatLines = [];
+    const maxDepth = (focused?.depth ?? 0) + 1;
 
     for (const line of flatLines) {
       if (line.depth < 0) parents.push(line);
-      else if (line.depth > 0) replies.push(line);
+      else if (line.depth > 0 && line.depth <= maxDepth && line.uri !== focused?.uri) replies.push(line);
     }
 
     parents.sort((a, b) => a.depth - b.depth);
