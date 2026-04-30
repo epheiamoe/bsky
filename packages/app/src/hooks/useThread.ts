@@ -16,12 +16,26 @@ export interface FlatLine {
   mediaTags: string[];
   imageUrls: string[];
   externalLink: { uri: string; title: string; description: string } | null;
+  quotedPost?: {
+    uri: string;
+    cid: string;
+    text: string;
+    handle: string;
+    displayName: string;
+    authorAvatar?: string;
+    mediaTags: string[];
+    imageUrls: string[];
+    externalLink: { uri: string; title: string; description: string } | null;
+  };
   isRoot: boolean;
+  isTruncation: boolean;
   likeCount: number;
   repostCount: number;
   replyCount: number;
   indexedAt: string;
 }
+
+const INITIAL_SIBLINGS = 5;
 
 export function useThread(
   client: BskyClient | null,
@@ -34,6 +48,7 @@ export function useThread(
   const [themeUri, setThemeUri] = useState<string | undefined>(uri);
   const [likedUris, setLikedUris] = useState<Set<string>>(new Set());
   const [repostedUris, setRepostedUris] = useState<Set<string>>(new Set());
+  const [maxSiblings, setMaxSiblings] = useState(INITIAL_SIBLINGS);
   const loadedUri = useRef('');
 
   const loadThread = useCallback(async () => {
@@ -41,15 +56,15 @@ export function useThread(
     if (uri === loadedUri.current) return;
     loadedUri.current = uri;
     setLoading(true);
+    setMaxSiblings(INITIAL_SIBLINGS);
 
     try {
       setError(null);
       const res = await client.getPostThread(uri, 5, 80);
-      const lines = flattenThreadTree(res.thread);
+      const lines = flattenThreadTree(res.thread, INITIAL_SIBLINGS);
       setFlatLines(lines);
       const rootIdx = lines.findIndex(l => l.isRoot);
       setFocusedIndex(rootIdx >= 0 ? rootIdx : 0);
-      // Set theme URI on first load
       if (!themeUri) setThemeUri(uri);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -61,29 +76,25 @@ export function useThread(
 
   useEffect(() => { void loadThread(); }, [loadThread]);
 
-  const up = useCallback(() => setFocusedIndex(i => Math.max(0, i - 1)), []);
-  const down = useCallback(() => {
-    setFocusedIndex(i => {
-      const next = Math.min(flatLines.length - 1, i + 1);
-      // Auto-load more if at last visible and there are more to fetch
-      return next;
-    });
-  }, [flatLines.length]);
+  const expandReplies = useCallback(() => {
+    if (!client || !uri) return;
+    setMaxSiblings(prev => prev + 10);
+  }, [client, uri]);
 
-  const focus = useCallback((lineUri: string) => {
-    // Re-focus: change the uri to the selected post, triggering reload
-    const line = flatLines.find(l => l.uri === lineUri);
-    if (line && line.uri) {
-      // We need to re-call loadThread with the new uri.
-      // But loadThread won't work here since it's a hook effect.
-      // Instead, we use a trick: set flatLines to empty and change loadedUri
-      loadedUri.current = '';
-      setFlatLines([]);
-      // We need a way to re-trigger load with new uri
-      // The cleanest approach: use a state setter from parent
-      // For now, we set themeUri to the current focused and re-fetch
-    }
-  }, [flatLines]);
+  // Re-flatten when maxSiblings increases
+  useEffect(() => {
+    if (maxSiblings <= INITIAL_SIBLINGS) return;
+    (async () => {
+      if (!client || !uri) return;
+      try {
+        const res = await client.getPostThread(uri, 5, 80);
+        const lines = flattenThreadTree(res.thread, maxSiblings);
+        setFlatLines(lines);
+      } catch (e) {
+        console.error('Expand replies error:', e);
+      }
+    })();
+  }, [maxSiblings, client, uri]);
 
   const likePost = useCallback(async (postUri: string) => {
     if (!client || likedUris.has(postUri)) return;
@@ -117,7 +128,7 @@ export function useThread(
   return {
     flatLines, loading, error, focusedIndex, themeUri,
     focused: focusedLine,
-    up, down, focus,
+    expandReplies,
     likePost, repostPost,
     isLiked: (uri: string) => likedUris.has(uri),
     isReposted: (uri: string) => repostedUris.has(uri),
@@ -130,7 +141,7 @@ function uriToParts(uri: string) {
   return { did: m[1]!, collection: m[2]!, rkey: m[3]! };
 }
 
-function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] {
+function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5): FlatLine[] {
   const lines: FlatLine[] = [];
   const visitedUris = new Set<string>();
 
@@ -161,7 +172,9 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
       mediaTags: getMediaTags(post),
       imageUrls: getImageUrls(post),
       externalLink: getExternalLink(post),
+      quotedPost: getQuotedPost(post),
       isRoot,
+      isTruncation: false,
       likeCount: post.likeCount ?? 0,
       repostCount: post.repostCount ?? 0,
       replyCount: post.replyCount ?? 0,
@@ -173,15 +186,19 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
         .filter((r): r is ThreadViewPost => r.$type === 'app.bsky.feed.defs#threadViewPost')
         .sort((a, b) => new Date(a.post.indexedAt).getTime() - new Date(b.post.indexedAt).getTime());
 
-      for (const reply of sortedReplies.slice(0, 5)) {
+      const visible = Math.min(sortedReplies.length, maxSiblings);
+      for (const reply of sortedReplies.slice(0, visible)) {
         walk(reply, d + 1);
       }
-      if (sortedReplies.length > 5) {
-        const remaining = sortedReplies.length - 5;
+      if (sortedReplies.length > maxSiblings) {
+        const remaining = sortedReplies.length - maxSiblings;
         lines.push({
-          depth: d + 1, uri: '', cid: '', rkey: '', text: `（还有 ${remaining} 条回复未显示）`,
-          handle: '', displayName: '', authorAvatar: undefined, hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null,
-          isRoot: false, likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
+          depth: d + 1, uri: '', cid: '', rkey: '',
+          text: `（还有 ${remaining} 条回复未显示）`,
+          handle: '', displayName: '', authorAvatar: undefined,
+          hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null, quotedPost: undefined,
+          isRoot: false, isTruncation: true,
+          likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
         });
       }
     }
@@ -189,6 +206,72 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, depth = 0): FlatLine[] 
 
   walk(thread, 0);
   return lines;
+}
+
+function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
+  const embed = post.record.embed as {
+    $type?: string;
+    record?: {
+      $type?: string;
+      uri?: string;
+      cid?: string;
+      author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
+      value?: { text?: string };
+      embeds?: Array<unknown>;
+      record?: {
+        $type?: string;
+        uri?: string;
+        cid?: string;
+        author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
+        value?: { text?: string };
+        embeds?: Array<unknown>;
+      };
+    };
+    media?: Record<string, unknown>;
+  } | undefined;
+
+  if (!embed) return undefined;
+
+  const isRecord = embed.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia';
+
+  if (!isRecord && !isRecordWithMedia) return undefined;
+
+  // For recordWithMedia, the record is double-nested: embed.record.record
+  const rec = isRecordWithMedia ? embed.record?.record : embed.record;
+  if (!rec?.uri) return undefined;
+
+  const quotedMediaTags: string[] = [];
+  const quotedImageUrls: string[] = [];
+  let quotedExternalLink: FlatLine['externalLink'] | null = null;
+
+  const recEmbed = rec as { embeds?: Array<{ $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; external?: { uri: string; title: string; description: string } }> };
+  if (recEmbed?.embeds?.[0]) {
+    const e = recEmbed.embeds[0]!;
+    if (e.$type === 'app.bsky.embed.images' && e.images) {
+      const count = e.images.length;
+      quotedMediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
+      const did = rec.author?.did ?? '';
+      for (const img of e.images) {
+        quotedImageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
+      }
+    } else if (e.$type === 'app.bsky.embed.external' && e.external) {
+      quotedMediaTags.push('🔗 链接');
+      quotedExternalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
+    }
+  }
+
+  return {
+    uri: rec.uri,
+    cid: rec.cid ?? '',
+    text: rec.value?.text ?? '',
+    handle: rec.author?.handle ?? '',
+    displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
+    authorAvatar: rec.author?.avatar,
+    mediaTags: quotedMediaTags,
+    imageUrls: quotedImageUrls,
+    externalLink: quotedExternalLink,
+  };
 }
 
 function getMediaTags(post: PostView): string[] {
