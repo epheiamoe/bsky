@@ -32,6 +32,7 @@ export function createTimelineStore(): TimelineStore {
         const res = await client.getTimeline(20);
         store.posts = res.feed.map(f => f.post);
         store.cursor = res.cursor;
+        store.error = null;
       } catch (e) {
         store.error = e instanceof Error ? e.message : String(e);
       } finally {
@@ -48,6 +49,7 @@ export function createTimelineStore(): TimelineStore {
         const res = await client.getTimeline(20, store.cursor);
         store.posts = [...store.posts, ...res.feed.map(f => f.post)];
         store.cursor = res.cursor;
+        store.error = null;
       } catch (e) {
         store.error = e instanceof Error ? e.message : String(e);
       } finally {
