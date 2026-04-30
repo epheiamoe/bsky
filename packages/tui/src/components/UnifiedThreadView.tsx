@@ -147,9 +147,24 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       {themeLines.length > 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Box><Text dimColor>{'── ' + t('thread.discussionSource') + ' ──'}</Text></Box>
-          {themeLines.map((line, i) => (
-            <Box key={i} marginBottom={0}>{renderPostBody(line)}</Box>
-          ))}
+          {themeLines.map((line) => {
+            const isCursor = line.uri === cursorLine?.uri;
+            return (
+              <Box key={line.uri || Math.random()} flexDirection="column" marginBottom={0}>
+                <Box>
+                  <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color={isCursor ? 'cyanBright' : 'green'} bold={isCursor}>
+                    {line.displayName}
+                  </Text>
+                  <Text dimColor>{' @'}{line.handle}</Text>
+                  {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
+                </Box>
+                <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text}</Text></Box>
+                <Box>
+                  <Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
+                </Box>
+              </Box>
+            );
+          })}
         </Box>
       )}
 
