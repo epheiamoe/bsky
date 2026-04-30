@@ -10,9 +10,11 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useTimeline` | `createTimelineStore()` | `{ posts, loading, cursor, loadMore, refresh }` |
 | `usePostDetail` | `createPostDetailStore()` | `{ post, flatThread, translate, actions }` |
 | `useNavigation` | `createNavigation()` | `{ currentView, canGoBack, goTo, goBack, goHome }` |
-| `useThread` | (inline state) | `{ flatLines, focusedIndex, up, down, focus, likePost, repostPost }` |
-| `useCompose` | (inline state) | `{ draft, setDraft, submitting, submit }` |
-| `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, chatId }` |
+| `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, expandReplies }` |
+| `useCompose` | (inline state) | `{ draft, setDraft, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, submit }` |
+| `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, chatId, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry }` |
+| `useDrafts` | `createDraftsStore()` | `{ drafts, saveDraft, deleteDraft, loadDraft }` |
+| `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
 | `useChatHistory` | `FileChatStorage` | `{ conversations, loadConversation, saveConversation, deleteConversation }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |
 | `useProfile` | (inline state) | `{ profile, follows, followers, loading }` |
