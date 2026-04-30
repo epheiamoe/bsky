@@ -57,6 +57,14 @@ export function App() {
     }
   }, [session, client]);
 
+  // ── Force logout when auth error (session expired after sleep) ──
+  useEffect(() => {
+    if (authError && isLoggedIn) {
+      clearSession();
+      setIsLoggedIn(false);
+    }
+  }, [authError, isLoggedIn]);
+
   const handleLogin = useCallback(async (handle: string, password: string) => {
     await login(handle, password);
   }, [login]);

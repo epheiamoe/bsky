@@ -49,7 +49,14 @@ export function createAuthStore(): AuthStore {
       c.getProfile(session.handle).then(p => {
         store.profile = p;
         store._notify();
-      }).catch(() => {});
+      }).catch(() => {
+        if (!c.isAuthenticated()) {
+          store.client = null;
+          store.session = null;
+          store.error = 'session_expired';
+          store._notify();
+        }
+      });
     },
 
     _notify() { if (store.listener) store.listener(); },

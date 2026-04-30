@@ -66,9 +66,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
 
   // Auto-login
+  const [wasAuthenticated, setWasAuthenticated] = useState(false);
   useEffect(() => {
     if (!authLoading) login(config.blueskyHandle, config.blueskyPassword);
   }, []);
+
+  // Re-login on expired session (e.g., after system sleep)
+  useEffect(() => {
+    if (client?.isAuthenticated()) {
+      setWasAuthenticated(true);
+    } else if (wasAuthenticated) {
+      setWasAuthenticated(false);
+      login(config.blueskyHandle, config.blueskyPassword);
+    }
+  }, [client]);
 
   // Refresh bookmarks when entering bookmarks page
   useEffect(() => {
