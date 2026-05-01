@@ -339,7 +339,7 @@ function tryJsonSummary(text: string): string {
     if (obj.did !== undefined && obj.handle) return `用户: @${obj.handle} (${obj.displayName ?? ''})`;
     if (obj.notifications !== undefined) return `${obj.notifications.length} 条通知`;
     if (obj.images !== undefined) return `${obj.count} 张图片`;
-    if (obj.text !== undefined) return `帖子: "${(obj.text as string).slice(0, 100)}"`;
+    if (obj.text !== undefined) return `帖子: ${(obj.text as string).slice(0, 100)}`;
     return text.slice(0, 200);
   } catch {
     return text.slice(0, 200);

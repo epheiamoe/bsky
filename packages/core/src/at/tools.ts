@@ -882,7 +882,7 @@ function formatPostLine(post: PostView, depth: number, prefix: string): string {
   }
 
   const authorStr = displayName ? `${handle} (${displayName})` : handle;
-  return `${prefix}depth:${depth} | ${authorStr} (post:${rkey})\n"${text}"${mediaInfo}`;
+  return `${prefix}depth:${depth} | ${authorStr} (post:${rkey})\ntext: ${text}${mediaInfo}`;
 }
 
 function extractTitle(md: string): string {
