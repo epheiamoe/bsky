@@ -61,7 +61,17 @@ export function useThread(
     try {
       setError(null);
       const res = await client.getPostThread(uri, 5, 80);
-      const lines = flattenThreadTree(res.thread, INITIAL_SIBLINGS);
+
+      // Seed like/repost state from API viewer data
+      const liked = new Set<string>();
+      const reposted = new Set<string>();
+      const lines = flattenThreadTree(res.thread, INITIAL_SIBLINGS, (post) => {
+        if (post.viewer?.like) liked.add(post.uri);
+        if (post.viewer?.repost) reposted.add(post.uri);
+      });
+      setLikedUris(liked);
+      setRepostedUris(reposted);
+
       setFlatLines(lines);
       const rootIdx = lines.findIndex(l => l.isRoot);
       setFocusedIndex(rootIdx >= 0 ? rootIdx : 0);
@@ -141,13 +151,15 @@ function uriToParts(uri: string) {
   return { did: m[1]!, collection: m[2]!, rkey: m[3]! };
 }
 
-function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5): FlatLine[] {
+function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost?: (post: PostView) => void): FlatLine[] {
   const lines: FlatLine[] = [];
   const visitedUris = new Set<string>();
 
   function walk(node: ThreadViewPost | NFP, d: number) {
     if (node.$type !== 'app.bsky.feed.defs#threadViewPost') return;
     const post = node.post as PostView;
+
+    onPost?.(post);
 
     if (visitedUris.has(post.uri)) return;
     visitedUris.add(post.uri);

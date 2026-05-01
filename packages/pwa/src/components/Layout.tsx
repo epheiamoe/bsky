@@ -5,6 +5,7 @@ import type { BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { Sidebar } from './Sidebar';
 import { SettingsModal } from './SettingsModal';
+import { Icon } from './Icon.js';
 
 interface LayoutProps {
   currentView: AppView;
@@ -63,16 +64,16 @@ export function Layout({
             className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none"
             aria-label={t('nav.menu')}
           >
-            ☰
+            <Icon name="menu" size={20} />
           </button>
 
           {canGoBack && (
             <button
               onClick={goBack}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none hidden md:block"
+              className="text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 hidden md:block"
               aria-label={t('nav.back')}
             >
-              ←
+              <Icon name="arrow-big-left" size={20} />
             </button>
           )}
           <span className="text-lg leading-none">🦋</span>
@@ -89,17 +90,17 @@ export function Layout({
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setSettingsOpen(true)}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
+              className="text-text-secondary hover:text-text-primary transition-colors p-1"
               aria-label={t('nav.settings')}
             >
-              ⚙️
+              <Icon name="settings" size={18} />
             </button>
             <button
               onClick={toggleDark}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 text-sm leading-none"
+              className="text-text-secondary hover:text-text-primary transition-colors p-1"
               aria-label={dark ? t('theme.switchLight') : t('theme.switchDark')}
             >
-              {dark ? '☀️' : '🌙'}
+              <Icon name={dark ? 'sun' : 'moon'} size={18} />
             </button>
             <button
               onClick={onLogout}

@@ -2,6 +2,8 @@ import React from 'react';
 import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
+import { Icon } from './Icon.js';
+import type { IconName } from './Icon.js';
 
 interface SidebarProps {
   currentView: AppView;
@@ -12,13 +14,13 @@ interface SidebarProps {
 }
 
 const SIDEBAR_TABS = [
-  { emoji: '📋', key: 'nav.feed', type: 'feed' as const, needsHandle: false },
-  { emoji: '🔔', key: 'nav.notifications', type: 'notifications' as const, needsHandle: false },
-  { emoji: '🔍', key: 'nav.search', type: 'search' as const, needsHandle: false },
-  { emoji: '🔖', key: 'nav.bookmarks', type: 'bookmarks' as const, needsHandle: false },
-  { emoji: '👤', key: 'nav.profile', type: 'profile' as const, needsHandle: true },
-  { emoji: '🤖', key: 'nav.aiChat', type: 'aiChat' as const, needsHandle: false },
-  { emoji: '✏️', key: 'nav.compose', type: 'compose' as const, needsHandle: false },
+  { icon: 'home' as IconName, key: 'nav.feed', type: 'feed' as const, needsHandle: false },
+  { icon: 'bell' as IconName, key: 'nav.notifications', type: 'notifications' as const, needsHandle: false },
+  { icon: 'compass' as IconName, key: 'nav.search', type: 'search' as const, needsHandle: false },
+  { icon: 'bookmark' as IconName, key: 'nav.bookmarks', type: 'bookmarks' as const, needsHandle: false },
+  { icon: 'at-sign' as IconName, key: 'nav.profile', type: 'profile' as const, needsHandle: true },
+  { icon: 'astroid-as-AI-Button' as IconName, key: 'nav.aiChat', type: 'aiChat' as const, needsHandle: false },
+  { icon: 'pen-line' as IconName, key: 'nav.compose', type: 'compose' as const, needsHandle: false },
 ] as const;
 
 export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: SidebarProps) {
@@ -47,7 +49,7 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: S
                 : 'text-text-secondary hover:bg-surface border-transparent'
             }`}
           >
-            <span className="text-lg w-6 text-center leading-none">{tab.emoji}</span>
+            <Icon name={tab.icon} size={20} className="mr-2" />
             <span className="flex-1">{t(tab.key)}</span>
             {tab.type === 'notifications' && notifCount != null && notifCount > 0 && (
               <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
