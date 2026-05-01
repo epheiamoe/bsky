@@ -56,6 +56,11 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
         for (const l of wrapLines(msg.content, maxCols, 4)) {
           lines.push(`  \u21a1  ${l}`);
         }
+      } else if (msg.role === 'thinking') {
+        lines.push(<Text key={`think-${lines.length}`} color="gray" dimColor>{'💭 Thinking:'}</Text>);
+        for (const l of wrapLines(msg.content, maxCols, 2)) {
+          lines.push(<Text key={`thl-${lines.length}`} color="gray" dimColor>{'│ ' + l}</Text>);
+        }
       } else if (msg.role === 'user') {
         for (const l of wrapLines(msg.content, maxCols, 2)) {
           lines.push('\u25b8 ' + l);

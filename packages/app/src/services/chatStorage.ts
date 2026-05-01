@@ -3,7 +3,7 @@ import * as path from 'path';
 import { homedir } from 'os';
 
 export interface AIChatMessage {
-  role: 'user' | 'assistant' | 'tool_call' | 'tool_result';
+  role: 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'thinking';
   content: string;
   toolName?: string;
   isError?: boolean;

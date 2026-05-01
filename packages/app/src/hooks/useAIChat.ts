@@ -69,8 +69,8 @@ export function useAIChat(
     setMessages([]);
     setGuidingQuestions([]);
 
-        assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
-  }, [options?.chatId, buildSystemPrompt]);
+    assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
+  }, [options?.chatId, buildSystemPrompt, options?.contextProfile]);
 
   // Load existing conversation from storage when chatId changes
   useEffect(() => {
@@ -95,24 +95,43 @@ export function useAIChat(
     const tools = createTools(client);
     assistant.setTools(tools);
 
-    if (contextUri !== lastContext.current) {
-      lastContext.current = contextUri;
+    const changed = contextUri !== lastContext.current;
+    lastContext.current = contextUri;
 
-      // Only reset if not restoring from storage
-      if (!options?.chatId && messages.length > 0) {
+    if (changed) {
+      // Only reset if not restoring from storage and not a fresh chat with contextProfile
+      if (!options?.chatId && messages.length > 0 && !options?.contextProfile) {
         assistant.clearMessages();
         setMessages([]);
       }
 
       if (contextUri) {
-        assistant.addSystemMessage(buildSystemPrompt(contextUri));
+        assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
+      } else if (options?.contextProfile) {
+        // Profile context — add profile-specific system prompt
+        assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
+        setGuidingQuestions([]);
       } else {
-    assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
+        assistant.addSystemMessage(buildSystemPrompt());
         setGuidingQuestions([]);
       }
+    } else if (options?.contextProfile && !changed) {
+      // contextProfile set but contextUri hasn't changed — re-apply system prompt
+      assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
     }
-  }, [client, contextUri, assistant]);
+  }, [client, contextUri, assistant, options?.contextProfile, buildSystemPrompt, messages.length]);
+
+  // Auto-start: when contextProfile is set on a fresh chat, send first message
+  useEffect(() => {
+    if (options?.contextProfile && messages.length === 0 && client && !loading) {
+      const displayName = options.contextProfile;
+      const timer = setTimeout(() => {
+        send(`请分析 @${displayName} 的主页，概括他们的近期动态并与我互动。`);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [options?.contextProfile, messages.length, client, loading]);
 
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
@@ -169,6 +188,17 @@ export function useAIChat(
                 { role: 'tool_result', content: summary.length > 300 ? summary.slice(0, 300) + '...' : summary, toolName: event.toolName },
               ];
               return newMsgs;
+            });
+          } else if (event.type === 'thinking') {
+            // Accumulate reasoning content — show incrementally
+            setMessages(prev => {
+              const last = prev[prev.length - 1];
+              if (last?.role === 'thinking') {
+                const updated = [...prev];
+                updated[updated.length - 1] = { role: 'thinking', content: last.content + event.content };
+                return updated;
+              }
+              return [...prev, { role: 'thinking', content: event.content }];
             });
           } else if (event.type === 'token') {
             streamingContent += event.content;

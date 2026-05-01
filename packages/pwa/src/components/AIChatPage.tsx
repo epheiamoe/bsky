@@ -239,6 +239,15 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
           )}
 
           {messages.map((msg, i) => {
+            if (msg.role === 'thinking') {
+              return (
+                <div key={i} className="flex justify-start mb-1">
+                  <div className="border-l-2 border-text-secondary/20 pl-3 py-1 text-xs text-text-secondary/60 italic max-w-[85%] whitespace-pre-wrap break-words">
+                    <span className="font-medium not-italic text-text-secondary/70">💭 Thinking:</span>{' '}{msg.content}
+                  </div>
+                </div>
+              );
+            }
             if (msg.role === 'tool_call') {
               return (
                 <div key={i} className="flex justify-center">

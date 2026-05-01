@@ -313,7 +313,7 @@ export class AIAssistant {
    * Yields intermediate steps (tool_call/tool_result) and tokens.
    */
   async *sendMessageStreaming(content: string): AsyncGenerator<{
-    type: 'tool_call' | 'tool_result' | 'token' | 'done';
+    type: 'tool_call' | 'tool_result' | 'token' | 'done' | 'thinking';
     content: string;
     toolName?: string;
   }> {
@@ -391,6 +391,7 @@ export class AIAssistant {
 
             if (delta.reasoning_content) {
               reasoningContent += delta.reasoning_content;
+              yield { type: 'thinking', content: delta.reasoning_content as string };
             }
 
             if (delta.content) {
