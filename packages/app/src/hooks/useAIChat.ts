@@ -11,6 +11,7 @@ import {
   PF_AUTO_ANALYSIS,
   P_GUIDING_QUESTIONS,
   PF_VISION_HINT,
+  PF_CURRENT_TIME,
 } from '@bsky/core';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
@@ -62,6 +63,7 @@ export function useAIChat(
     }
     parts.push(PF_ENVIRONMENT(options?.environment || 'pwa'));
     if (options?.locale) parts.push(PF_LOCALE_HINT(options.locale));
+    parts.push(PF_CURRENT_TIME());
     parts.push(PF_VISION_HINT(aiConfig.visionEnabled ?? false));
     parts.push(P_CONCISE);
     return parts.join('');

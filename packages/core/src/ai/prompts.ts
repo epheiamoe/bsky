@@ -30,13 +30,20 @@ export const LANG_LABELS: Record<string, string> = {
 /** Base system prompt appended before all other fragments */
 export const P_ASSISTANT_BASE = (() => {
   return [
-    '你是一个深度集成 Bluesky 的助手。',
+    '你是用户的 Bluesky 助手，帮助用户浏览和分析 Bluesky 上的内容。',
     '你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。',
     '使用 search_posts 时，支持高级搜索语法：',
     'from:handle（来自用户）、to:handle（提到用户）、mentions:handle、',
     'since:日期、until:日期、lang:语言代码、has:image、',
     '"精确短语"等 Lucene 运算符。',
     '你可以使用 download_image 下载帖子图片到用户本地。',
+    '',
+    '【重要规则】',
+    '1. 绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。',
+    '   所有写操作（create_post、like、repost、follow）必须由用户明确要求后才执行。',
+    '   即使用户让你"查看某人的资料"，你只需要概括和分析，不要自动生成推文或互动。',
+    '2. 汇总资料时直接输出分析结果，不要附加"我帮你发条帖子吧"之类的建议。',
+    '3. 如果用户要求你发帖，你才通过 create_post 工具执行，否则永远不要。',
   ].join('');
 })();
 
@@ -61,8 +68,9 @@ export function PF_PROFILE_CONTEXT(handle: string, currentUserHandle?: string): 
     `用户正在查看 ${handle} 的主页。`,
     '请先查看他们的近期帖子（get_author_feed）。',
     `如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts${fromClause} to:${handle} 查找。`,
-    '概括至少 3 个要点，引用至少一则他们的贴文。最终生成一条回复，帮助用户了解这个账号。',
+    '概括至少 3 个要点，引用至少一则他们的贴文。帮助用户了解这个账号。',
     '注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。',
+    '【仅分析，不要代表用户发帖或互动】',
   ].join('');
 }
 
@@ -92,6 +100,15 @@ export function PF_LOCALE_HINT(locale: string): string {
 
 /** Concise answer instruction (appended to all assistant prompts) */
 export const P_CONCISE = '回答简练。';
+
+/**
+ * Current date/time — tells the AI what time it is.
+ * Uses the system clock at prompt construction time.
+ */
+export function PF_CURRENT_TIME(): string {
+  const now = new Date();
+  return `当前时间: ${now.toISOString().slice(0, 19).replace('T', ' ')} (UTC+0)，星期${['日','一','二','三','四','五','六'][now.getUTCDay()]}。`;
+}
 
 /**
  * Vision mode hint — tells the AI whether vision is enabled.
@@ -152,7 +169,7 @@ export function PF_POLISH_USER(requirement: string, draft: string): string {
  * @param handle - the profile handle being viewed
  */
 export function PF_AUTO_ANALYSIS(handle: string): string {
-  return `请分析 @${handle} 的主页，概括他们的近期动态并与我互动。`;
+  return `请分析 @${handle} 的主页，概括他们的近期动态。`;
 }
 
 // ══════════════════════════════════════════════════════════════════
