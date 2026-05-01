@@ -108,6 +108,10 @@ const en: LocaleMessages = {
   'search.startTyping': 'Type a keyword to search',
   'search.searching': 'Searching…',
   'search.noResults': 'No results',
+  'search.tabTop': 'Top',
+  'search.tabLatest': 'Latest',
+  'search.tabUsers': 'Users',
+  'search.tabFeeds': 'Feeds',
 
   'profile.title': 'Profile',
   'profile.notFound': 'User not found',
@@ -247,6 +251,7 @@ const en: LocaleMessages = {
   'feed.yourFeeds': 'Your Feeds',
   'feed.noCustomFeeds': 'No custom feeds added',
   'feed.addCustomFeed': 'Add Custom Feed',
+  'feed.subscribe': 'Subscribe',
   'feed.addFeedUri': 'Enter Feed URI (at://...)',
   'feed.recommended': 'Recommended Feeds',
   'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',

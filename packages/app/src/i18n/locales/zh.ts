@@ -115,6 +115,10 @@ const zh: LocaleMessages = {
   'search.startTyping': '输入关键词搜索',
   'search.searching': '搜索中…',
   'search.noResults': '无搜索结果',
+  'search.tabTop': '热门',
+  'search.tabLatest': '最新',
+  'search.tabUsers': '用户',
+  'search.tabFeeds': '动态源',
 
   // ── Profile ──
   'profile.title': '资料',
@@ -268,6 +272,7 @@ const zh: LocaleMessages = {
   'feed.yourFeeds': '你的 Feed',
   'feed.noCustomFeeds': '暂未添加自定义 Feed',
   'feed.addCustomFeed': '添加自定义 Feed',
+  'feed.subscribe': '订阅',
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',

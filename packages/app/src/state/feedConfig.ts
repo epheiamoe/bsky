@@ -1,4 +1,4 @@
-import { RECOMMENDED_FEEDS, getFeedLabel } from '@bsky/core';
+import { RECOMMENDED_FEEDS, getFeedLabel, BUILTIN_FEEDS } from '@bsky/core';
 import type { FeedInfo } from '@bsky/core';
 
 export interface FeedConfigData {
@@ -36,6 +36,7 @@ export function addFeed(uri: string, label?: string): FeedConfigData {
 }
 
 export function removeFeed(uri: string): FeedConfigData {
+  if (uri === BUILTIN_FEEDS.following) return getFeedConfig(); // Never delete Following
   const config = getFeedConfig();
   config.feeds = config.feeds.filter(f => f.uri !== uri);
   if (config.defaultFeedUri === uri) config.defaultFeedUri = null;

@@ -156,7 +156,8 @@ export function linkifyText(text: string): React.ReactNode[] {
     }
     const token = match[1];
     if (token.startsWith('@')) {
-      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/profile?actor=${encodeURIComponent(token)}`} onClick={(e) => e.stopPropagation()}>{token}</a>);
+      const handle = token.slice(1);
+      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/profile?actor=${encodeURIComponent(handle)}`} onClick={(e) => e.stopPropagation()}>{token}</a>);
     } else {
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={token} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{token}</a>);
     }

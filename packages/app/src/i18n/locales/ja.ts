@@ -108,6 +108,10 @@ const ja: LocaleMessages = {
   'search.startTyping': 'キーワードを入力して検索',
   'search.searching': '検索中…',
   'search.noResults': '検索結果がありません',
+  'search.tabTop': '人気',
+  'search.tabLatest': '最新',
+  'search.tabUsers': 'ユーザー',
+  'search.tabFeeds': 'フィード',
 
   'profile.title': 'プロフィール',
   'profile.notFound': 'ユーザーが見つかりません',
@@ -247,6 +251,7 @@ const ja: LocaleMessages = {
   'feed.yourFeeds': 'あなたのフィード',
   'feed.noCustomFeeds': 'カスタムフィードはありません',
   'feed.addCustomFeed': 'カスタムフィードを追加',
+  'feed.subscribe': '購読',
   'feed.addFeedUri': 'フィードURIを入力 (at://...)',
   'feed.recommended': 'おすすめフィード',
   'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
