@@ -89,6 +89,8 @@ const en: LocaleMessages = {
   'thread.repostChoice': '⚠ Repost or Quote @{handle}?',
   'thread.repostChoiceOpts': '[r] Repost  [q] Quote  [Esc] Cancel',
   'thread.repostConfirm': 'Confirm repost @{handle}? [y/n]',
+  'thread.deletePost': 'Delete Post',
+  'thread.confirmDelete': 'Delete this post? This cannot be undone.',
 
   'notifications.title': 'Notifications',
   'notifications.empty': 'No notifications',

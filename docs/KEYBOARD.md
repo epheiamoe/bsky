@@ -115,6 +115,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `r` | Repost with confirmation dialog |
 | `c` / `C` | Reply (opens compose with reply context) |
 | `v` | Toggle bookmark |
+| `d` / `D` | Delete cursor post (only if own) — with [Y/N] confirmation |
 | `y` | Yank URI — copies `@handle uri bsky.app/...` to stderr (5s display) |
 | `f` / `F` | Translate cursor line text via AI |
 
@@ -125,7 +126,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `y` / `Y` | Confirm repost |
 | `n` / `N` | Cancel repost |
 
-**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译`
+**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 d:删除 f:翻译`
 
 **Note**: `t` is GLOBAL (`goHome`) and NOT available for thread-local translation. Use `f` for translation.
 
@@ -269,7 +270,7 @@ Keys that have **different meanings** depending on view:
 | `b` | goTo bm | goTo bm | goTo bm (global) | goTo bm | goTo bm | blocked |
 | `r` | refresh | repost confirm | — | refresh notifs | — | blocked |
 | `l` | — | like | — | — | load conv (hist) | blocked |
-| `d` | — | — | delete bm | — | delete conv (hist) | blocked |
+| `d` | — | delete post | delete bm | — | delete conv (hist) | blocked |
 | `h` | — | go to root | — | — | — | blocked |
 | `y` | — | yank URI | — | — | — | blocked |
 | `f` | — | translate | — | — | — | blocked |

@@ -140,6 +140,34 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
+export function truncateName(name: string, max = 15): string {
+  return name.length > max ? name.slice(0, max - 1) + '…' : name;
+}
+
+const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+)/g;
+
+export function linkifyText(text: string): React.ReactNode[] {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = LINK_REGEX.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    const token = match[1];
+    if (token.startsWith('@')) {
+      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/profile?actor=${encodeURIComponent(token)}`} onClick={(e) => e.stopPropagation()}>{token}</a>);
+    } else {
+      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={token} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{token}</a>);
+    }
+    lastIndex = LINK_REGEX.lastIndex;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts.length > 0 ? parts : [text];
+}
+
 function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
   return (
       <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); onClose(); }}>
@@ -300,7 +328,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 flex-wrap">
             <span className="text-text-primary font-semibold text-sm truncate max-w-[200px]">
-              {displayName}
+              {truncateName(displayName)}
             </span>
             <span className="text-text-secondary text-xs truncate max-w-[150px]">
               @{handle}
@@ -312,8 +340,8 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               </>
             )}
           </div>
-          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
-            {text}
+          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-all line-clamp-6">
+            {linkifyText(text)}
           </p>
           {hasImages && <ImageGrid images={images} />}
           {externalLink && (
@@ -347,7 +375,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
                 <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
                 <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
               </div>
-              <p className="text-xs text-text-primary line-clamp-3">{quotedPost.text}</p>
+              <p className="text-xs text-text-primary line-clamp-3 break-all">{linkifyText(quotedPost.text)}</p>
               {quotedPost.imageUrls && quotedPost.imageUrls.length > 0 && (
                 <div className="mt-1 flex gap-1">
                   {quotedPost.imageUrls.slice(0, 2).map((url, idx) => (

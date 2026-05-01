@@ -89,6 +89,8 @@ const ja: LocaleMessages = {
   'thread.repostChoice': '⚠ @{handle} の投稿をリポスト/引用？',
   'thread.repostChoiceOpts': '[r] リポスト  [q] 引用  [Esc] 取消',
   'thread.repostConfirm': '@{handle} をリポスト？[y/n]',
+  'thread.deletePost': '投稿を削除',
+  'thread.confirmDelete': 'この投稿を削除しますか？この操作は元に戻せません。',
 
   'notifications.title': '通知',
   'notifications.empty': '通知はありません',

@@ -94,6 +94,8 @@ const zh: LocaleMessages = {
   'thread.repostChoice': '⚠ 转发/引用 @{handle} 的帖子？',
   'thread.repostChoiceOpts': '[r] 转发  [q] 引用  [Esc] 取消',
   'thread.repostConfirm': '确认转发 @{handle}？[y/n]',
+  'thread.deletePost': '删除帖子',
+  'thread.confirmDelete': '确认删除这条帖子？此操作不可撤销。',
 
   // ── Notifications ──
   'notifications.title': '通知',

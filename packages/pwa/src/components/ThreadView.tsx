@@ -3,6 +3,7 @@ import { useThread, useBookmarks, useTranslation, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
+import { truncateName, linkifyText } from './PostCard.js';
 import { ImageGrid } from './PostCard.js';
 import { formatTime, uriToRkey, getPostUrl } from '../utils/format.js';
 
@@ -38,6 +39,8 @@ function ActionButtons({
   toggleBookmark,
   goTo,
   onTranslate,
+  onDelete,
+  isOwn,
 }: {
   uri: string;
   cid: string;
@@ -52,10 +55,13 @@ function ActionButtons({
   toggleBookmark: (uri: string, cid: string) => void;
   goTo: (v: AppView) => void;
   onTranslate?: () => void;
+  onDelete?: () => void;
+  isOwn?: boolean;
 }) {
   const { t } = useI18n();
   const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
   const [showRepostMenu, setShowRepostMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <div className={`flex items-center ${sizeClass} text-text-secondary mt-2`}>
@@ -113,6 +119,23 @@ function ActionButtons({
       >
         📋 {t('action.copyLink')}
       </button>
+      {isOwn && onDelete && (
+        !showDeleteConfirm ? (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="hover:text-red-500 transition-colors"
+            title={t('thread.deletePost')}
+          >
+            🗑 {t('action.delete')}
+          </button>
+        ) : (
+          <span className="flex items-center gap-1">
+            <span className="text-red-500 text-xs">{t('thread.confirmDelete')}</span>
+            <button onClick={() => { onDelete(); setShowDeleteConfirm(false); }} className="text-red-500 font-bold hover:underline">✓</button>
+            <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:underline">✕</button>
+          </span>
+        )
+      )}
     </div>
   );
 }
@@ -232,7 +255,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               >
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm font-medium text-text-primary">
-                    {line.displayName}
+                    {truncateName(line.displayName)}
                   </span>
                   <span className="text-xs text-text-secondary">
                     @{line.handle}
@@ -268,7 +291,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 )}
               </div>
               <span className="text-base font-semibold text-text-primary">
-                {focused.displayName}
+                {truncateName(focused.displayName)}
               </span>
               <span className="text-sm text-text-secondary">
                 @{focused.handle}
@@ -288,8 +311,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 {isFollowing ? t('profile.unfollow') : t('profile.follow')}
               </button>
             </div>
-            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap">
-              {focused.text}
+            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-all">
+              {linkifyText(focused.text)}
             </p>
             {translating && <p className="text-text-secondary text-sm mt-1">🌐 {t('action.translating')}</p>}
             {translationResult && !translating && (
@@ -343,6 +366,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               toggleBookmark={toggleBookmark}
               goTo={goTo}
               onTranslate={hasText ? handleTranslate : undefined}
+              onDelete={() => client.deletePost(focused.uri)}
+              isOwn={focused.handle === client.getHandle()}
             />
           </article>
         )}
@@ -387,6 +412,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       isBookmarked={isBookmarked}
                       toggleBookmark={toggleBookmark}
                       goTo={goTo}
+                      onDelete={() => client.deletePost(line.uri)}
+                      isOwn={line.handle === client.getHandle()}
                     />
                   </PostCard>
                 </div>

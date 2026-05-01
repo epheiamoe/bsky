@@ -36,6 +36,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   }, [client, focused?.handle]);
 
   const [repostDialog, setRepostDialog] = useState<{ uri: string; handle: string; phase: 'choice' | 'confirm' } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
@@ -65,6 +66,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   };
 
   useInput((input, key) => {
+    if (deleteConfirm) {
+      if (input === 'y' || input === 'Y') { client?.deletePost(deleteConfirm).then(() => { setDeleteConfirm(null); refreshThread(uri); }).catch(() => setDeleteConfirm(null)); return; }
+      if (input === 'n' || input === 'N' || key.escape) { setDeleteConfirm(null); return; }
+      return;
+    }
+
     if (repostDialog) {
       if (input === 'q' || input === 'Q') {
         goTo({ type: 'compose', quoteUri: repostDialog.uri });
@@ -118,6 +125,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       if (input === 'r') { setRepostDialog({ uri: cursorLine.uri, handle: cursorLine.handle, phase: 'choice' }); return; }
       if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
       if (input === 'v') { void toggleBookmark(cursorLine.uri, cursorLine.cid); return; }
+      if (input === 'd' || input === 'D') {
+        if (client && cursorLine.handle === client.getHandle()) {
+          setDeleteConfirm(cursorLine.uri);
+        }
+        return;
+      }
       if (input === 'y') {
         const rkey = cursorLine.uri.split('/').pop() ?? '';
         const url = `@${cursorLine.handle} ${cursorLine.uri} https://bsky.app/profile/${cursorLine.handle}/post/${rkey}`;
@@ -306,6 +319,14 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
               <Box><Text color="green">{t('thread.confirmRepostYes')}</Text><Text>{'  '}</Text><Text color="red">{t('thread.confirmRepostNo')}</Text></Box>
             </Box>
           )}
+        </Box>
+      )}
+
+      {/* ── Delete confirmation ── */}
+      {deleteConfirm && (
+        <Box flexDirection="column" borderStyle="double" borderColor="red" paddingX={1} marginTop={0}>
+          <Text bold color="red">🗑 {t('thread.confirmDelete')}</Text>
+          <Box><Text color="green">[Y] {t('action.confirm')}</Text><Text>{'  '}</Text><Text color="red">[N/Esc] {t('action.cancel')}</Text></Box>
         </Box>
       )}
 

@@ -24,6 +24,7 @@ import type {
   CreateBookmarkResponse,
   GetBookmarksResponse,
 } from './types.js';
+import { parseAtUri } from './types.js';
 
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
@@ -371,6 +372,18 @@ export class BskyClient {
     } catch {
       // silently ignore if bookmark doesn't exist
     }
+  }
+
+  async deletePost(uri: string): Promise<void> {
+    const parsed = parseAtUri(uri);
+    await this.ky.post('com.atproto.repo.deleteRecord', {
+      headers: this.getAuthHeaders(),
+      json: {
+        repo: parsed.did,
+        collection: parsed.collection,
+        rkey: parsed.rkey,
+      },
+    });
   }
 
   async getBookmarks(limit = 50, cursor?: string): Promise<GetBookmarksResponse> {
