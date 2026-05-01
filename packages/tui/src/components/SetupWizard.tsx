@@ -10,6 +10,7 @@ export interface SetupConfig {
   llmApiKey: string;
   llmBaseUrl: string;
   llmModel: string;
+  llmThinkingEnabled: boolean;
   locale: string;
 }
 
@@ -31,6 +32,10 @@ const FIELDS: Field[] = [
   { key: 'llmApiKey', labelKey: 'setup.llmApiKey', isPassword: true },
   { key: 'llmBaseUrl', labelKey: 'setup.llmBaseUrl', default: 'https://api.deepseek.com' },
   { key: 'llmModel', labelKey: 'setup.llmModel', default: 'deepseek-v4-flash' },
+  { key: 'llmThinkingEnabled', labelKey: 'setup.thinkMode', default: 'true', validate: (v) => {
+    const trimmed = v.trim().toLowerCase();
+    return ['true', 'false', 'yes', 'no'].includes(trimmed) ? null : 'Must be true/false/yes/no';
+  }},
   { key: 'locale', labelKey: 'setup.locale', default: 'zh', validate: (v) => {
     const trimmed = v.trim().toLowerCase();
     return ['zh', 'en', 'ja'].includes(trimmed) ? null : 'Must be zh, en, or ja';
@@ -81,6 +86,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
         llmApiKey: newValues.llmApiKey || '',
         llmBaseUrl: newValues.llmBaseUrl || '',
         llmModel: newValues.llmModel || '',
+        llmThinkingEnabled: (newValues.llmThinkingEnabled || 'true').toLowerCase() !== 'false' && (newValues.llmThinkingEnabled || 'true').toLowerCase() !== 'no',
         locale: newValues.locale || 'zh',
       };
       onComplete(config);

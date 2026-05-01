@@ -1,0 +1,243 @@
+{
+  "id": "2026-05-01-155702",
+  "generated_at": "2026-05-01T07:57:02.1244016Z",
+  "language": "zh",
+  "pages": [
+    {
+      "slug": "1-xiang-mu-gai-lan-shuang-jie-mian-bluesky-ke-hu-duan-yu-shen-du-ai-ji-cheng",
+      "title": "项目概览：双界面 Bluesky 客户端与深度 AI 集成",
+      "file": "1-xiang-mu-gai-lan-shuang-jie-mian-bluesky-ke-hu-duan-yu-shen-du-ai-ji-cheng.md",
+      "section": "Get Started",
+      "level": "Beginner"
+    },
+    {
+      "slug": "2-kuai-su-qi-dong-tui-zhong-duan-ke-hu-duan-an-zhuang-yu-yun-xing",
+      "title": "快速启动：TUI 终端客户端安装与运行",
+      "file": "2-kuai-su-qi-dong-tui-zhong-duan-ke-hu-duan-an-zhuang-yu-yun-xing.md",
+      "section": "Get Started",
+      "level": "Beginner"
+    },
+    {
+      "slug": "3-kuai-su-qi-dong-pwa-liu-lan-qi-ke-hu-duan-an-zhuang-yu-bu-shu",
+      "title": "快速启动：PWA 浏览器客户端安装与部署",
+      "file": "3-kuai-su-qi-dong-pwa-liu-lan-qi-ke-hu-duan-an-zhuang-yu-bu-shu.md",
+      "section": "Get Started",
+      "level": "Beginner"
+    },
+    {
+      "slug": "4-huan-jing-bian-liang-pei-zhi-zhi-nan-tui-de-env-yu-pwa-de-localstorage",
+      "title": "环境变量配置指南（TUI 的 .env 与 PWA 的 localStorage）",
+      "file": "4-huan-jing-bian-liang-pei-zhi-zhi-nan-tui-de-env-yu-pwa-de-localstorage.md",
+      "section": "Get Started",
+      "level": "Beginner"
+    },
+    {
+      "slug": "5-dan-ti-cang-ku-jia-gou-core-app-tui-pwa-de-san-ceng-yi-lai-ti-xi",
+      "title": "单体仓库架构：core → app → tui/pwa 的三层依赖体系",
+      "file": "5-dan-ti-cang-ku-jia-gou-core-app-tui-pwa-de-san-ceng-yi-lai-ti-xi.md",
+      "section": "Deep Dive",
+      "group": "架构与设计",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "6-pwa-qian-yi-zhi-nan-cong-tui-dao-web-de-xuan-ran-ceng-ti-huan-ce-lue",
+      "title": "PWA 迁移指南：从 TUI 到 Web 的渲染层替换策略",
+      "file": "6-pwa-qian-yi-zhi-nan-cong-tui-dao-web-de-xuan-ran-ceng-ti-huan-ce-lue.md",
+      "section": "Deep Dive",
+      "group": "架构与设计",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "7-dao-hang-zhuang-tai-ji-ji-yu-zhan-de-appview-lu-you-yu-shi-tu-qie-huan",
+      "title": "导航状态机：基于栈的 AppView 路由与视图切换",
+      "file": "7-dao-hang-zhuang-tai-ji-ji-yu-zhan-de-appview-lu-you-yu-shi-tu-qie-huan.md",
+      "section": "Deep Dive",
+      "group": "架构与设计",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "8-pwa-she-ji-xi-tong-yu-yi-se-ban-pai-ban-bu-ju-yu-zu-jian-gui-fan",
+      "title": "PWA 设计系统：语义色板、排版、布局与组件规范",
+      "file": "8-pwa-she-ji-xi-tong-yu-yi-se-ban-pai-ban-bu-ju-yu-zu-jian-gui-fan.md",
+      "section": "Deep Dive",
+      "group": "架构与设计",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "9-he-xin-zhu-yu-yu-ming-ming-yue-ding-tao-lun-chuan-ui-yuan-su-dai-ma-ming-ming-gui-fan",
+      "title": "核心术语与命名约定：讨论串、UI 元素、代码命名规范",
+      "file": "9-he-xin-zhu-yu-yu-ming-ming-yue-ding-tao-lun-chuan-ui-yuan-su-dai-ma-ming-ming-gui-fan.md",
+      "section": "Deep Dive",
+      "group": "架构与设计",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "10-bskyclient-at-xie-yi-http-ke-hu-duan-shuang-duan-dian-jia-gou-yu-jwt-zi-dong-shua-xin",
+      "title": "BskyClient：AT 协议 HTTP 客户端、双端点架构与 JWT 自动刷新",
+      "file": "10-bskyclient-at-xie-yi-http-ke-hu-duan-shuang-duan-dian-jia-gou-yu-jwt-zi-dong-shua-xin.md",
+      "section": "Deep Dive",
+      "group": "AT 协议与 Bluesky 客户端",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "11-31-ge-ai-gong-ju-xi-tong-gong-ju-ding-yi-du-xie-an-quan-men-yu-gong-ju-zhi-xing-xun-huan",
+      "title": "31 个 AI 工具系统：工具定义、读写安全门与工具执行循环",
+      "file": "11-31-ge-ai-gong-ju-xi-tong-gong-ju-ding-yi-du-xie-an-quan-men-yu-gong-ju-zhi-xing-xun-huan.md",
+      "section": "Deep Dive",
+      "group": "AT 协议与 Bluesky 客户端",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "12-aiassistant-duo-lun-gong-ju-diao-yong-yin-qing-yu-sse-liu-shi-shu-chu",
+      "title": "AIAssistant：多轮工具调用引擎与 SSE 流式输出",
+      "file": "12-aiassistant-duo-lun-gong-ju-diao-yong-yin-qing-yu-sse-liu-shi-shu-chu.md",
+      "section": "Deep Dive",
+      "group": "AI 集成系统",
+      "level": "Advanced"
+    },
+    {
+      "slug": "13-useaichat-gou-zi-liu-shi-xuan-ran-xie-cao-zuo-que-ren-che-xiao-zhong-shi-yu-zi-dong-bao-cun",
+      "title": "useAIChat 钩子：流式渲染、写操作确认、撤销/重试与自动保存",
+      "file": "13-useaichat-gou-zi-liu-shi-xuan-ran-xie-cao-zuo-que-ren-che-xiao-zhong-shi-yu-zi-dong-bao-cun.md",
+      "section": "Deep Dive",
+      "group": "AI 集成系统",
+      "level": "Advanced"
+    },
+    {
+      "slug": "14-zhi-neng-fan-yi-xi-tong-shuang-mo-shi-fan-yi-simple-json-yu-zhi-shu-tui-bi-zhong-shi",
+      "title": "智能翻译系统：双模式翻译（simple/json）与指数退避重试",
+      "file": "14-zhi-neng-fan-yi-xi-tong-shuang-mo-shi-fan-yi-simple-json-yu-zhi-shu-tui-bi-zhong-shi.md",
+      "section": "Deep Dive",
+      "group": "AI 集成系统",
+      "level": "Advanced"
+    },
+    {
+      "slug": "15-ai-cao-gao-run-se-yu-dan-lun-dui-hua-gong-ju-han-shu",
+      "title": "AI 草稿润色与单轮对话工具函数",
+      "file": "15-ai-cao-gao-run-se-yu-dan-lun-dui-hua-gong-ju-han-shu.md",
+      "section": "Deep Dive",
+      "group": "AI 集成系统",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "16-dan-xiang-jian-ting-qi-store-mo-shi-chun-dui-xiang-zhuang-tai-guan-li-react-ding-yue",
+      "title": "单向监听器 Store 模式：纯对象状态管理 + React 订阅",
+      "file": "16-dan-xiang-jian-ting-qi-store-mo-shi-chun-dui-xiang-zhuang-tai-guan-li-react-ding-yue.md",
+      "section": "Deep Dive",
+      "group": "状态管理与 React 钩子",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "17-shu-ju-gou-zi-qing-dan-useauth-usetimeline-usethread-useprofile-deng",
+      "title": "数据钩子清单：useAuth / useTimeline / useThread / useProfile 等",
+      "file": "17-shu-ju-gou-zi-qing-dan-useauth-usetimeline-usethread-useprofile-deng.md",
+      "section": "Deep Dive",
+      "group": "状态管理与 React 钩子",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "18-usepostdetail-tie-zi-xiang-qing-fan-yi-huan-cun-yu-cao-zuo-ji-he",
+      "title": "usePostDetail：帖子详情、翻译缓存与操作集合",
+      "file": "18-usepostdetail-tie-zi-xiang-qing-fan-yi-huan-cun-yu-cao-zuo-ji-he.md",
+      "section": "Deep Dive",
+      "group": "状态管理与 React 钩子",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "19-usecompose-yu-usedrafts-fa-tie-bian-ji-qi-yu-cao-gao-guan-li",
+      "title": "useCompose 与 useDrafts：发帖编辑器与草稿管理",
+      "file": "19-usecompose-yu-usedrafts-fa-tie-bian-ji-qi-yu-cao-gao-guan-li.md",
+      "section": "Deep Dive",
+      "group": "状态管理与 React 钩子",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "20-tui-ru-kou-yu-setupwizard-jiao-hu-shi-shou-ci-pei-zhi-liu-cheng",
+      "title": "TUI 入口与 SetupWizard：交互式首次配置流程",
+      "file": "20-tui-ru-kou-yu-setupwizard-jiao-hu-shi-shou-ci-pei-zhi-liu-cheng.md",
+      "section": "Deep Dive",
+      "group": "TUI 终端界面",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "21-jian-pan-kuai-jie-jian-jia-gou-5-ge-useinput-chu-li-qi-yu-quan-ju-bao-liu-jian-gui-ze",
+      "title": "键盘快捷键架构：5 个 useInput 处理器与全局保留键规则",
+      "file": "21-jian-pan-kuai-jie-jian-jia-gou-5-ge-useinput-chu-li-qi-yu-quan-ju-bao-liu-jian-gui-ze.md",
+      "section": "Deep Dive",
+      "group": "TUI 终端界面",
+      "level": "Advanced"
+    },
+    {
+      "slug": "22-tui-wen-ben-gong-ju-cjk-gan-zhi-de-visualwidth-wraplines-yu-zhong-duan-shu-biao-zhui-zong",
+      "title": "TUI 文本工具：CJK 感知的 visualWidth / wrapLines 与终端鼠标追踪",
+      "file": "22-tui-wen-ben-gong-ju-cjk-gan-zhi-de-visualwidth-wraplines-yu-zhong-duan-shu-biao-zhui-zong.md",
+      "section": "Deep Dive",
+      "group": "TUI 终端界面",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "23-zi-yan-markdown-xuan-ran-qi-ling-yi-lai-de-ink-zhong-duan-markdown-jie-xi",
+      "title": "自研 Markdown 渲染器：零依赖的 Ink 终端 Markdown 解析",
+      "file": "23-zi-yan-markdown-xuan-ran-qi-ling-yi-lai-de-ink-zhong-duan-markdown-jie-xi.md",
+      "section": "Deep Dive",
+      "group": "TUI 终端界面",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "24-pwa-zu-jian-quan-jing-ye-mian-zu-jian-gou-zi-yu-fu-wu-ceng-qing-dan",
+      "title": "PWA 组件全景：页面组件、钩子与服务层清单",
+      "file": "24-pwa-zu-jian-quan-jing-ye-mian-zu-jian-gou-zi-yu-fu-wu-ceng-qing-dan.md",
+      "section": "Deep Dive",
+      "group": "PWA 网页应用",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "25-hash-lu-you-xi-tong-usehashrouter-yu-ji-yu-url-hash-de-spa-dao-hang",
+      "title": "Hash 路由系统：useHashRouter 与基于 URL hash 的 SPA 导航",
+      "file": "25-hash-lu-you-xi-tong-usehashrouter-yu-ji-yu-url-hash-de-spa-dao-hang.md",
+      "section": "Deep Dive",
+      "group": "PWA 网页应用",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "26-pwa-chi-xian-zhi-chi-service-worker-manifest-json-yu-zhuo-mian-an-zhuang",
+      "title": "PWA 离线支持：Service Worker、manifest.json 与桌面安装",
+      "file": "26-pwa-chi-xian-zhi-chi-service-worker-manifest-json-yu-zhuo-mian-an-zhuang.md",
+      "section": "Deep Dive",
+      "group": "PWA 网页应用",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "27-liao-tian-cun-chu-jie-kou-chatstorage-chou-xiang-yu-tui-pwa-shuang-shi-xian",
+      "title": "聊天存储接口：ChatStorage 抽象与 TUI/PWA 双实现",
+      "file": "27-liao-tian-cun-chu-jie-kou-chatstorage-chou-xiang-yu-tui-pwa-shuang-shi-xian.md",
+      "section": "Deep Dive",
+      "group": "数据持久化",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "28-pwa-indexeddb-shi-xian-liu-lan-qi-duan-liao-tian-li-shi-chi-jiu-hua",
+      "title": "PWA IndexedDB 实现：浏览器端聊天历史持久化",
+      "file": "28-pwa-indexeddb-shi-xian-liu-lan-qi-duan-liao-tian-li-shi-chi-jiu-hua.md",
+      "section": "Deep Dive",
+      "group": "数据持久化",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "29-guo-ji-hua-xi-tong-zh-en-ja-san-yu-yan-dan-li-store-yu-ji-shi-qie-huan",
+      "title": "国际化系统：zh/en/ja 三语言单例 Store 与即时切换",
+      "file": "29-guo-ji-hua-xi-tong-zh-en-ja-san-yu-yan-dan-li-store-yu-ji-shi-qie-huan.md",
+      "section": "Deep Dive",
+      "group": "国际化与测试",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "30-ji-cheng-ce-shi-ti-xi-zhen-shi-api-diao-yong-29-ge-ce-shi-yong-li-yu-e2e-liu-cheng",
+      "title": "集成测试体系：真实 API 调用、29 个测试用例与 E2E 流程",
+      "file": "30-ji-cheng-ce-shi-ti-xi-zhen-shi-api-diao-yong-29-ge-ce-shi-yong-li-yu-e2e-liu-cheng.md",
+      "section": "Deep Dive",
+      "group": "国际化与测试",
+      "level": "Intermediate"
+    }
+  ]
+}

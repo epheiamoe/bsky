@@ -7,6 +7,7 @@ export interface AppConfig {
   targetLang: string;
   translateMode: 'simple' | 'json';
   darkMode: boolean;
+  thinkingEnabled: boolean;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -18,6 +19,7 @@ const DEFAULT_CONFIG: AppConfig = {
   targetLang: 'zh',
   translateMode: 'simple',
   darkMode: false,
+  thinkingEnabled: true,
 };
 
 export function getAppConfig(): AppConfig {

@@ -25,6 +25,7 @@ export function SettingsView({ goBack }: SettingsViewProps) {
   const [llmKey, setLlmKey] = useState(process.env.LLM_API_KEY || '');
   const [llmUrl, setLlmUrl] = useState(process.env.LLM_BASE_URL || '');
   const [llmModel, setLlmModel] = useState(process.env.LLM_MODEL || '');
+  const [thinkMode, setThinkMode] = useState(process.env.LLM_THINKING_ENABLED || 'true');
   const [locale, setLocale] = useState(process.env.I18N_LOCALE || process.env.TRANSLATE_TARGET_LANG || 'zh');
   const [focusIdx, setFocusIdx] = useState(0);
   const [saved, setSaved] = useState(false);
@@ -33,6 +34,7 @@ export function SettingsView({ goBack }: SettingsViewProps) {
     { key: 'LLM_API_KEY', label: '🤖 LLM API Key', current: llmKey, setter: setLlmKey },
     { key: 'LLM_BASE_URL', label: '🔗 LLM Base URL', current: llmUrl, setter: setLlmUrl },
     { key: 'LLM_MODEL', label: '🧠 LLM Model', current: llmModel, setter: setLlmModel },
+    { key: 'LLM_THINKING_ENABLED', label: '💭 Think Mode (true/false)', current: thinkMode, setter: setThinkMode },
     { key: 'I18N_LOCALE', label: '🌐 UI 语言 (zh/en/ja)', current: locale, setter: setLocale },
   ];
 
@@ -46,14 +48,15 @@ export function SettingsView({ goBack }: SettingsViewProps) {
         if (key === 'LLM_API_KEY') { lines.push(`LLM_API_KEY=${llmKey}`); replaced.add(key); }
         else if (key === 'LLM_BASE_URL') { lines.push(`LLM_BASE_URL=${llmUrl}`); replaced.add(key); }
         else if (key === 'LLM_MODEL') { lines.push(`LLM_MODEL=${llmModel}`); replaced.add(key); }
+        else if (key === 'LLM_THINKING_ENABLED') { lines.push(`LLM_THINKING_ENABLED=${thinkMode}`); replaced.add(key); }
         else if (key === 'I18N_LOCALE') { lines.push(`I18N_LOCALE=${locale}`); replaced.add(key); }
         else lines.push(line);
       }
-      for (const key of ['LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL', 'I18N_LOCALE']) {
+      for (const key of ['LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL', 'LLM_THINKING_ENABLED', 'I18N_LOCALE']) {
         if (!replaced.has(key)) lines.push(`${key}=${fields.find(f => f.key === key)!.current}`);
       }
     } else {
-      lines.push(`LLM_API_KEY=${llmKey}`, `LLM_BASE_URL=${llmUrl}`, `LLM_MODEL=${llmModel}`, `I18N_LOCALE=${locale}`);
+      lines.push(`LLM_API_KEY=${llmKey}`, `LLM_BASE_URL=${llmUrl}`, `LLM_MODEL=${llmModel}`, `LLM_THINKING_ENABLED=${thinkMode}`, `I18N_LOCALE=${locale}`);
     }
     writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
     setSaved(true);

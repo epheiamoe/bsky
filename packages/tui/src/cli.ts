@@ -33,6 +33,7 @@ interface AppConfig {
     apiKey: string;
     baseUrl: string;
     model: string;
+    thinkingEnabled?: boolean;
   };
   targetLang?: string;
 }
@@ -48,6 +49,7 @@ function getConfigFromEnv(): AppConfig | null {
       apiKey: process.env.LLM_API_KEY || '',
       baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
       model: process.env.LLM_MODEL || 'deepseek-v4-flash',
+      thinkingEnabled: process.env.LLM_THINKING_ENABLED !== 'false',
     },
     targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
   };
@@ -61,6 +63,7 @@ function writeEnvFile(config: SetupConfig): string {
     `LLM_API_KEY=${config.llmApiKey}`,
     `LLM_BASE_URL=${config.llmBaseUrl || 'https://api.deepseek.com'}`,
     `LLM_MODEL=${config.llmModel || 'deepseek-v4-flash'}`,
+    `LLM_THINKING_ENABLED=${config.llmThinkingEnabled !== false}`,
     config.locale ? `TRANSLATE_TARGET_LANG=${config.locale}` : '',
   ].filter(Boolean);
   writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');

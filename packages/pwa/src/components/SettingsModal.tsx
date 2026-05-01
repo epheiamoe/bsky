@@ -36,6 +36,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [apiKey, setApiKey] = useState(config.aiConfig.apiKey);
   const [baseUrl, setBaseUrl] = useState(config.aiConfig.baseUrl);
   const [model, setModel] = useState(config.aiConfig.model);
+  const [thinkingEnabled, setThinkingEnabled] = useState(config.thinkingEnabled ?? true);
 
   const [targetLang, setTargetLang] = useState(config.targetLang);
   const [darkMode, setDarkMode] = useState(config.darkMode);
@@ -53,7 +54,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const saveAi = () => {
-    const updated = { ...config, aiConfig: { apiKey, baseUrl, model } };
+    const updated = { ...config, thinkingEnabled, aiConfig: { apiKey, baseUrl, model } };
     updateAppConfig(updated);
     onConfigChange(updated);
   };
@@ -155,6 +156,15 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={thinkingEnabled}
+                  onChange={e => setThinkingEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm text-text-primary">{t('settings.thinkMode')}</span>
+              </label>
               <button
                 onClick={saveAi}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"

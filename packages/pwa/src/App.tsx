@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth, useTimeline, useI18n, useDrafts } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
@@ -25,6 +25,11 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollIndexRef = useRef(0);
+
+  const effectiveAiConfig = useMemo(() => ({
+    ...appConfig.aiConfig,
+    thinkingEnabled: appConfig.thinkingEnabled,
+  }), [appConfig.aiConfig, appConfig.thinkingEnabled]);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {
@@ -123,7 +128,7 @@ export function App() {
             uri={(currentView as { uri: string }).uri}
             goBack={goBack}
             goTo={goTo}
-            aiConfig={appConfig.aiConfig}
+            aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
           />
@@ -145,7 +150,7 @@ export function App() {
             actor={(currentView as { actor: string }).actor}
             goBack={goBack}
             goTo={goTo}
-            aiConfig={appConfig.aiConfig}
+            aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
           />
@@ -165,7 +170,7 @@ export function App() {
         return (
           <AIChatPage
             client={client}
-            aiConfig={appConfig.aiConfig}
+            aiConfig={effectiveAiConfig}
             contextUri={(currentView as { contextUri?: string }).contextUri}
             goBack={goBack}
           />

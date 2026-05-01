@@ -33,6 +33,7 @@ export interface ChatCompletionRequest {
   temperature?: number;
   max_tokens?: number;
   stream?: boolean;
+  thinking?: { type: 'enabled' | 'disabled' };
 }
 
 export interface ChatCompletionChoice {
@@ -63,11 +64,13 @@ export type AIConfig = {
   apiKey: string;
   baseUrl: string;
   model: string;
+  thinkingEnabled?: boolean;
 };
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {
   baseUrl: 'https://api.deepseek.com',
   model: 'deepseek-v4-flash',
+  thinkingEnabled: true,
 };
 
 export class AIAssistant {
@@ -266,6 +269,7 @@ export class AIAssistant {
       messages: this.messages,
       temperature: 0.7,
       max_tokens: 4096,
+      thinking: { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
     };
 
     // Only include tools if we have any
@@ -328,6 +332,7 @@ export class AIAssistant {
         temperature: 0.7,
         max_tokens: 4096,
         stream: true,
+        thinking: { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
       };
 
       if (this.tools.length > 0) {
@@ -522,6 +527,7 @@ export async function singleTurnAI(
     temperature,
     max_tokens: maxTokens,
     stream: false,
+    thinking: { type: config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
   };
 
   const url = `${config.baseUrl}/v1/chat/completions`;
@@ -594,6 +600,7 @@ export async function translateText(
         ],
         temperature: 0.3,
         max_tokens: 2000,
+        thinking: { type: 'disabled' },
       };
 
       if (mode === 'json') {
