@@ -26,7 +26,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = isProfile ? contextUri : undefined;
   const postContext = isProfile ? undefined : contextUri;
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext });
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
@@ -57,9 +57,13 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
           lines.push(`  \u21a1  ${l}`);
         }
       } else if (msg.role === 'thinking') {
-        lines.push(<Text key={`think-${lines.length}`} color="gray" dimColor>{'💭 Thinking:'}</Text>);
-        for (const l of wrapLines(msg.content, maxCols, 2)) {
-          lines.push(<Text key={`thl-${lines.length}`} color="gray" dimColor>{'│ ' + l}</Text>);
+        const prefix = '| Thinking: ';
+        const contPrefix = '|           ';
+        const innerWidth = Math.max(1, maxCols - 13);
+        const wrapped = wrapLines(msg.content, innerWidth, 0);
+        for (let i = 0; i < wrapped.length; i++) {
+          const p = i === 0 ? prefix : contPrefix;
+          lines.push(<Text key={`think-${lines.length}`} color="gray" dimColor>{p + wrapped[i]}</Text>);
         }
       } else if (msg.role === 'user') {
         for (const l of wrapLines(msg.content, maxCols, 2)) {
