@@ -36,6 +36,8 @@ export const P_ASSISTANT_BASE = (() => {
     'from:handle（来自用户）、to:handle（提到用户）、mentions:handle、',
     'since:日期、until:日期、lang:语言代码、has:image、',
     '"精确短语"等 Lucene 运算符。',
+    '你可以使用 download_image 下载帖子图片到用户本地。',
+    '你可以使用 view_image 查看图片内容（仅适用于 GPT-4V/Claude Vision/DeepSeek VL 等视觉模型，纯文本模型请跳过此工具）。',
   ].join('');
 })();
 

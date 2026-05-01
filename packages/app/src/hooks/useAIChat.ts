@@ -180,7 +180,7 @@ export function useAIChat(
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
-                { role: 'tool_result', content: summary.length > 300 ? summary.slice(0, 300) + '...' : summary, toolName: event.toolName },
+                { role: 'tool_result', content: summary, toolName: event.toolName },
               ];
               return newMsgs;
             });
@@ -299,7 +299,7 @@ export function useAIChat(
     assistant.loadMessages(keep);
     setMessages(keep.map(m => ({
       role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: m.content,
+      content: contentToString(m.content),
     })));
   }, [assistant]);
 
@@ -310,12 +310,12 @@ export function useAIChat(
       if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
     }
     if (lastUserIdx < 0) return;
-    const lastUserContent = allMsgs[lastUserIdx]!.content;
+    const lastUserContent = contentToString(allMsgs[lastUserIdx]!.content);
     const keep = allMsgs.slice(0, lastUserIdx);
     assistant.loadMessages(keep);
     setMessages(keep.map(m => ({
       role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: m.content,
+      content: contentToString(m.content),
     })));
     await send(lastUserContent);
   }, [assistant, send]);
@@ -332,10 +332,17 @@ function extractToolName(raw: string): string {
 }
 
 function truncateToolResult(raw: string): string {
-  const prefixMatch = raw.match(/^Result from \w+: /);
+  const prefixMatch = raw.match(/^Result: /);
   const body = prefixMatch ? raw.slice(prefixMatch[0].length) : raw;
-  const data = tryJsonSummary(body);
-  return data.length > 300 ? data.slice(0, 300) + '...' : data;
+  return tryJsonSummary(body);
+}
+
+function contentToString(c: string | unknown): string {
+  if (typeof c === 'string') return c;
+  if (Array.isArray(c)) {
+    return c.map((b: { type?: string; text?: string }) => b.text ?? '').join('');
+  }
+  return String(c ?? '');
 }
 
 function tryJsonSummary(text: string): string {
@@ -343,14 +350,15 @@ function tryJsonSummary(text: string): string {
     const obj = JSON.parse(text);
     if (obj.posts !== undefined) return `搜索到 ${obj.total ?? obj.posts.length} 个帖子`;
     if (obj.feed !== undefined) return `获取了 ${obj.feed.length} 条时间线`;
-    if (obj.thread !== undefined) return obj.thread.slice(0, 200);
+    if (obj.thread !== undefined) return obj.thread.slice(0, 800);
     if (obj.likes !== undefined) return `${obj.total ?? obj.likes.length} 人赞了`;
+    if (obj.saved !== undefined) return `图片已保存: ${obj.saved}`;
+    if (obj.mimeType !== undefined && obj.size) return `图片: ${obj.mimeType} (${(obj.size / 1024).toFixed(1)}KB)`;
     if (obj.did !== undefined && obj.handle) return `用户: @${obj.handle} (${obj.displayName ?? ''})`;
     if (obj.notifications !== undefined) return `${obj.notifications.length} 条通知`;
-    if (obj.images !== undefined) return `${obj.count} 张图片`;
-    if (obj.text !== undefined) return `帖子: ${(obj.text as string).slice(0, 100)}`;
-    return text.slice(0, 200);
+    if (obj.text !== undefined) return `帖子: ${(obj.text as string).slice(0, 300)}`;
+    return text.slice(0, 500);
   } catch {
-    return text.slice(0, 200);
+    return text.slice(0, 500);
   }
 }

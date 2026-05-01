@@ -258,11 +258,10 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               );
             }
             if (msg.role === 'tool_result') {
-              const display = msg.content.length > 300 ? msg.content.slice(0, 300) + '...' : msg.content;
               return (
                 <div key={i} className="flex justify-center">
                   <div className="text-xs text-text-secondary/50 px-3 py-0.5 max-w-lg text-center break-words overflow-hidden">
-                    ⮡ {display}
+                    ⮡ {msg.content}
                   </div>
                 </div>
               );

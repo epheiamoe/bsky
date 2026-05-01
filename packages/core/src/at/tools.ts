@@ -21,7 +21,7 @@ export interface ToolDefinition {
   };
 }
 
-export type ToolHandler = (params: Record<string, unknown>) => Promise<string>;
+export type ToolHandler = (params: Record<string, unknown>, assistant?: unknown) => Promise<string>;
 
 export interface ToolDescriptor {
   definition: ToolDefinition;
@@ -124,7 +124,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const posts = res.posts.map((post: PostView) => ({
           uri: post.uri,
           author: post.author.handle,
-          text: (post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
+          text: (post.record as unknown as PostRecord)?.text ?? '',
           likeCount: post.likeCount,
           repostCount: post.repostCount,
           indexedAt: post.indexedAt,
@@ -265,11 +265,12 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           properties: {
             uri: { type: 'string', description: 'The AT URI of the post to start from' },
             depth: { type: 'number', description: 'Maximum depth (default 3)' },
+            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20)' },
           },
           required: ['uri'],
         },
       },
-      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3),
+      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3, (p.maxReplies as number) ?? 5),
       requiresWrite: false,
     },
     {
@@ -281,11 +282,12 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           properties: {
             uri: { type: 'string', description: 'The AT URI of the post to expand' },
             depth: { type: 'number', description: 'Maximum depth (default 3)' },
+            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20)' },
           },
           required: ['uri'],
         },
       },
-      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3),
+      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3, (p.maxReplies as number) ?? 5),
       requiresWrite: false,
     },
     {
@@ -294,14 +296,17 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         description: 'Get full context for a post: parent chain, quoted post content, and media summary',
         inputSchema: {
           type: 'object',
-          properties: { uri: { type: 'string', description: 'The AT URI of the post' } },
+          properties: {
+            uri: { type: 'string', description: 'The AT URI of the post' },
+            maxReplies: { type: 'number', description: 'Maximum replies per level (default 5, max 20)' },
+          },
           required: ['uri'],
         },
       },
       handler: async (p) => {
         const uri = p.uri as string;
         const parsed = parseAtUri(uri);
-        const thread = await flattenThread(client, uri, 3);
+        const thread = await flattenThread(client, uri, 3, (p.maxReplies as number) ?? 5);
         const record = await client.getRecord(parsed.did, parsed.collection, parsed.rkey);
         const postRecord = record.value as unknown as PostRecord;
         const media: string[] = [];
@@ -382,7 +387,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const posts = res.posts.map((post: PostView) => ({
           uri: post.uri,
           author: post.author.handle,
-          text: (post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
+          text: (post.record as unknown as PostRecord)?.text ?? '',
         }));
         return JSON.stringify({ quotes: posts, total: posts.length });
       },
@@ -405,7 +410,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const res = await client.searchActors({ q: p.q as string, limit: (p.limit as number) ?? 25 });
         const actors = res.actors.map((a) => ({
           did: a.did, handle: a.handle, displayName: a.displayName,
-          description: a.description?.slice(0, 100),
+          description: a.description,
         }));
         return JSON.stringify({ actors, total: actors.length, cursor: res.cursor });
       },
@@ -546,23 +551,62 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'download_image',
-        description: 'Download an image blob and return as base64 (truncated to 500 chars for preview)',
+        description: 'Download a Bluesky post image to the user\'s local Downloads folder',
         inputSchema: {
           type: 'object',
           properties: {
-            did: { type: 'string', description: 'The DID of the repo' },
-            cid: { type: 'string', description: 'The CID of the blob' },
+            did: { type: 'string', description: 'The DID of the post author' },
+            cid: { type: 'string', description: 'The CID of the image blob' },
+            filename: { type: 'string', description: 'Optional filename (default: auto-generated)' },
           },
           required: ['did', 'cid'],
         },
       },
       handler: async (p) => {
         const data = await client.downloadBlob(p.did as string, p.cid as string);
-        const base64 = Buffer.from(data).toString('base64');
-        const mimeType = detectMimeType(data);
+        const ext = detectMimeType(data).split('/')[1] || 'jpg';
+        const filename = (p.filename as string) || `bsky_image_${new Date().toISOString().replace(/[:.]/g, '-')}.${ext}`;
+        // Write to user's Downloads folder
+        const { writeFileSync, mkdirSync } = await import('fs');
+        const { homedir } = await import('os');
+        const { join } = await import('path');
+        const downloadsDir = join(homedir(), 'Downloads');
+        try { mkdirSync(downloadsDir, { recursive: true }); } catch {}
+        const filepath = join(downloadsDir, filename);
+        writeFileSync(filepath, data);
         return JSON.stringify({
-          mimeType, size: data.length,
-          preview: base64.slice(0, 500) + (base64.length > 500 ? '...' : ''),
+          saved: filepath,
+          size: data.length,
+          mimeType: detectMimeType(data),
+        });
+      },
+      requiresWrite: false,
+    },
+    {
+      definition: {
+        name: 'view_image',
+        description: 'View and analyze a Bluesky post image. This tool is for VISION MODELS ONLY (GPT-4V, Claude Vision, DeepSeek VL, etc). Plain text models cannot understand image data — they will see base64 gibberish. If your model is text-only, skip this tool.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            did: { type: 'string', description: 'The DID of the post author' },
+            cid: { type: 'string', description: 'The CID of the image blob' },
+          },
+          required: ['did', 'cid'],
+        },
+      },
+      handler: async (p, assistant) => {
+        const data = await client.downloadBlob(p.did as string, p.cid as string);
+        const mimeType = detectMimeType(data);
+        const base64 = Buffer.from(data).toString('base64');
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+        // Store for multi-modal promotion in next user message
+        const ai = assistant as unknown as { addPendingImage?: (url: string) => void };
+        ai.addPendingImage?.(dataUrl);
+        return JSON.stringify({
+          mimeType,
+          size: data.length,
+          note: 'Image data stored for visual analysis. If your model supports vision (GPT-4V/Claude Vision/DeepSeek VL), you will be able to see this image in the next message. Text-only models: skip image analysis and describe using metadata only.',
         });
       },
       requiresWrite: false,
@@ -609,7 +653,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           return JSON.stringify({ error: `HTTP ${res.status}: ${res.statusText}`, url });
         }
         const md = await res.text();
-        const trimmed = md.length > 4000 ? md.slice(0, 4000) + '\n\n... (truncated)' : md;
+        const trimmed = md.length > 10000 ? md.slice(0, 10000) + '\n\n... (truncated)' : md;
         return JSON.stringify({ url, title: extractTitle(md), content: trimmed });
       },
       requiresWrite: false,
@@ -769,8 +813,8 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
 
 // ======================== Thread Flattening ========================
 
-async function flattenThread(client: BskyClient, uri: string, maxDepth: number): Promise<string> {
-  const MAX_SIBLINGS = 5;
+async function flattenThread(client: BskyClient, uri: string, maxDepth: number, maxReplies = 5): Promise<string> {
+  const capped = Math.min(maxReplies, 20);
 
   const res = await client.getPostThread(uri, Math.max(maxDepth + 1, 6), 80);
   if (res.thread.$type !== 'app.bsky.feed.defs#threadViewPost') {
@@ -804,7 +848,7 @@ async function flattenThread(client: BskyClient, uri: string, maxDepth: number):
   lines.push(formatPostLine(thread.post, 0, ''));
 
   // Replies
-  buildReplyLines(thread.replies ?? [], 1, maxDepth, MAX_SIBLINGS, lines);
+  buildReplyLines(thread.replies ?? [], 1, maxDepth, capped, lines);
 
   return lines.join('\n');
 }

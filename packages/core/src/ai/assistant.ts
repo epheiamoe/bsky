@@ -7,9 +7,15 @@ import {
   PF_POLISH_USER,
 } from './prompts.js';
 
+export interface ContentBlock {
+  type: 'text' | 'image_url';
+  text?: string;
+  image_url?: { url: string; detail?: 'auto' | 'low' | 'high' };
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
+  content: string | ContentBlock[];
   name?: string;
   tool_call_id?: string;
   tool_calls?: ToolCall[];
@@ -90,6 +96,9 @@ export class AIAssistant {
   private _confirmPromise: Promise<boolean> | null = null;
   private _confirmResolve: ((v: boolean) => void) | null = null;
 
+  // Pending images for multi-modal support (view_image tool)
+  private _pendingImages: string[] = [];
+
   constructor(config?: Partial<AIConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config } as AIConfig;
   }
@@ -132,6 +141,20 @@ export class AIAssistant {
 
   loadMessages(msgs: ChatMessage[]): void {
     this.messages = [...msgs];
+  }
+
+  /** Store a base64 data URL for multi-modal vision model support */
+  addPendingImage(base64DataUrl: string): void {
+    this._pendingImages.push(base64DataUrl);
+  }
+
+  /** Clear pending images after they've been used in a request */
+  clearPendingImages(): void {
+    this._pendingImages = [];
+  }
+
+  get hasPendingImages(): boolean {
+    return this._pendingImages.length > 0;
   }
 
   /** Whether a write-tool confirmation dialog is currently open. */
@@ -219,7 +242,7 @@ export class AIAssistant {
               }
             }
             try {
-              toolResult = await toolDesc.handler(toolArgs);
+              toolResult = await toolDesc.handler(toolArgs, this);
             } catch (err) {
               toolResult = `Error executing tool: ${err instanceof Error ? err.message : String(err)}`;
             }
@@ -230,7 +253,7 @@ export class AIAssistant {
 
           intermediateSteps.push({
             type: 'tool_result',
-            content: `Result from ${toolName}: ${toolResult.slice(0, 500)}${toolResult.length > 500 ? '...' : ''}`,
+            content: `Result: ${toolResult.slice(0, 300)}${toolResult.length > 300 ? '...' : ''}`,
           });
 
           // Add tool result message
@@ -268,12 +291,27 @@ export class AIAssistant {
     throw new Error('Max tool calling rounds exceeded');
   }
 
+  private _buildMessages(): ChatMessage[] {
+    if (!this.hasPendingImages) return this.messages;
+    const msgs = [...this.messages];
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i]!.role === 'user') {
+        const text: string = typeof msgs[i]!.content === 'string' ? (msgs[i]!.content as string) : '';
+        const blocks: ContentBlock[] = [
+          { type: 'text' as const, text },
+          ...this._pendingImages.map(url => ({ type: 'image_url' as const, image_url: { url, detail: 'auto' as const } })),
+        ];
+        msgs[i] = { ...msgs[i]!, content: blocks } as ChatMessage;
+        break;
+      }
+    }
+    this.clearPendingImages();
+    return msgs;
+  }
   private async makeRequest(): Promise<ChatCompletionResponse> {
-    // TODO: streaming support — set stream:true, use ReadableStream + SSE parser
-    // to yield tokens in real-time instead of waiting for full response
     const body: ChatCompletionRequest = {
       model: this.config.model,
-      messages: this.messages,
+      messages: this._buildMessages(),
       temperature: 0.7,
       max_tokens: 4096,
       thinking: { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
@@ -335,7 +373,7 @@ export class AIAssistant {
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
       const body: ChatCompletionRequest = {
         model: this.config.model,
-        messages: this.messages,
+        messages: this._buildMessages(),
         temperature: 0.7,
         max_tokens: 4096,
         stream: true,
@@ -470,7 +508,7 @@ export class AIAssistant {
               }
             }
             try {
-              toolResult = await toolDesc.handler(toolArgs);
+              toolResult = await toolDesc.handler(toolArgs, this);
             } catch (err) {
               toolResult = `Error: ${err instanceof Error ? err.message : String(err)}`;
             }
@@ -478,7 +516,7 @@ export class AIAssistant {
             toolResult = `Unknown tool: ${toolName}`;
           }
 
-          yield { type: 'tool_result', content: toolResult.slice(0, 500), toolName };
+          yield { type: 'tool_result', content: toolResult, toolName };
 
           this.messages.push({
             role: 'tool',
