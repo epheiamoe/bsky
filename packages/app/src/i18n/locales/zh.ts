@@ -225,7 +225,7 @@ const zh: LocaleMessages = {
   'keys.notifications': '↑↓/jk:导航 Enter:查看帖子 R:刷新',
   'keys.search': 'Tab:切标签 Enter:搜索 Esc:返回',
   'keys.aiMain': 'a:复制 r:编辑 t:完整对话 Tab:切换面板',
-  'keys.aiChat': 'u:撤销 Esc:返回 PgUp/PgDn:滚动',
+  'keys.aiChat': 'Esc:返回 PgUp/PgDn:滚动',
   'keys.aiFocused': 'Esc:返回主面板',
   'keys.aiHistory': 'Esc 返回 ↑↓:选 N:新建 L:加载 D:删除',
 

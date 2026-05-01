@@ -210,7 +210,7 @@ const ja: LocaleMessages = {
   'keys.notifications': '↑↓/jk:移動 Enter:表示 R:更新',
   'keys.search': 'Tab:切替 Enter:検索 Esc:戻る',
   'keys.aiMain': 'a:コピー r:編集 t:全記録 Tab:切替',
-  'keys.aiChat': 'u:元に戻す Esc:戻る PgUp/PgDn:スクロール',
+  'keys.aiChat': 'Esc:戻る PgUp/PgDn:スクロール',
   'keys.aiFocused': 'Esc:メインに戻る',
   'keys.aiHistory': 'Esc:戻る ↑↓:選択 N:新規 L:読込 D:削除',
 

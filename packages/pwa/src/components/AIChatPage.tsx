@@ -295,9 +295,6 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                         className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1"
                       >✏️</button>
                     )}
-                    {isLastUser && i > 0 && (
-                      <button onClick={undoLastMessage} title="Undo" className="text-xs text-text-secondary/60 hover:text-red-500 transition-colors px-1">↩</button>
-                    )}
                   </div>
                   <div className="bg-primary text-white rounded-lg px-3 py-2 max-w-[75%]">
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>

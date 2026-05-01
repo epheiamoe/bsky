@@ -210,7 +210,7 @@ const en: LocaleMessages = {
   'keys.notifications': '↑↓/jk:Navigate Enter:View R:Refresh',
   'keys.search': 'Tab:Switch Enter:Search Esc:Back',
   'keys.aiMain': 'a:Copy r:Edit t:Transcript Tab:Switch',
-  'keys.aiChat': 'u:Undo Esc:Back PgUp/PgDn:Scroll',
+  'keys.aiChat': 'Esc:Back PgUp/PgDn:Scroll',
   'keys.aiFocused': 'Esc:Return to main',
   'keys.aiHistory': 'Esc:Back ↑↓:Select N:New L:Load D:Delete',
 

@@ -164,7 +164,6 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     if (focused) return;
 
     if (!loading) {
-      if (input === 'u' || input === 'U') { undoLastMessage(); return; }
       if (input === 'a' || input === 'A') {
         if (assistantMessages.length > 0) setPickMode({ type: 'copy', buffer: '' });
         return;
@@ -232,7 +231,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
             ? (pickMode.type === 'copy' ? t('ai.pickCopy') : t('ai.pickEdit')) + ` [${pickMode.buffer || '?'}]`
             : pendingConfirmation
               ? 'Y:确认 N:取消'
-              : t('keys.aiChat') + ' u:撤销 a:复制 r:编辑 t:全部复制'
+              : t('keys.aiChat') + ' a:复制 r:编辑 t:全部复制'
         }</Text>
       </Box>
       {lastCopied && <Box height={1}><Text color="green" bold>{'📋 '}{t('ai.copied')}</Text></Box>}

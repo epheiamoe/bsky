@@ -12,6 +12,7 @@ export { useCompose } from './hooks/useCompose.js';
 export type { ComposeImage, Draft } from './hooks/useCompose.js';
 export { useDrafts } from './hooks/useDrafts.js';
 export type { DraftStore } from './hooks/useDrafts.js';
+export { useActiveFeed, getLastFeedUri, setLastFeedUri } from './hooks/useActiveFeed.js';
 export { useAIChat } from './hooks/useAIChat.js';
 export type { AIChatMessage } from './hooks/useAIChat.js';
 export { useChatHistory, getDefaultStorage } from './hooks/useChatHistory.js';

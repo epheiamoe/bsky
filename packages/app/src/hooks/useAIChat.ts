@@ -293,10 +293,12 @@ export function useAIChat(
   }, [assistant]);
 
   const mapMessages = useCallback((msgs: ChatMessage[]): AIChatMessage[] => {
-    return msgs.map(m => ({
-      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: contentToString(m.content),
-    }));
+    return msgs
+      .filter(m => m.role !== 'system')
+      .map(m => ({
+        role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
+        content: contentToString(m.content),
+      }));
   }, []);
 
   /** Roll back to before the nth user message (0-indexed) and return that user's text. */

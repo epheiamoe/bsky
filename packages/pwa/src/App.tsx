@@ -4,7 +4,7 @@ import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
-import { getFeedConfig } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri } from '@bsky/app';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -38,6 +38,14 @@ export function App() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', getAppConfig().darkMode);
   }, []);
+
+  // ── Track last active feed URI for sidebar/home navigation ──
+  useEffect(() => {
+    if (currentView.type === 'feed') {
+      const uri = (currentView as { feedUri?: string }).feedUri;
+      if (uri) setLastFeedUri(uri);
+    }
+  }, [currentView]);
 
   // ── Restore session from localStorage on mount ──
   useEffect(() => {

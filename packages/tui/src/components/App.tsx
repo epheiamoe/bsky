@@ -4,6 +4,7 @@ import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeImage, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
+import { setLastFeedUri } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
@@ -66,6 +67,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const effectiveFeedUri = currentFeedUri ?? defaultFeedUri;
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client, effectiveFeedUri);
   const [feedIdx, setFeedIdx] = useState(0);
+
+  // Track last active feed URI for sidebar/home navigation (shared PWA+TUI)
+  useEffect(() => {
+    if (effectiveFeedUri) setLastFeedUri(effectiveFeedUri);
+  }, [effectiveFeedUri]);
 
   // Thread
   const threadUri = currentView.type === 'thread' ? (currentView as { uri: string }).uri : undefined;

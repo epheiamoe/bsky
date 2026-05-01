@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppView } from '@bsky/app';
-import { getFeedConfig } from '@bsky/app';
+import { getFeedConfig, getLastFeedUri } from '@bsky/app';
 
 /**
  * Hash-based navigation for PWA static hosting.
@@ -46,6 +46,13 @@ export function useHashRouter() {
   }, []);
 
   const goTo = useCallback((view: AppView) => {
+    // Bare feed navigation → resolve to last active or default feed
+    if (view.type === 'feed' && !view.feedUri) {
+      const resolved = getLastFeedUri() ?? getFeedConfig().defaultFeedUri ?? undefined;
+      if (resolved) {
+        view = { type: 'feed', feedUri: resolved };
+      }
+    }
     const hash = encodeView(view);
     window.history.pushState(null, '', hash);
     setCurrentView(view);
