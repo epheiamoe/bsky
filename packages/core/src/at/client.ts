@@ -12,6 +12,7 @@ import type {
   GetFollowsResponse,
   GetFollowersResponse,
   GetSuggestedFollowsResponse,
+  GetSuggestedFeedsResponse,
   ListNotificationsResponse,
   AuthorFeedResponse,
   GetFeedResponse,
@@ -243,6 +244,15 @@ export class BskyClient {
       searchParams: { feed },
       ...headers,
     }).json<GetFeedGeneratorResponse>();
+  }
+
+  async getSuggestedFeeds(limit = 30, cursor?: string): Promise<GetSuggestedFeedsResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.ky.get('app.bsky.feed.getSuggestedFeeds', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetSuggestedFeedsResponse>();
   }
 
   async getFeed(feedUri: string, limit = 50, cursor?: string): Promise<GetFeedResponse> {

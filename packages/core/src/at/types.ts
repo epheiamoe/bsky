@@ -200,6 +200,11 @@ export interface GetFeedGeneratorsResponse {
   feeds: FeedGeneratorView[];
 }
 
+export interface GetSuggestedFeedsResponse {
+  feeds: FeedGeneratorView[];
+  cursor?: string;
+}
+
 export interface GetFeedGeneratorResponse {
   view: FeedGeneratorView;
   isOnline: boolean;

@@ -249,6 +249,7 @@ const ja: LocaleMessages = {
   'feed.addCustomFeed': 'カスタムフィードを追加',
   'feed.addFeedUri': 'フィードURIを入力 (at://...)',
   'feed.recommended': 'おすすめフィード',
+  'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
 };
 
 export default ja;

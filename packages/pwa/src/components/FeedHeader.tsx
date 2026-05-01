@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed } from '@bsky/app';
 import { getFeedLabel, RECOMMENDED_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import type { BskyClient, FeedGeneratorView } from '@bsky/core';
 
 interface FeedHeaderProps {
   goTo: (v: AppView) => void;
@@ -102,6 +102,17 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
   const [config, setConfig] = useState(() => getFeedConfig());
   const [customUri, setCustomUri] = useState('');
   const [adding, setAdding] = useState(false);
+  const [suggestedFeeds, setSuggestedFeeds] = useState<FeedGeneratorView[]>([]);
+  const [loadingSuggested, setLoadingSuggested] = useState(false);
+
+  useEffect(() => {
+    if (client) {
+      setLoadingSuggested(true);
+      client.getSuggestedFeeds(20).then(res => {
+        setSuggestedFeeds(res.feeds);
+      }).catch(() => {}).finally(() => setLoadingSuggested(false));
+    }
+  }, [client]);
 
   const handleAdd = async () => {
     const trimmed = customUri.trim();
@@ -196,16 +207,31 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
             </div>
           </div>
 
-          {RECOMMENDED_FEEDS.length > 0 && !config.feeds.some(f => RECOMMENDED_FEEDS.some(r => r.uri === f.uri)) && (
+          {suggestedFeeds.length > 0 && (
             <div>
               <p className="text-xs text-text-secondary mb-2">{t('feed.recommended')}</p>
-              {RECOMMENDED_FEEDS.map(f => (
+              {suggestedFeeds.map(f => (
                 <div key={f.uri} className="flex items-center gap-2 py-1 text-sm">
-                  <span className="flex-1">{f.label}</span>
-                  <button onClick={() => { const u = addFeed(f.uri, f.label); setConfig(u); }} className="text-xs text-primary hover:underline">+ {t('action.add')}</button>
+                  <span className="flex-1 truncate">{f.displayName}</span>
+                  {f.creator && <span className="text-text-secondary text-xs">@{f.creator.handle}</span>}
+                  <button
+                    onClick={() => { const u = addFeed(f.uri, f.displayName); setConfig(u); }}
+                    className="text-xs text-primary hover:underline flex-shrink-0"
+                  >
+                    + {t('action.add')}
+                  </button>
                 </div>
               ))}
             </div>
+          )}
+          {!loadingSuggested && suggestedFeeds.length === 0 && (
+            <div>
+              <p className="text-xs text-text-secondary mb-2">{t('feed.recommended')}</p>
+              <p className="text-text-secondary text-sm py-1">{t('feed.noSuggestedFeeds')}</p>
+            </div>
+          )}
+          {loadingSuggested && (
+            <div className="text-text-secondary text-sm py-2">{t('status.loading')}</div>
           )}
         </div>
       </div>

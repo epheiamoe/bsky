@@ -270,6 +270,7 @@ const zh: LocaleMessages = {
   'feed.addCustomFeed': '添加自定义 Feed',
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
+  'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',
 };
 
 export default zh;

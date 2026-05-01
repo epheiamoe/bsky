@@ -249,6 +249,7 @@ const en: LocaleMessages = {
   'feed.addCustomFeed': 'Add Custom Feed',
   'feed.addFeedUri': 'Enter Feed URI (at://...)',
   'feed.recommended': 'Recommended Feeds',
+  'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',
 };
 
 export default en;

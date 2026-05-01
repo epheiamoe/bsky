@@ -23,6 +23,8 @@ export type {
   PostRecord,
   GetBookmarksResponse,
   BookmarkResult,
+  GetSuggestedFeedsResponse,
+  FeedGeneratorView,
 } from './at/types.js';
 
 // AI exports
