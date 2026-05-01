@@ -16,6 +16,13 @@ export interface TimelineStore {
   listener: (() => void) | null;
 }
 
+function shouldUseTimeline(feedUri?: string): boolean {
+  if (!feedUri) return true;
+  // Following is the home timeline (not a separate feed generator)
+  if (feedUri === 'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/following') return true;
+  return false;
+}
+
 export function createTimelineStore(): TimelineStore {
   const store: TimelineStore = {
     posts: [],
@@ -28,7 +35,9 @@ export function createTimelineStore(): TimelineStore {
       store.loading = true;
       store._notify();
       try {
-        const res = feedUri ? await client.getFeed(feedUri, 20) : await client.getTimeline(20);
+        const res = shouldUseTimeline(feedUri)
+          ? await client.getTimeline(20)
+          : await client.getFeed(feedUri!, 20);
         store.posts = res.feed.map(f => f.post);
         store.cursor = res.cursor;
         store.error = null;
@@ -45,7 +54,9 @@ export function createTimelineStore(): TimelineStore {
       store.loading = true;
       store._notify();
       try {
-        const res = feedUri ? await client.getFeed(feedUri, 20, store.cursor) : await client.getTimeline(20, store.cursor);
+        const res = shouldUseTimeline(feedUri)
+          ? await client.getTimeline(20, store.cursor)
+          : await client.getFeed(feedUri!, 20, store.cursor);
         store.posts = [...store.posts, ...res.feed.map(f => f.post)];
         store.cursor = res.cursor;
         store.error = null;

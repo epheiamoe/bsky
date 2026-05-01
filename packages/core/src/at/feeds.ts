@@ -15,7 +15,7 @@ export type FeedInfo = {
 /** Recommended feeds shown to new users */
 export const RECOMMENDED_FEEDS: FeedInfo[] = [
   { uri: BUILTIN_FEEDS.discover, label: 'Discover', description: 'Bluesky 官方推荐 — 热门内容' },
-  { uri: BUILTIN_FEEDS.following, label: 'Following', description: '仅你关注的用户' },
+  { uri: BUILTIN_FEEDS.following, label: 'Following', description: '仅你关注的用户（使用主页时间线）' },
 ];
 
 /**
