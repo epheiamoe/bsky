@@ -23,13 +23,16 @@ const TABS: { key: SearchTab; label: string }[] = [
   { key: 'feeds', label: '动态源' },
 ];
 
-export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProps) {
+export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchViewProps) {
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client);
   const [input, setInput] = useState(query ?? '');
   const [searching, setSearching] = useState(false);
+  const [postIdx, setPostIdx] = useState(0);
+  const [userIdx, setUserIdx] = useState(0);
+  const [feedIdx, setFeedIdx] = useState(0);
   const { t } = useI18n();
 
-  useInput((input, key) => {
+  useInput((inputChar, key) => {
     if (key.escape) { goBack(); return; }
     if (key.tab) {
       const idx = TABS.findIndex(tb => tb.key === tab);
@@ -39,9 +42,29 @@ export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProp
     }
     if (key.return && input.trim()) { search(input.trim(), tab); setSearching(true); return; }
     if (key.return) {
-      // Enter with no input — open selected post/user
-      if (tab === 'users' && users.length > 0) { goTo({ type: 'profile', actor: users[0]!.handle }); }
-      else if ((tab === 'top' || tab === 'latest') && posts.length > 0) { goTo({ type: 'thread', uri: posts[0]!.uri }); }
+      if (tab === 'users' && users.length > 0) { goTo({ type: 'profile', actor: users[userIdx]!.handle }); }
+      else if ((tab === 'top' || tab === 'latest') && posts.length > 0) { goTo({ type: 'thread', uri: posts[postIdx]!.uri }); }
+      else if (tab === 'feeds' && feeds.length > 0) { goTo({ type: 'feed', feedUri: feeds[feedIdx]!.uri }); }
+      return;
+    }
+    if (key.upArrow || inputChar === 'k') {
+      if (tab === 'users') setUserIdx(i => Math.max(0, i - 1));
+      else if (tab === 'feeds') setFeedIdx(i => Math.max(0, i - 1));
+      else setPostIdx(i => Math.max(0, i - 1));
+      return;
+    }
+    if (key.downArrow || inputChar === 'j') {
+      if (tab === 'users') setUserIdx(i => Math.min(users.length - 1, i + 1));
+      else if (tab === 'feeds') setFeedIdx(i => Math.min(feeds.length - 1, i + 1));
+      else setPostIdx(i => Math.min(posts.length - 1, i + 1));
+      return;
+    }
+    if (inputChar === 'v' || inputChar === 'V') {
+      if (tab === 'feeds' && feeds.length > 0) { goTo({ type: 'feed', feedUri: feeds[feedIdx]!.uri }); }
+      return;
+    }
+    if (inputChar === 's' || inputChar === 'S') {
+      if (tab === 'feeds' && feeds.length > 0) { addFeed(feeds[feedIdx]!.uri); }
       return;
     }
   });
@@ -50,7 +73,7 @@ export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProp
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box height={1}>
         <Text bold>{'🔍 '}{t('search.title')}</Text>
-        <Text dimColor>{' Tab:切标签 Enter:搜索 Esc:返回'}</Text>
+        <Text dimColor>{' Tab:切标签 jk:导航 Enter:搜索/查看 Esc:返回 V/S:动态源'}</Text>
       </Box>
 
       {/* Tab bar */}
@@ -72,13 +95,14 @@ export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProp
 
       {/* Posts results */}
       {(tab === 'top' || tab === 'latest') && posts.map((p, i) => {
+        const isSel = i === postIdx;
         const viewEmbed = (p as any).embed as { $type?: string; record?: { uri?: string; author?: { handle?: string }; value?: { text?: string } } } | undefined;
         const hasQuote = viewEmbed?.record?.uri && (viewEmbed.$type === 'app.bsky.embed.record#view' || viewEmbed.$type === 'app.bsky.embed.record' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia#view' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia');
         return (
           <React.Fragment key={p.uri}>
             <Box height={1}>
-              <Text color="green">{p.author.handle}</Text>
-              <Text>{': '}{p.record.text.slice(0, cols - 30)}</Text>
+              <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : 'green'}>{isSel ? '▶' : ' '}{p.author.handle}</Text>
+              <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>{': '}{p.record.text.slice(0, cols - 30)}</Text>
               {hasQuote && <Text color="magenta">{' 📌'}</Text>}
             </Box>
             {hasQuote && (
@@ -93,16 +117,16 @@ export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProp
       {/* Users results */}
       {tab === 'users' && users.map((u, i) => (
         <Box key={u.did} height={1}>
-          <Text color="green">{u.handle}</Text>
-          {u.displayName && <Text>{' ('}{u.displayName.slice(0, 20)}{u.displayName.length > 20 ? '…' : ''}{')'}</Text>}
+          <Text backgroundColor={i === userIdx ? '#1e40af' : undefined} color={i === userIdx ? 'cyanBright' : 'green'}>{i === userIdx ? '▶' : ' '}{u.handle}</Text>
+          {u.displayName && <Text backgroundColor={i === userIdx ? '#1e40af' : undefined} color={i === userIdx ? 'cyanBright' : undefined}>{' ('}{u.displayName.slice(0, 20)}{u.displayName.length > 20 ? '…' : ''}{')'}</Text>}
         </Box>
       ))}
 
       {/* Feeds results */}
       {tab === 'feeds' && feeds.map((f, i) => (
         <Box key={f.uri} height={1}>
-          <Text color="green">{f.displayName}</Text>
-          {f.creator && <Text dimColor>{' @'}{f.creator.handle}</Text>}
+          <Text backgroundColor={i === feedIdx ? '#1e40af' : undefined} color={i === feedIdx ? 'cyanBright' : 'green'}>{i === feedIdx ? '▶' : ' '}{f.displayName}</Text>
+          {f.creator && <Text backgroundColor={i === feedIdx ? '#1e40af' : undefined} dimColor>{' @'}{f.creator.handle}</Text>}
           <Text>{' '}</Text>
           <Text color="cyan">{'[V: 查看]'}</Text>
           <Text>{' '}</Text>

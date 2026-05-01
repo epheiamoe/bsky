@@ -73,82 +73,73 @@ function ActionButtons({
     <div className={`flex items-center ${sizeClass} text-text-secondary mt-2`}>
       <button
         onClick={() => likePost(uri)}
-        className={`hover:text-red-500 transition-colors flex items-center gap-1 ${isLiked(uri) ? 'text-red-500' : ''}`}
+        className={`hover:text-red-500 transition-colors ${isLiked(uri) ? 'text-red-500' : ''}`}
+        title={isLiked(uri) ? t('action.liked') : t('action.like')}
       >
-        <Icon name="heart" size={18} filled={isLiked(uri)} />
-        <span className="text-sm">{isLiked(uri) ? t('action.liked') : t('action.like')}</span>
+        <Icon name="heart" size={depth > 0 ? 16 : 18} filled={isLiked(uri)} />
       </button>
       <div className="relative inline-flex">
         <button
-          onClick={() => setShowRepostMenu(!showRepostMenu)}
-          className={`hover:text-green-500 transition-colors flex items-center gap-1 ${isReposted(uri) ? 'text-green-500' : ''}`}
+          onClick={() => { repostPost(uri); setShowRepostMenu(false); }}
+          className={`hover:text-green-500 transition-colors ${isReposted(uri) ? 'text-green-500' : ''}`}
+          title={isReposted(uri) ? t('action.reposted') : t('action.repost')}
         >
-          <Icon name="repeat" size={18} />
-          <span className="text-sm">{isReposted(uri) ? t('action.reposted') : t('action.repost')}</span>
+          <Icon name="repeat" size={depth > 0 ? 16 : 18} />
+        </button>
+        <button
+          onClick={() => setShowRepostMenu(!showRepostMenu)}
+          className="hover:text-text-primary transition-colors ml-0.5"
+          title="Quote"
+        >
+          <Icon name="pen-line" size={12} />
         </button>
         {showRepostMenu && (
           <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-30 py-1 min-w-[120px]">
-            <button onClick={() => { repostPost(uri); setShowRepostMenu(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors flex items-center gap-2"><Icon name="repeat" size={14} /> Repost</button>
             <button onClick={() => { goTo({ type: 'compose', quoteUri: uri }); setShowRepostMenu(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors flex items-center gap-2"><Icon name="pen-line" size={14} /> Quote</button>
           </div>
         )}
       </div>
       <button
         onClick={() => goTo({ type: 'compose', replyTo: uri })}
-        className="hover:text-primary transition-colors flex items-center gap-1"
+        className="hover:text-primary transition-colors"
+        title={t('action.reply')}
       >
-        <Icon name="corner-down-right" size={18} />
-        <span className="text-sm">{t('action.reply')}</span>
+        <Icon name="corner-down-right" size={depth > 0 ? 16 : 18} />
       </button>
       <button
         onClick={() => toggleBookmark(uri, cid)}
-        className={`hover:text-yellow-500 transition-colors flex items-center gap-1 ${isBookmarked(uri) ? 'text-yellow-500' : ''}`}
+        className={`hover:text-yellow-500 transition-colors ${isBookmarked(uri) ? 'text-yellow-500' : ''}`}
+        title={isBookmarked(uri) ? t('action.bookmarked') : t('action.bookmark')}
       >
-        <Icon name="bookmark" size={18} filled={isBookmarked(uri)} />
-        <span className="text-sm">{isBookmarked(uri) ? t('action.bookmarked') : t('action.bookmark')}</span>
+        <Icon name="bookmark" size={depth > 0 ? 16 : 18} filled={isBookmarked(uri)} />
       </button>
       <button
         onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: uri })}
-        className="hover:text-purple-500 transition-colors flex items-center gap-1"
+        className="hover:text-purple-500 transition-colors"
+        title={t('thread.aiAnalyze')}
       >
-        <Icon name="astroid-as-AI-Button" size={18} />
-        <span className="text-sm">{t('thread.aiAnalyze')}</span>
+        <Icon name="astroid-as-AI-Button" size={depth > 0 ? 16 : 18} />
       </button>
       {onTranslate && (
-        <button
-          onClick={onTranslate}
-          disabled={!onTranslate}
-          className="hover:text-blue-500 transition-colors flex items-center gap-1 disabled:opacity-50"
-        >
-          <Icon name="languages" size={18} />
-          <span className="text-sm">{t('action.translate')}</span>
+        <button onClick={onTranslate} className="hover:text-blue-500 transition-colors" title={t('action.translate')}>
+          <Icon name="languages" size={depth > 0 ? 16 : 18} />
         </button>
       )}
-      <button
-        onClick={handleCopyLink}
-        className="hover:text-blue-500 transition-colors flex items-center gap-1"
-      >
-        <Icon name="copy" size={18} />
-        <span className="text-sm">{t('action.copyLink')}</span>
+      <button onClick={handleCopyLink} className="hover:text-blue-500 transition-colors" title={t('action.copyLink')}>
+        <Icon name="copy" size={depth > 0 ? 16 : 18} />
       </button>
       {isOwn && onDelete && (
-        <div className="relative inline-flex items-center gap-1">
-          {!showDeleteConfirm ? (
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              className="hover:text-red-500 transition-colors flex items-center gap-1"
-            >
-              <Icon name="trash-2" size={18} />
-              <span className="text-sm">{t('action.delete')}</span>
-            </button>
-          ) : (
-            <>
-              <button onClick={() => { onDelete(); setShowDeleteConfirm(false); }} className="text-green-500 hover:text-green-400 transition-colors flex items-center gap-1"><Icon name="badge-check" size={18} /><span className="text-sm">{t('action.confirm')}</span></button>
-              <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1"><Icon name="badge-alert" size={18} /><span className="text-sm">{t('action.cancel')}</span></button>
-            </>
-          )}
-        </div>
-        )}
+        !showDeleteConfirm ? (
+          <button onClick={() => setShowDeleteConfirm(true)} className="hover:text-red-500 transition-colors" title={t('action.delete')}>
+            <Icon name="trash-2" size={depth > 0 ? 16 : 18} />
+          </button>
+        ) : (
+          <span className="flex items-center gap-1">
+            <button onClick={() => { onDelete(); setShowDeleteConfirm(false); }} className="text-green-500 hover:text-green-400 transition-colors" title={t('action.confirm')}><Icon name="badge-check" size={16} /></button>
+            <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:text-text-primary transition-colors" title={t('action.cancel')}><Icon name="badge-alert" size={16} /></button>
+          </span>
+        )
+      )}
     </div>
   );
 }
@@ -384,9 +375,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               </div>
             )}
             <div className="mt-3 flex items-center gap-4 text-sm text-text-secondary">
-              <span>💬 {focused.replyCount}</span>
-              <span>♻️ {focused.repostCount}</span>
-              <span>❤️ {focused.likeCount}</span>
+              <span className="flex items-center gap-1"><Icon name="corner-down-right" size={16} />{focused.replyCount}</span>
+              <span className="flex items-center gap-1"><Icon name="repeat" size={16} />{focused.repostCount}</span>
+              <span className="flex items-center gap-1"><Icon name="heart" size={16} />{focused.likeCount}</span>
             </div>
             <ActionButtons
               uri={focused.uri}

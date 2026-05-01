@@ -48,6 +48,9 @@ export function useThread(
   const [themeUri, setThemeUri] = useState<string | undefined>(uri);
   const [likedUris, setLikedUris] = useState<Set<string>>(new Set());
   const [repostedUris, setRepostedUris] = useState<Set<string>>(new Set());
+  // Track like/repost record URIs for unlike/unrepost
+  const likedRecordRef = useRef<Map<string, string>>(new Map());
+  const repostedRecordRef = useRef<Map<string, string>>(new Map());
   const [maxSiblings, setMaxSiblings] = useState(INITIAL_SIBLINGS);
   const loadedUri = useRef('');
 
@@ -65,9 +68,17 @@ export function useThread(
       // Seed like/repost state from API viewer data
       const liked = new Set<string>();
       const reposted = new Set<string>();
+      likedRecordRef.current.clear();
+      repostedRecordRef.current.clear();
       const lines = flattenThreadTree(res.thread, INITIAL_SIBLINGS, (post) => {
-        if (post.viewer?.like) liked.add(post.uri);
-        if (post.viewer?.repost) reposted.add(post.uri);
+        if (post.viewer?.like) {
+          liked.add(post.uri);
+          likedRecordRef.current.set(post.uri, post.viewer.like);
+        }
+        if (post.viewer?.repost) {
+          reposted.add(post.uri);
+          repostedRecordRef.current.set(post.uri, post.viewer.repost);
+        }
       });
       setLikedUris(liked);
       setRepostedUris(reposted);
@@ -107,28 +118,54 @@ export function useThread(
   }, [maxSiblings, client, uri]);
 
   const likePost = useCallback(async (postUri: string) => {
-    if (!client || likedUris.has(postUri)) return;
+    if (!client) return;
     try {
+      if (likedUris.has(postUri)) {
+        // Unlike: delete the existing like record
+        const likeUri = likedRecordRef.current.get(postUri);
+        if (likeUri) {
+          const parts = uriToParts(likeUri);
+          await client.deleteRecord(parts.did, parts.collection, parts.rkey);
+        }
+        setLikedUris(prev => { const s = new Set(prev); s.delete(postUri); return s; });
+        likedRecordRef.current.delete(postUri);
+        return;
+      }
+      // Like
       const parts = uriToParts(postUri);
       const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
-      await client.createRecord(client.getDID(), 'app.bsky.feed.like', {
+      const res = await client.createRecord(client.getDID(), 'app.bsky.feed.like', {
         subject: { uri: postUri, cid: rec.cid ?? '' },
         createdAt: new Date().toISOString(),
       });
-      setLikedUris(prev => { prev.add(postUri); return new Set(prev); });
+      setLikedUris(prev => { const s = new Set(prev); s.add(postUri); return s; });
+      likedRecordRef.current.set(postUri, (res as any).uri);
     } catch (e) { console.error('Like error:', e); }
   }, [client, likedUris]);
 
   const repostPost = useCallback(async (postUri: string): Promise<boolean> => {
-    if (!client || repostedUris.has(postUri)) return false;
+    if (!client) return false;
     try {
+      if (repostedUris.has(postUri)) {
+        // Unrepost: delete the existing repost record
+        const repostUri = repostedRecordRef.current.get(postUri);
+        if (repostUri) {
+          const parts = uriToParts(repostUri);
+          await client.deleteRecord(parts.did, parts.collection, parts.rkey);
+        }
+        setRepostedUris(prev => { const s = new Set(prev); s.delete(postUri); return s; });
+        repostedRecordRef.current.delete(postUri);
+        return false;
+      }
+      // Repost
       const parts = uriToParts(postUri);
       const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
-      await client.createRecord(client.getDID(), 'app.bsky.feed.repost', {
+      const res = await client.createRecord(client.getDID(), 'app.bsky.feed.repost', {
         subject: { uri: postUri, cid: rec.cid ?? '' },
         createdAt: new Date().toISOString(),
       });
-      setRepostedUris(prev => { prev.add(postUri); return new Set(prev); });
+      setRepostedUris(prev => { const s = new Set(prev); s.add(postUri); return s; });
+      repostedRecordRef.current.set(postUri, (res as any).uri);
       return true;
     } catch (e) { console.error('Repost error:', e); return false; }
   }, [client, repostedUris]);

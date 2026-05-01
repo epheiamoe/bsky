@@ -223,7 +223,7 @@ const zh: LocaleMessages = {
   'keys.composeImage': '输入图片路径 · Enter 确认 · Esc 取消',
   'keys.profile': 'Tab/←→:切换标签 u:关注 f:翻译 a:AI p/P:关注/粉丝 j/k:导航 m:更多 Enter:查看 Esc:返回',
   'keys.notifications': '↑↓/jk:导航 Enter:查看帖子 R:刷新',
-  'keys.search': 'Tab:切标签 Enter:搜索 Esc:返回',
+  'keys.search': 'Tab:切标签 jk:导航 Enter:搜索/查看 Esc:返回',
   'keys.aiMain': 'a:复制 r:编辑 t:完整对话 Tab:切换面板',
   'keys.aiChat': 'Esc:返回 PgUp/PgDn:滚动',
   'keys.aiFocused': 'Esc:返回主面板',
