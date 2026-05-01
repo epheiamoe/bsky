@@ -5,6 +5,13 @@ export { BskyClient } from './at/client.js';
 export { createTools } from './at/tools.js';
 export type { ToolDefinition, ToolHandler, ToolDescriptor } from './at/tools.js';
 export { parseAtUri } from './at/types.js';
+export {
+  BUILTIN_FEEDS,
+  RECOMMENDED_FEEDS,
+  getFeedLabel,
+  resolveFeedId,
+} from './at/feeds.js';
+export type { FeedInfo } from './at/feeds.js';
 export type {
   PostView,
   ProfileView,

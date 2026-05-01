@@ -28,3 +28,12 @@ export { getCdnImageUrl } from './utils/imageUrl.js';
 export { useI18n } from './i18n/index.js';
 export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';
 export { availableLocales, localeLabels } from './i18n/index.js';
+
+export {
+  getFeedConfig,
+  saveFeedConfig,
+  addFeed,
+  removeFeed,
+  setDefaultFeed,
+} from './state/feedConfig.js';
+export type { FeedConfigData } from './state/feedConfig.js';

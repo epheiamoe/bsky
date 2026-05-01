@@ -208,7 +208,7 @@ const zh: LocaleMessages = {
   'common.escBack': 'Esc 返回',
 
   // ── Keyboard hints (TUI) ──
-  'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新',
+  'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed',
   'keys.bookmarks': '↑↓/jk:导航 Enter:查看 d:删除 r:刷新',
   'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译 u:关注 g:资料',
   'keys.compose': 'Enter:发送 · Esc:取消 · i:图片 · D:草稿',
@@ -258,6 +258,16 @@ const zh: LocaleMessages = {
 
   // ── Image ──
   'image.cdnHint': '(Ctrl+点击在浏览器查看)',
+
+  // ── Feed ──
+  'feed.switchFeed': '切换 Feed',
+  'feed.configureFeeds': '配置 Feed',
+  'feed.defaultFeed': '默认 Feed（启动时显示）',
+  'feed.yourFeeds': '你的 Feed',
+  'feed.noCustomFeeds': '暂未添加自定义 Feed',
+  'feed.addCustomFeed': '添加自定义 Feed',
+  'feed.addFeedUri': '输入 Feed URI (at://...)',
+  'feed.recommended': '推荐 Feed',
 };
 
 export default zh;

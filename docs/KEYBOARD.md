@@ -86,11 +86,12 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `Enter` | View selected post in thread |
 | `m` | Load more (older posts) |
 | `r` | Refresh feed from top |
+| `f` | Switch / configure feed |
 | `v` | Toggle bookmark on selected post |
 | Mouse scroll up | Move cursor up by 1 |
 | Mouse scroll down | Move cursor down by 1 |
 
-**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 v:收藏`
+**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏`
 
 ---
 
@@ -273,7 +274,7 @@ Keys that have **different meanings** depending on view:
 | `d` | — | delete post | delete bm | — | delete conv (hist) | blocked |
 | `h` | — | go to root | — | — | — | blocked |
 | `y` | — | yank URI | — | — | — | blocked |
-| `f` | — | translate | — | — | — | blocked |
+| `f` | switch feed | translate | — | — | — | blocked |
 | `i` | — | — | — | — | — | add image |
 | `,` | settings | settings | settings | settings | settings | settings |
 | `Enter` | view thread | refocus post | view thread | view post | TextInput | submit |

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeImage, AppView, Locale } from '@bsky/app';
+import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
 import type { AIConfig } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
@@ -50,7 +51,18 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
   // Feed
-  const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client);
+  const [currentFeedUri, setCurrentFeedUri] = useState<string | undefined>(undefined);
+  const [feedConfig, setFeedConfig] = useState<string[]>(() => {
+    const envFeeds = process.env.BSKY_FEEDS;
+    if (!envFeeds) return RECOMMENDED_FEEDS.map(f => f.uri);
+    return envFeeds.split(',').map(s => s.trim()).filter(Boolean);
+  });
+  const defaultFeed = process.env.DEFAULT_FEED || undefined;
+  const [showFeedConfig, setShowFeedConfig] = useState(false);
+  const [feedConfigInput, setFeedConfigInput] = useState('');
+
+  const effectiveFeedUri = currentFeedUri ?? defaultFeed;
+  const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client, effectiveFeedUri);
   const [feedIdx, setFeedIdx] = useState(0);
 
   // Thread
@@ -263,6 +275,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
       else if (k === 'm') loadMore?.();
       else if (k === 'r') refresh?.();
+      else if (k === 'f') { setFeedConfigInput(''); setShowFeedConfig(true); }
       else if (k === 'v') {
         const p = posts[feedIdx];
         if (p) bookmarks.toggleBookmark(p.uri, p.cid);
@@ -321,8 +334,22 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'feed':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
-            <Box height={1}><Text bold>{'📋 '}{t('nav.feed')}</Text><Text dimColor>{' '}{t('keys.feed')}</Text></Box>
-            <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
+            <Box height={1}>
+              <Text bold>{'📋 '}{effectiveFeedUri ? getFeedLabel(effectiveFeedUri) : t('nav.feed')}</Text>
+              <Text dimColor>{' '}{showFeedConfig ? 'Esc:关闭' : t('keys.feed')}</Text>
+            </Box>
+            {showFeedConfig ? (
+              <FeedConfigOverlay
+                feeds={feedConfig}
+                currentFeedUri={effectiveFeedUri}
+                onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
+                onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
+                onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
+                onClose={() => setShowFeedConfig(false)}
+              />
+            ) : (
+              <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
+            )}
           </Box>
         );
       case 'thread':
@@ -453,6 +480,70 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       </Box>
       {!isRawModeSupported && (
         <Box width={cols} height={1}><Text backgroundColor="#92400e" color="yellow">{'⚠ '}{t('common.rawModeWarning')}</Text></Box>
+      )}
+    </Box>
+  );
+}
+
+function FeedConfigOverlay({ feeds, currentFeedUri, onSelect, onAdd, onRemove, onClose }: {
+  feeds: string[];
+  currentFeedUri: string | undefined;
+  onSelect: (uri: string) => void;
+  onAdd: (uri: string) => void;
+  onRemove: (uri: string) => void;
+  onClose: () => void;
+}) {
+  const [idx, setIdx] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [addInput, setAddInput] = useState('');
+
+  useInput((input, key) => {
+    if (adding) {
+      if (key.escape) { setAdding(false); setAddInput(''); return; }
+      if (key.return && addInput.trim()) {
+        onAdd(addInput.trim());
+        setAdding(false);
+        setAddInput('');
+        return;
+      }
+      return;
+    }
+    if (key.escape) { onClose(); return; }
+    if (key.upArrow || input === 'k') { setIdx(i => Math.max(0, i - 1)); return; }
+    if (key.downArrow || input === 'j') { setIdx(i => Math.min(feeds.length + 1, i + 1)); return; }
+    if (key.return) {
+      if (idx < feeds.length) {
+        onSelect(feeds[idx]!);
+      } else if (idx === feeds.length) {
+        setAdding(true);
+      } else if (idx === feeds.length + 1) {
+        onSelect(undefined as any);
+      }
+      return;
+    }
+    if (input === 'd' || input === 'D') {
+      if (idx < feeds.length) onRemove(feeds[idx]!);
+      return;
+    }
+  });
+
+  return (
+    <Box flexDirection="column" paddingY={1}>
+      <Text color="cyan" bold>{'⚙️ Feeds — jk:切换 Enter:选择 d:删除 a:添加 Esc:关闭'}</Text>
+      <Box flexDirection="column" marginTop={1}>
+        {feeds.map((f, i) => (
+          <Text key={f} color={i === idx ? 'cyan' : undefined}>
+            {i === idx ? '▸' : ' '} {getFeedLabel(f)}
+          </Text>
+        ))}
+        <Text dimColor>{idx === feeds.length ? '▸' : ' '} ── [+ 添加] ──</Text>
+        <Text dimColor>{idx === feeds.length + 1 ? '▸' : ' '} ── 📋 默认时间线 ──</Text>
+      </Box>
+      {adding && (
+        <Box marginTop={1} borderStyle="single" borderColor="cyan" paddingX={1}>
+          <Text color="cyan">▸ URI: </Text>
+          <TextInput value={addInput} onChange={setAddInput} onSubmit={() => {}} />
+        </Box>
       )}
     </Box>
   );

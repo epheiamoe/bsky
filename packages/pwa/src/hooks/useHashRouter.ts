@@ -6,7 +6,7 @@ import type { AppView } from '@bsky/app';
  * Uses history.pushState + popstate for reliable back/forward.
  *
  * Hash formats:
- *   #/feed
+ *   #/feed / #/feed?feed=at://... / #/feed?feed=following / #/feed?feed=discover
  *   #/thread?uri=at://...
  *   #/profile?actor=did:plc:...
  *   #/notifications
@@ -68,8 +68,10 @@ function parseHash(): AppView {
   const params = new URLSearchParams(queryString || '');
 
   switch (path) {
-    case '/': case '/feed': case '':
-      return { type: 'feed' };
+    case '/': case '/feed': case '': {
+      const feedUri = params.get('feed');
+      return feedUri ? { type: 'feed', feedUri: decodeURIComponent(feedUri) } : { type: 'feed' };
+    }
     case '/thread': {
       const uri = params.get('uri');
       return uri ? { type: 'thread', uri: decodeURIComponent(uri) } : { type: 'feed' };
@@ -106,6 +108,9 @@ function parseHash(): AppView {
 function encodeView(view: AppView): string {
   switch (view.type) {
     case 'feed':
+      if (view.feedUri) {
+        return `#/feed?feed=${encodeURIComponent(view.feedUri)}`;
+      }
       return '#/feed';
     case 'thread':
       return `#/thread?uri=${encodeURIComponent(view.uri)}`;

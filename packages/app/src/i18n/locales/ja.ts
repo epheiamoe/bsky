@@ -193,7 +193,7 @@ const ja: LocaleMessages = {
   'common.rawModeWarning': 'このターミナルは raw mode に対応していません。Windows Terminal / iTerm2 を使用してください。',
   'common.escBack': 'Esc で戻る',
 
-  'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新',
+  'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新 f:フィード',
   'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 r:更新',
   'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳 u:フォロー g:プロフィール',
   'keys.compose': 'Enter:送信 · Esc:取消 · i:画像 · D:下書き',
@@ -238,6 +238,15 @@ const ja: LocaleMessages = {
   'post.postsCount': '{n} 件の投稿を読み込みました',
 
   'image.cdnHint': '(Ctrl+クリックでブラウザ表示)',
+
+  'feed.switchFeed': 'フィード切替',
+  'feed.configureFeeds': 'フィード設定',
+  'feed.defaultFeed': 'デフォルトフィード（起動時）',
+  'feed.yourFeeds': 'あなたのフィード',
+  'feed.noCustomFeeds': 'カスタムフィードはありません',
+  'feed.addCustomFeed': 'カスタムフィードを追加',
+  'feed.addFeedUri': 'フィードURIを入力 (at://...)',
+  'feed.recommended': 'おすすめフィード',
 };
 
 export default ja;

@@ -1,5 +1,5 @@
 export type AppView =
-  | { type: 'feed' }
+  | { type: 'feed'; feedUri?: string }
   | { type: 'detail'; uri: string }
   | { type: 'thread'; uri: string }
   | { type: 'compose'; replyTo?: string; quoteUri?: string }

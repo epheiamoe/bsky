@@ -193,7 +193,7 @@ const en: LocaleMessages = {
   'common.rawModeWarning': 'This terminal does not support raw mode. Use Windows Terminal / iTerm2.',
   'common.escBack': 'Esc to go back',
 
-  'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh',
+  'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh f:Feed',
   'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete r:Refresh',
   'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark f:Translate u:Follow g:Profile',
   'keys.compose': 'Enter:Send · Esc:Cancel · i:Image · D:Drafts',
@@ -238,6 +238,15 @@ const en: LocaleMessages = {
   'post.postsCount': 'Loaded {n} posts',
 
   'image.cdnHint': '(Ctrl+Click to view in browser)',
+
+  'feed.switchFeed': 'Switch Feed',
+  'feed.configureFeeds': 'Configure Feeds',
+  'feed.defaultFeed': 'Default Feed (on startup)',
+  'feed.yourFeeds': 'Your Feeds',
+  'feed.noCustomFeeds': 'No custom feeds added',
+  'feed.addCustomFeed': 'Add Custom Feed',
+  'feed.addFeedUri': 'Enter Feed URI (at://...)',
+  'feed.recommended': 'Recommended Feeds',
 };
 
 export default en;

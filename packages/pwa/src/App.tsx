@@ -19,7 +19,7 @@ import { BookmarkPage } from './components/BookmarkPage.js';
 export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
-  const timeline = useTimeline(client);
+  const timeline = useTimeline(client, currentView.type === 'feed' ? (currentView as { feedUri?: string }).feedUri : undefined);
   const { drafts } = useDrafts();
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -119,6 +119,8 @@ export function App() {
             refresh={timeline.refresh}
             initialScrollIndex={feedScrollIndexRef.current}
             onFirstVisibleIndexChange={(idx) => { feedScrollIndexRef.current = idx; }}
+            feedUri={(currentView as { feedUri?: string }).feedUri}
+            client={client}
           />
         );
       case 'thread':

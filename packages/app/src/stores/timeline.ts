@@ -1,6 +1,5 @@
-import { BskyClient, createTools } from '@bsky/core';
-import type { PostView, ToolDescriptor } from '@bsky/core';
-import type { AppView } from '../state/navigation.js';
+import type { BskyClient } from '@bsky/core';
+import type { PostView } from '@bsky/core';
 
 export interface TimelineStore {
   posts: PostView[];
@@ -8,9 +7,9 @@ export interface TimelineStore {
   cursor: string | undefined;
   error: string | null;
 
-  load(client: BskyClient): Promise<void>;
-  loadMore(client: BskyClient): Promise<void>;
-  refresh(client: BskyClient): Promise<void>;
+  load(client: BskyClient, feedUri?: string): Promise<void>;
+  loadMore(client: BskyClient, feedUri?: string): Promise<void>;
+  refresh(client: BskyClient, feedUri?: string): Promise<void>;
 
   _notify(): void;
   subscribe(fn: () => void): () => void;
@@ -25,11 +24,11 @@ export function createTimelineStore(): TimelineStore {
     error: null,
     listener: null,
 
-    async load(client) {
+    async load(client, feedUri) {
       store.loading = true;
       store._notify();
       try {
-        const res = await client.getTimeline(20);
+        const res = feedUri ? await client.getFeed(feedUri, 20) : await client.getTimeline(20);
         store.posts = res.feed.map(f => f.post);
         store.cursor = res.cursor;
         store.error = null;
@@ -41,12 +40,12 @@ export function createTimelineStore(): TimelineStore {
       }
     },
 
-    async loadMore(client) {
+    async loadMore(client, feedUri) {
       if (!store.cursor || store.loading) return;
       store.loading = true;
       store._notify();
       try {
-        const res = await client.getTimeline(20, store.cursor);
+        const res = feedUri ? await client.getFeed(feedUri, 20, store.cursor) : await client.getTimeline(20, store.cursor);
         store.posts = [...store.posts, ...res.feed.map(f => f.post)];
         store.cursor = res.cursor;
         store.error = null;
@@ -58,10 +57,10 @@ export function createTimelineStore(): TimelineStore {
       }
     },
 
-    async refresh(client) {
+    async refresh(client, feedUri) {
       store.cursor = undefined;
       store.posts = [];
-      await store.load(client);
+      await store.load(client, feedUri);
     },
 
     _notify() { if (store.listener) store.listener(); },

@@ -4,6 +4,8 @@ import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { useI18n } from '@bsky/app';
 import { PostCard } from './PostCard';
+import { FeedHeader } from './FeedHeader';
+import type { BskyClient } from '@bsky/core';
 
 interface FeedTimelineProps {
   goTo: (v: AppView) => void;
@@ -15,6 +17,8 @@ interface FeedTimelineProps {
   refresh?: () => Promise<void>;
   initialScrollIndex?: number;
   onFirstVisibleIndexChange?: (index: number) => void;
+  feedUri?: string;
+  client?: BskyClient | null;
 }
 
 function SkeletonCard() {
@@ -34,7 +38,7 @@ function SkeletonCard() {
 
 const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange, feedUri, client }: FeedTimelineProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -97,15 +101,12 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0">
-        <h1 className="text-lg font-bold text-text-primary">📋 {t('nav.feed')}</h1>
-        <button
-          onClick={refresh}
-          className="rounded-full bg-surface hover:bg-primary/10 text-text-primary text-sm px-4 py-1.5 transition-colors"
-        >
-          {t('action.refresh')}
-        </button>
-      </div>
+      <FeedHeader
+        goTo={goTo}
+        currentFeedUri={feedUri}
+        refresh={refresh}
+        client={client}
+      />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {error && (
