@@ -102,7 +102,7 @@ export function useAIChat(
 
     if (changed) {
       // Only reset if not restoring from storage and not a fresh chat with contextProfile
-      if (!options?.chatId && messages.length > 0 && !options?.contextProfile) {
+      if (!options?.chatId && !options?.contextProfile) {
         assistant.clearMessages();
         setMessages([]);
       }
@@ -111,18 +111,14 @@ export function useAIChat(
         assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
       } else if (options?.contextProfile) {
-        // Profile context — add profile-specific system prompt
         assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
         setGuidingQuestions([]);
       } else {
         assistant.addSystemMessage(buildSystemPrompt());
         setGuidingQuestions([]);
       }
-    } else if (options?.contextProfile && !changed) {
-      // contextProfile set but contextUri hasn't changed — re-apply system prompt
-      assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
     }
-  }, [client, contextUri, assistant, options?.contextProfile, buildSystemPrompt, messages.length]);
+  }, [client, contextUri, assistant, options?.contextProfile, buildSystemPrompt]);
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
     const title = msgs.find(m => m.role === 'user')?.content.slice(0, 80) ?? '新对话';
