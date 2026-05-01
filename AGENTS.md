@@ -88,6 +88,7 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
   3. Update the i18n `keys.*` footer hint strings in `packages/app/src/i18n/locales/*.ts`
   4. Verify no conflicts by checking the key across ALL views (feed, thread, bookmarks, notifications, aiChat, compose, profile, search)
   Note: Ink fires ALL `useInput` callbacks on every keystroke; 5 handlers coexist. Guards must be view-specific.
+- **Wiki docs**: `.zread/wiki/` directory contains auto-generated project documentation by `zread-cli`. These are useful reference material — DO NOT remove them. Consult them as needed for architecture understanding.
 
 ## Local Development Notes
 
