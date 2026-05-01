@@ -10,7 +10,7 @@ Built with TypeScript, Ink (React), React DOM, and AT Protocol.
 
 ---
 
-## 🚀 Live Demo
+## Live Demo
 
 **PWA Online**: [ai-bsky.pages.dev](https://ai-bsky.pages.dev)
 
@@ -50,40 +50,50 @@ cd packages/pwa && pnpm dev    # http://localhost:5173
 
 ---
 
-## 🤖 AI Integration
+## AI Integration
 
-DeepSeek V4 Flash powers a suite of AI features not found in the official Bluesky client:
+DeepSeek V4 Flash powers AI features not found in the official Bluesky client:
 
-- **AI 对话** — Full multi-turn chat with tool calling (31 Bluesky API tools). Reads posts, profiles, notifications; writes likes, reposts, bookmarks
-- **实时流式输出** — PWA uses SSE streaming for real-time AI response display
-- **智能翻译** — 7 种语言双模式翻译（simple / JSON with source language detection）
-- **Markdown 渲染** — PWA: full GFM (tables, code highlight) via react-markdown; TUI: structured terminal rendering
-- **AI 草稿润色** — Polish post drafts with style requirements (formal, humorous, etc.)
-- **引导式提问** — Context-aware guiding questions when opening AI from a post
-- **工具调用透明** — Real-time display of tool calls and results in the chat UI
+- **AI 对话** — Full multi-turn chat with 31 Bluesky API tools (read posts/profiles, write likes/reposts, analyze images with vision models)
+- **流式输出** — TUI + PWA both use SSE streaming, real-time thinking display
+- **思考模式** — Configurable reasoning content (DeepSeek V4), visible as 💭 thinking blocks
+- **视觉模式** — Optional image analysis via `view_image` tool (for GPT-4V / Claude Vision / DeepSeek VL)
+- **自定义 Feed** — Following / Discover / custom feed generators, `getSuggestedFeeds` recommendations
+- **智能翻译** — 7 languages dual-mode (simple / JSON with source language detection)
+- **Markdown 渲染** — PWA: full GFM (tables, code highlight); TUI: structured terminal rendering
+- **AI 润色** — Polish post drafts with style requirements
+- **写操作确认** — Prompts user confirmation before likes/reposts/posts
+- **编辑消息** — Pre-fill last user input for editing (replaces retry)
+
+---
 
 ## Features
 
-| Feature | TUI | PWA |
-|---------|-----|-----|
-| Timeline (virtual scroll) | ✅ | ✅ |
-| Thread view (reply tree) | ✅ | ✅ |
-| Compose post/reply | ✅ | ✅ |
-| Image upload (max 4) | ✅ | ✅ |
-| Like / Repost / Reply | ✅ | ✅ |
-| Notifications | ✅ | ✅ |
-| Search | ✅ | ✅ |
-| Profile view | ✅ | ✅ |
-| Bookmarks (built-in API) | ✅ | ✅ |
-| AI Chat (tools + streaming) | ✅ | ✅ |
-| AI Translation (7 languages) | ✅ | ✅ |
-| AI Draft Polish | ✅ | ✅ |
-| Markdown rendering | ✅ | ✅ |
-| Image display (CDN) | ✅ | ✅ |
-| Dark mode | N/A | ✅ |
-| PWA installable | N/A | ✅ |
-| Hash-based routing | N/A | ✅ |
-| JWT auto-refresh | ✅ | ✅ |
+| Feature | TUI | PWA | Notes |
+|---------|:---:|:---:|-------|
+| Timeline (virtual scroll) | ✅ | ✅ | Following / Discover / custom feeds |
+| Custom feed switching | ✅ | ✅ | `f` key / `▾` dropdown, `getSuggestedFeeds` |
+| Thread view (reply tree) | ✅ | ✅ | Expand replies, quote posts |
+| Compose post/reply/quote | ✅ | ✅ | Draft save, image upload (max 4) |
+| Delete own post | ✅ | ✅ | `d` key / `🗑` button with confirmation |
+| Like / Repost / Reply | ✅ | ✅ | |
+| Notifications | ✅ | ✅ | |
+| Search | ✅ | ✅ | |
+| Profile view | ✅ | ✅ | Follow/unfollow, tabs, follow lists |
+| Bookmarks (built-in API) | ✅ | ✅ | |
+| AI Chat (31 tools + streaming) | ✅ | ✅ | Thinking display, edit undo |
+| Thinking mode | ✅ | ✅ | Configurable `LLM_THINKING_ENABLED` |
+| Vision mode | ✅ | ✅ | Configurable `LLM_VISION_ENABLED` |
+| AI Translation (7 languages) | ✅ | ✅ | `f` key / button |
+| AI Draft Polish | ✅ | ✅ | |
+| Link/handle auto-coloring | ✅ | ✅ | Blue in text |
+| Markdown rendering | ✅ | ✅ | PWA: react-markdown, TUI: custom parser |
+| Image display (CDN) | ✅ | ✅ | Lightbox + local save |
+| i18n (zh/en/ja) | ✅ | ✅ | Singleton store, instant switch |
+| Dark mode | N/A | ✅ | CSS variables |
+| PWA installable | N/A | ✅ | manifest.json + Service Worker |
+| Hash-based routing | N/A | ✅ | `#/feed?feed=at://...` |
+| JWT auto-refresh | ✅ | ✅ | |
 
 ---
 
@@ -97,12 +107,16 @@ BLUESKY_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
 LLM_API_KEY=sk-your-api-key
 LLM_BASE_URL=https://api.deepseek.com
 LLM_MODEL=deepseek-v4-flash
+LLM_THINKING_ENABLED=true
+LLM_VISION_ENABLED=false
+TRANSLATE_TARGET_LANG=zh
 ```
 
 ### PWA — Browser Login + Settings
 
 - Login: Bluesky Handle + App Password → localStorage session
-- AI: API Key + Base URL + Model → Settings page
+- AI: API Key + Base URL + Model + Think Mode + Vision Mode → Settings page
+- Feed config: add/remove feeds, set default
 - No `.env` needed; credentials never leave the browser
 
 ---
@@ -116,13 +130,8 @@ cd packages/pwa && pnpm build    # output → dist/
 Upload `dist/` to any static host:
 
 ```bash
-# Cloudflare Pages (Wrangler CLI)
-npx wrangler pages deploy dist --project-name ai-bsky
-
-# Cloudflare Pages (Manual — if network blocks API)
-# 1. Open https://dash.cloudflare.com → Workers & Pages → Create → Pages → Direct Upload
-# 2. Drag packages/pwa/dist/ folder to the upload area
-# 3. Set project name: ai-bsky, deploy
+# Cloudflare Pages
+npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true
 
 # Netlify
 npx netlify deploy --dir dist --prod
@@ -136,7 +145,7 @@ npx vercel dist --prod
 ## Tests
 
 ```bash
-pnpm test           # all tests (real API, no mocks)
+pnpm test           # 19 tests (real API, no mocks)
 pnpm -r typecheck   # full TypeScript check
 ```
 
@@ -149,8 +158,8 @@ TUI and PWA are pure render layers consuming the same React hooks.
 
 | Package | Role |
 |---------|------|
-| `@bsky/core` | AT Protocol client, AI assistant, 31 tools, types |
-| `@bsky/app` | React hooks (useAuth, useTimeline, useThread, useAIChat…), stores, utilities |
+| `@bsky/core` | AT Protocol client, AI assistant, 31 tools, prompts, types |
+| `@bsky/app` | React hooks (useAuth, useTimeline, useThread, useAIChat…), stores, i18n |
 | `@bsky/tui` | Terminal UI via Ink (React-on-terminal) |
 | `@bsky/pwa` | Web UI via React DOM + Tailwind, installable PWA |
 
@@ -168,6 +177,9 @@ TUI and PWA are pure render layers consuming the same React hooks.
 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
 | `docs/TODO.md` | Feature roadmap |
 | `docs/AI_SYSTEM.md` | AI integration: tools, streaming, translation |
-| `docs/USER_ISSUSES.md` | Known & resolved user issues |
+| `CHANGELOG.md` | Version history |
 | `AGENTS.md` | AI agent / contributor guide |
-| `AGENTS.local.md` | Local dev notes (gitignored) |
+
+---
+
+**Version**: 0.2.0 — [Changelog](CHANGELOG.md)

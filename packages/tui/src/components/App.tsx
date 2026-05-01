@@ -4,7 +4,7 @@ import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeImage, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
-import type { AIConfig } from '@bsky/core';
+import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
 import { PostList } from './PostList.jsx';
@@ -346,6 +346,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               <FeedConfigOverlay
                 feeds={feedConfig}
                 currentFeedUri={effectiveFeedUri}
+                client={client}
                 onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
                 onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
                 onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
@@ -489,9 +490,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   );
 }
 
-function FeedConfigOverlay({ feeds, currentFeedUri, onSelect, onAdd, onRemove, onClose }: {
+function FeedConfigOverlay({ feeds, currentFeedUri, client, onSelect, onAdd, onRemove, onClose }: {
   feeds: string[];
   currentFeedUri: string | undefined;
+  client: BskyClient | null;
   onSelect: (uri: string) => void;
   onAdd: (uri: string) => void;
   onRemove: (uri: string) => void;
@@ -500,6 +502,16 @@ function FeedConfigOverlay({ feeds, currentFeedUri, onSelect, onAdd, onRemove, o
   const [idx, setIdx] = useState(0);
   const [adding, setAdding] = useState(false);
   const [addInput, setAddInput] = useState('');
+  const [suggested, setSuggested] = useState<Array<{ uri: string; label: string }>>([]);
+  const [loadingSuggested, setLoadingSuggested] = useState(false);
+
+  useEffect(() => {
+    if (!client) return;
+    setLoadingSuggested(true);
+    client.getSuggestedFeeds(10).then(res => {
+      setSuggested(res.feeds.map(f => ({ uri: f.uri, label: f.displayName })));
+    }).catch(() => {}).finally(() => setLoadingSuggested(false));
+  }, [client]);
 
   useInput((input, key) => {
     if (adding) {
@@ -514,13 +526,16 @@ function FeedConfigOverlay({ feeds, currentFeedUri, onSelect, onAdd, onRemove, o
     }
     if (key.escape) { onClose(); return; }
     if (key.upArrow || input === 'k') { setIdx(i => Math.max(0, i - 1)); return; }
-    if (key.downArrow || input === 'j') { setIdx(i => Math.min(feeds.length + 1, i + 1)); return; }
+    if (key.downArrow || input === 'j') { setIdx(i => Math.min(feeds.length + suggested.length + 2, i + 1)); return; }
     if (key.return) {
       if (idx < feeds.length) {
         onSelect(feeds[idx]!);
-      } else if (idx === feeds.length) {
+      } else if (idx < feeds.length + suggested.length) {
+        const s = suggested[idx - feeds.length]!;
+        onAdd(s.uri);
+      } else if (idx === feeds.length + suggested.length) {
         setAdding(true);
-      } else if (idx === feeds.length + 1) {
+      } else if (idx === feeds.length + suggested.length + 1) {
         onSelect(undefined as any);
       }
       return;
@@ -540,8 +555,18 @@ function FeedConfigOverlay({ feeds, currentFeedUri, onSelect, onAdd, onRemove, o
             {i === idx ? '▸' : ' '} {getFeedLabel(f)}
           </Text>
         ))}
-        <Text dimColor>{idx === feeds.length ? '▸' : ' '} ── [+ 添加] ──</Text>
-        <Text dimColor>{idx === feeds.length + 1 ? '▸' : ' '} ── 📋 默认时间线 ──</Text>
+        <Text dimColor>{'┈┈ 推荐 Feed ┈┈'}</Text>
+        {loadingSuggested && <Text dimColor>{'  ⏳ 加载中...'}</Text>}
+        {suggested.map((f, i) => {
+          const fi = feeds.length + i;
+          return (
+            <Text key={f.uri} color={fi === idx ? 'cyan' : undefined}>
+              {fi === idx ? '▸' : ' '} {f.label} <Text dimColor>(添加)</Text>
+            </Text>
+          );
+        })}
+        <Text dimColor>{idx === feeds.length + suggested.length ? '▸' : ' '} ── [+ 添加] ──</Text>
+        <Text dimColor>{idx === feeds.length + suggested.length + 1 ? '▸' : ' '} ── 📋 默认时间线 ──</Text>
       </Box>
       {adding && (
         <Box marginTop={1} borderStyle="single" borderColor="cyan" paddingX={1}>

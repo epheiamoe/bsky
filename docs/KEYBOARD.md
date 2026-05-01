@@ -86,7 +86,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `Enter` | View selected post in thread |
 | `m` | Load more (older posts) |
 | `r` | Refresh feed from top |
-| `f` | Switch / configure feed |
+| `f` | Switch / configure feed (jk nav, Enter select, d delete, a add) |
 | `v` | Toggle bookmark on selected post |
 | Mouse scroll up | Move cursor up by 1 |
 | Mouse scroll down | Move cursor down by 1 |
@@ -195,7 +195,7 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 | `↑` | Scroll up 3 lines | Only when `focused === false` (not typing) |
 | `↓` | Scroll down 3 lines | Only when `focused === false` |
 | `u` / `U` | Undo last message pair (remove last user+assistant) | When `!loading` and `!focused` |
-| `r` / `R` | Retry last message (re-send last user input) | When `!loading` and `!focused` |
+| `r` / `R` | Edit last message (pre-fill input for editing) | When `!loading` and `!focused` |
 
 **Write confirmation dialog** (when open, blocks all other keys):
 | Key | Action |
@@ -207,7 +207,7 @@ When `focused === true` (Tab switched focus to AI panel), arrow keys pass throug
 
 **Note**: While `focusedPanel === 'main'`, keys `a` and `t` navigate to feed (overriding their global meaning).
 
-**Footer hint**: `Tab:切换 Esc:返回 PgUp/PgDn:滚动 u:撤销`
+**Footer hint**: `Tab:切换 Esc:返回 PgUp/PgDn:滚动 u:撤销 r:编辑`
 
 ### When Chat History is Open
 
