@@ -1,0 +1,244 @@
+{
+  "id": "2026-05-01-125020",
+  "generated_at": "2026-05-01T04:50:20.1448099Z",
+  "language": "zh",
+  "pages": [
+    {
+      "slug": "1-gai-shu-bluesky-shuang-duan-ai-she-jiao-ke-hu-duan",
+      "title": "概述：Bluesky 双端 AI 社交客户端",
+      "file": "1-gai-shu-bluesky-shuang-duan-ai-she-jiao-ke-hu-duan.md",
+      "section": "Get Started",
+      "level": "beginner"
+    },
+    {
+      "slug": "2-kuai-su-kai-shi-huan-jing-zhun-bei-yu-xiang-mu-qi-dong",
+      "title": "快速开始：环境准备与项目启动",
+      "file": "2-kuai-su-kai-shi-huan-jing-zhun-bei-yu-xiang-mu-qi-dong.md",
+      "section": "Get Started",
+      "level": "beginner"
+    },
+    {
+      "slug": "3-tui-zhong-duan-huan-jing-env-pei-zhi-yu-ping-zheng-guan-li",
+      "title": "TUI 终端环境：.env 配置与凭证管理",
+      "file": "3-tui-zhong-duan-huan-jing-env-pei-zhi-yu-ping-zheng-guan-li.md",
+      "section": "Get Started",
+      "group": "环境配置",
+      "level": "beginner"
+    },
+    {
+      "slug": "4-pwa-liu-lan-qi-huan-jing-wu-xu-env-deng-lu-ji-yong",
+      "title": "PWA 浏览器环境：无需 .env，登录即用",
+      "file": "4-pwa-liu-lan-qi-huan-jing-wu-xu-env-deng-lu-ji-yong.md",
+      "section": "Get Started",
+      "group": "环境配置",
+      "level": "beginner"
+    },
+    {
+      "slug": "5-qi-dong-tui-zhong-duan-ke-hu-duan",
+      "title": "启动 TUI 终端客户端",
+      "file": "5-qi-dong-tui-zhong-duan-ke-hu-duan.md",
+      "section": "Get Started",
+      "group": "运行方式",
+      "level": "beginner"
+    },
+    {
+      "slug": "6-qi-dong-pwa-liu-lan-qi-ke-hu-duan",
+      "title": "启动 PWA 浏览器客户端",
+      "file": "6-qi-dong-pwa-liu-lan-qi-ke-hu-duan.md",
+      "section": "Get Started",
+      "group": "运行方式",
+      "level": "beginner"
+    },
+    {
+      "slug": "7-si-ceng-jia-gou-she-ji-core-app-tui-pwa-fen-ceng-yuan-ze",
+      "title": "四层架构设计：Core → App → TUI/PWA 分层原则",
+      "file": "7-si-ceng-jia-gou-she-ji-core-app-tui-pwa-fen-ceng-yuan-ze.md",
+      "section": "Deep Dive",
+      "level": "intermediate"
+    },
+    {
+      "slug": "8-bskyclient-at-xie-yi-ke-hu-duan-yu-jwt-zi-dong-shua-xin-ji-zhi",
+      "title": "BskyClient：AT 协议客户端与 JWT 自动刷新机制",
+      "file": "8-bskyclient-at-xie-yi-ke-hu-duan-yu-jwt-zi-dong-shua-xin-ji-zhi.md",
+      "section": "Deep Dive",
+      "group": "核心层（@bsky/core）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "9-aiassistant-lei-duo-lun-dui-hua-gong-ju-diao-yong-yu-sse-liu-shi-shu-chu",
+      "title": "AIAssistant 类：多轮对话、工具调用与 SSE 流式输出",
+      "file": "9-aiassistant-lei-duo-lun-dui-hua-gong-ju-diao-yong-yu-sse-liu-shi-shu-chu.md",
+      "section": "Deep Dive",
+      "group": "核心层（@bsky/core）",
+      "level": "advanced"
+    },
+    {
+      "slug": "10-31-ge-bluesky-gong-ju-han-shu-xi-tong-du-xie-fen-chi-yu-quan-xian-kong-zhi",
+      "title": "31 个 Bluesky 工具函数系统：读写分离与权限控制",
+      "file": "10-31-ge-bluesky-gong-ju-han-shu-xi-tong-du-xie-fen-chi-yu-quan-xian-kong-zhi.md",
+      "section": "Deep Dive",
+      "group": "核心层（@bsky/core）",
+      "level": "advanced"
+    },
+    {
+      "slug": "11-shuang-mo-shi-zhi-neng-fan-yi-simple-json-mo-shi-yu-zhi-shu-tui-bi-zhong-shi",
+      "title": "双模式智能翻译：simple/json 模式与指数退避重试",
+      "file": "11-shuang-mo-shi-zhi-neng-fan-yi-simple-json-mo-shi-yu-zhi-shu-tui-bi-zhong-shi.md",
+      "section": "Deep Dive",
+      "group": "核心层（@bsky/core）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "12-chun-store-react-hook-mo-shi-ding-yue-qu-dong-de-zhuang-tai-guan-li",
+      "title": "纯 Store + React Hook 模式：订阅驱动的状态管理",
+      "file": "12-chun-store-react-hook-mo-shi-ding-yue-qu-dong-de-zhuang-tai-guan-li.md",
+      "section": "Deep Dive",
+      "group": "应用层（@bsky/app）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "13-dao-hang-xi-tong-yu-appview-shi-tu-lu-you-she-ji",
+      "title": "导航系统与 AppView 视图路由设计",
+      "file": "13-dao-hang-xi-tong-yu-appview-shi-tu-lu-you-she-ji.md",
+      "section": "Deep Dive",
+      "group": "应用层（@bsky/app）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "14-suo-you-hook-qian-ming-su-cha-useauth-usetimeline-usethread-useaichat-deng",
+      "title": "所有 Hook 签名速查：useAuth / useTimeline / useThread / useAIChat 等",
+      "file": "14-suo-you-hook-qian-ming-su-cha-useauth-usetimeline-usethread-useaichat-deng.md",
+      "section": "Deep Dive",
+      "group": "应用层（@bsky/app）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "15-liao-tian-ji-lu-chi-jiu-hua-filechatstorage-yu-indexeddbchatstorage",
+      "title": "聊天记录持久化：FileChatStorage 与 IndexedDBChatStorage",
+      "file": "15-liao-tian-ji-lu-chi-jiu-hua-filechatstorage-yu-indexeddbchatstorage.md",
+      "section": "Deep Dive",
+      "group": "应用层（@bsky/app）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "16-guo-ji-hua-duo-yu-yan-zhi-chi-i18n-xi-tong-yu-yu-yan-bao-jie-gou",
+      "title": "国际化多语言支持：i18n 系统与语言包结构",
+      "file": "16-guo-ji-hua-duo-yu-yan-zhi-chi-i18n-xi-tong-yu-yu-yan-bao-jie-gou.md",
+      "section": "Deep Dive",
+      "group": "应用层（@bsky/app）",
+      "level": "beginner"
+    },
+    {
+      "slug": "17-ink-zhong-duan-xuan-ran-shi-kou-ji-suan-cjk-wen-ben-huan-xing-yu-markdown-xuan-ran",
+      "title": "Ink 终端渲染：视口计算、CJK 文本换行与 Markdown 渲染",
+      "file": "17-ink-zhong-duan-xuan-ran-shi-kou-ji-suan-cjk-wen-ben-huan-xing-yu-markdown-xuan-ran.md",
+      "section": "Deep Dive",
+      "group": "终端 UI（@bsky/tui）",
+      "level": "advanced"
+    },
+    {
+      "slug": "18-jian-pan-kuai-jie-jian-xi-tong-yu-ansi-shu-biao-shi-jian-zhui-zong",
+      "title": "键盘快捷键系统与 ANSI 鼠标事件追踪",
+      "file": "18-jian-pan-kuai-jie-jian-xi-tong-yu-ansi-shu-biao-shi-jian-zhui-zong.md",
+      "section": "Deep Dive",
+      "group": "终端 UI（@bsky/tui）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "19-xu-ni-gun-dong-yu-ping-pu-xian-cheng-shi-tu-cursor-focused-shuang-jiao-dian-she-ji",
+      "title": "虚拟滚动与平铺线程视图：Cursor/Focused 双焦点设计",
+      "file": "19-xu-ni-gun-dong-yu-ping-pu-xian-cheng-shi-tu-cursor-focused-shuang-jiao-dian-she-ji.md",
+      "section": "Deep Dive",
+      "group": "终端 UI（@bsky/tui）",
+      "level": "advanced"
+    },
+    {
+      "slug": "20-ai-liao-tian-mian-ban-hui-hua-li-shi-xie-cao-zuo-que-ren-dui-hua-kuang-yu-che-xiao-gong-neng",
+      "title": "AI 聊天面板：会话历史、写操作确认对话框与撤销功能",
+      "file": "20-ai-liao-tian-mian-ban-hui-hua-li-shi-xie-cao-zuo-que-ren-dui-hua-kuang-yu-che-xiao-gong-neng.md",
+      "section": "Deep Dive",
+      "group": "终端 UI（@bsky/tui）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "21-she-zhi-xiang-dao-shou-ci-yun-xing-de-jiao-hu-shi-pei-zhi-liu-cheng",
+      "title": "设置向导：首次运行的交互式配置流程",
+      "file": "21-she-zhi-xiang-dao-shou-ci-yun-xing-de-jiao-hu-shi-pei-zhi-liu-cheng.md",
+      "section": "Deep Dive",
+      "group": "终端 UI（@bsky/tui）",
+      "level": "beginner"
+    },
+    {
+      "slug": "22-hash-lu-you-yu-hui-hua-chi-jiu-hua-usehashrouter-yu-localstorage",
+      "title": "Hash 路由与会话持久化：useHashRouter 与 localStorage",
+      "file": "22-hash-lu-you-yu-hui-hua-chi-jiu-hua-usehashrouter-yu-localstorage.md",
+      "section": "Deep Dive",
+      "group": "PWA 端（@bsky/pwa）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "23-xu-ni-gun-dong-shi-jian-xian-attanstack-react-virtual-intersectionobserver-zi-dong-jia-zai",
+      "title": "虚拟滚动时间线：@tanstack/react-virtual + IntersectionObserver 自动加载",
+      "file": "23-xu-ni-gun-dong-shi-jian-xian-attanstack-react-virtual-intersectionobserver-zi-dong-jia-zai.md",
+      "section": "Deep Dive",
+      "group": "PWA 端（@bsky/pwa）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "24-ai-liao-tian-liu-shi-ye-mian-sse-shi-shi-ling-pai-xuan-ran-yu-react-markdown",
+      "title": "AI 聊天流式页面：SSE 实时令牌渲染与 react-markdown",
+      "file": "24-ai-liao-tian-liu-shi-ye-mian-sse-shi-shi-ling-pai-xuan-ran-yu-react-markdown.md",
+      "section": "Deep Dive",
+      "group": "PWA 端（@bsky/pwa）",
+      "level": "intermediate"
+    },
+    {
+      "slug": "25-she-ji-xi-tong-yu-yi-se-ban-zi-ti-bi-li-yu-tailwind-css-bian-liang",
+      "title": "设计系统：语义色板、字体比例与 Tailwind CSS 变量",
+      "file": "25-she-ji-xi-tong-yu-yi-se-ban-zi-ti-bi-li-yu-tailwind-css-bian-liang.md",
+      "section": "Deep Dive",
+      "group": "PWA 端（@bsky/pwa）",
+      "level": "beginner"
+    },
+    {
+      "slug": "26-service-worker-chi-xian-huan-cun-ce-lue-yu-pwa-an-zhuang",
+      "title": "Service Worker 离线缓存策略与 PWA 安装",
+      "file": "26-service-worker-chi-xian-huan-cun-ce-lue-yu-pwa-an-zhuang.md",
+      "section": "Deep Dive",
+      "group": "PWA 端（@bsky/pwa）",
+      "level": "beginner"
+    },
+    {
+      "slug": "27-xi-tong-ti-shi-ci-he-yue-jiao-se-ding-yi-fan-yi-yu-cao-gao-run-se-prompt",
+      "title": "系统提示词合约：角色定义、翻译与草稿润色 Prompt",
+      "file": "27-xi-tong-ti-shi-ci-he-yue-jiao-se-ding-yi-fan-yi-yu-cao-gao-run-se-prompt.md",
+      "section": "Deep Dive",
+      "group": "合约与辅助文档",
+      "level": "beginner"
+    },
+    {
+      "slug": "28-zhu-yu-ti-xi-zhu-ti-tie-tao-lun-chuan-tao-lun-yuan-de-ming-ming-gui-fan",
+      "title": "术语体系：主题帖/讨论串/讨论源的命名规范",
+      "file": "28-zhu-yu-ti-xi-zhu-ti-tie-tao-lun-chuan-tao-lun-yuan-de-ming-ming-gui-fan.md",
+      "section": "Deep Dive",
+      "group": "合约与辅助文档",
+      "level": "beginner"
+    },
+    {
+      "slug": "29-ji-yu-zhen-shi-api-de-wu-mock-ji-cheng-ce-shi-ce-lue",
+      "title": "基于真实 API 的无 Mock 集成测试策略",
+      "file": "29-ji-yu-zhen-shi-api-de-wu-mock-ji-cheng-ce-shi-ce-lue.md",
+      "section": "Deep Dive",
+      "group": "合约与辅助文档",
+      "level": "intermediate"
+    },
+    {
+      "slug": "30-pwa-gou-jian-bu-shu-cloudflare-pages-netlify-vercel",
+      "title": "PWA 构建部署：Cloudflare Pages / Netlify / Vercel",
+      "file": "30-pwa-gou-jian-bu-shu-cloudflare-pages-netlify-vercel.md",
+      "section": "Deep Dive",
+      "group": "合约与辅助文档",
+      "level": "beginner"
+    }
+  ]
+}

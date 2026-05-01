@@ -26,11 +26,22 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   useEffect(() => { setCursorIndex(focusedIndex); }, [focusedIndex]);
   useEffect(() => { setTranslatedText(null); }, [cursorIndex]);
 
+  // Fetch follow status when focused post changes
+  useEffect(() => {
+    if (!client || !focused?.handle) { setIsFollowingFocused(false); return; }
+    client.getProfile(focused.handle).then(p => {
+      setIsFollowingFocused(!!p.viewer?.following);
+      setFollowUriFocused(p.viewer?.following);
+    }).catch(() => { setIsFollowingFocused(false); });
+  }, [client, focused?.handle]);
+
   const [repostDialog, setRepostDialog] = useState<{ uri: string; handle: string; phase: 'choice' | 'confirm' } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
+  const [isFollowingFocused, setIsFollowingFocused] = useState(false);
+  const [followUriFocused, setFollowUriFocused] = useState<string | undefined>();
   const { t, locale } = useI18n();
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
   const dateTimeOpts: Intl.DateTimeFormatOptions = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
@@ -84,6 +95,16 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
     // h: go back to theme post
     if ((input === 'h' || input === 'H') && themeUri) { refreshThread(themeUri); return; }
+
+    // u: follow/unfollow the focused post's author
+    if ((input === 'u' || input === 'U') && client && focused?.handle) {
+      if (isFollowingFocused && followUriFocused) {
+        client.unfollow(followUriFocused).then(() => { setIsFollowingFocused(false); setFollowUriFocused(undefined); }).catch(() => {});
+      } else {
+        client.getProfile(focused.handle).then(p => { client.follow(p.did).then(r => { setIsFollowingFocused(true); setFollowUriFocused(r.uri); }).catch(() => {}); }).catch(() => {});
+      }
+      return;
+    }
 
     // Actions on cursor line
     if (cursorLine?.uri) {
@@ -201,6 +222,9 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         <Box flexDirection="column" marginTop={0}>
           <Box><Text dimColor>{isTheme ? '── ' + t('thread.rootPost') + ' ──' : '── ' + t('thread.currentPost') + ' ──'}</Text></Box>
           {renderPostBody(focused, '#1e40af')}
+          <Box>
+            <Text color={isFollowingFocused ? 'green' : 'yellow'}>{isFollowingFocused ? '✅ ' + t('profile.following') : '【u】 ' + t('profile.follow') + ' @' + focused.handle}</Text>
+          </Box>
         </Box>
       )}
 

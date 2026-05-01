@@ -137,11 +137,31 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   );
 
   const [translationResult, setTranslationResult] = useState<{ translated: string; sourceLang?: string } | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followUri, setFollowUri] = useState<string | undefined>();
 
   // Clear translation when focused post changes
   useEffect(() => {
     setTranslationResult(null);
   }, [focused?.uri]);
+
+  // Fetch follow status when focused post changes
+  useEffect(() => {
+    if (!client || !focused?.handle) { setIsFollowing(false); return; }
+    client.getProfile(focused.handle).then(p => {
+      setIsFollowing(!!p.viewer?.following);
+      setFollowUri(p.viewer?.following);
+    }).catch(() => { setIsFollowing(false); });
+  }, [client, focused?.handle]);
+
+  const handleFollow = useCallback(() => {
+    if (!client || !focused) return;
+    if (isFollowing && followUri) {
+      client.unfollow(followUri).then(() => { setIsFollowing(false); setFollowUri(undefined); }).catch(() => {});
+    } else {
+      client.getProfile(focused.handle).then(p => { client.follow(p.did).then(r => { setIsFollowing(true); setFollowUri(r.uri); }).catch(() => {}); }).catch(() => {});
+    }
+  }, [client, focused, isFollowing, followUri]);
 
   const hasText = (focused?.text?.trim().length ?? 0) > 0;
 
@@ -245,6 +265,16 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               <span className="text-sm text-text-secondary">
                 {formatTime(focused.indexedAt)}
               </span>
+              <button
+                onClick={handleFollow}
+                className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors ${
+                  isFollowing
+                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
+                    : 'bg-primary text-white hover:bg-primary-hover'
+                }`}
+              >
+                {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+              </button>
             </div>
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap">
               {focused.text}
