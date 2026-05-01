@@ -188,6 +188,7 @@ export function App() {
             contextPost={(currentView as { contextPost?: string }).contextPost}
             contextProfile={(currentView as { contextProfile?: string }).contextProfile}
             contextUri={(currentView as { contextUri?: string }).contextUri}
+            goTo={goTo}
             goBack={goBack}
           />
         );

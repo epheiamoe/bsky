@@ -441,7 +441,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'search':
         return <SearchView client={client} query={(currentView as { query?: string }).query} goBack={goBack} cols={mainW} rows={rows} goTo={goTo} />;
       case 'aiChat':
-        return <AIChatView client={client} aiConfig={config.aiConfig} sessionId={(currentView as { sessionId?: string }).sessionId} contextPost={(currentView as { contextPost?: string }).contextPost} contextProfile={(currentView as { contextProfile?: string }).contextProfile} contextUri={(currentView as { contextUri?: string }).contextUri} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} userHandle={config.blueskyHandle} locale={locale} />;
+        return <AIChatView client={client} aiConfig={config.aiConfig} sessionId={(currentView as { sessionId?: string }).sessionId} contextPost={(currentView as { contextPost?: string }).contextPost} contextProfile={(currentView as { contextProfile?: string }).contextProfile} contextUri={(currentView as { contextUri?: string }).contextUri} goTo={goTo} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} userHandle={config.blueskyHandle} locale={locale} />;
       case 'bookmarks':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>

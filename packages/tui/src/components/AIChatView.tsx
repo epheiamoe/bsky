@@ -15,6 +15,7 @@ interface AIChatViewProps {
   contextPost?: string;
   contextProfile?: string;
   contextUri?: string;
+  goTo: (v: any) => void;
   goBack: () => void;
   cols: number;
   rows: number;
@@ -25,15 +26,13 @@ interface AIChatViewProps {
 
 type PickMode = { type: 'copy' | 'edit'; buffer: string } | null;
 
-export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
+export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
   const storage = getDefaultStorage();
-  const [chatId, setChatId] = useState<string | undefined>();
   const [showHistory, setShowHistory] = useState(!contextUri && !sessionId);
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
   const postContext = contextPost ?? (isProfile ? undefined : contextUri);
-  const effectiveChatId = sessionId ?? chatId;
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: effectiveChatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, contextPost, stream: true });
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, contextPost, stream: true });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
@@ -200,8 +199,19 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
     if (key.escape) { goBack(); return; }
     if (key.upArrow) { setHistoryIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow) { setHistoryIdx(i => Math.min(conversations.length - 1, i + 1)); return; }
-    if (input === 'n' || input === 'N') { setChatId(undefined); setShowHistory(false); return; }
-    if (input === 'l' || input === 'L') { const c = conversations[historyIdx]; if (c) { setChatId(c.id); setShowHistory(false); } return; }
+    if (input === 'n' || input === 'N') {
+      goTo({ type: 'aiChat', sessionId: crypto.randomUUID() });
+      setShowHistory(false);
+      return;
+    }
+    if (input === 'l' || input === 'L') {
+      const c = conversations[historyIdx];
+      if (c) {
+        goTo({ type: 'aiChat', sessionId: c.id });
+        setShowHistory(false);
+      }
+      return;
+    }
     if (input === 'd' || input === 'D') { const c = conversations[historyIdx]; if (c) { void deleteConversation(c.id); } return; }
   });
 

@@ -14,13 +14,13 @@ interface AIChatPageProps {
   contextPost?: string;
   contextProfile?: string;
   contextUri?: string;
+  goTo: (v: import('@bsky/app').AppView) => void;
   goBack: () => void;
 }
 
-export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goBack }: AIChatPageProps) {
+export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack }: AIChatPageProps) {
   const { t, locale } = useI18n();
   const storage = useMemo(() => new IndexedDBChatStorage(), []);
-  const [chatId, setChatId] = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -28,10 +28,8 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const isProfile = contextUri && !contextUri?.startsWith('at://');
 
-  const effectiveChatId = sessionId ?? chatId;
-
   const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
-    chatId: effectiveChatId,
+    chatId: sessionId,
     storage,
     stream: true,
     userHandle,
@@ -75,24 +73,24 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   const handleNewChat = useCallback(() => {
-    setChatId(crypto.randomUUID());
+    goTo({ type: 'aiChat', sessionId: crypto.randomUUID() });
     setSidebarOpen(false);
     setInput('');
-  }, []);
+  }, [goTo]);
 
   const handleSelectChat = useCallback((id: string) => {
-    setChatId(id);
+    goTo({ type: 'aiChat', sessionId: id });
     setSidebarOpen(false);
     setInput('');
-  }, []);
+  }, [goTo]);
 
   const handleDeleteChat = useCallback(
     async (e: React.MouseEvent, id: string) => {
       e.stopPropagation();
       await deleteConversation(id);
-      if (chatId === id) setChatId(undefined);
+      if (sessionId === id) goTo({ type: 'aiChat' });
     },
-    [chatId, deleteConversation],
+    [sessionId, deleteConversation, goTo],
   );
 
   const handleGuidingQuestion = useCallback(
@@ -146,7 +144,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                 key={c.id}
                 onClick={() => handleSelectChat(c.id)}
                 className={`group flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors mx-1 ${
-                  c.id === chatId
+                  c.id === sessionId
                     ? 'bg-primary/10 border border-primary/30'
                     : 'hover:bg-surface border border-transparent'
                 }`}
