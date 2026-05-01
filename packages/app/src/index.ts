@@ -20,6 +20,7 @@ export type { ChatStorage, ChatRecord, ChatSummary } from './services/chatStorag
 export { useTranslation } from './hooks/useTranslation.js';
 export type { TargetLang, TranslationResult } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';
+export type { FollowListItem } from './hooks/useProfile.js';
 export { useSearch } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';
 export { useBookmarks } from './hooks/useBookmarks.js';

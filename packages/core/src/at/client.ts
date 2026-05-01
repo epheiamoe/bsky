@@ -119,9 +119,10 @@ export class BskyClient {
     }).json<TimelineResponse>();
   }
 
-  async getAuthorFeed(actor: string, limit = 50, cursor?: string): Promise<AuthorFeedResponse> {
+  async getAuthorFeed(actor: string, limit = 50, cursor?: string, filter?: string): Promise<AuthorFeedResponse> {
     const params: Record<string, string | number> = { actor, limit };
     if (cursor) params.cursor = cursor;
+    if (filter) params.filter = filter;
     const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
     return kyInstance.get('app.bsky.feed.getAuthorFeed', {
@@ -288,6 +289,26 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       json: body,
     }).json<CreateRecordResponse>();
+  }
+
+  async deleteRecord(repo: string, collection: string, rkey: string): Promise<void> {
+    await this.ky.post('com.atproto.repo.deleteRecord', {
+      headers: this.getAuthHeaders(),
+      json: { repo, collection, rkey },
+    });
+  }
+
+  async follow(did: string): Promise<{ uri: string }> {
+    const res = await this.createRecord(this.getDID(), 'app.bsky.graph.follow', {
+      subject: did,
+      createdAt: new Date().toISOString(),
+    });
+    return { uri: res.uri };
+  }
+
+  async unfollow(followUri: string): Promise<void> {
+    const rkey = followUri.split('/').pop() ?? '';
+    await this.deleteRecord(this.getDID(), 'app.bsky.graph.follow', rkey);
   }
 
   async uploadBlob(data: Uint8Array, mimeType: string): Promise<UploadBlobResponse> {
