@@ -291,7 +291,7 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
                 disabled={translatingBio}
                 className="mt-1 text-xs text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
               >
-                {translatingBio ? '⏳ ...' : translatedBio ? '<Icon name="arrow-big-right" size={16} /> ' + t('action.original') : '<Icon name="languages" size={18} /> ' + t('action.translate')}
+                {translatingBio ? <><Icon name="clock" size={14} /> ...</> : translatedBio ? <><Icon name="arrow-big-right" size={16} /> {t('action.original')}</> : <><Icon name="languages" size={18} /> {t('action.translate')}</>}
               </button>
             </div>
           )}

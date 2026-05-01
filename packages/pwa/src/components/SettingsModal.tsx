@@ -49,7 +49,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     if (!handle.trim() || !password.trim()) return;
     try {
       await onRelogin(handle.trim(), password);
-      setLoginMsg('<Icon name="badge-check" size={16} /> ' + t('settings.updated'));
+      setLoginMsg('ok');
     } catch (e) {
       setLoginMsg(e instanceof Error ? e.message : t('settings.updateFailed'));
     }
@@ -113,7 +113,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 placeholder="App Password"
                 className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              {loginMsg && <p className={`text-xs ${loginMsg.startsWith('<Icon name="badge-check" size={16} />') ? 'text-green-500' : 'text-red-500'}`}>{loginMsg}</p>}
+              {loginMsg && <p className={`text-xs ${loginMsg === 'ok' ? 'text-green-500' : 'text-red-500'}`}>{loginMsg === 'ok' ? <><Icon name="badge-check" size={14} /> {t('settings.updated')}</> : loginMsg}</p>}
               <button
                 onClick={handleRelogin}
                 disabled={!handle.trim() || !password.trim()}

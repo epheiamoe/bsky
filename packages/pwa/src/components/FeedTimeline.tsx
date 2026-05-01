@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n } from '@bsky/app';
+import { useI18n, isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { PostCard } from './PostCard';
+import { Icon } from './Icon.js';
 import { FeedHeader } from './FeedHeader';
 import type { BskyClient } from '@bsky/core';
 
@@ -19,6 +20,10 @@ interface FeedTimelineProps {
   onFirstVisibleIndexChange?: (index: number) => void;
   feedUri?: string;
   client?: BskyClient | null;
+  isLiked?: (uri: string) => boolean;
+  isReposted?: (uri: string) => boolean;
+  likePost?: (uri: string, cid?: string) => void;
+  repostPost?: (uri: string, cid?: string) => void;
 }
 
 function SkeletonCard() {
@@ -38,7 +43,7 @@ function SkeletonCard() {
 
 const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange, feedUri, client }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange, feedUri, client, isLiked, isReposted, likePost, repostPost }: FeedTimelineProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -157,7 +162,9 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
-                />
+                >
+                  <FeedCardActions post={post} goTo={goTo} client={client} />
+                </PostCard>
               </div>
             );
           })}
@@ -184,6 +191,25 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+function FeedCardActions({ post, goTo, client }: { post: PostView; goTo: (v: AppView) => void; client?: BskyClient | null }) {
+  const liked = isPostLiked(post.uri);
+  const reposted = isPostReposted(post.uri);
+
+  return (
+    <div className="flex items-center gap-3 text-text-secondary text-xs mt-1">
+      <button onClick={() => goTo({ type: 'compose', replyTo: post.uri })} className="hover:text-primary transition-colors flex items-center gap-0.5">
+        <Icon name="corner-down-right" size={14} />{post.replyCount ?? 0}
+      </button>
+      <button onClick={() => { repostPost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 ${reposted ? 'text-green-500' : ''}`}>
+        <Icon name="repeat" size={14} />{post.repostCount ?? 0}
+      </button>
+      <button onClick={() => { likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 ${liked ? 'text-red-500' : ''}`}>
+        <Icon name="heart" size={14} filled={liked} />{post.likeCount ?? 0}
+      </button>
     </div>
   );
 }

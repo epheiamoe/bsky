@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
-import { getFeedConfig, setLastFeedUri } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri, seedPostViewers } from '@bsky/app';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -22,6 +22,9 @@ export function App() {
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
   const timeline = useTimeline(client, feedUri);
+  const postActions = usePostActions(client);
+  // Seed timeline posts into global like/repost state
+  useEffect(() => { if (timeline.posts.length > 0) seedPostViewers(timeline.posts as any[]); }, [timeline.posts]);
   const { drafts } = useDrafts();
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -132,6 +135,10 @@ export function App() {
             onFirstVisibleIndexChange={(idx) => { feedScrollIndexRef.current = idx; }}
             feedUri={(currentView as { feedUri?: string }).feedUri}
             client={client}
+            isLiked={postActions.isLiked}
+            isReposted={postActions.isReposted}
+            likePost={postActions.likePost}
+            repostPost={postActions.repostPost}
           />
         );
       case 'thread':

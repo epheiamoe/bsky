@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import type { PostView } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, useI18n } from '@bsky/app';
+import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 
@@ -101,7 +102,7 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
     const e = rec.embeds[0]!;
     if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
       const count = e.images.length;
-      mediaTags.push(count === 1 ? '<Icon name="camera" size={18} /> 图片' : `<Icon name="camera" size={18} /> ${count}张图片`);
+      mediaTags.push(count === 1 ? '图片' : `${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         imageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
@@ -349,11 +350,15 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           )}
           {mediaTags.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
-              {mediaTags.map((tag, i) => (
-                <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                  {tag}
-                </span>
-              ))}
+              {mediaTags.map((tag, i) => {
+                const isImage = /[0-9]/.test(tag) || tag.includes('图片');
+                const isLink = tag.includes('链接');
+                return (
+                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-0.5">
+                    <Icon name={isImage ? 'camera' : isLink ? 'compass' : 'bell'} size={10} />{tag}
+                  </span>
+                );
+              })}
             </div>
           )}
           {quotedPost && (

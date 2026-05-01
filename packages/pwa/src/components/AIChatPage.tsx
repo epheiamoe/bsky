@@ -200,7 +200,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                 onClick={() => {
                   const txt = messages
                     .filter(m => m.role === 'user' || m.role === 'assistant')
-                    .map(m => `[${m.role === 'user' ? '▸' : '<Icon name="astroid-as-AI-Button" size={18} />'}] ${m.content}`)
+                    .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
                     .join('\n\n');
                   navigator.clipboard.writeText(txt).catch(() => {});
                 }}
