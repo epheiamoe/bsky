@@ -155,6 +155,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                 <PostCard
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
+                  goTo={goTo}
                 />
               </div>
             );

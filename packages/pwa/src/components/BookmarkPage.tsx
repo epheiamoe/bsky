@@ -46,6 +46,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
               <PostCard
                 post={post}
                 onClick={() => goTo({ type: 'thread', uri: post.uri })}
+                goTo={goTo}
               />
               <button
                 onClick={(e) => {

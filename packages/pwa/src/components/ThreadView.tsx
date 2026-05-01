@@ -330,6 +330,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   <PostCard
                     line={line}
                     onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+                    goTo={goTo}
                   >
                     <ActionButtons
                       uri={line.uri}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { PostView } from '@bsky/core';
-import type { FlatLine } from '@bsky/app';
+import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, useI18n } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 
@@ -142,8 +142,8 @@ function avatarLetter(name: string): string {
 
 function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
   return (
-      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={onClose}>
-      <button onClick={onClose} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10">✕</button>
+      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+      <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10">✕</button>
       <img
         src={images[initial]!.url}
         alt={images[initial]!.alt}
@@ -202,6 +202,7 @@ interface PostCardBaseProps {
   onClick?: () => void;
   isSelected?: boolean;
   children?: React.ReactNode;
+  goTo?: (v: AppView) => void;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -216,7 +217,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -276,7 +277,13 @@ export function PostCard({ onClick, isSelected, post, line, children }: PostCard
       } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
+        <div
+          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            goTo?.({ type: 'profile', actor: handle });
+          }}
+        >
           {avatarUrl ? (
             <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
           ) : (

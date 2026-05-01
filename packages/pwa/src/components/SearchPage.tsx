@@ -75,6 +75,7 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
               key={post.uri}
               post={post}
               onClick={() => goTo({ type: 'thread', uri: post.uri })}
+              goTo={goTo}
             />
           ))}
         </div>
