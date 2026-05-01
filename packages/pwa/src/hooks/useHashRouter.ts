@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppView } from '@bsky/app';
 import { getFeedConfig, getLastFeedUri } from '@bsky/app';
+import { BUILTIN_FEEDS } from '@bsky/core';
 
 /**
  * Hash-based navigation for PWA static hosting.
@@ -26,12 +27,8 @@ export function useHashRouter() {
     // Redirect bare /feed to default feed if configured
     const raw = window.location.hash.replace(/^#/, '');
     if (!raw || raw === '/' || raw === '/feed' || raw === '') {
-      const defFeed = getFeedConfig().defaultFeedUri;
-      if (defFeed) {
-        window.history.replaceState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
-      } else {
-        window.history.replaceState(null, '', '#/feed');
-      }
+      const defFeed = getFeedConfig().defaultFeedUri ?? BUILTIN_FEEDS.following;
+      window.history.replaceState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
     }
 
     const handler = () => {
@@ -48,7 +45,7 @@ export function useHashRouter() {
   const goTo = useCallback((view: AppView) => {
     // Bare feed navigation → resolve to last active or default feed
     if (view.type === 'feed' && !view.feedUri) {
-      const resolved = getLastFeedUri() ?? getFeedConfig().defaultFeedUri ?? undefined;
+      const resolved = getLastFeedUri() ?? getFeedConfig().defaultFeedUri ?? BUILTIN_FEEDS.following;
       if (resolved) {
         view = { type: 'feed', feedUri: resolved };
       }
@@ -66,14 +63,9 @@ export function useHashRouter() {
   }, []);
 
   const goHome = useCallback(() => {
-    const defFeed = getFeedConfig().defaultFeedUri;
-    if (defFeed) {
-      window.history.pushState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
-      setCurrentView({ type: 'feed', feedUri: defFeed });
-    } else {
-      window.history.pushState(null, '', '#/feed');
-      setCurrentView({ type: 'feed' });
-    }
+    const defFeed = getFeedConfig().defaultFeedUri ?? BUILTIN_FEEDS.following;
+    window.history.pushState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
+    setCurrentView({ type: 'feed', feedUri: defFeed });
     setCanGoBack(false);
   }, []);
 
@@ -91,12 +83,11 @@ function parseHash(): AppView {
     case '/': case '/feed': case '': {
       const feedUri = params.get('feed');
       if (feedUri) return { type: 'feed', feedUri: decodeURIComponent(feedUri) };
-      // Check user's configured default feed
       try {
-        const defFeed = getFeedConfig().defaultFeedUri;
+        const defFeed = getFeedConfig().defaultFeedUri ?? BUILTIN_FEEDS.following;
         if (defFeed) return { type: 'feed', feedUri: defFeed };
       } catch {}
-      return { type: 'feed' };
+      return { type: 'feed', feedUri: BUILTIN_FEEDS.following };
     }
     case '/thread': {
       const uri = params.get('uri');

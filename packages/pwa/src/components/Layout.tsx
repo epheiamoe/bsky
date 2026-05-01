@@ -76,7 +76,7 @@ export function Layout({
               <Icon name="arrow-big-left" size={20} />
             </button>
           )}
-          <span className="text-lg leading-none">🦋</span>
+          <span className="text-lg leading-none"><Icon name="astroid-as-AI-Button" size={20} /></span>
           <span className="font-semibold text-text-primary text-sm">Bluesky</span>
           {handle && (
             <span className="text-text-secondary text-xs hidden sm:inline">@{handle}</span>
@@ -147,7 +147,7 @@ export function Layout({
 
         <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100vh-3rem)] sticky top-12 border-l border-border flex-shrink-0 p-4">
           <div className="text-text-secondary text-sm">
-            <p className="text-lg mb-2">🤖</p>
+            <p className="text-lg mb-2"><Icon name="astroid-as-AI-Button" size={18} /></p>
             <p className="font-semibold text-text-primary mb-1">{t('layout.aiSuggestions')}</p>
             <p className="text-xs">(TODO)</p>
           </div>

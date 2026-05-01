@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useI18n } from '@bsky/app';
+import { Icon } from './Icon.js';
 
 interface LoginPageProps {
   onLogin: (handle: string, password: string) => Promise<void>;
@@ -33,7 +34,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-5xl mb-3">🦋</p>
+          <p className="text-5xl mb-3"><Icon name="astroid-as-AI-Button" size={20} /></p>
           <h1 className="text-2xl font-bold text-text-primary">Bluesky</h1>
           <p className="text-text-secondary text-sm mt-1">{t('login.title')}</p>
         </div>

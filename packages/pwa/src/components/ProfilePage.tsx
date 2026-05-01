@@ -28,8 +28,8 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   return createPortal(
     <button className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-4 border-none cursor-pointer" onClick={(e) => { e.stopPropagation(); onClose(); }}>
       <div className="absolute top-4 right-4 flex gap-2 z-10">
-        <a href={src} download target="_blank" className="text-white bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-sm no-underline" onClick={e => e.stopPropagation()}>⬇ Download</a>
-        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white text-3xl leading-none hover:opacity-70 bg-transparent border-none cursor-pointer">✕</button>
+        <a href={src} download target="_blank" className="text-white bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-sm no-underline" onClick={e => e.stopPropagation()}><Icon name="arrow-big-down" size={18} /> Download</a>
+        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white text-3xl leading-none hover:opacity-70 bg-transparent border-none cursor-pointer"><Icon name="x" size={16} /></button>
       </div>
       <img src={src} alt={alt} className="max-w-full max-h-[85vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
     </button>,
@@ -291,7 +291,7 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
                 disabled={translatingBio}
                 className="mt-1 text-xs text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
               >
-                {translatingBio ? '⏳ ...' : translatedBio ? '↩ ' + t('action.original') : '🌐 ' + t('action.translate')}
+                {translatingBio ? '⏳ ...' : translatedBio ? '<Icon name="arrow-big-right" size={16} /> ' + t('action.original') : '<Icon name="languages" size={18} /> ' + t('action.translate')}
               </button>
             </div>
           )}

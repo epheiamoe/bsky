@@ -2,6 +2,7 @@ import React from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
 import { useNotifications, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
+import { Icon } from './Icon.js';
 
 interface NotifsPageProps {
   client: BskyClient;
@@ -47,7 +48,7 @@ function reasonText(reason: string, t: (key: string) => string): string {
 }
 
 function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void }) {
-  const emoji = REASON_EMOJI[n.reason] ?? '🔔';
+  const emoji = REASON_EMOJI[n.reason] ?? '<Icon name="bell" size={20} />';
   const reasonLabel = reasonText(n.reason, t);
   const reasonSubject = n.reasonSubject;
 
@@ -102,9 +103,9 @@ export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary transition-colors text-lg"
           >
-            ←
+            <Icon name="arrow-big-left" size={20} />
           </button>
-          <h1 className="text-text-primary font-semibold text-lg">🔔 {t('notifications.title')}</h1>
+          <h1 className="text-text-primary font-semibold text-lg"><Icon name="bell" size={20} /> {t('notifications.title')}</h1>
         </div>
         <button
           onClick={refresh}

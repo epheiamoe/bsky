@@ -3,6 +3,7 @@ import { useI18n } from '@bsky/app';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { updateAppConfig } from '../hooks/useAppConfig.js';
 import type { TargetLang, Locale } from '@bsky/app';
+import { Icon } from './Icon.js';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
   { value: 'zh', label: '中文' },
@@ -48,7 +49,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     if (!handle.trim() || !password.trim()) return;
     try {
       await onRelogin(handle.trim(), password);
-      setLoginMsg('✅ ' + t('settings.updated'));
+      setLoginMsg('<Icon name="badge-check" size={16} /> ' + t('settings.updated'));
     } catch (e) {
       setLoginMsg(e instanceof Error ? e.message : t('settings.updateFailed'));
     }
@@ -68,9 +69,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const tabs: { key: Tab; emoji: string; labelKey: string }[] = [
-    { key: 'bluesky', emoji: '🦋', labelKey: 'settings.tabAccount' },
-    { key: 'ai', emoji: '🤖', labelKey: 'settings.tabAI' },
-    { key: 'general', emoji: '⚙️', labelKey: 'settings.tabGeneral' },
+    { key: 'bluesky', emoji: '<Icon name="astroid-as-AI-Button" size={20} />', labelKey: 'settings.tabAccount' },
+    { key: 'ai', emoji: '<Icon name="astroid-as-AI-Button" size={18} />', labelKey: 'settings.tabAI' },
+    { key: 'general', emoji: '<Icon name="settings" size={16} />', labelKey: 'settings.tabGeneral' },
   ];
 
   return (
@@ -79,7 +80,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       <div className="relative bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('settings.title')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1">✕</button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1"><Icon name="x" size={16} /></button>
         </div>
 
         <div className="flex border-b border-border">
@@ -112,7 +113,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 placeholder="App Password"
                 className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              {loginMsg && <p className={`text-xs ${loginMsg.startsWith('✅') ? 'text-green-500' : 'text-red-500'}`}>{loginMsg}</p>}
+              {loginMsg && <p className={`text-xs ${loginMsg.startsWith('<Icon name="badge-check" size={16} />') ? 'text-green-500' : 'text-red-500'}`}>{loginMsg}</p>}
               <button
                 onClick={handleRelogin}
                 disabled={!handle.trim() || !password.trim()}

@@ -2,6 +2,7 @@ import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { useBookmarks, useI18n } from '@bsky/app';
+import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 
 interface BookmarkPageProps {
@@ -24,7 +25,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
           >
             ←
           </button>
-          <h1 className="text-text-primary font-semibold text-lg">🔖 {t('bookmarks.title')}</h1>
+          <h1 className="text-text-primary font-semibold text-lg"><Icon name="bookmark" size={18} /> {t('bookmarks.title')}</h1>
         </div>
         <button
           onClick={refresh}
@@ -56,7 +57,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
                 className="absolute top-2 right-3 w-7 h-7 rounded-full bg-surface border border-border flex items-center justify-center text-text-secondary hover:text-red-500 hover:border-red-300 transition-colors text-xs"
                 title={t('action.removeBookmark')}
               >
-                ✕
+                <Icon name="x" size={16} />
               </button>
             </div>
           ))}

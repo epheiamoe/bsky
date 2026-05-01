@@ -341,11 +341,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 )}
               </div>
             )}
-            {translating && <p className="text-text-secondary text-sm mt-1">🌐 {t('action.translating')}</p>}
+            {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
             {translationResult && !translating && (
               <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
                 <p className="text-xs text-primary font-medium mb-1">
-                  🌐 {t('action.translate')} ({targetLang})
+                  <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
                   {translationResult.sourceLang && (
                     <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
                   )}
@@ -374,28 +374,19 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 ))}
               </div>
             )}
-            <div className="mt-3 flex items-center gap-4 text-sm text-text-secondary">
-              <span className="flex items-center gap-1"><Icon name="corner-down-right" size={16} />{focused.replyCount}</span>
-              <span className="flex items-center gap-1"><Icon name="repeat" size={16} />{focused.repostCount}</span>
-              <span className="flex items-center gap-1"><Icon name="heart" size={16} />{focused.likeCount}</span>
+            <div className="flex items-center gap-4 text-sm text-text-secondary mt-3">
+              <button onClick={() => goTo({ type: 'compose', replyTo: focused.uri })} className="hover:text-primary transition-colors flex items-center gap-1"><Icon name="corner-down-right" size={18} />{focused.replyCount}</button>
+              <div className="relative inline-flex">
+                <button onClick={() => repostPost(focused.uri)} className={`hover:text-green-500 transition-colors flex items-center gap-1 ${isReposted(focused.uri) ? 'text-green-500' : ''}`}><Icon name="repeat" size={18} />{focused.repostCount}</button>
+                <button onClick={() => goTo({ type: 'compose', quoteUri: focused.uri })} className="hover:text-text-primary transition-colors ml-0.5" title="Quote"><Icon name="pen-line" size={12} /></button>
+              </div>
+              <button onClick={() => likePost(focused.uri)} className={`hover:text-red-500 transition-colors flex items-center gap-1 ${isLiked(focused.uri) ? 'text-red-500' : ''}`}><Icon name="heart" size={18} filled={isLiked(focused.uri)} />{focused.likeCount}</button>
+              <button onClick={() => toggleBookmark(focused.uri, focused.cid)} className={`hover:text-yellow-500 transition-colors ${isBookmarked(focused.uri) ? 'text-yellow-500' : ''}`}><Icon name="bookmark" size={18} filled={isBookmarked(focused.uri)} /></button>
+              <button onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: focused.uri })} className="hover:text-purple-500 transition-colors"><Icon name="astroid-as-AI-Button" size={18} /></button>
+              {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
+              <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
+              {focused.handle === client.getHandle() && <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors"><Icon name="trash-2" size={18} /></button>}
             </div>
-            <ActionButtons
-              uri={focused.uri}
-              cid={focused.cid}
-              handle={focused.handle}
-              rkey={focused.rkey}
-              depth={0}
-              likePost={likePost}
-              repostPost={repostPost}
-              isLiked={isLiked}
-              isReposted={isReposted}
-              isBookmarked={isBookmarked}
-              toggleBookmark={toggleBookmark}
-              goTo={goTo}
-              onTranslate={hasText ? handleTranslate : undefined}
-              onDelete={() => client.deletePost(focused.uri)}
-              isOwn={focused.handle === client.getHandle()}
-            />
           </article>
         )}
 

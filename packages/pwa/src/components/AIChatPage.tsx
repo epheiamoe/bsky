@@ -6,6 +6,7 @@ import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { IndexedDBChatStorage } from '../services/indexeddb-chat-storage.js';
 import { formatTime } from '../utils/format.js';
+import { Icon } from './Icon.js';
 
 interface AIChatPageProps {
   client: BskyClient;
@@ -117,12 +118,12 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         }`}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h2 className="text-sm font-semibold text-text-primary">🤖 {t('ai.history')}</h2>
+          <h2 className="text-sm font-semibold text-text-primary"><Icon name="astroid-as-AI-Button" size={18} /> {t('ai.history')}</h2>
           <button
             className="md:hidden text-text-secondary hover:text-text-primary p-1"
             onClick={() => setSidebarOpen(false)}
           >
-            ✕
+            <Icon name="x" size={18} />
           </button>
         </div>
 
@@ -131,7 +132,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             onClick={handleNewChat}
             className="w-full py-2 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
           >
-            ＋ {t('ai.newChat')}
+            <Icon name="plus" size={16} /> {t('ai.newChat')}
           </button>
         </div>
 
@@ -165,7 +166,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                   className="opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-500 p-0.5 transition-all shrink-0"
                   title={t('ai.deleteChat')}
                 >
-                  🗑
+                  <Icon name="trash-2" size={16} />
                 </button>
               </div>
             ))
@@ -182,37 +183,37 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             className="text-text-secondary hover:text-text-primary p-1 transition-colors"
             title={t('nav.back')}
           >
-            ←
+            <Icon name="arrow-big-left" size={20} />
           </button>
           <button
             onClick={() => setSidebarOpen((v) => !v)}
             className="md:hidden text-text-secondary hover:text-text-primary p-1 transition-colors"
             title={t('ai.history')}
           >
-            ☰
+            <Icon name="menu" size={20} />
           </button>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-lg">🤖</span>
+            <span className="text-lg"><Icon name="astroid-as-AI-Button" size={18} /></span>
             <h1 className="text-base font-semibold text-text-primary truncate">{t('nav.aiChat')}</h1>
             {messages.length > 0 && (
               <button
                 onClick={() => {
                   const txt = messages
                     .filter(m => m.role === 'user' || m.role === 'assistant')
-                    .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
+                    .map(m => `[${m.role === 'user' ? '▸' : '<Icon name="astroid-as-AI-Button" size={18} />'}] ${m.content}`)
                     .join('\n\n');
                   navigator.clipboard.writeText(txt).catch(() => {});
                 }}
                 className="ml-auto text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border"
                 title={t('ai.copyTranscript')}
               >
-                📋 {t('ai.copyTranscript')}
+                <Icon name="copy" size={16} /> {t('ai.copyTranscript')}
               </button>
             )}
           </div>
           {contextUri && (
             <span className="ml-auto text-xs text-text-secondary bg-surface border border-border rounded-full px-2.5 py-0.5 truncate max-w-[200px]">
-              📌 {contextUri.split('/').pop()}
+              <Icon name="pin" size={14} /> {contextUri.split('/').pop()}
             </span>
           )}
         </header>
@@ -221,7 +222,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         {pendingConfirmation && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={rejectAction}>
             <div className="bg-white dark:bg-[#1a1a2e] rounded-xl p-6 max-w-md mx-4 border-2 border-yellow-500 shadow-xl" onClick={e => e.stopPropagation()}>
-              <p className="text-yellow-600 dark:text-yellow-400 font-semibold text-lg mb-2">⚠ Confirm Action</p>
+              <p className="text-yellow-600 dark:text-yellow-400 font-semibold text-lg mb-2"><Icon name="triangle-alert" size={18} /> Confirm Action</p>
               <p className="text-sm text-text-primary mb-4">{pendingConfirmation.description}</p>
               <div className="flex gap-3 justify-end">
                 <button onClick={rejectAction} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-surface transition-colors">{t('action.cancel')}</button>
@@ -297,7 +298,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                         onClick={() => { const text = editByIndex(userIdx); if (text) { setInput(text); } }}
                         title="Edit"
                         className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1"
-                      >✏️</button>
+                      ><Icon name="pencil-line" size={16} /></button>
                     )}
                   </div>
                   <div className="bg-primary text-white rounded-lg px-3 py-2 max-w-[75%]">
@@ -327,7 +328,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                       className="absolute bottom-1 right-1 text-xs text-text-secondary/60 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-surface/80"
                       title={t('ai.copyLast')}
                     >
-                      {copiedIdx === i ? '📋 ' + t('ai.copied') : '📋'}
+                      {copiedIdx === i ? '<Icon name="copy" size={16} /> ' + t('ai.copied') : '<Icon name="copy" size={16} />'}
                     </button>
                   )}
                 </div>
@@ -338,7 +339,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
           {loading && (
             <div className="flex justify-start">
               <div className="bg-surface rounded-lg px-4 py-2.5 border border-border flex items-center gap-1.5">
-                <span className="text-sm text-text-secondary">🤖 {t('ai.thinking')}</span>
+                <span className="text-sm text-text-secondary"><Icon name="astroid-as-AI-Button" size={18} /> {t('ai.thinking')}</span>
                 <span className="flex gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style={{ animationDelay: '200ms' }} />

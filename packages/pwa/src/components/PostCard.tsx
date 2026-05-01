@@ -101,7 +101,7 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
     const e = rec.embeds[0]!;
     if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
       const count = e.images.length;
-      mediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
+      mediaTags.push(count === 1 ? '<Icon name="camera" size={18} /> 图片' : `<Icon name="camera" size={18} /> ${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         imageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
@@ -161,7 +161,7 @@ export function linkifyText(text: string): React.ReactNode[] {
 function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
   return (
       <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-      <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10">✕</button>
+      <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10"><Icon name="x" size={16} /></button>
       <img
         src={images[initial]!.url}
         alt={images[initial]!.alt}
@@ -297,7 +297,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     >
       {repostBy && (
         <div className="flex items-center gap-1 mb-2 text-text-secondary text-xs">
-          <span>↻</span>
+          <span><Icon name="repeat" size={14} /></span>
           <span>Reposted by @{repostBy}</span>
         </div>
       )}

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearch, useI18n, addFeed } from '@bsky/app';
-import { getFeedLabel } from '@bsky/core';
+import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
-import type { BskyClient, FeedGeneratorView } from '@bsky/core';
+import type { BskyClient } from '@bsky/core';
+import { Icon } from './Icon.js';
 import type { AppView } from '@bsky/app';
 import { PostCard } from './PostCard.js';
 import { truncateName } from './PostCard.js';
@@ -60,8 +61,8 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
       <div className="border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors text-lg shrink-0">←</button>
-        <h1 className="text-text-primary font-semibold text-lg">🔍 {t('search.title')}</h1>
+        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors text-lg shrink-0"><Icon name="arrow-big-left" size={20} /></button>
+        <h1 className="text-text-primary font-semibold text-lg"><Icon name="compass" size={18} /> {t('search.title')}</h1>
       </div>
 
       <div className="px-4 py-3 flex gap-2">

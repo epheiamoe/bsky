@@ -4,6 +4,7 @@ import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed } from '@bs
 import { getFeedLabel, RECOMMENDED_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, FeedGeneratorView } from '@bsky/core';
+import { Icon } from './Icon.js';
 
 interface FeedHeaderProps {
   goTo: (v: AppView) => void;
@@ -30,7 +31,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
     setConfig(cfg);
   };
 
-  const currentLabel = `📋 ${t('nav.feed')}${currentFeedUri ? ' - ' + getFeedLabel(currentFeedUri) : ''}`;
+  const currentLabel = `<Icon name="home" size={16} /> ${t('nav.feed')}${currentFeedUri ? ' - ' + getFeedLabel(currentFeedUri) : ''}`;
 
   return (
     <>
@@ -42,7 +43,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
             className="text-text-secondary hover:text-text-primary text-lg leading-none p-0.5"
             title={t('feed.switchFeed')}
           >
-            ▾
+            <Icon name="chevron-down" size={16} />
           </button>
           {showMenu && createPortal(
             <div className="fixed top-12 left-4 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-[200] py-1 min-w-[200px] max-h-[60vh] overflow-y-auto">
@@ -60,7 +61,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
                   onClick={() => { setShowMenu(false); setShowConfig(true); }}
                   className="w-full text-left px-3 py-1.5 text-sm text-text-secondary hover:bg-surface transition-colors"
                 >
-                  ⚙️ {t('feed.configureFeeds')}
+                  <Icon name="settings" size={16} /> {t('feed.configureFeeds')}
                 </button>
               </div>
             </div>,
@@ -140,7 +141,7 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
       <div className="relative bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('feed.configureFeeds')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1">✕</button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1"><Icon name="x" size={16} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div>
@@ -167,7 +168,7 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
               <div key={f.uri} className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
                 <span className="flex-1 text-sm text-text-primary truncate">{f.label}</span>
                 <button onClick={() => handleUse(f.uri)} className="text-xs text-primary hover:underline">{t('action.open')}</button>
-                <button onClick={() => handleRemove(f.uri)} className="text-xs text-red-400 hover:text-red-500">✕</button>
+                <button onClick={() => handleRemove(f.uri)} className="text-xs text-red-400 hover:text-red-500"><Icon name="x" size={16} /></button>
               </div>
             ))}
           </div>

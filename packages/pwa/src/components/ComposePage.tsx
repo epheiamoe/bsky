@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCompose, useI18n, useDrafts, getCdnImageUrl } from '@bsky/app';
 import type { ComposeImage, Draft } from '@bsky/app';
 import type { BskyClient, PostView } from '@bsky/core';
+import { Icon } from './Icon.js';
 
 const MAX_IMAGES = 4;
 const MAX_SIZE = 1024 * 1024; // 1MB per image (generous for Bluesky)
@@ -192,10 +193,10 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</h1>
+            <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '<Icon name="pencil-line" size={16} /> ' + t('compose.titleReply') : '<Icon name="pencil-line" size={16} /> ' + t('compose.title')}</h1>
             {drafts.length > 0 && (
               <button onClick={() => setShowDrafts(!showDrafts)} className="text-sm text-text-secondary hover:text-primary transition-colors">
-                📝 {t('compose.drafts') || 'Drafts'}
+                <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
               </button>
             )}
           </div>
@@ -208,7 +209,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
         {showDrafts && (
           <div className="mb-4 border border-border rounded-lg bg-surface p-3 space-y-2">
             <p className="text-sm font-semibold text-text-primary">
-              📝 {t('compose.drafts') || 'Drafts'}
+              <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
             </p>
             <div className="border-t border-border" />
             {drafts.length === 0 && (
@@ -284,7 +285,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
                     </div>
                   )}
                   {img.error && <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center text-red-500 text-xs">{img.error}</div>}
-                  <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80">✕</button>
+                  <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80"><Icon name="x" size={16} /></button>
                 </div>
               ))}
             </div>
@@ -296,7 +297,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={images.length >= MAX_IMAGES || submitting}
                 className="text-text-secondary hover:text-primary transition-colors text-sm disabled:opacity-30">
-                🖼 {t('compose.addImage')}{images.length > 0 ? ` (${images.length}/${MAX_IMAGES})` : ''}
+                <Icon name="camera" size={18} /> {t('compose.addImage')}{images.length > 0 ? ` (${images.length}/${MAX_IMAGES})` : ''}
               </button>
               <span className={`text-sm tabular-nums ${charLen >= 280 ? 'text-yellow-500' : 'text-text-secondary'}`}>{charLen}/300</span>
             </div>
