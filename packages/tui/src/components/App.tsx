@@ -125,6 +125,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
     if (key.escape) {
+      if (showFeedConfig) { setShowFeedConfig(false); return; }
       if (currentView.type === 'aiChat') {
         if (focusedPanel === 'ai') { setFocusedPanel('main'); return; }
         goBack(); return;
@@ -140,6 +141,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
     if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
+
+    // Feed config overlay active — skip all other keys (handled by overlay)
+    if (showFeedConfig) return;
 
     // Arrows — feed + bookmarks
     if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
@@ -335,7 +339,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
             <Box height={1}>
-              <Text bold>{'📋 '}{effectiveFeedUri ? getFeedLabel(effectiveFeedUri) : t('nav.feed')}</Text>
+              <Text bold>{'📋 '}{t('nav.feed')}{effectiveFeedUri ? ' - ' + getFeedLabel(effectiveFeedUri) : ''}</Text>
               <Text dimColor>{' '}{showFeedConfig ? 'Esc:关闭' : t('keys.feed')}</Text>
             </Box>
             {showFeedConfig ? (

@@ -14,8 +14,8 @@ export type FeedInfo = {
 
 /** Recommended feeds shown to new users */
 export const RECOMMENDED_FEEDS: FeedInfo[] = [
-  { uri: BUILTIN_FEEDS.discover, label: '🔥 Discover', description: 'Bluesky 官方推荐 — 热门内容' },
-  { uri: BUILTIN_FEEDS.following, label: '👥 Following', description: '仅你关注的用户' },
+  { uri: BUILTIN_FEEDS.discover, label: 'Discover', description: 'Bluesky 官方推荐 — 热门内容' },
+  { uri: BUILTIN_FEEDS.following, label: 'Following', description: '仅你关注的用户' },
 ];
 
 /**
@@ -23,8 +23,8 @@ export const RECOMMENDED_FEEDS: FeedInfo[] = [
  * Returns custom label if known, otherwise try to extract from URI.
  */
 export function getFeedLabel(uri: string): string {
-  if (uri === BUILTIN_FEEDS.discover) return '🔥 Discover';
-  if (uri === BUILTIN_FEEDS.following) return '👥 Following';
+  if (uri === BUILTIN_FEEDS.discover) return 'Discover';
+  if (uri === BUILTIN_FEEDS.following) return 'Following';
   // Extract last segment as label for custom feeds
   const parts = uri.split('/');
   return parts[parts.length - 1] ?? uri;

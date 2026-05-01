@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed } from '@bsky/app';
 import { getFeedLabel, RECOMMENDED_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
@@ -29,7 +30,9 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
     setConfig(cfg);
   };
 
-  const currentLabel = currentFeedUri ? getFeedLabel(currentFeedUri) : '📋 ' + t('nav.feed');
+  const currentLabel = currentFeedUri
+    ? `📋 ${t('nav.feed')} - ${getFeedLabel(currentFeedUri)}`
+    : `📋 ${t('nav.feed')}`;
 
   return (
     <>
@@ -43,9 +46,8 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
           >
             ▾
           </button>
-          {showMenu && (
-            <div className="absolute top-full left-0 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-30 py-1 min-w-[200px] max-h-[60vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}>
+          {showMenu && createPortal(
+            <div className="fixed top-12 left-4 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-[200] py-1 min-w-[200px] max-h-[60vh] overflow-y-auto">
               <button
                 onClick={() => { goTo({ type: 'feed' }); setShowMenu(false); }}
                 className={`w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors ${!currentFeedUri ? 'text-primary font-medium' : 'text-text-primary'}`}
@@ -69,7 +71,8 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
                   ⚙️ {t('feed.configureFeeds')}
                 </button>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
         <div className="flex items-center gap-2">
