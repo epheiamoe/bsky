@@ -24,7 +24,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
 
   const isProfile = contextUri && !contextUri.startsWith('at://');
 
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId,
     storage,
     stream: true,
@@ -272,7 +272,7 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                 <div key={i} className="flex justify-end items-start gap-2">
                   {isLastUser && !loading && msg.content && (
                     <div className="flex flex-col gap-1 pt-1">
-                      <button onClick={retry} title="Retry" className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1">↻</button>
+                      <button onClick={() => { const last = edit(); if (last) { setInput(last); } }} title="Edit" className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1">✏️</button>
                       {i > 0 && (
                         <button onClick={undoLastMessage} title="Undo" className="text-xs text-text-secondary/60 hover:text-red-500 transition-colors px-1">↩</button>
                       )}

@@ -29,7 +29,8 @@ export function App() {
   const effectiveAiConfig = useMemo(() => ({
     ...appConfig.aiConfig,
     thinkingEnabled: appConfig.thinkingEnabled,
-  }), [appConfig.aiConfig, appConfig.thinkingEnabled]);
+    visionEnabled: appConfig.visionEnabled,
+  }), [appConfig.aiConfig, appConfig.thinkingEnabled, appConfig.visionEnabled]);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {

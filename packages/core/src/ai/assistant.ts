@@ -78,6 +78,7 @@ export type AIConfig = {
   baseUrl: string;
   model: string;
   thinkingEnabled?: boolean;
+  visionEnabled?: boolean;
 };
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {
@@ -292,7 +293,7 @@ export class AIAssistant {
   }
 
   private _buildMessages(): ChatMessage[] {
-    if (!this.hasPendingImages) return this.messages;
+    if (!this.hasPendingImages || !this.config.visionEnabled) return this.messages;
     const msgs = [...this.messages];
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i]!.role === 'user') {

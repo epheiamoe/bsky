@@ -8,6 +8,7 @@ export interface AppConfig {
   translateMode: 'simple' | 'json';
   darkMode: boolean;
   thinkingEnabled: boolean;
+  visionEnabled: boolean;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -20,6 +21,7 @@ const DEFAULT_CONFIG: AppConfig = {
   translateMode: 'simple',
   darkMode: false,
   thinkingEnabled: true,
+  visionEnabled: false,
 };
 
 export function getAppConfig(): AppConfig {

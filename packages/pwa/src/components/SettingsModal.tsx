@@ -37,6 +37,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [baseUrl, setBaseUrl] = useState(config.aiConfig.baseUrl);
   const [model, setModel] = useState(config.aiConfig.model);
   const [thinkingEnabled, setThinkingEnabled] = useState(config.thinkingEnabled ?? true);
+  const [visionEnabled, setVisionEnabled] = useState(config.visionEnabled ?? false);
 
   const [targetLang, setTargetLang] = useState(config.targetLang);
   const [darkMode, setDarkMode] = useState(config.darkMode);
@@ -54,7 +55,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const saveAi = () => {
-    const updated = { ...config, thinkingEnabled, aiConfig: { apiKey, baseUrl, model } };
+    const updated = { ...config, thinkingEnabled, visionEnabled, aiConfig: { apiKey, baseUrl, model } };
     updateAppConfig(updated);
     onConfigChange(updated);
   };
@@ -164,6 +165,15 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   className="w-4 h-4 accent-primary"
                 />
                 <span className="text-sm text-text-primary">{t('settings.thinkMode')}</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={visionEnabled}
+                  onChange={e => setVisionEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm text-text-primary">{t('settings.visionMode')}</span>
               </label>
               <button
                 onClick={saveAi}

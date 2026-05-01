@@ -16,7 +16,7 @@ export interface ToolDefinition {
   description: string;
   inputSchema: {
     type: 'object';
-    properties: Record<string, { type: string; description: string }>;
+    properties: Record<string, Record<string, unknown>>;
     required: string[];
   };
 }
@@ -670,6 +670,19 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
             text: { type: 'string', description: 'The post text content' },
             replyTo: { type: 'string', description: 'Optional: AT URI of the post to reply to' },
             quoteUri: { type: 'string', description: 'Optional: AT URI of the post to quote' },
+            images: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  did: { type: 'string', description: 'DID of the image author (get from extract_images_from_post)' },
+                  cid: { type: 'string', description: 'CID of the image blob' },
+                  alt: { type: 'string', description: 'Alt text for the image' },
+                },
+                required: ['did', 'cid'],
+              },
+              description: 'Optional: Images to attach. Use extract_images_from_post first to get did/cid',
+            },
           },
           required: ['text'],
         },
@@ -689,18 +702,14 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           try {
             const threadRes = await client.getPostThread(p.replyTo as string, 0, 10);
             if (threadRes.thread.$type === 'app.bsky.feed.defs#threadViewPost') {
-              // Walk up to find root
               let current: ThreadViewPost | undefined = threadRes.thread as ThreadViewPost;
               while (current?.parent && (current.parent as ThreadViewPost).$type === 'app.bsky.feed.defs#threadViewPost') {
                 current = current.parent as ThreadViewPost;
               }
-              // If we found parent chain, current is either the top or the original
-              // For root: if there's no parent, the post itself is root
               if (!current?.parent) {
                 rootUri = current?.post.uri ?? rootUri;
                 rootCid = current?.post.cid ?? rootCid;
               } else {
-                // There's a parent but it might be notFound - use the highest post we have
                 rootUri = current?.post.uri ?? rootUri;
                 rootCid = current?.post.cid ?? rootCid;
               }
@@ -711,14 +720,40 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
             parent: { uri: p.replyTo as string, cid: parentCid },
           };
         }
+        // Handle images: download from Bluesky CDN -> upload to user's PDS -> embed
+        const imageList = p.images as Array<{ did: string; cid: string; alt?: string }> | undefined;
+        if (imageList && imageList.length > 0) {
+          const uploadedImages: Array<{ image: { ref: { $link: string }; mimeType: string; size: number }; alt: string }> = [];
+          for (const img of imageList) {
+            const data = await client.downloadBlob(img.did, img.cid);
+            const mimeType = detectMimeType(data);
+            const blob = await client.uploadBlob(data, mimeType);
+            uploadedImages.push({
+              image: { ref: { $link: blob.blob.ref.$link }, mimeType, size: data.length },
+              alt: img.alt ?? '',
+            });
+          }
+          record.embed = {
+            $type: 'app.bsky.embed.images',
+            images: uploadedImages,
+          };
+        }
         if (p.quoteUri) {
           const quoteParsed = parseAtUri(p.quoteUri as string);
           const quoteRec = await client.getRecord(quoteParsed.did, quoteParsed.collection, quoteParsed.rkey);
-          quoteRec;
-          record.embed = {
-            $type: 'app.bsky.embed.record',
-            record: { uri: p.quoteUri as string, cid: quoteRec.cid ?? '' },
-          };
+          if (record.embed) {
+            // Wrap existing images embed in recordWithMedia
+            record.embed = {
+              $type: 'app.bsky.embed.recordWithMedia',
+              record: { uri: p.quoteUri as string, cid: quoteRec.cid ?? '' },
+              media: record.embed,
+            };
+          } else {
+            record.embed = {
+              $type: 'app.bsky.embed.record',
+              record: { uri: p.quoteUri as string, cid: quoteRec.cid ?? '' },
+            };
+          }
         }
         const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
         return JSON.stringify({ uri: res.uri, cid: res.cid, text });
@@ -783,26 +818,6 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           createdAt: new Date().toISOString(),
         });
         return JSON.stringify({ uri: res.uri, cid: res.cid, followed: p.subject });
-      },
-      requiresWrite: true,
-    },
-    {
-      definition: {
-        name: 'upload_blob',
-        description: 'Upload a binary blob (image). Requires user confirmation.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            base64: { type: 'string', description: 'Base64-encoded binary data' },
-            mimeType: { type: 'string', description: 'MIME type (e.g., image/png)' },
-          },
-          required: ['base64', 'mimeType'],
-        },
-      },
-      handler: async (p) => {
-        const data = Uint8Array.from(Buffer.from(p.base64 as string, 'base64'));
-        const res = await client.uploadBlob(data, p.mimeType as string);
-        return JSON.stringify({ blob: res.blob });
       },
       requiresWrite: true,
     },

@@ -26,7 +26,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = isProfile ? contextUri : undefined;
   const postContext = isProfile ? undefined : contextUri;
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
@@ -113,11 +113,11 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
       if (input === 'n' || input === 'N' || key.escape) { rejectAction(); return; }
       return;
     }
-    // Undo / Retry (u = undo last, r = retry last)
-    if (!focused && !loading) {
-      if (input === 'u' || input === 'U') { undoLastMessage(); return; }
-      if (input === 'r' || input === 'R') { retry(); return; }
-    }
+      // Undo / Edit (u = undo last, r = edit last)
+      if (!focused && !loading) {
+        if (input === 'u' || input === 'U') { undoLastMessage(); return; }
+        if (input === 'r' || input === 'R') { const last = edit(); if (last) setInput(last); return; }
+      }
     const page = Math.floor(maxVisible * 0.7);
     if (key.pageUp) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + page)); return; }
     if (key.pageDown) { setScrollOffset(s => Math.max(0, s - page)); return; }
@@ -163,7 +163,7 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>{'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}</Text>
-        <Text dimColor>{' '}{pendingConfirmation ? 'Y:确认 N:取消' : t('keys.aiChat') + ' u:撤销'}</Text>
+        <Text dimColor>{' '}{pendingConfirmation ? 'Y:确认 N:取消' : t('keys.aiChat') + ' u:撤销 r:编辑'}</Text>
       </Box>
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>

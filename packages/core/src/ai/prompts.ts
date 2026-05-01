@@ -37,7 +37,6 @@ export const P_ASSISTANT_BASE = (() => {
     'since:日期、until:日期、lang:语言代码、has:image、',
     '"精确短语"等 Lucene 运算符。',
     '你可以使用 download_image 下载帖子图片到用户本地。',
-    '你可以使用 view_image 查看图片内容（仅适用于 GPT-4V/Claude Vision/DeepSeek VL 等视觉模型，纯文本模型请跳过此工具）。',
   ].join('');
 })();
 
@@ -93,6 +92,17 @@ export function PF_LOCALE_HINT(locale: string): string {
 
 /** Concise answer instruction (appended to all assistant prompts) */
 export const P_CONCISE = '回答简练。';
+
+/**
+ * Vision mode hint — tells the AI whether vision is enabled.
+ * @param enabled - whether the user has enabled vision mode
+ */
+export function PF_VISION_HINT(enabled: boolean): string {
+  if (enabled) {
+    return '视觉模式已开启。你可以使用 view_image 查看图片内容。使用 download_image 将图片保存到用户本地。';
+  }
+  return '用户暂未开启视觉模式。如果你支持视觉（如 GPT-4V、Claude Vision、DeepSeek VL 等），可以提醒用户开启视觉模式。开启方法：在 TUI 使用逗号(,)打开设置页面设置 LLM_VISION_ENABLED=true，在 PWA 使用设置页面的「视觉模式」开关。注意：如果你不支持视觉，请不要建议用户开启视觉模式以避免浪费上下文。视觉模式本身不提供外置 OCR 功能，仅用于你自身可处理图片内容。';
+}
 
 // ══════════════════════════════════════════════════════════════════
 // Translation prompts

@@ -10,6 +10,7 @@ import {
   P_CONCISE,
   PF_AUTO_ANALYSIS,
   P_GUIDING_QUESTIONS,
+  PF_VISION_HINT,
 } from '@bsky/core';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
@@ -61,9 +62,10 @@ export function useAIChat(
     }
     parts.push(PF_ENVIRONMENT(options?.environment || 'pwa'));
     if (options?.locale) parts.push(PF_LOCALE_HINT(options.locale));
+    parts.push(PF_VISION_HINT(aiConfig.visionEnabled ?? false));
     parts.push(P_CONCISE);
     return parts.join('');
-  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment]);
+  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment, aiConfig.visionEnabled]);
 
   // Keep chatIdRef in sync
   useEffect(() => {
@@ -303,24 +305,13 @@ export function useAIChat(
     })));
   }, [assistant]);
 
-  const retry = useCallback(async () => {
-    const allMsgs = assistant.getMessages();
-    let lastUserIdx = -1;
-    for (let i = allMsgs.length - 1; i >= 0; i--) {
-      if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
-    }
-    if (lastUserIdx < 0) return;
-    const lastUserContent = contentToString(allMsgs[lastUserIdx]!.content);
-    const keep = allMsgs.slice(0, lastUserIdx);
-    assistant.loadMessages(keep);
-    setMessages(keep.map(m => ({
-      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: contentToString(m.content),
-    })));
-    await send(lastUserContent);
-  }, [assistant, send]);
+  /** Return the content of the last user message for editing, or null if none */
+  const edit = useCallback((): string | null => {
+    const lastUser = [...messages].reverse().find(m => m.role === 'user');
+    return lastUser?.content ?? null;
+  }, [messages]);
 
-  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry };
+  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit };
 }
 
 // Re-export the AIChatMessage type for consumers
