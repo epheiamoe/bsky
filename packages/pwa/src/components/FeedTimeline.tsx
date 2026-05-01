@@ -201,13 +201,13 @@ function FeedCardActions({ post, goTo, client }: { post: PostView; goTo: (v: App
 
   return (
     <div className="flex items-center gap-3 text-text-secondary text-xs mt-1">
-      <button onClick={() => goTo({ type: 'compose', replyTo: post.uri })} className="hover:text-primary transition-colors flex items-center gap-0.5">
+      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'compose', replyTo: post.uri }); }} className="hover:text-primary transition-colors flex items-center gap-0.5">
         <Icon name="corner-down-right" size={14} />{post.replyCount ?? 0}
       </button>
-      <button onClick={() => { repostPost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 ${reposted ? 'text-green-500' : ''}`}>
+      <button onClick={(e) => { e.stopPropagation(); repostPost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 ${reposted ? 'text-green-500' : ''}`}>
         <Icon name="repeat" size={14} />{post.repostCount ?? 0}
       </button>
-      <button onClick={() => { likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 ${liked ? 'text-red-500' : ''}`}>
+      <button onClick={(e) => { e.stopPropagation(); likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 ${liked ? 'text-red-500' : ''}`}>
         <Icon name="heart" size={14} filled={liked} />{post.likeCount ?? 0}
       </button>
     </div>

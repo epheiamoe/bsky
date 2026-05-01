@@ -386,11 +386,6 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               )}
             </div>
           )}
-          <div className="flex items-center gap-4 mt-2 text-text-secondary text-xs">
-            <span className="flex items-center gap-1"><Icon name="corner-down-right" size={14} />{replyCount ?? 0}</span>
-            <span className="flex items-center gap-1"><Icon name="repeat" size={14} />{repostCount ?? 0}</span>
-            <span className="flex items-center gap-1"><Icon name="heart" size={14} />{likeCount ?? 0}</span>
-          </div>
           {children}
         </div>
       </div>
