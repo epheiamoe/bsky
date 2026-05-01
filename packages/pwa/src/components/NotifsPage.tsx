@@ -46,11 +46,6 @@ function reasonText(reason: string, t: (key: string) => string): string {
   return t(map[reason] ?? reason);
 }
 
-function avatarLetter(author: { displayName?: string; handle: string }): string {
-  const name = author.displayName || author.handle;
-  return name.charAt(0).toUpperCase();
-}
-
 function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void }) {
   const emoji = REASON_EMOJI[n.reason] ?? '🔔';
   const reasonLabel = reasonText(n.reason, t);
@@ -61,8 +56,14 @@ function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string
       onClick={reasonSubject ? () => goTo({ type: 'thread', uri: reasonSubject! }) : undefined}
       className={`border-b border-border px-4 py-3 hover:bg-surface transition-colors ${reasonSubject ? 'cursor-pointer' : ''}`}>
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0">
-          {avatarLetter(n.author)}
+        <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden">
+          {n.author.avatar ? (
+            <img src={n.author.avatar} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-primary flex items-center justify-center text-white font-bold text-sm">
+              {(n.author.displayName || n.author.handle).charAt(0).toUpperCase()}
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">

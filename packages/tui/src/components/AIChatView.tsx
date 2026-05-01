@@ -6,6 +6,7 @@ import { wrapLines } from '../utils/text.js';
 import { renderMarkdown } from '../utils/markdown.js';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
+import clipboard from 'clipboardy';
 
 interface AIChatViewProps {
   client: BskyClient | null;
@@ -19,6 +20,8 @@ interface AIChatViewProps {
   locale?: string;
 }
 
+type PickMode = { type: 'copy' | 'edit'; buffer: string } | null;
+
 export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
   const storage = getDefaultStorage();
   const [chatId, setChatId] = useState<string | undefined>();
@@ -26,11 +29,13 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = isProfile ? contextUri : undefined;
   const postContext = isProfile ? undefined : contextUri;
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
+  const [pickMode, setPickMode] = useState<PickMode>(null);
+  const [lastCopied, setLastCopied] = useState(false);
   const prevMsgCount = useRef(0);
   const wasAtBottom = useRef(true);
   const { t, locale } = useI18n();
@@ -38,10 +43,19 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
 
   useEffect(() => { if (messages.length > 0) setShowHistory(false); }, [messages]);
 
+  // Auto-clear "Copied" toast
+  useEffect(() => { if (lastCopied) { const t = setTimeout(() => setLastCopied(false), 1500); return () => clearTimeout(t); } }, [lastCopied]);
+
   const handleSend = () => { if (input.trim() && !loading) { void send(input.trim()); setInput(''); } };
+
+  const assistantMessages = useMemo(() => messages.filter(m => m.role === 'assistant'), [messages]);
+  const userMessages = useMemo(() => messages.filter(m => m.role === 'user'), [messages]);
 
   // ── CJK-safe viewport with conditional auto-scroll ──
   const maxCols = Math.max(20, cols - 6);
+  const baseMaxVisible = Math.max(10, rows - 6);
+  const maxVisible = pickMode ? baseMaxVisible - Math.min(assistantMessages.length + 2, rows - 2) - 2 : baseMaxVisible;
+
   const allMessageLines = useMemo((): Array<string | React.ReactNode> => {
     const lines: Array<string | React.ReactNode> = [];
     for (const msg of messages) {
@@ -70,7 +84,6 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
           lines.push('\u25b8 ' + l);
         }
       } else {
-        // Assistant message — render as markdown
         lines.push(<Text key={`ml-${lines.length}`} color="cyan">🤖</Text>);
         const elements = renderMarkdown(msg.content);
         for (const el of elements) {
@@ -83,8 +96,6 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     return lines;
   }, [messages, loading, maxCols, t]);
 
-  const maxVisible = Math.max(10, rows - 6);
-
   // Only auto-scroll to bottom if user was already at bottom
   const totalMsgCount = useMemo(() => messages.length, [messages]);
   useEffect(() => {
@@ -94,7 +105,6 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     prevMsgCount.current = totalMsgCount;
   }, [totalMsgCount]);
 
-  // Track whether we're at bottom
   useEffect(() => {
     wasAtBottom.current = scrollOffset === 0;
   }, [scrollOffset]);
@@ -104,20 +114,74 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const canScrollUp = viewStart > 0;
   const canScrollDown = viewStart + maxVisible < allMessageLines.length;
 
-  // Scroll keys: PgUp/PgDn always, ↑/↓ when unfocused
+  // Pick mode handlers
+  const handlePickConfirm = () => {
+    if (!pickMode) return;
+    const idx = parseInt(pickMode.buffer, 10);
+    if (isNaN(idx) || idx < 1) { setPickMode(null); return; }
+    const i = idx - 1;
+
+    if (pickMode.type === 'copy') {
+      const target = assistantMessages[i];
+      if (target) {
+        try { clipboard.writeSync(target.content); setLastCopied(true); } catch (e) {}
+      }
+    } else if (pickMode.type === 'edit') {
+      const target = userMessages[i];
+      if (target) {
+        const text = editByIndex(i);
+        if (text) setInput(text);
+      }
+    }
+    setPickMode(null);
+  };
+
+  // Main chat keys
   useInput((input, key) => {
     if (showHistory) return;
+
+    if (pickMode) {
+      if (key.escape) { setPickMode(null); return; }
+      if (key.return) { handlePickConfirm(); return; }
+      if (key.backspace || key.delete) {
+        setPickMode(prev => prev ? { ...prev, buffer: prev.buffer.slice(0, -1) } : null);
+        return;
+      }
+      if (/^[0-9]$/.test(input)) {
+        setPickMode(prev => prev ? { ...prev, buffer: prev.buffer + input } : null);
+        return;
+      }
+      return;
+    }
+
     // Confirmation dialog active — only Y/N/Esc
     if (pendingConfirmation) {
       if (input === 'y' || input === 'Y' || key.return) { confirmAction(); return; }
       if (input === 'n' || input === 'N' || key.escape) { rejectAction(); return; }
       return;
     }
-      // Undo / Edit (u = undo last, r = edit last)
-      if (!focused && !loading) {
-        if (input === 'u' || input === 'U') { undoLastMessage(); return; }
-        if (input === 'r' || input === 'R') { const last = edit(); if (last) setInput(last); return; }
+    // User is typing in the input box — let TextInput handle it
+    if (focused) return;
+
+    if (!loading) {
+      if (input === 'u' || input === 'U') { undoLastMessage(); return; }
+      if (input === 'a' || input === 'A') {
+        if (assistantMessages.length > 0) setPickMode({ type: 'copy', buffer: '' });
+        return;
       }
+      if (input === 'r' || input === 'R') {
+        if (userMessages.length > 0) setPickMode({ type: 'edit', buffer: '' });
+        return;
+      }
+      if (input === 't' || input === 'T') {
+        const transcript = messages
+          .filter(m => m.role === 'user' || m.role === 'assistant')
+          .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
+          .join('\n\n');
+        try { clipboard.writeSync(transcript); setLastCopied(true); } catch (e) {}
+        return;
+      }
+    }
     const page = Math.floor(maxVisible * 0.7);
     if (key.pageUp) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + page)); return; }
     if (key.pageDown) { setScrollOffset(s => Math.max(0, s - page)); return; }
@@ -163,8 +227,15 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor={focused ? 'magentaBright' : 'magenta'} paddingX={1}>
       <Box height={1}>
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>{'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}</Text>
-        <Text dimColor>{' '}{pendingConfirmation ? 'Y:确认 N:取消' : t('keys.aiChat') + ' u:撤销 r:编辑'}</Text>
+        <Text dimColor>{' '}{
+          pickMode
+            ? (pickMode.type === 'copy' ? t('ai.pickCopy') : t('ai.pickEdit')) + ` [${pickMode.buffer || '?'}]`
+            : pendingConfirmation
+              ? 'Y:确认 N:取消'
+              : t('keys.aiChat') + ' u:撤销 a:复制 r:编辑 t:全部复制'
+        }</Text>
       </Box>
+      {lastCopied && <Box height={1}><Text color="green" bold>{'📋 '}{t('ai.copied')}</Text></Box>}
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Text dimColor>{t('ai.quickQuestions')}</Text>
@@ -188,10 +259,27 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
           }
           return <React.Fragment key={viewStart + i}>{line}</React.Fragment>;
         })}
+        {!canScrollDown && !canScrollUp && allMessageLines.length <= maxVisible && <Box flexGrow={1} />}
         {canScrollDown && (
           <Text dimColor color="cyan">{'↓ '}{t('ai.scrollBelow', { n: allMessageLines.length - viewStart - maxVisible })}</Text>
         )}
       </Box>
+      {/* ── Pick mode overlay ── */}
+      {pickMode && (
+        <Box flexDirection="column" borderStyle="single" borderColor={focused ? 'magentaBright' : 'cyan'} paddingX={1} marginTop={0}>
+          <Text dimColor>{pickMode.type === 'copy' ? t('ai.pickCopy') : t('ai.pickEdit')} — Esc:{t('action.cancel')}</Text>
+          {(pickMode.type === 'copy' ? assistantMessages : userMessages).map((m, i) => {
+            const preview = m.content.slice(0, 40).replace(/\n/g, ' ');
+            const num = String(i + 1);
+            const highlighted = pickMode.buffer === num;
+            return (
+              <Text key={i} color={highlighted ? 'cyan' : undefined}>
+                {highlighted ? '▸' : ' '}[{num}] {preview}{m.content.length > 40 ? '…' : ''}
+              </Text>
+            );
+          })}
+        </Box>
+      )}
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>
         <Text color={focused ? 'yellow' : 'gray'}>{focused ? '▸ ' : '· '}</Text>
         {focused ? (

@@ -13,7 +13,7 @@ import {
   PF_VISION_HINT,
   PF_CURRENT_TIME,
 } from '@bsky/core';
-import type { AIConfig, BskyClient } from '@bsky/core';
+import type { AIConfig, BskyClient, ChatMessage } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
 import type { ChatStorage } from '../services/chatStorage.js';
 import { v4 as uuidv4 } from './uuid.js';
@@ -292,6 +292,32 @@ export function useAIChat(
     setPendingConfirmation(null);
   }, [assistant]);
 
+  const mapMessages = useCallback((msgs: ChatMessage[]): AIChatMessage[] => {
+    return msgs.map(m => ({
+      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
+      content: contentToString(m.content),
+    }));
+  }, []);
+
+  /** Roll back to before the nth user message (0-indexed) and return that user's text. */
+  const editByIndex = useCallback((n: number): string | null => {
+    const allMsgs = assistant.getMessages();
+    let count = 0;
+    for (let i = 0; i < allMsgs.length; i++) {
+      if (allMsgs[i]!.role === 'user') {
+        if (count === n) {
+          const userContent = contentToString(allMsgs[i]!.content);
+          const keep = allMsgs.slice(0, i);
+          assistant.loadMessages(keep);
+          setMessages(mapMessages(keep));
+          return userContent;
+        }
+        count++;
+      }
+    }
+    return null;
+  }, [assistant, mapMessages]);
+
   const undoLastMessage = useCallback(() => {
     const allMsgs = assistant.getMessages();
     let lastUserIdx = -1;
@@ -301,13 +327,9 @@ export function useAIChat(
     if (lastUserIdx < 0) return;
     const keep = allMsgs.slice(0, lastUserIdx);
     assistant.loadMessages(keep);
-    setMessages(keep.map(m => ({
-      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: contentToString(m.content),
-    })));
-  }, [assistant]);
+    setMessages(mapMessages(keep));
+  }, [assistant, mapMessages]);
 
-  /** Undo last user+assistant pair and return the user's text for editing */
   const edit = useCallback((): string | null => {
     const allMsgs = assistant.getMessages();
     let lastUserIdx = -1;
@@ -315,17 +337,10 @@ export function useAIChat(
       if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
     }
     if (lastUserIdx < 0) return null;
-    const userContent = contentToString(allMsgs[lastUserIdx]!.content);
-    const keep = allMsgs.slice(0, lastUserIdx);
-    assistant.loadMessages(keep);
-    setMessages(keep.map(m => ({
-      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-      content: contentToString(m.content),
-    })));
-    return userContent;
-  }, [assistant]);
+    return editByIndex(lastUserIdx);
+  }, [assistant, editByIndex]);
 
-  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit };
+  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex };
 }
 
 // Re-export the AIChatMessage type for consumers

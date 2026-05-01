@@ -20,11 +20,12 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   const [chatId, setChatId] = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const userHandle = useMemo(() => (client.isAuthenticated() ? client.getHandle() : undefined), [client]);
 
   const isProfile = contextUri && !contextUri.startsWith('at://');
 
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId,
     storage,
     stream: true,
@@ -189,6 +190,21 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-lg">🤖</span>
             <h1 className="text-base font-semibold text-text-primary truncate">{t('nav.aiChat')}</h1>
+            {messages.length > 0 && (
+              <button
+                onClick={() => {
+                  const txt = messages
+                    .filter(m => m.role === 'user' || m.role === 'assistant')
+                    .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
+                    .join('\n\n');
+                  navigator.clipboard.writeText(txt).catch(() => {});
+                }}
+                className="ml-auto text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border"
+                title={t('ai.copyTranscript')}
+              >
+                📋 {t('ai.copyTranscript')}
+              </button>
+            )}
           </div>
           {contextUri && (
             <span className="ml-auto text-xs text-text-secondary bg-surface border border-border rounded-full px-2.5 py-0.5 truncate max-w-[200px]">
@@ -267,17 +283,22 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
               );
             }
             if (msg.role === 'user') {
-              const isLastUser = i === messages.length - 1 || (i < messages.length - 1 && messages.slice(i + 1).every(m => m.role !== 'user'));
+              const userIdx = messages.slice(0, i + 1).filter(m => m.role === 'user').length - 1;
+              const isLastUser = i === messages.length - 1 || messages.slice(i + 1).every(m => m.role !== 'user');
               return (
                 <div key={i} className="flex justify-end items-start gap-2">
-                  {isLastUser && !loading && msg.content && (
-                    <div className="flex flex-col gap-1 pt-1">
-                      <button onClick={() => { const last = edit(); if (last) { setInput(last); } }} title="Edit" className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1">✏️</button>
-                      {i > 0 && (
-                        <button onClick={undoLastMessage} title="Undo" className="text-xs text-text-secondary/60 hover:text-red-500 transition-colors px-1">↩</button>
-                      )}
-                    </div>
-                  )}
+                  <div className="flex flex-col gap-1 pt-1">
+                    {!loading && msg.content && (
+                      <button
+                        onClick={() => { const text = editByIndex(userIdx); if (text) { setInput(text); } }}
+                        title="Edit"
+                        className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1"
+                      >✏️</button>
+                    )}
+                    {isLastUser && i > 0 && (
+                      <button onClick={undoLastMessage} title="Undo" className="text-xs text-text-secondary/60 hover:text-red-500 transition-colors px-1">↩</button>
+                    )}
+                  </div>
                   <div className="bg-primary text-white rounded-lg px-3 py-2 max-w-[75%]">
                     <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                   </div>
@@ -286,8 +307,8 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
             }
             const isError = (msg as any).isError === true;
             return (
-              <div key={i} className="flex justify-start">
-                <div className={`rounded-lg px-3 py-2 max-w-[85%] border ${
+              <div key={i} className="flex justify-start group">
+                <div className={`rounded-lg px-3 py-2 max-w-[85%] border relative ${
                   isError
                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
                     : 'bg-surface border-border'
@@ -295,6 +316,19 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
                   <div className="text-sm text-text-primary markdown-body">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
+                  {!isError && msg.content && (
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(msg.content).catch(() => {});
+                        setCopiedIdx(i);
+                        setTimeout(() => setCopiedIdx(null), 1500);
+                      }}
+                      className="absolute bottom-1 right-1 text-xs text-text-secondary/60 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-surface/80"
+                      title={t('ai.copyLast')}
+                    >
+                      {copiedIdx === i ? '📋 ' + t('ai.copied') : '📋'}
+                    </button>
+                  )}
                 </div>
               </div>
             );

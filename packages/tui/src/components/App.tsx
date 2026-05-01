@@ -128,6 +128,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     }
     if (key.escape) {
       if (showFeedConfig) { setShowFeedConfig(false); return; }
+      if (currentView.type === 'search') { /* handled by SearchView */ return; }
       if (currentView.type === 'aiChat') {
         if (focusedPanel === 'ai') { setFocusedPanel('main'); return; }
         goBack(); return;
@@ -176,12 +177,6 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
     const k = input.toLowerCase();
     if (!k) return;
-
-    // INCOMPLETE: a/t should do copy/transcript per keys.aiMain i18n, but impl not wired
-    if (currentView.type === 'aiChat' && focusedPanel === 'main') {
-      if (k === 'a' || k === 't') { goBack(); goTo({ type: 'feed' }); }
-      return;
-    }
 
     // When composing: handle image path input, draft list, save prompt, or pass to TextInput
     if (currentView.type === 'compose') {
@@ -266,12 +261,15 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
 
+    // Search mode — all keys handled by SearchView (like compose mode)
+    if (currentView.type === 'search') return;
+
     // ── Global navigation shortcuts ──
-    if (k === 't') { goHome(); return; }
+    if (k === 't') { if (currentView.type !== 'aiChat') goHome(); return; }
     if (k === 'n') { goTo({ type: 'notifications' }); return; }
     if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
     if (k === 's') { goTo({ type: 'search' }); return; }
-    if (k === 'a') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
+    if (k === 'a') { if (currentView.type !== 'aiChat') goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
     if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
 
