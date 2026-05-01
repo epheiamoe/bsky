@@ -46,12 +46,6 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
           </button>
           {showMenu && createPortal(
             <div className="fixed top-12 left-4 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-[200] py-1 min-w-[200px] max-h-[60vh] overflow-y-auto">
-              <button
-                onClick={() => { goTo({ type: 'feed' }); setShowMenu(false); }}
-                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors ${!currentFeedUri ? 'text-primary font-medium' : 'text-text-primary'}`}
-              >
-                📋 {t('nav.feed')}
-              </button>
               {feeds.map(f => (
                 <button
                   key={f.uri}
@@ -152,12 +146,6 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
           <div>
             <p className="text-xs text-text-secondary mb-2">{t('feed.defaultFeed')}</p>
             <div className="flex flex-wrap gap-1">
-              <button
-                onClick={() => handleSetDefault(null)}
-                className={`text-xs px-2 py-1 rounded-full transition-colors ${config.defaultFeedUri === null ? 'bg-primary text-white' : 'bg-surface text-text-secondary hover:bg-border'}`}
-              >
-                📋 {t('nav.feed')}
-              </button>
               {config.feeds.map(f => (
                 <button
                   key={f.uri}

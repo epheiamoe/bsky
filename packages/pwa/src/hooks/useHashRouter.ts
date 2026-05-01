@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AppView } from '@bsky/app';
+import { getFeedConfig } from '@bsky/app';
 
 /**
  * Hash-based navigation for PWA static hosting.
@@ -22,9 +23,15 @@ export function useHashRouter() {
   });
 
   useEffect(() => {
-    // Set initial history state
-    if (!window.location.hash || window.location.hash === '#/' || window.location.hash === '#/feed') {
-      window.history.replaceState(null, '', '#/feed');
+    // Redirect bare /feed to default feed if configured
+    const raw = window.location.hash.replace(/^#/, '');
+    if (!raw || raw === '/' || raw === '/feed' || raw === '') {
+      const defFeed = getFeedConfig().defaultFeedUri;
+      if (defFeed) {
+        window.history.replaceState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
+      } else {
+        window.history.replaceState(null, '', '#/feed');
+      }
     }
 
     const handler = () => {
@@ -52,8 +59,14 @@ export function useHashRouter() {
   }, []);
 
   const goHome = useCallback(() => {
-    window.history.pushState(null, '', '#/feed');
-    setCurrentView({ type: 'feed' });
+    const defFeed = getFeedConfig().defaultFeedUri;
+    if (defFeed) {
+      window.history.pushState(null, '', `#/feed?feed=${encodeURIComponent(defFeed)}`);
+      setCurrentView({ type: 'feed', feedUri: defFeed });
+    } else {
+      window.history.pushState(null, '', '#/feed');
+      setCurrentView({ type: 'feed' });
+    }
     setCanGoBack(false);
   }, []);
 
@@ -70,7 +83,13 @@ function parseHash(): AppView {
   switch (path) {
     case '/': case '/feed': case '': {
       const feedUri = params.get('feed');
-      return feedUri ? { type: 'feed', feedUri: decodeURIComponent(feedUri) } : { type: 'feed' };
+      if (feedUri) return { type: 'feed', feedUri: decodeURIComponent(feedUri) };
+      // Check user's configured default feed
+      try {
+        const defFeed = getFeedConfig().defaultFeedUri;
+        if (defFeed) return { type: 'feed', feedUri: defFeed };
+      } catch {}
+      return { type: 'feed' };
     }
     case '/thread': {
       const uri = params.get('uri');
