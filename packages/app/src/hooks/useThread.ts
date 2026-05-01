@@ -178,13 +178,13 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5): FlatL
       likeCount: post.likeCount ?? 0,
       repostCount: post.repostCount ?? 0,
       replyCount: post.replyCount ?? 0,
-      indexedAt: post.indexedAt,
+      indexedAt: post.indexedAt ?? '',
     });
 
     if (node.replies && d >= 0) {
       const sortedReplies = [...node.replies]
         .filter((r): r is ThreadViewPost => r.$type === 'app.bsky.feed.defs#threadViewPost')
-        .sort((a, b) => new Date(a.post.indexedAt).getTime() - new Date(b.post.indexedAt).getTime());
+        .sort((a, b) => new Date(a.post.indexedAt ?? '').getTime() - new Date(b.post.indexedAt ?? '').getTime());
 
       const visible = Math.min(sortedReplies.length, maxSiblings);
       for (const reply of sortedReplies.slice(0, visible)) {
@@ -209,53 +209,48 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5): FlatL
 }
 
 function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
-  const embed = post.record.embed as {
+  // Read from the API-resolved top-level embed (has full author/value/embeds),
+  // NOT from post.record.embed (stored format with only uri+cid)
+  const embed = (post as any).embed as {
     $type?: string;
     record?: {
-      $type?: string;
       uri?: string;
       cid?: string;
       author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-      value?: { text?: string };
-      embeds?: Array<unknown>;
-      record?: {
+      value?: { text?: string; createdAt?: string };
+      embeds?: Array<{
         $type?: string;
-        uri?: string;
-        cid?: string;
-        author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-        value?: { text?: string };
-        embeds?: Array<unknown>;
-      };
+        images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+        external?: { uri: string; title: string; description: string };
+      }>;
     };
     media?: Record<string, unknown>;
   } | undefined;
 
   if (!embed) return undefined;
 
-  const isRecord = embed.$type === 'app.bsky.embed.record';
-  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia';
-
+  const isRecord = embed.$type === 'app.bsky.embed.record#view' || embed.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia#view' || embed.$type === 'app.bsky.embed.recordWithMedia';
   if (!isRecord && !isRecordWithMedia) return undefined;
 
-  // For recordWithMedia, the record is double-nested: embed.record.record
-  const rec = isRecordWithMedia ? embed.record?.record : embed.record;
+  // For resolved #view format, record is always single-nested
+  const rec = embed.record;
   if (!rec?.uri) return undefined;
 
   const quotedMediaTags: string[] = [];
   const quotedImageUrls: string[] = [];
   let quotedExternalLink: FlatLine['externalLink'] | null = null;
 
-  const recEmbed = rec as { embeds?: Array<{ $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; external?: { uri: string; title: string; description: string } }> };
-  if (recEmbed?.embeds?.[0]) {
-    const e = recEmbed.embeds[0]!;
-    if (e.$type === 'app.bsky.embed.images' && e.images) {
+  if (rec.embeds?.[0]) {
+    const e = rec.embeds[0]!;
+    if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
       const count = e.images.length;
       quotedMediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         quotedImageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
       }
-    } else if (e.$type === 'app.bsky.embed.external' && e.external) {
+    } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       quotedMediaTags.push('🔗 链接');
       quotedExternalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
     }

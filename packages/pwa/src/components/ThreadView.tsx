@@ -314,6 +314,28 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-all">
               {linkifyText(focused.text)}
             </p>
+            {focused.quotedPost && (
+              <div
+                className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+                onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {focused.quotedPost.authorAvatar && (
+                    <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                  )}
+                  <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                  <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                </div>
+                <p className="text-sm text-text-primary line-clamp-4 break-all">{linkifyText(focused.quotedPost.text)}</p>
+                {focused.quotedPost.imageUrls && focused.quotedPost.imageUrls.length > 0 && (
+                  <div className="mt-1 flex gap-1">
+                    {focused.quotedPost.imageUrls.slice(0, 2).map((url, idx) => (
+                      <img key={idx} src={url} className="w-16 h-16 object-cover rounded-md" alt="" />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             {translating && <p className="text-text-secondary text-sm mt-1">🌐 {t('action.translating')}</p>}
             {translationResult && !translating && (
               <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">

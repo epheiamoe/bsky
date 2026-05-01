@@ -4,7 +4,7 @@ import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeImage, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
-import { setLastFeedUri } from '@bsky/app';
+import { setLastFeedUri, getFeedConfig } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import { Sidebar } from './Sidebar.jsx';
@@ -54,7 +54,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Feed
   const [currentFeedUri, setCurrentFeedUri] = useState<string | undefined>(undefined);
   const [defaultFeedUri, setDefaultFeedUri] = useState<string | undefined>(
-    process.env.DEFAULT_FEED || undefined
+    getFeedConfig().defaultFeedUri ?? process.env.DEFAULT_FEED ?? undefined
   );
   const [feedConfig, setFeedConfig] = useState<string[]>(() => {
     const envFeeds = process.env.BSKY_FEEDS;
@@ -290,6 +290,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const p = posts[feedIdx];
         if (p) bookmarks.toggleBookmark(p.uri, p.cid);
       }
+      else if (k === 'q') {
+        const p = posts[feedIdx] as any;
+        const quoteUri = p?.embed?.record?.uri as string | undefined;
+        if (quoteUri) goTo({ type: 'thread', uri: quoteUri });
+      }
     }
 
     // ── Bookmarks-specific ──
@@ -300,6 +305,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       else if (k === 'd') {
         const bm = bookmarks.bookmarks[bookmarkIdx];
         if (bm) bookmarks.removeBookmark(bm.uri);
+      }
+      else if (k === 'q') {
+        const bm = bookmarks.bookmarks[bookmarkIdx] as any;
+        const quoteUri = bm?.embed?.record?.uri as string | undefined;
+        if (quoteUri) goTo({ type: 'thread', uri: quoteUri });
       }
       return;
     }

@@ -56,13 +56,13 @@ export interface PostView {
   cid: string;
   author: ProfileViewBasic;
   record: PostRecord;
+  embed?: Record<string, unknown>;
+  embedCount?: number;
+  likeCount?: number;
   replyCount?: number;
   repostCount?: number;
-  likeCount?: number;
-  quoteCount?: number;
-  indexedAt: string;
+  indexedAt?: string;
   viewer?: ViewerState;
-  labels?: Array<{ val: string }>;
 }
 
 export interface ProfileViewBasic {

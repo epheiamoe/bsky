@@ -197,11 +197,13 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   );
 
   const renderQuotedPost = (qp: NonNullable<FlatLine['quotedPost']>) => (
-    <Box flexDirection="column" marginTop={0} borderStyle="single" borderColor="magenta" paddingX={1}>
-      <Box><Text color="magenta">{'📌 '}{qp.displayName}{' @'}{qp.handle}</Text></Box>
-      <Box><Text>{qp.text}</Text></Box>
+    <Box flexDirection="column" marginTop={0}>
+      <Box><Text color="magenta">{'│ @'}{qp.handle}</Text></Box>
+      {qp.text.split('\n').map((line, i) => (
+        <Box key={i}><Text color="magenta">{'│ '}{line || ' '}</Text></Box>
+      ))}
       {qp.imageUrls?.map((url, idx) => (
-        <Box key={idx}><Text>{'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: qp.imageUrls!.length > 1 ? idx + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}</Text></Box>
+        <Box key={idx}><Text color="magenta">{'│ '}{'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: qp.imageUrls!.length > 1 ? idx + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}</Text></Box>
       ))}
     </Box>
   );

@@ -8,6 +8,7 @@ export interface PostLine {
   text: string;
   isSelected: boolean;
   isName: boolean;
+  quoteUri?: string;
 }
 
 export function postToLines(post: PostView, index: number, isSelected: boolean, cols: number, t: (key: string, params?: Record<string, string | number>) => string, locale: string): PostLine[] {
@@ -42,20 +43,23 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
   };
   extract(embed);
 
-  // Quote embed — show quoted post summary
-  const quoteEmbed = post.record.embed as {
+  // Quote embed — read from resolved top-level embed (NOT record.embed)
+  const viewEmbed = (post as any).embed as {
     $type?: string;
-    record?: { uri?: string; cid?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string }; record?: { uri?: string; cid?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string } } };
+    record?: { uri?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string }; embeds?: Array<{ $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> }> };
   } | undefined;
-  const isRecord = quoteEmbed?.$type === 'app.bsky.embed.record';
-  const isRecordWithMedia = quoteEmbed?.$type === 'app.bsky.embed.recordWithMedia';
-  if (isRecord || isRecordWithMedia) {
-    const rec = isRecordWithMedia ? quoteEmbed?.record?.record : quoteEmbed?.record;
-    if (rec?.uri) {
-      const quotedAuthor = rec.author?.displayName || rec.author?.handle || '';
-      const quotedText = rec.value?.text?.replace(/\n/g, ' ').slice(0, 80) || '';
-      const extra = rec.value?.text && rec.value.text.length > 80 ? '…' : '';
-      lines.push({ text: `📌 引用 @${quotedAuthor}: ${quotedText}${extra}`, isSelected, isName: false });
+  const isRecord = viewEmbed?.$type === 'app.bsky.embed.record#view' || viewEmbed?.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = viewEmbed?.$type === 'app.bsky.embed.recordWithMedia#view' || viewEmbed?.$type === 'app.bsky.embed.recordWithMedia';
+  if ((isRecord || isRecordWithMedia) && viewEmbed?.record?.uri) {
+    const rec = viewEmbed.record;
+    const qAuthor = rec.author?.displayName || rec.author?.handle || '';
+    const qText = rec.value?.text?.replace(/\n/g, ' ') || '';
+    const qUri = rec.uri;
+    // │ @handle
+    lines.push({ text: `│ @${qAuthor}`, isSelected, isName: false, quoteUri: qUri });
+    // │ quoted text (wrapped)
+    for (const l of wrapLines(qText, maxCols - 2)) {
+      lines.push({ text: '│ ' + l, isSelected, isName: false, quoteUri: qUri });
     }
   }
 
@@ -80,6 +84,13 @@ export interface PostListItemProps {
 
 export function PostListItem({ line }: PostListItemProps) {
   if (!line.text) return <Text> </Text>;
+  if (line.quoteUri) {
+    return (
+      <Text color="magenta" dimColor={!line.isSelected}>
+        {line.text}
+      </Text>
+    );
+  }
   return (
     <Text color={line.isSelected ? 'cyanBright' : line.isName ? 'green' : undefined} bold={line.isSelected && line.isName} dimColor={!line.isSelected && !line.isName}>
       {line.text}

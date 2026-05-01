@@ -68,7 +68,7 @@ export function PF_PROFILE_CONTEXT(handle: string, currentUserHandle?: string): 
     `用户正在查看 ${handle} 的主页。`,
     '请先查看他们的近期帖子（get_author_feed）。',
     `如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts${fromClause} to:${handle} 查找。`,
-    '概括至少 3 个要点，引用至少一则他们的贴文。帮助用户了解这个账号。',
+    '概括至少 3 个要点，在响应末尾使用引用格式引用至少一则他们的贴文。帮助用户了解这个账号。',
     '注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。',
     '【仅分析，不要代表用户发帖或互动】',
   ].join('');
@@ -87,7 +87,7 @@ export function PF_POST_CONTEXT(uri: string): string {
  * @param env - 'tui' (终端) or 'pwa' (浏览器)
  */
 export function PF_ENVIRONMENT(env: 'tui' | 'pwa'): string {
-  return `用户环境: ${env === 'tui' ? '终端' : '浏览器'}。`;
+  return `你运行在${env === 'tui' ? '终端命令行界面 (TUI/CLI)' : '网页浏览器 (PWA)'}中。当前用户通过${env === 'tui' ? '命令行输入和你交互，输出是纯文本。保持回复简短，避免复杂格式，每行不要超过80个字符。可使用OSC 8超链接但不支持图片内嵌。' : '网页界面和你交互，支持图片、Markdown格式和超链接。'}。`;
 }
 
 /**
@@ -178,6 +178,6 @@ export function PF_AUTO_ANALYSIS(handle: string): string {
 
 export const P_GUIDING_QUESTIONS: string[] = [
   '总结这个讨论',
-  '查看作者动态',
+  '解释这个讨论',
   '分析帖子情绪',
 ];

@@ -201,8 +201,8 @@ const en: LocaleMessages = {
   'common.rawModeWarning': 'This terminal does not support raw mode. Use Windows Terminal / iTerm2.',
   'common.escBack': 'Esc to go back',
 
-  'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh f:Feed',
-  'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete r:Refresh',
+  'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh f:Feed v:Bookmark q:Quote',
+  'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete r:Refresh q:Quote',
   'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark f:Translate u:Follow g:Profile',
   'keys.compose': 'Enter:Send · Esc:Cancel · i:Image · D:Drafts',
   'keys.composeImage': 'Enter image path · Enter:Confirm · Esc:Cancel',

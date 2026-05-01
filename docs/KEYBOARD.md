@@ -88,10 +88,11 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `r` | Refresh feed from top |
 | `f` | Switch / configure feed (jk nav, Enter select, d delete, a add) |
 | `v` | Toggle bookmark on selected post |
+| `q` | Open quoted post in thread (when post has a quote embed) |
 | Mouse scroll up | Move cursor up by 1 |
 | Mouse scroll down | Move cursor down by 1 |
 
-**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏`
+**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用`
 
 ---
 
@@ -142,8 +143,9 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `Enter` | View bookmarked post in thread |
 | `d` | Delete selected bookmark |
 | `r` | Refresh bookmarks list |
+| `q` | Open quoted post in thread |
 
-**Footer hint**: `↑↓/jk:导航 Enter:查看 d:删除 r:刷新`
+**Footer hint**: `↑↓/jk:导航 Enter:查看 d:删除 r:刷新 q:引用`
 
 ---
 

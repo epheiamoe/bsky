@@ -201,8 +201,8 @@ const ja: LocaleMessages = {
   'common.rawModeWarning': 'このターミナルは raw mode に対応していません。Windows Terminal / iTerm2 を使用してください。',
   'common.escBack': 'Esc で戻る',
 
-  'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新 f:フィード',
-  'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 r:更新',
+  'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新 f:フィード v:ブクマ q:引用',
+  'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 r:更新 q:引用',
   'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳 u:フォロー g:プロフィール',
   'keys.compose': 'Enter:送信 · Esc:取消 · i:画像 · D:下書き',
   'keys.composeImage': '画像パス入力 · Enter:確認 · Esc:取消',

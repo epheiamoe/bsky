@@ -66,42 +66,30 @@ function extractEmbeds(post: PostView): { images: ImageData[]; external: Externa
 }
 
 function extractQuotedPost(post: PostView): QuotedPostData | undefined {
-  const embed = post.record.embed as {
+  // Read from the API-resolved top-level embed (has full author/value/embeds),
+  // NOT from post.record.embed (stored format with only uri+cid)
+  const embed = (post as any).embed as {
     $type?: string;
     record?: {
-      $type?: string;
       uri?: string;
       cid?: string;
       author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-      value?: { text?: string };
+      value?: { text?: string; createdAt?: string };
       embeds?: Array<{
         $type?: string;
         images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
         external?: { uri: string; title: string; description: string };
       }>;
-      // For recordWithMedia, the record is double-nested
-      record?: {
-        $type?: string;
-        uri?: string;
-        cid?: string;
-        author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-        value?: { text?: string };
-        embeds?: Array<{
-          $type?: string;
-          images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-          external?: { uri: string; title: string; description: string };
-        }>;
-      };
     };
   } | undefined;
   if (!embed) return undefined;
 
-  const isRecord = embed.$type === 'app.bsky.embed.record';
-  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia';
+  const isRecord = embed.$type === 'app.bsky.embed.record#view' || embed.$type === 'app.bsky.embed.record';
+  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia#view' || embed.$type === 'app.bsky.embed.recordWithMedia';
   if (!isRecord && !isRecordWithMedia) return undefined;
 
-  // For recordWithMedia, the actual record is double-nested: embed.record.record
-  const rec = isRecordWithMedia ? embed.record?.record : embed.record;
+  // For resolved #view format, record is always single-nested
+  const rec = embed.record;
   if (!rec?.uri) return undefined;
 
   const imageUrls: string[] = [];
@@ -110,14 +98,14 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
 
   if (rec.embeds?.[0]) {
     const e = rec.embeds[0]!;
-    if (e.$type === 'app.bsky.embed.images' && e.images) {
+    if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
       const count = e.images.length;
       mediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         imageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
       }
-    } else if (e.$type === 'app.bsky.embed.external' && e.external) {
+    } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       mediaTags.push('🔗 链接');
       externalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
     }
@@ -266,7 +254,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     displayName = post.author.displayName ?? post.author.handle;
     handle = post.author.handle;
     text = post.record.text;
-    indexedAt = post.indexedAt;
+    indexedAt = post.indexedAt ?? '';
     likeCount = post.likeCount;
     repostCount = post.repostCount;
     replyCount = post.replyCount;
@@ -368,7 +356,13 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             </div>
           )}
           {quotedPost && (
-            <div className="mt-2 border border-border rounded-lg p-3 bg-surface overflow-hidden">
+            <div
+              className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
+              }}
+            >
               <div className="flex items-center gap-2 mb-1">
                 {quotedPost.authorAvatar && (
                   <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />

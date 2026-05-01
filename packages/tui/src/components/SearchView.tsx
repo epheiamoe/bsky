@@ -71,12 +71,24 @@ export function SearchView({ client, query, goBack, cols, goTo }: SearchViewProp
       {loading && <Text dimColor>{'⏳ '}{t('search.searching')}</Text>}
 
       {/* Posts results */}
-      {(tab === 'top' || tab === 'latest') && posts.map((p, i) => (
-        <Box key={p.uri} height={1}>
-          <Text color="green">{p.author.handle}</Text>
-          <Text>{': '}{p.record.text.slice(0, cols - 30)}</Text>
-        </Box>
-      ))}
+      {(tab === 'top' || tab === 'latest') && posts.map((p, i) => {
+        const viewEmbed = (p as any).embed as { $type?: string; record?: { uri?: string; author?: { handle?: string }; value?: { text?: string } } } | undefined;
+        const hasQuote = viewEmbed?.record?.uri && (viewEmbed.$type === 'app.bsky.embed.record#view' || viewEmbed.$type === 'app.bsky.embed.record' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia#view' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia');
+        return (
+          <React.Fragment key={p.uri}>
+            <Box height={1}>
+              <Text color="green">{p.author.handle}</Text>
+              <Text>{': '}{p.record.text.slice(0, cols - 30)}</Text>
+              {hasQuote && <Text color="magenta">{' 📌'}</Text>}
+            </Box>
+            {hasQuote && (
+              <Box height={1}>
+                <Text color="magenta" dimColor>{'│ @'}{viewEmbed!.record!.author?.handle || ''}{' '}{viewEmbed!.record!.value?.text?.replace(/\n/g, ' ').slice(0, 60) || ''}</Text>
+              </Box>
+            )}
+          </React.Fragment>
+        );
+      })}
 
       {/* Users results */}
       {tab === 'users' && users.map((u, i) => (

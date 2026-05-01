@@ -94,7 +94,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
             authorAvatar: post.author.avatar,
             text: post.record.text,
             images: extractQuotePreviews(post),
-            indexedAt: post.indexedAt,
+            indexedAt: post.indexedAt ?? '',
           });
         }
       }).catch(() => {}).finally(() => setQuoteLoading(false));

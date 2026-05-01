@@ -125,6 +125,20 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig,
   const maxPosts = Math.max(1, rows - 8);
   const followLabel = isFollowing ? t('profile.unfollow') : t('profile.follow');
 
+  // Flatten posts + quote lines for display
+  type DisplayItem = { type: 'post'; post: typeof posts[number]; index: number } | { type: 'quote'; text: string; uri: string };
+  const displayItems: DisplayItem[] = [];
+  for (let i = 0; i < posts.length; i++) {
+    displayItems.push({ type: 'post', post: posts[i]!, index: i });
+    const viewEmbed = (posts[i] as any).embed as { $type?: string; record?: { uri?: string; author?: { handle?: string; displayName?: string }; value?: { text?: string } } } | undefined;
+    if (viewEmbed?.record?.uri && (viewEmbed.$type === 'app.bsky.embed.record#view' || viewEmbed.$type === 'app.bsky.embed.record' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia#view' || viewEmbed.$type === 'app.bsky.embed.recordWithMedia')) {
+      const h = viewEmbed.record.author?.handle || '';
+      const t = (viewEmbed.record.value?.text || '').replace(/\n/g, ' ').slice(0, 80);
+      displayItems.push({ type: 'quote', text: `│ @${h}\n│ ${t}${t.length >= 80 ? '…' : ''}`, uri: viewEmbed.record.uri });
+    }
+  }
+  const visibleItems = displayItems.slice(0, maxPosts * 3);
+
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box height={1}>
@@ -150,8 +164,17 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig,
         <Text color={isFollowing ? 'yellow' : 'green'}>{followLabel}</Text>
       </Box>
       {posts.length === 0 && !feedLoading && <Text dimColor>{t('status.noPosts')}</Text>}
-      {posts.slice(0, maxPosts).map((post, i) => {
-        const isSel = i === postIdx;
+      {visibleItems.map((item) => {
+        if (item.type === 'quote') {
+          const lines = item.text.split('\n');
+          return (
+            <Box key={`q-${item.uri}-${lines[0]}`} height={1}>
+              <Text color="magenta" dimColor>{lines[0]}</Text>
+            </Box>
+          );
+        }
+        const post = item.post;
+        const isSel = item.index === postIdx;
         const raw = (post.record.text || '').replace(/\n/g, ' ');
         const text = raw.slice(0, 80);
         const truncated = raw.length > 80;
