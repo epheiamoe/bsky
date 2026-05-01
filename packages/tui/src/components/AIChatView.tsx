@@ -11,6 +11,9 @@ import clipboard from 'clipboardy';
 interface AIChatViewProps {
   client: BskyClient | null;
   aiConfig: AIConfig;
+  sessionId?: string;
+  contextPost?: string;
+  contextProfile?: string;
   contextUri?: string;
   goBack: () => void;
   cols: number;
@@ -22,14 +25,15 @@ interface AIChatViewProps {
 
 type PickMode = { type: 'copy' | 'edit'; buffer: string } | null;
 
-export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
+export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
   const storage = getDefaultStorage();
   const [chatId, setChatId] = useState<string | undefined>();
-  const [showHistory, setShowHistory] = useState(!contextUri);
+  const [showHistory, setShowHistory] = useState(!contextUri && !sessionId);
   const isProfile = contextUri && !contextUri.startsWith('at://');
-  const profileContext = isProfile ? contextUri : undefined;
-  const postContext = isProfile ? undefined : contextUri;
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
+  const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
+  const postContext = contextPost ?? (isProfile ? undefined : contextUri);
+  const effectiveChatId = sessionId ?? chatId;
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: effectiveChatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, contextPost, stream: true });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);

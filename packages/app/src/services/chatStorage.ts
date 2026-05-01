@@ -13,6 +13,7 @@ export interface ChatRecord {
   id: string;
   title: string;
   contextUri?: string;
+  context?: { type: 'post'; uri: string } | { type: 'profile'; handle: string };
   messages: AIChatMessage[];
   createdAt: string;
   updatedAt: string;

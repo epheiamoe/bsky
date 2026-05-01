@@ -98,7 +98,7 @@ function ActionButtons({
         {isBookmarked(uri) ? '🔖 ' + t('action.bookmarked') : '🔖 ' + t('action.bookmark')}
       </button>
       <button
-        onClick={() => goTo({ type: 'aiChat', contextUri: uri })}
+        onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: uri })}
         className="hover:text-primary transition-colors"
       >
         🤖 {t('thread.aiAnalyze')}

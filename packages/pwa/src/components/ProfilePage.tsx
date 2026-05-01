@@ -241,7 +241,7 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
 
             <div className="flex gap-2 items-end">
               <button
-                onClick={() => goTo({ type: 'aiChat', contextUri: actor })}
+                onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile: actor })}
                 className="px-4 py-2 rounded-full text-sm font-medium border border-border text-text-secondary hover:bg-surface transition-colors"
               >
                 🤖 AI

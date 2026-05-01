@@ -26,7 +26,10 @@ interface UseAIChatOptions {
   userDisplayName?: string;
   environment?: 'tui' | 'pwa';
   locale?: string;
+  /** Profile context: handle (not at:// prefixed) — passed from navigation, not URL */
   contextProfile?: string;
+  /** Post context: at:// URI — passed from navigation, not URL */
+  contextPost?: string;
 }
 
 export function useAIChat(
@@ -48,6 +51,8 @@ export function useAIChat(
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
   const autoStartedRef = useRef(false);
+  // Track current context for auto-save persistence
+  const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
   const buildSystemPrompt = useCallback((withContext?: string, contextProfile?: string) => {
     const parts: string[] = [];
@@ -84,8 +89,16 @@ export function useAIChat(
     setGuidingQuestions([]);
     autoStartedRef.current = false;
 
-    assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
-  }, [options?.chatId, buildSystemPrompt, options?.contextProfile]);
+    // Add initial system message based on context from options (in-memory from navigation)
+    if (options?.contextPost) {
+      assistant.addSystemMessage(buildSystemPrompt(options.contextPost, undefined));
+      setGuidingQuestions(P_GUIDING_QUESTIONS);
+    } else if (options?.contextProfile) {
+      assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
+    } else {
+      assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
+    }
+  }, [options?.chatId, buildSystemPrompt, options?.contextProfile, options?.contextPost]);
 
   // Load existing conversation from storage when chatId changes
   useEffect(() => {
@@ -94,11 +107,18 @@ export function useAIChat(
       const record = await storage.loadChat(options.chatId!);
       if (record) {
         setMessages(record.messages);
-        if (contextUri) {
+        // Restore context from saved record (survives page refresh)
+        if (record.context) {
+          contextRef.current = record.context;
+          if (record.context.type === 'post') {
+            assistant.addSystemMessage(buildSystemPrompt(record.context.uri, undefined));
+          } else {
+            assistant.addSystemMessage(buildSystemPrompt(undefined, record.context.handle));
+          }
+        } else if (contextUri) {
           assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         }
       } else {
-        // No record found — start fresh
         setMessages([]);
       }
     })();
@@ -110,17 +130,29 @@ export function useAIChat(
     const tools = createTools(client);
     assistant.setTools(tools);
 
+    // Set context from options (first navigation — in memory, not URL)
+    if (options?.contextPost) {
+      contextRef.current = { type: 'post', uri: options.contextPost };
+    } else if (options?.contextProfile) {
+      contextRef.current = { type: 'profile', handle: options.contextProfile };
+    }
+
     const changed = contextUri !== lastContext.current;
     lastContext.current = contextUri;
 
     if (changed) {
-      // Only reset if not restoring from storage and not a fresh chat with contextProfile
-      if (!options?.chatId && !options?.contextProfile) {
+      if (!options?.chatId && !options?.contextProfile && !options?.contextPost) {
         assistant.clearMessages();
         setMessages([]);
       }
 
-      if (contextUri) {
+      if (options?.contextPost) {
+        assistant.addSystemMessage(buildSystemPrompt(options.contextPost, undefined));
+        setGuidingQuestions(P_GUIDING_QUESTIONS);
+      } else if (options?.contextProfile) {
+        assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
+        setGuidingQuestions([]);
+      } else if (contextUri) {
         assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         setGuidingQuestions(P_GUIDING_QUESTIONS);
       } else if (options?.contextProfile) {
@@ -131,7 +163,7 @@ export function useAIChat(
         setGuidingQuestions([]);
       }
     }
-  }, [client, contextUri, assistant, options?.contextProfile, buildSystemPrompt]);
+  }, [client, contextUri, assistant, options?.contextProfile, options?.contextPost, buildSystemPrompt]);
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
     const title = msgs.find(m => m.role === 'user')?.content.slice(0, 80) ?? '新对话';
@@ -140,6 +172,7 @@ export function useAIChat(
         id: chatIdRef.current,
         title,
         contextUri,
+        context: contextRef.current,
         messages: msgs,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

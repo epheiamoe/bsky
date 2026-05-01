@@ -184,6 +184,9 @@ export function App() {
           <AIChatPage
             client={client}
             aiConfig={effectiveAiConfig}
+            sessionId={(currentView as { sessionId?: string }).sessionId}
+            contextPost={(currentView as { contextPost?: string }).contextPost}
+            contextProfile={(currentView as { contextProfile?: string }).contextProfile}
             contextUri={(currentView as { contextUri?: string }).contextUri}
             goBack={goBack}
           />

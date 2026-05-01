@@ -176,7 +176,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     }
 
     // Ctrl+G
-    if (input === '\x07') { goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
+    if (input === '\x07') { goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: threadUri ?? undefined }); return; }
 
     // Settings
     if (input === ',') { setShowSettings(true); return; }
@@ -275,7 +275,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'n') { goTo({ type: 'notifications' }); return; }
     if (k === 'p') { goTo({ type: 'profile', actor: config.blueskyHandle }); return; }
     if (k === 's') { goTo({ type: 'search' }); return; }
-    if (k === 'a') { if (currentView.type !== 'aiChat') goTo({ type: 'aiChat', contextUri: threadUri ?? undefined }); return; }
+    if (k === 'a') { if (currentView.type !== 'aiChat') goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: threadUri ?? undefined }); return; }
     if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
 
@@ -441,7 +441,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'search':
         return <SearchView client={client} query={(currentView as { query?: string }).query} goBack={goBack} cols={mainW} rows={rows} goTo={goTo} />;
       case 'aiChat':
-        return <AIChatView client={client} aiConfig={config.aiConfig} contextUri={(currentView as { contextUri?: string }).contextUri} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} userHandle={config.blueskyHandle} locale={locale} />;
+        return <AIChatView client={client} aiConfig={config.aiConfig} sessionId={(currentView as { sessionId?: string }).sessionId} contextPost={(currentView as { contextPost?: string }).contextPost} contextProfile={(currentView as { contextProfile?: string }).contextProfile} contextUri={(currentView as { contextUri?: string }).contextUri} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} userHandle={config.blueskyHandle} locale={locale} />;
       case 'bookmarks':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>

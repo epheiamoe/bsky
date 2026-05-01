@@ -10,11 +10,14 @@ import { formatTime } from '../utils/format.js';
 interface AIChatPageProps {
   client: BskyClient;
   aiConfig: AIConfig;
+  sessionId?: string;
+  contextPost?: string;
+  contextProfile?: string;
   contextUri?: string;
   goBack: () => void;
 }
 
-export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageProps) {
+export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goBack }: AIChatPageProps) {
   const { t, locale } = useI18n();
   const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [chatId, setChatId] = useState<string | undefined>();
@@ -23,16 +26,19 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const userHandle = useMemo(() => (client.isAuthenticated() ? client.getHandle() : undefined), [client]);
 
-  const isProfile = contextUri && !contextUri.startsWith('at://');
+  const isProfile = contextUri && !contextUri?.startsWith('at://');
+
+  const effectiveChatId = sessionId ?? chatId;
 
   const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
-    chatId,
+    chatId: effectiveChatId,
     storage,
     stream: true,
     userHandle,
     environment: 'pwa',
     locale,
-    contextProfile: isProfile ? contextUri : undefined,
+    contextProfile: contextProfile ?? (isProfile ? contextUri : undefined),
+    contextPost,
   });
   const { conversations, deleteConversation } = useChatHistory(storage);
 

@@ -58,7 +58,7 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig,
       if (post) goTo({ type: 'thread', uri: post.uri });
       return;
     }
-    if (input === 'a' || input === 'A') { goTo({ type: 'aiChat', contextUri: actor }); return; }
+    if (input === 'a' || input === 'A') { goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile: actor }); return; }
     if (input === 'f' || input === 'F') {
       if (profile?.description && !translatingBio) {
         setTranslatingBio(true);
