@@ -103,9 +103,9 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
     if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
       const count = e.images.length;
       mediaTags.push(count === 1 ? '图片' : `${count}张图片`);
-      const did = rec.author?.did ?? '';
       for (const img of e.images) {
-        imageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
+        const url = (img as any).fullsize || getCdnImageUrl(rec.author?.did ?? '', (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
+        if (url) imageUrls.push(url);
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       mediaTags.push('🔗 链接');

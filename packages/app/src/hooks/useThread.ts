@@ -241,7 +241,8 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
       quotedMediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
-        quotedImageUrls.push(getCdnImageUrl(did, img.image.ref.$link, img.image.mimeType));
+        const url = (img as any).fullsize || getCdnImageUrl(did, (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
+        if (url) quotedImageUrls.push(url);
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       quotedMediaTags.push('🔗 链接');
