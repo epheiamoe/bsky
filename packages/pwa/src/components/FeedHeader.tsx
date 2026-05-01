@@ -30,9 +30,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
     setConfig(cfg);
   };
 
-  const currentLabel = currentFeedUri
-    ? `📋 ${t('nav.feed')} - ${getFeedLabel(currentFeedUri)}`
-    : `📋 ${t('nav.feed')}`;
+  const currentLabel = `📋 ${t('nav.feed')}${currentFeedUri ? ' - ' + getFeedLabel(currentFeedUri) : ''}`;
 
   return (
     <>

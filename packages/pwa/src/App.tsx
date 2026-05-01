@@ -4,6 +4,7 @@ import type { AppView } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
+import { getFeedConfig } from '@bsky/app';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -19,7 +20,8 @@ import { BookmarkPage } from './components/BookmarkPage.js';
 export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
-  const timeline = useTimeline(client, currentView.type === 'feed' ? (currentView as { feedUri?: string }).feedUri : undefined);
+  const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
+  const timeline = useTimeline(client, feedUri);
   const { drafts } = useDrafts();
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);

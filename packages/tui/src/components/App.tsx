@@ -52,16 +52,18 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
   // Feed
   const [currentFeedUri, setCurrentFeedUri] = useState<string | undefined>(undefined);
+  const [defaultFeedUri, setDefaultFeedUri] = useState<string | undefined>(
+    process.env.DEFAULT_FEED || undefined
+  );
   const [feedConfig, setFeedConfig] = useState<string[]>(() => {
     const envFeeds = process.env.BSKY_FEEDS;
     if (!envFeeds) return RECOMMENDED_FEEDS.map(f => f.uri);
     return envFeeds.split(',').map(s => s.trim()).filter(Boolean);
   });
-  const defaultFeed = process.env.DEFAULT_FEED || undefined;
   const [showFeedConfig, setShowFeedConfig] = useState(false);
   const [feedConfigInput, setFeedConfigInput] = useState('');
 
-  const effectiveFeedUri = currentFeedUri ?? defaultFeed;
+  const effectiveFeedUri = currentFeedUri ?? defaultFeedUri;
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client, effectiveFeedUri);
   const [feedIdx, setFeedIdx] = useState(0);
 
@@ -346,8 +348,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               <FeedConfigOverlay
                 feeds={feedConfig}
                 currentFeedUri={effectiveFeedUri}
+                defaultFeedUri={defaultFeedUri}
                 client={client}
                 onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
+                onSetDefault={(uri) => setDefaultFeedUri(uri)}
                 onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
                 onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
                 onClose={() => setShowFeedConfig(false)}
@@ -490,11 +494,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   );
 }
 
-function FeedConfigOverlay({ feeds, currentFeedUri, client, onSelect, onAdd, onRemove, onClose }: {
+function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSelect, onSetDefault, onAdd, onRemove, onClose }: {
   feeds: string[];
   currentFeedUri: string | undefined;
+  defaultFeedUri: string | undefined;
   client: BskyClient | null;
   onSelect: (uri: string) => void;
+  onSetDefault: (uri: string | undefined) => void;
   onAdd: (uri: string) => void;
   onRemove: (uri: string) => void;
   onClose: () => void;
@@ -527,6 +533,11 @@ function FeedConfigOverlay({ feeds, currentFeedUri, client, onSelect, onAdd, onR
     if (key.escape) { onClose(); return; }
     if (key.upArrow || input === 'k') { setIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow || input === 'j') { setIdx(i => Math.min(feeds.length + suggested.length + 2, i + 1)); return; }
+    if (input === 's' || input === 'S') {
+      if (idx < feeds.length) { onSetDefault(feeds[idx]!); }
+      else if (idx === feeds.length + suggested.length + 1) { onSetDefault(undefined); }
+      return;
+    }
     if (key.return) {
       if (idx < feeds.length) {
         onSelect(feeds[idx]!);
@@ -548,11 +559,11 @@ function FeedConfigOverlay({ feeds, currentFeedUri, client, onSelect, onAdd, onR
 
   return (
     <Box flexDirection="column" paddingY={1}>
-      <Text color="cyan" bold>{'⚙️ Feeds — jk:切换 Enter:选择 d:删除 a:添加 Esc:关闭'}</Text>
+      <Text color="cyan" bold>{'⚙️ Feeds — jk:切换 Enter:选择 d:删除 s:设为默认 Esc:关闭'}</Text>
       <Box flexDirection="column" marginTop={1}>
         {feeds.map((f, i) => (
           <Text key={f} color={i === idx ? 'cyan' : undefined}>
-            {i === idx ? '▸' : ' '} {getFeedLabel(f)}
+            {i === idx ? '▸' : ' '} {f === defaultFeedUri ? '★ ' : '  '}{getFeedLabel(f)}
           </Text>
         ))}
         <Text dimColor>{'┈┈ 推荐 Feed ┈┈'}</Text>
@@ -566,7 +577,7 @@ function FeedConfigOverlay({ feeds, currentFeedUri, client, onSelect, onAdd, onR
           );
         })}
         <Text dimColor>{idx === feeds.length + suggested.length ? '▸' : ' '} ── [+ 添加] ──</Text>
-        <Text dimColor>{idx === feeds.length + suggested.length + 1 ? '▸' : ' '} ── 📋 默认时间线 ──</Text>
+        <Text dimColor>{idx === feeds.length + suggested.length + 1 ? '▸' : ' '} ── 📋 时间线(主页) ──{defaultFeedUri === undefined ? ' ★' : ''}</Text>
       </Box>
       {adding && (
         <Box marginTop={1} borderStyle="single" borderColor="cyan" paddingX={1}>
