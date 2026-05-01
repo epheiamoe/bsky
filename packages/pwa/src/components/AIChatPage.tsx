@@ -15,16 +15,20 @@ interface AIChatPageProps {
 }
 
 export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [chatId, setChatId] = useState<string | undefined>();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
+  const userHandle = useMemo(() => (client.isAuthenticated() ? client.getHandle() : undefined), [client]);
 
   const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, contextUri, {
     chatId,
     storage,
     stream: true,
+    userHandle,
+    environment: 'pwa',
+    locale,
   });
   const { conversations, deleteConversation } = useChatHistory(storage);
 

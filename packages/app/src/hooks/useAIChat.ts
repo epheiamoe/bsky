@@ -9,6 +9,10 @@ interface UseAIChatOptions {
   chatId?: string;
   storage?: ChatStorage;
   stream?: boolean;
+  userHandle?: string;
+  userDisplayName?: string;
+  environment?: 'tui' | 'pwa';
+  locale?: string;
 }
 
 export function useAIChat(
@@ -29,6 +33,22 @@ export function useAIChat(
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
+  const envLabel = options?.environment === 'tui' ? '终端' : '浏览器';
+
+  const buildSystemPrompt = useCallback((withContext?: string) => {
+    const parts: string[] = [];
+    parts.push('你是一个深度集成 Bluesky 的助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。');
+    if (options?.userHandle || options?.userDisplayName) {
+      const name = options.userDisplayName || options.userHandle;
+      const suffix = options.userHandle ? ` (@${options.userHandle})` : '';
+      parts.push(`当前用户: ${name}${suffix}。`);
+    }
+    if (withContext) parts.push(`用户正在查看帖子 ${withContext}，如果需要请用工具获取上下文。`);
+    parts.push(`用户环境: ${envLabel}。`);
+    if (options?.locale) parts.push(`用户界面语言: ${options.locale}，请优先用该语言回复。`);
+    parts.push('回答简练。');
+    return parts.join('');
+  }, [options?.userHandle, options?.userDisplayName, options?.locale, envLabel]);
 
   // Keep chatIdRef in sync
   useEffect(() => {
@@ -44,8 +64,8 @@ export function useAIChat(
     setMessages([]);
     setGuidingQuestions([]);
 
-    assistant.addSystemMessage('你是一个深度集成 Bluesky 的终端助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。回答简练，适合终端显示，支持 Markdown（由 ink 渲染）。');
-  }, [options?.chatId]);
+    assistant.addSystemMessage(buildSystemPrompt());
+  }, [options?.chatId, buildSystemPrompt]);
 
   // Load existing conversation from storage when chatId changes
   useEffect(() => {
@@ -55,9 +75,7 @@ export function useAIChat(
       if (record) {
         setMessages(record.messages);
         if (contextUri) {
-          assistant.addSystemMessage(
-            `你是一个深度集成 Bluesky 的终端助手。用户正在查看帖子 ${contextUri}，如果需要请用工具获取上下文。回答简练，适合终端显示。`
-          );
+          assistant.addSystemMessage(buildSystemPrompt(contextUri));
         }
       } else {
         // No record found — start fresh
@@ -82,14 +100,10 @@ export function useAIChat(
       }
 
       if (contextUri) {
-        assistant.addSystemMessage(
-          `你是一个深度集成 Bluesky 的终端助手。用户正在查看帖子 ${contextUri}，如果需要请用工具获取上下文。回答简练，适合终端显示。`
-        );
+        assistant.addSystemMessage(buildSystemPrompt(contextUri));
         setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
       } else {
-        assistant.addSystemMessage(
-          '你是一个深度集成 Bluesky 的终端助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。回答简练，适合终端显示。'
-        );
+        assistant.addSystemMessage(buildSystemPrompt());
         setGuidingQuestions([]);
       }
     }
