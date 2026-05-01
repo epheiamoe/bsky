@@ -122,6 +122,10 @@ const zh: LocaleMessages = {
   'profile.followers': '粉丝',
   'profile.following': '关注',
   'profile.loading': '加载资料…',
+  'profile.follow': '关注',
+  'profile.unfollow': '取消关注',
+  'profile.tabPosts': '帖子',
+  'profile.tabReplies': '帖子和回复',
 
   // ── Bookmarks ──
   'bookmarks.title': '书签',
@@ -206,7 +210,7 @@ const zh: LocaleMessages = {
   'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译',
   'keys.compose': 'Enter:发送 · Esc:取消 · i:图片 · D:草稿',
   'keys.composeImage': '输入图片路径 · Enter 确认 · Esc 取消',
-  'keys.profile': 'Esc 返回',
+  'keys.profile': 'Tab 切换 f 关注 p/P 关注/粉丝 j/k 导航 m 更多 Enter 查看 Esc 返回',
   'keys.notifications': '↑↓/jk:导航 Enter:查看帖子 R:刷新',
   'keys.search': 'Esc 返回',
   'keys.aiMain': 'a:复制 t:完整对话 Tab:切换面板',
