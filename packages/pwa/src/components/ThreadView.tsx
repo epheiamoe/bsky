@@ -255,6 +255,18 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           <article className="border-l-4 border-primary pl-4 py-3 rounded-r-lg bg-surface/50">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
             <div className="flex items-center gap-2 mb-2">
+              <div
+                className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
+              >
+                {focused.authorAvatar ? (
+                  <img src={focused.authorAvatar} alt={focused.displayName} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                    {focused.displayName?.charAt(0) || '?'}
+                  </span>
+                )}
+              </div>
               <span className="text-base font-semibold text-text-primary">
                 {focused.displayName}
               </span>

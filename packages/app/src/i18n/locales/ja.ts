@@ -192,7 +192,7 @@ const ja: LocaleMessages = {
 
   'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新',
   'keys.bookmarks': '↑↓/jk:移動 Enter:表示 d:削除 r:更新',
-  'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳',
+  'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳 u:フォロー g:プロフィール',
   'keys.compose': 'Enter:送信 · Esc:取消 · i:画像 · D:下書き',
   'keys.composeImage': '画像パス入力 · Enter:確認 · Esc:取消',
   'keys.profile': 'Tab:切替 f:フォロー p/P:フォロー/フォロワー j/k:移動 m:もっと Enter:表示 Esc:戻る',

@@ -8,7 +8,7 @@ interface UnifiedThreadViewProps {
   client: BskyClient | null;
   uri: string;
   goBack: () => void;
-  goTo: (v: { type: string; replyTo?: string; quoteUri?: string }) => void;
+  goTo: (v: { type: string; replyTo?: string; quoteUri?: string; actor?: string }) => void;
   refreshThread: (newUri: string) => void;
   cols: number;
   isBookmarked: (uri: string) => boolean;
@@ -103,6 +103,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       } else {
         client.getProfile(focused.handle).then(p => { client.follow(p.did).then(r => { setIsFollowingFocused(true); setFollowUriFocused(r.uri); }).catch(() => {}); }).catch(() => {});
       }
+      return;
+    }
+
+    // g: go to focused author's profile
+    if ((input === 'g' || input === 'G') && focused?.handle) {
+      goTo({ type: 'profile', actor: focused.handle });
       return;
     }
 

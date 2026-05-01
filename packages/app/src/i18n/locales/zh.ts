@@ -207,7 +207,7 @@ const zh: LocaleMessages = {
   // ── Keyboard hints (TUI) ──
   'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新',
   'keys.bookmarks': '↑↓/jk:导航 Enter:查看 d:删除 r:刷新',
-  'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译',
+  'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 f:翻译 u:关注 g:资料',
   'keys.compose': 'Enter:发送 · Esc:取消 · i:图片 · D:草稿',
   'keys.composeImage': '输入图片路径 · Enter 确认 · Esc 取消',
   'keys.profile': 'Tab 切换 f 关注 p/P 关注/粉丝 j/k 导航 m 更多 Enter 查看 Esc 返回',

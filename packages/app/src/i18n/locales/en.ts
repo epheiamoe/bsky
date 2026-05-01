@@ -192,7 +192,7 @@ const en: LocaleMessages = {
 
   'keys.feed': '↑↓/jk:Navigate Enter:View m:More r:Refresh',
   'keys.bookmarks': '↑↓/jk:Navigate Enter:View d:Delete r:Refresh',
-  'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark f:Translate',
+  'keys.thread': 'h:Root ↑↓/jk:Move Enter:Focus c:Reply l:Like r:Repost v:Bookmark f:Translate u:Follow g:Profile',
   'keys.compose': 'Enter:Send · Esc:Cancel · i:Image · D:Drafts',
   'keys.composeImage': 'Enter image path · Enter:Confirm · Esc:Cancel',
   'keys.profile': 'Tab:Switch f:Follow p/P:Follows/Followers j/k:Nav m:More Enter:View Esc:Back',
