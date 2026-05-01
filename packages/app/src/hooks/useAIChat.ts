@@ -35,17 +35,18 @@ export function useAIChat(
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
   const envLabel = options?.environment === 'tui' ? '终端' : '浏览器';
+  const autoStartedRef = useRef(false);
 
   const buildSystemPrompt = useCallback((withContext?: string, contextProfile?: string) => {
     const parts: string[] = [];
-    parts.push('你是一个深度集成 Bluesky 的助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。');
+    parts.push('你是一个深度集成 Bluesky 的助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。使用 search_posts 时，支持高级搜索语法：from:handle（来自用户）、to:handle（提到用户）、mentions:handle、since:日期、until:日期、lang:语言代码、has:image、"精确短语"等 Lucene 运算符。');
     if (options?.userHandle || options?.userDisplayName) {
       const name = options.userDisplayName || options.userHandle;
       const suffix = options.userHandle ? ` (@${options.userHandle})` : '';
       parts.push(`当前用户: ${name}${suffix}。`);
     }
     if (contextProfile) {
-      parts.push(`用户正在查看 ${contextProfile} 的主页。请先查看他们的近期帖子（get_author_feed），以及当前用户和他们的互动（如有）。概括至少 3 个要点，引用至少一则他们的贴文。最终生成一条回复，帮助用户了解这个账号。`);
+      parts.push(`用户正在查看 ${contextProfile} 的主页。请先查看他们的近期帖子（get_author_feed）。如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts from:当前用户 to:${contextProfile} 查找。概括至少 3 个要点，引用至少一则他们的贴文。最终生成一条回复，帮助用户了解这个账号。注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。`);
     } else if (withContext) {
       parts.push(`用户正在查看帖子 ${withContext}，如果需要请用工具获取上下文。`);
     }
@@ -68,6 +69,7 @@ export function useAIChat(
     assistant.clearMessages();
     setMessages([]);
     setGuidingQuestions([]);
+    autoStartedRef.current = false;
 
     assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
   }, [options?.chatId, buildSystemPrompt, options?.contextProfile]);
@@ -121,18 +123,6 @@ export function useAIChat(
       assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
     }
   }, [client, contextUri, assistant, options?.contextProfile, buildSystemPrompt, messages.length]);
-
-  // Auto-start: when contextProfile is set on a fresh chat, send first message
-  useEffect(() => {
-    if (options?.contextProfile && messages.length === 0 && client && !loading) {
-      const displayName = options.contextProfile;
-      const timer = setTimeout(() => {
-        send(`请分析 @${displayName} 的主页，概括他们的近期动态并与我互动。`);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [options?.contextProfile, messages.length, client, loading]);
-
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
     const title = msgs.find(m => m.role === 'user')?.content.slice(0, 80) ?? '新对话';
@@ -270,6 +260,18 @@ export function useAIChat(
       setLoading(false);
     }
   }, [assistant, autoSave, options?.stream]);
+
+  // Auto-start: when contextProfile is set on a fresh chat, send first message
+  useEffect(() => {
+    if (options?.contextProfile && messages.length === 0 && client && !loading && !autoStartedRef.current) {
+      autoStartedRef.current = true;
+      const displayName = options.contextProfile;
+      const timer = setTimeout(() => {
+        send(`请分析 @${displayName} 的主页，概括他们的近期动态并与我互动。`);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [options?.contextProfile, messages.length, client, loading, send]);
 
   const confirmAction = useCallback(() => {
     assistant.confirmAction(true);
