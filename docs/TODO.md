@@ -16,9 +16,10 @@
 | **搜索** | ✅ | ✅ | 搜索帖子 |
 | **个人资料** | ✅ | ✅ | 显示信息 + 统计 + 头像 |
 | **书签** | ✅ | ✅ | AT 内置 API, TUI: v/d 键, PWA: 按钮 |
-| **AI 对话** | ✅ | ✅ | 工具调用, 流式 SSE, 写操作确认, 撤销/重试, IndexedDB/File |
+| **AI 对话** | ✅ | ✅ | 工具调用, 流式 SSE, 写操作确认, 撤销/重试, IndexedDB/File, 思考模式可开关 |
 | **AI 翻译** | ✅ | ✅ | 7 语言, simple/json 双模式, 3 次重试, TUI: `f` 键 |
 | **AI 润色** | ✅ | ✅ | 草稿润色 |
+| **AI 提示词定制** | ✅ | ✅ | 集中式提示词模块 `packages/core/src/ai/prompts.ts`，修改此文件即可自定义所有 AI 行为 |
 | **Markdown 渲染** | ✅ | ✅ | PWA: react-markdown+GFM, TUI: 自定义 Ink parser |
 | **草稿** | ✅ | ✅ | TUI: `D` 键草稿列表, PWA: 草稿面板 + 退出保存 |
 | **i18n 多语言** | ✅ | ✅ | zh/en/ja, 单例 store 即时切换 |

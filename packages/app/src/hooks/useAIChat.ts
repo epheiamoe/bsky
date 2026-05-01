@@ -1,5 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AIAssistant, createTools } from '@bsky/core';
+import {
+  P_ASSISTANT_BASE,
+  PF_CURRENT_USER,
+  PF_PROFILE_CONTEXT,
+  PF_POST_CONTEXT,
+  PF_ENVIRONMENT,
+  PF_LOCALE_HINT,
+  P_CONCISE,
+  PF_AUTO_ANALYSIS,
+  P_GUIDING_QUESTIONS,
+} from '@bsky/core';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
 import type { ChatStorage } from '../services/chatStorage.js';
@@ -34,27 +45,25 @@ export function useAIChat(
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
-  const envLabel = options?.environment === 'tui' ? '终端' : '浏览器';
   const autoStartedRef = useRef(false);
 
   const buildSystemPrompt = useCallback((withContext?: string, contextProfile?: string) => {
     const parts: string[] = [];
-    parts.push('你是一个深度集成 Bluesky 的助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。使用 search_posts 时，支持高级搜索语法：from:handle（来自用户）、to:handle（提到用户）、mentions:handle、since:日期、until:日期、lang:语言代码、has:image、"精确短语"等 Lucene 运算符。');
+    parts.push(P_ASSISTANT_BASE);
     if (options?.userHandle || options?.userDisplayName) {
-      const name = options.userDisplayName || options.userHandle;
-      const suffix = options.userHandle ? ` (@${options.userHandle})` : '';
-      parts.push(`当前用户: ${name}${suffix}。`);
+      const name = options.userDisplayName || options.userHandle || '';
+      parts.push(PF_CURRENT_USER(name, options.userHandle));
     }
     if (contextProfile) {
-      parts.push(`用户正在查看 ${contextProfile} 的主页。请先查看他们的近期帖子（get_author_feed）。如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts from:当前用户 to:${contextProfile} 查找。概括至少 3 个要点，引用至少一则他们的贴文。最终生成一条回复，帮助用户了解这个账号。注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。`);
+      parts.push(PF_PROFILE_CONTEXT(contextProfile, options?.userHandle));
     } else if (withContext) {
-      parts.push(`用户正在查看帖子 ${withContext}，如果需要请用工具获取上下文。`);
+      parts.push(PF_POST_CONTEXT(withContext));
     }
-    parts.push(`用户环境: ${envLabel}。`);
-    if (options?.locale) parts.push(`用户界面语言: ${options.locale}，请优先用该语言回复。`);
-    parts.push('回答简练。');
+    parts.push(PF_ENVIRONMENT(options?.environment || 'pwa'));
+    if (options?.locale) parts.push(PF_LOCALE_HINT(options.locale));
+    parts.push(P_CONCISE);
     return parts.join('');
-  }, [options?.userHandle, options?.userDisplayName, options?.locale, envLabel]);
+  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment]);
 
   // Keep chatIdRef in sync
   useEffect(() => {
@@ -109,7 +118,7 @@ export function useAIChat(
 
       if (contextUri) {
         assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
-        setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
+        setGuidingQuestions(P_GUIDING_QUESTIONS);
       } else if (options?.contextProfile) {
         assistant.addSystemMessage(buildSystemPrompt(undefined, options.contextProfile));
         setGuidingQuestions([]);
@@ -263,7 +272,7 @@ export function useAIChat(
       autoStartedRef.current = true;
       const displayName = options.contextProfile;
       const timer = setTimeout(() => {
-        send(`请分析 @${displayName} 的主页，概括他们的近期动态并与我互动。`);
+        send(PF_AUTO_ANALYSIS(displayName));
       }, 500);
       return () => clearTimeout(timer);
     }

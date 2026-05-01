@@ -1,4 +1,11 @@
 import type { ToolDescriptor } from '../at/tools.js';
+import {
+  LANG_LABELS,
+  PF_TRANSLATE_SIMPLE,
+  PF_TRANSLATE_JSON,
+  P_POLISH_SYSTEM,
+  PF_POLISH_USER,
+} from './prompts.js';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -581,14 +588,11 @@ export async function translateText(
   mode: 'simple' | 'json' = 'simple',
   maxRetries = 3,
 ): Promise<TranslationResult> {
-  const LANG_LABELS: Record<string, string> = {
-    zh: '中文', en: 'English', ja: '日本語', ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español',
-  };
   const langLabel = LANG_LABELS[targetLang] ?? targetLang;
 
   const systemPrompt = mode === 'json'
-    ? `You are a translator. Translate the user's text to ${langLabel}. Output valid JSON with these keys: {"source_lang": "<ISO 639-1 code, use 'und' if unsure>", "translated": "<the translation>"}. Output ONLY the JSON object. The response must be a valid JSON object containing the word json.`
-    : `Translate the following text to ${langLabel}. Keep the original meaning, output only the translation, no explanations.`;
+    ? PF_TRANSLATE_JSON(langLabel)
+    : PF_TRANSLATE_SIMPLE(langLabel);
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
@@ -683,11 +687,10 @@ export async function translateToChinese(config: AIConfig, text: string): Promis
  * Polish/refine post draft
  */
 export async function polishDraft(config: AIConfig, draft: string, requirement: string): Promise<string> {
-  const systemPrompt = `你是一个文字润色助手，根据用户要求调整以下帖子草稿，只返回润色后的文本。`;
   return singleTurnAI(
     config,
-    systemPrompt,
-    `用户要求：${requirement}\n\n草稿：\n${draft}`,
+    P_POLISH_SYSTEM,
+    PF_POLISH_USER(requirement, draft),
     0.7,
     2000,
   );

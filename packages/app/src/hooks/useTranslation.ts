@@ -1,10 +1,17 @@
 import { useState, useCallback } from 'react';
+import { LANG_LABELS as CORE_LANG_LABELS } from '@bsky/core';
 import type { AIConfig } from '@bsky/core';
 
 export type TargetLang = 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es';
 
 export const LANG_LABELS: Record<TargetLang, string> = {
-  zh: '中文', en: 'English', ja: '日本語', ko: '한국어', fr: 'Français', de: 'Deutsch', es: 'Español',
+  zh: CORE_LANG_LABELS.zh ?? '中文',
+  en: CORE_LANG_LABELS.en ?? 'English',
+  ja: CORE_LANG_LABELS.ja ?? '日本語',
+  ko: CORE_LANG_LABELS.ko ?? '한국어',
+  fr: CORE_LANG_LABELS.fr ?? 'Français',
+  de: CORE_LANG_LABELS.de ?? 'Deutsch',
+  es: CORE_LANG_LABELS.es ?? 'Español',
 };
 
 export interface TranslationResult {
