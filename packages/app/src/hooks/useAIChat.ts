@@ -13,6 +13,7 @@ interface UseAIChatOptions {
   userDisplayName?: string;
   environment?: 'tui' | 'pwa';
   locale?: string;
+  contextProfile?: string;
 }
 
 export function useAIChat(
@@ -35,7 +36,7 @@ export function useAIChat(
   const storage = options?.storage;
   const envLabel = options?.environment === 'tui' ? '终端' : '浏览器';
 
-  const buildSystemPrompt = useCallback((withContext?: string) => {
+  const buildSystemPrompt = useCallback((withContext?: string, contextProfile?: string) => {
     const parts: string[] = [];
     parts.push('你是一个深度集成 Bluesky 的助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。');
     if (options?.userHandle || options?.userDisplayName) {
@@ -43,7 +44,11 @@ export function useAIChat(
       const suffix = options.userHandle ? ` (@${options.userHandle})` : '';
       parts.push(`当前用户: ${name}${suffix}。`);
     }
-    if (withContext) parts.push(`用户正在查看帖子 ${withContext}，如果需要请用工具获取上下文。`);
+    if (contextProfile) {
+      parts.push(`用户正在查看 ${contextProfile} 的主页。请先查看他们的近期帖子（get_author_feed），以及当前用户和他们的互动（如有）。概括至少 3 个要点，引用至少一则他们的贴文。最终生成一条回复，帮助用户了解这个账号。`);
+    } else if (withContext) {
+      parts.push(`用户正在查看帖子 ${withContext}，如果需要请用工具获取上下文。`);
+    }
     parts.push(`用户环境: ${envLabel}。`);
     if (options?.locale) parts.push(`用户界面语言: ${options.locale}，请优先用该语言回复。`);
     parts.push('回答简练。');
@@ -64,7 +69,7 @@ export function useAIChat(
     setMessages([]);
     setGuidingQuestions([]);
 
-    assistant.addSystemMessage(buildSystemPrompt());
+        assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
   }, [options?.chatId, buildSystemPrompt]);
 
   // Load existing conversation from storage when chatId changes
@@ -75,7 +80,7 @@ export function useAIChat(
       if (record) {
         setMessages(record.messages);
         if (contextUri) {
-          assistant.addSystemMessage(buildSystemPrompt(contextUri));
+          assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         }
       } else {
         // No record found — start fresh
@@ -103,7 +108,7 @@ export function useAIChat(
         assistant.addSystemMessage(buildSystemPrompt(contextUri));
         setGuidingQuestions(['总结这个讨论', '查看作者动态', '分析帖子情绪']);
       } else {
-        assistant.addSystemMessage(buildSystemPrompt());
+    assistant.addSystemMessage(buildSystemPrompt(undefined, options?.contextProfile));
         setGuidingQuestions([]);
       }
     }

@@ -22,13 +22,16 @@ export function AIChatPage({ client, aiConfig, contextUri, goBack }: AIChatPageP
   const [input, setInput] = useState('');
   const userHandle = useMemo(() => (client.isAuthenticated() ? client.getHandle() : undefined), [client]);
 
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, contextUri, {
+  const isProfile = contextUri && !contextUri.startsWith('at://');
+
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId,
     storage,
     stream: true,
     userHandle,
     environment: 'pwa',
     locale,
+    contextProfile: isProfile ? contextUri : undefined,
   });
   const { conversations, deleteConversation } = useChatHistory(storage);
 

@@ -195,7 +195,7 @@ const ja: LocaleMessages = {
   'keys.thread': 'h:元投稿 ↑↓/jk:移動 Enter:フォーカス c:返信 l:いいね r:リポスト v:ブックマーク f:翻訳 u:フォロー g:プロフィール',
   'keys.compose': 'Enter:送信 · Esc:取消 · i:画像 · D:下書き',
   'keys.composeImage': '画像パス入力 · Enter:確認 · Esc:取消',
-  'keys.profile': 'Tab:切替 f:フォロー p/P:フォロー/フォロワー j/k:移動 m:もっと Enter:表示 Esc:戻る',
+  'keys.profile': 'Tab/←→:切替 u:フォロー f:翻訳 a:AI p/P:フォロー/フォロワー j/k:移動 m:もっと Enter:表示 Esc:戻る',
   'keys.notifications': '↑↓/jk:移動 Enter:表示 R:更新',
   'keys.search': 'Esc:戻る',
   'keys.aiMain': 'a:コピー t:全記録 Tab:切替',

@@ -395,7 +395,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           </Box>
         );
       case 'profile':
-        return <ProfileView client={client} actor={(currentView as { actor: string }).actor} goBack={goBack} cols={mainW} rows={rows} goTo={(v) => goTo(v as AppView)} />;
+        return <ProfileView client={client} actor={(currentView as { actor: string }).actor} goBack={goBack} cols={mainW} rows={rows} goTo={(v) => goTo(v as AppView)} aiConfig={config.aiConfig} targetLang={config.targetLang} />;
       case 'notifications':
         return <NotifView client={client} goBack={goBack} goTo={goTo} cols={mainW} />;
       case 'search':

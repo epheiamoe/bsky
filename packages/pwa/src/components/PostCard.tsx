@@ -203,6 +203,7 @@ interface PostCardBaseProps {
   isSelected?: boolean;
   children?: React.ReactNode;
   goTo?: (v: AppView) => void;
+  repostBy?: string;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -217,7 +218,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -276,6 +277,12 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo }: Po
         onClick ? 'cursor-pointer hover:bg-surface' : ''
       } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
+      {repostBy && (
+        <div className="flex items-center gap-1 mb-2 text-text-secondary text-xs">
+          <span>↻</span>
+          <span>Reposted by @{repostBy}</span>
+        </div>
+      )}
       <div className="flex gap-3">
         <div
           className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden cursor-pointer"

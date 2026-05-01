@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useProfile, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import type { BskyClient, AIConfig } from '@bsky/core';
 
 interface ProfileViewProps {
   client: BskyClient | null;
@@ -11,9 +11,11 @@ interface ProfileViewProps {
   cols: number;
   rows: number;
   goTo: (v: AppView) => void;
+  aiConfig?: AIConfig;
+  targetLang?: string;
 }
 
-export function ProfileView({ client, actor, goBack, cols, rows, goTo }: ProfileViewProps) {
+export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig, targetLang }: ProfileViewProps) {
   const {
     profile, loading, error,
     tab, setTab,
@@ -21,10 +23,13 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo }: Profile
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
+    repostReasons,
   } = useProfile(client, actor);
   const { t } = useI18n();
   const [postIdx, setPostIdx] = useState(0);
   const [followIdx, setFollowIdx] = useState(0);
+  const [translatingBio, setTranslatingBio] = useState(false);
+  const [translatedBio, setTranslatedBio] = useState<string | null>(null);
 
   useInput((input, key) => {
     if (followList) {
@@ -53,7 +58,20 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo }: Profile
       if (post) goTo({ type: 'thread', uri: post.uri });
       return;
     }
-    if (input === 'f') {
+    if (input === 'a' || input === 'A') { goTo({ type: 'aiChat', contextUri: actor }); return; }
+    if (input === 'f' || input === 'F') {
+      if (profile?.description && !translatingBio) {
+        setTranslatingBio(true);
+        import('@bsky/core').then(({ translateText: tt }) => {
+          const cfg = { apiKey: aiConfig?.apiKey || '', baseUrl: aiConfig?.baseUrl || 'https://api.deepseek.com', model: aiConfig?.model || 'deepseek-v4-flash' };
+          tt(cfg, profile.description!, targetLang || 'zh', 'simple').then(r => {
+            setTranslatedBio(`[→${targetLang || 'zh'}] ${r.translated}`);
+          }).finally(() => setTranslatingBio(false));
+        }).catch(() => setTranslatingBio(false));
+      }
+      return;
+    }
+    if (input === 'u' || input === 'U') {
       if (isFollowing) void handleUnfollow();
       else void handleFollow();
       return;
@@ -112,9 +130,12 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo }: Profile
       <Box height={1}>
         <Text bold>{'👤 '}{profile.displayName || profile.handle}</Text>
         <Text dimColor>{' Esc:'}{t('nav.back')}</Text>
+        <Text dimColor>{' a:AI u:'}{followLabel}</Text>
       </Box>
       <Box><Text dimColor>@{profile.handle}</Text></Box>
       <Box><Text>{profile.description || t('profile.noBio')}</Text></Box>
+      {translatingBio && <Text dimColor>{'  ⏳ '}{t('action.translating')}</Text>}
+      {translatedBio && !translatingBio && <Text dimColor>{translatedBio}</Text>}
       <Box>
         <Text bold>{profile.postsCount ?? 0}</Text><Text dimColor>{' '}{t('profile.posts')}  </Text>
         <Text bold>{profile.followersCount ?? 0}</Text><Text dimColor>{' '}{t('profile.followers')}  </Text>
@@ -135,10 +156,12 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo }: Profile
         const text = raw.slice(0, 80);
         const truncated = raw.length > 80;
         const showAuthor = tab === 'replies';
+        const repostBy = repostReasons[post.uri] || null;
         return (
           <Box key={post.uri} height={1}>
             <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
               {isSel ? '▶' : ' '}{' '}
+              {repostBy && <Text color="yellow">{'↻ @'}{repostBy}{' '}</Text>}
               {showAuthor && <Text color={isSel ? 'cyanBright' : 'green'}>@{post.author.handle} </Text>}
               <Text>{text}{truncated ? '…' : ''}</Text>
             </Text>

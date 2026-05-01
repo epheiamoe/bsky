@@ -145,6 +145,9 @@ export function App() {
             actor={(currentView as { actor: string }).actor}
             goBack={goBack}
             goTo={goTo}
+            aiConfig={appConfig.aiConfig}
+            targetLang={appConfig.targetLang}
+            translateMode={appConfig.translateMode}
           />
         );
       case 'notifications':

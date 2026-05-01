@@ -23,7 +23,10 @@ export function AIChatView({ client, aiConfig, contextUri, goBack, cols, rows, f
   const storage = getDefaultStorage();
   const [chatId, setChatId] = useState<string | undefined>();
   const [showHistory, setShowHistory] = useState(!contextUri);
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, contextUri, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale });
+  const isProfile = contextUri && !contextUri.startsWith('at://');
+  const profileContext = isProfile ? contextUri : undefined;
+  const postContext = isProfile ? undefined : contextUri;
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry } = useAIChat(client, aiConfig, postContext, { chatId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext });
   const { conversations, deleteConversation } = useChatHistory(storage);
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);

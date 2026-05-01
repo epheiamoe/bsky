@@ -22,6 +22,7 @@ export function useProfile(
   // Feed tabs
   const [tab, setTab] = useState<ProfileTab>('posts');
   const [posts, setPosts] = useState<PostView[]>([]);
+  const [repostReasons, setRepostReasons] = useState<Record<string, string>>({});
   const [feedCursor, setFeedCursor] = useState<string | undefined>();
   const [feedLoading, setFeedLoading] = useState(false);
 
@@ -44,6 +45,7 @@ export function useProfile(
     setLoading(true);
     setError(null);
     setPosts([]);
+    setRepostReasons({});
     setFeedCursor(undefined);
     setFollowList(null);
     setFollowItems([]);
@@ -69,10 +71,20 @@ export function useProfile(
     try {
       const filter = tab === 'posts' ? 'posts_no_replies' : '';
       const res = await client.getAuthorFeed(actor, 20, cursor, filter || undefined);
+      const newPosts = res.feed.map(f => f.post);
+      const reasons: Record<string, string> = {};
+      for (const f of res.feed) {
+        const reason = f.reason as { $type?: string; by?: { handle?: string } } | undefined;
+        if (reason?.$type === 'app.bsky.feed.defs#reasonRepost' && reason.by?.handle) {
+          reasons[f.post.uri] = reason.by.handle;
+        }
+      }
       if (cursor) {
-        setPosts(prev => [...prev, ...res.feed.map(f => f.post)]);
+        setPosts(prev => [...prev, ...newPosts]);
+        setRepostReasons(prev => ({ ...prev, ...reasons }));
       } else {
-        setPosts(res.feed.map(f => f.post));
+        setPosts(newPosts);
+        setRepostReasons(reasons);
       }
       setFeedCursor(res.cursor);
     } catch (e) {
@@ -166,7 +178,7 @@ export function useProfile(
   return {
     profile, loading, error,
     tab, setTab,
-    posts, feedCursor, feedLoading, loadMoreFeed,
+    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed,
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListCursor, followListLoading,
     openFollowList: loadFollowList, closeFollowList: () => setFollowList(null),

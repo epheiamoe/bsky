@@ -1,8 +1,10 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
-import type { AppView } from '@bsky/app';
-import { useProfile, useI18n } from '@bsky/app';
+import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl } from '@bsky/app';
+import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 
 interface ProfilePageProps {
@@ -10,6 +12,9 @@ interface ProfilePageProps {
   actor: string;
   goBack: () => void;
   goTo: (v: AppView) => void;
+  aiConfig: AIConfig;
+  targetLang: string;
+  translateMode: 'simple' | 'json';
 }
 
 const ESTIMATED_POST_HEIGHT = 150;
@@ -18,16 +23,38 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
+function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  return createPortal(
+    <button className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-4 border-none cursor-pointer" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+      <div className="absolute top-4 right-4 flex gap-2 z-10">
+        <a href={src} download target="_blank" className="text-white bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-sm no-underline" onClick={e => e.stopPropagation()}>⬇ Download</a>
+        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white text-3xl leading-none hover:opacity-70 bg-transparent border-none cursor-pointer">✕</button>
+      </div>
+      <img src={src} alt={alt} className="max-w-full max-h-[85vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
+    </button>,
+    document.body
+  );
+}
+
+export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang, translateMode }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
     tab, setTab,
-    posts, feedCursor, feedLoading, loadMoreFeed,
+    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed,
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor);
+
+  const { translate, loading: translatingBio } = useTranslation(
+    aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model,
+    targetLang as TargetLang, translateMode,
+  );
+  const [translatedBio, setTranslatedBio] = useState<string | null>(null);
+
+  const [bannerLightbox, setBannerLightbox] = useState(false);
+  const [avatarLightbox, setAvatarLightbox] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -188,9 +215,9 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {/* Banner */}
         {profile.banner ? (
-          <div className="h-32 bg-primary/20">
+          <button className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => setBannerLightbox(true)}>
             <img src={profile.banner} alt="" className="w-full h-full object-cover" />
-          </div>
+          </button>
         ) : (
           <div className="h-32 bg-primary/10" />
         )}
@@ -199,29 +226,39 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
           {/* Avatar + Follow button row */}
           <div className="relative -mt-12 mb-3 flex justify-between items-end">
             {profile.avatar ? (
-              <img
-                src={profile.avatar}
-                alt={profile.handle}
-                className="w-24 h-24 rounded-full border-4 border-white dark:border-[#0A0A0A] bg-surface"
-              />
+              <button className="border-none bg-transparent p-0 cursor-pointer" onClick={() => setAvatarLightbox(true)}>
+                <img
+                  src={profile.avatar}
+                  alt={profile.handle}
+                  className="w-24 h-24 rounded-full border-4 border-white dark:border-[#0A0A0A] bg-surface"
+                />
+              </button>
             ) : (
               <div className="w-24 h-24 rounded-full bg-primary flex items-center justify-center text-white font-bold text-3xl border-4 border-white dark:border-[#0A0A0A]">
                 {initial}
               </div>
             )}
 
-            {!profile.viewer?.blockedBy && (
+            <div className="flex gap-2 items-end">
               <button
-                onClick={isFollowing ? handleUnfollow : handleFollow}
-                className={`px-5 py-2 rounded-full font-semibold text-sm transition-colors ${
-                  isFollowing
-                    ? 'border border-red-400 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'bg-primary hover:bg-primary-hover text-white'
-                }`}
+                onClick={() => goTo({ type: 'aiChat', contextUri: actor })}
+                className="px-4 py-2 rounded-full text-sm font-medium border border-border text-text-secondary hover:bg-surface transition-colors"
               >
-                {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                🤖 AI
               </button>
-            )}
+              {!profile.viewer?.blockedBy && (
+                <button
+                  onClick={isFollowing ? handleUnfollow : handleFollow}
+                  className={`px-5 py-2 rounded-full font-semibold text-sm transition-colors ${
+                    isFollowing
+                      ? 'border border-red-400 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+                      : 'bg-primary hover:bg-primary-hover text-white'
+                  }`}
+                >
+                  {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Display name + handle */}
@@ -236,9 +273,25 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
 
           {/* Description */}
           {profile.description && (
-            <p className="text-text-primary text-sm whitespace-pre-wrap mb-3">
-              {profile.description}
-            </p>
+            <div className="mb-3">
+              <p className="text-text-primary text-sm whitespace-pre-wrap">
+                {translatedBio ?? profile.description}
+              </p>
+              <button
+                onClick={async () => {
+                  if (translatedBio) {
+                    setTranslatedBio(null);
+                    return;
+                  }
+                  const result = await translate(profile.description!);
+                  setTranslatedBio(result.translated);
+                }}
+                disabled={translatingBio}
+                className="mt-1 text-xs text-primary hover:underline bg-transparent border-none cursor-pointer p-0"
+              >
+                {translatingBio ? '⏳ ...' : translatedBio ? '↩ ' + t('action.original') : '🌐 ' + t('action.translate')}
+              </button>
+            </div>
           )}
 
           {/* Stats row */}
@@ -355,6 +408,7 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
+                  repostBy={repostReasons[post.uri]}
                 />
               </div>
             );
@@ -382,6 +436,13 @@ export function ProfilePage({ client, actor, goBack, goTo }: ProfilePageProps) {
           </div>
         )}
       </div>
+
+      {bannerLightbox && profile.banner && (
+        <ImageModal src={profile.banner} alt="Banner" onClose={() => setBannerLightbox(false)} />
+      )}
+      {avatarLightbox && profile.avatar && (
+        <ImageModal src={profile.avatar} alt={profile.handle} onClose={() => setAvatarLightbox(false)} />
+      )}
     </div>
   );
 }
