@@ -307,11 +307,23 @@ export function useAIChat(
     })));
   }, [assistant]);
 
-  /** Return the content of the last user message for editing, or null if none */
+  /** Undo last user+assistant pair and return the user's text for editing */
   const edit = useCallback((): string | null => {
-    const lastUser = [...messages].reverse().find(m => m.role === 'user');
-    return lastUser?.content ?? null;
-  }, [messages]);
+    const allMsgs = assistant.getMessages();
+    let lastUserIdx = -1;
+    for (let i = allMsgs.length - 1; i >= 0; i--) {
+      if (allMsgs[i]!.role === 'user') { lastUserIdx = i; break; }
+    }
+    if (lastUserIdx < 0) return null;
+    const userContent = contentToString(allMsgs[lastUserIdx]!.content);
+    const keep = allMsgs.slice(0, lastUserIdx);
+    assistant.loadMessages(keep);
+    setMessages(keep.map(m => ({
+      role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
+      content: contentToString(m.content),
+    })));
+    return userContent;
+  }, [assistant]);
 
   return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit };
 }
