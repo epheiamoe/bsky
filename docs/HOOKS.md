@@ -17,7 +17,7 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
 | `useChatHistory` | `FileChatStorage` | `{ conversations, loadConversation, saveConversation, deleteConversation }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |
-| `useProfile` | (inline state) | `{ profile, follows, followers, loading }` |
+| `useProfile` | (inline state) | `{ profile, loading, error, tab, setTab, posts, feedCursor, feedLoading, loadMoreFeed, isFollowing, handleFollow, handleUnfollow, followList, followItems, loadMoreFollowList, openFollowList, closeFollowList, repostReasons }` |
 | `useSearch` | (inline state) | `{ query, results, loading, search }` |
 | `useNotifications` | (inline state) | `{ notifications, loading, unreadCount, refresh }` |
 | `useBookmarks` | (inline state) | `{ bookmarks, loading, isBookmarked, addBookmark, removeBookmark, toggleBookmark, refresh }` |
