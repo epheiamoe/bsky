@@ -172,17 +172,17 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 |-----|--------|
 | `Enter` | Submit post (via TextInput onSubmit) |
 | `Esc` | Go back |
-| `i` / `I` | Enter image path input mode (max 4 images) |
+| `i` / `I` | Enter media path input mode (image or video, max 4 images / 1 video) |
 
-### Image Path Input Mode
+### Media Path Input Mode (image or video)
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Validate + upload image (check exists, size < 1MB, count < 4) |
-| `Esc` | Cancel image input |
-| Any other key | Type image path |
+| `Enter` | Validate + upload media (check exists, size < 1MB image / 100MB video, count check) |
+| `Esc` | Cancel media input |
+| Any other key | Type media path |
 
-**Footer hint**: `Enter:发送 · Esc:取消 · i:添加图片`
+**Footer hint**: `Enter:发送 · Esc:取消 · i:媒体 · D:草稿`
 
 ---
 
@@ -277,7 +277,7 @@ Keys that have **different meanings** depending on view:
 | `h` | — | go to root | — | — | — | blocked |
 | `y` | — | yank URI | — | — | — | blocked |
 | `f` | switch feed | translate | — | — | — | blocked |
-| `i` | — | — | — | — | — | add image |
+| `i` | — | — | — | — | — | add media |
 | `,` | settings | settings | settings | settings | settings | settings |
 | `Enter` | view thread | refocus post | view thread | view post | TextInput | submit |
 

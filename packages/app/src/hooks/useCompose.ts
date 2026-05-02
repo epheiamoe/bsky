@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 import { BskyClient } from '@bsky/core';
 
-export interface ComposeImage {
+export interface ComposeMedia {
+  type: 'image' | 'video';
   blobRef: { $link: string; mimeType: string; size: number };
   alt: string;
 }
+
+/** @deprecated Use ComposeMedia instead */
+export type ComposeImage = ComposeMedia;
 
 export interface Draft {
   id: string;
@@ -22,7 +26,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
   const [replyTo, setReplyTo] = useState<string | undefined>();
   const [quoteUri, setQuoteUri] = useState<string | undefined>();
 
-  const submit = useCallback(async (text: string, replyUri?: string, images?: ComposeImage[], qUri?: string) => {
+  const submit = useCallback(async (text: string, replyUri?: string, media?: ComposeMedia[], qUri?: string) => {
     if (!client) return;
     setSubmitting(true);
     setError(null);
@@ -42,9 +46,24 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
         };
       }
 
-      // Handle embed: images OR quote OR quote+images
+      // Handle embed: video OR images OR quote
       const effectiveQuoteUri = qUri ?? quoteUri;
-      if (effectiveQuoteUri) {
+      const video = media?.find(m => m.type === 'video');
+      const images = media?.filter(m => m.type === 'image');
+
+      if (video) {
+        // Single video embed — Bluesky only allows one video, no images alongside
+        record.embed = {
+          $type: 'app.bsky.embed.video',
+          video: {
+            $type: 'blob',
+            ref: { $link: video.blobRef.$link },
+            mimeType: video.blobRef.mimeType,
+            size: video.blobRef.size,
+          },
+        };
+        if (video.alt) record.embed = { ...record.embed as object, alt: video.alt };
+      } else if (effectiveQuoteUri) {
         const parts = uriToParts(effectiveQuoteUri);
         const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
         const quoteEmbed: Record<string, unknown> = {

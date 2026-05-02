@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { PostView } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
-import { getCdnImageUrl, useI18n } from '@bsky/app';
+import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
+import { VideoCard } from './VideoCard.js';
+import type { VideoData } from './VideoCard.js';
 
 interface ImageData {
   url: string;
@@ -30,23 +32,42 @@ interface QuotedPostData {
   externalLink: ExternalLink | null;
 }
 
-function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null } {
+function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null; video: VideoData | null; hasGif: boolean } {
   const images: ImageData[] = [];
   let external: ExternalLink | null = null;
+  let video: VideoData | null = null;
+  let hasGif = false;
   const embed = post.record.embed as {
     $type?: string;
     images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
     media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
     external?: { uri: string; title: string; description: string };
+    video?: { ref: { $link: string }; mimeType: string };
+    aspectRatio?: { width: number; height: number };
+    alt?: string;
   } | undefined;
-  if (!embed) return { images, external };
+  if (!embed) return { images, external, video, hasGif };
+
+  if (embed.$type === 'app.bsky.embed.video') {
+    const viewEmbed = (post as any).embed as { thumbnail?: string; playlist?: string; cid?: string } | undefined;
+    const cid = viewEmbed?.cid ?? embed.video?.ref?.$link ?? '';
+    video = {
+      thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
+      playlistUrl: viewEmbed?.playlist || getVideoPlaylistUrl(post.author.did, cid),
+      alt: embed.alt,
+      aspectRatio: embed.aspectRatio,
+    };
+    return { images, external, video, hasGif };
+  }
 
   const collectImages = (e: typeof embed) => {
     if (!e) return;
-    if (e.$type === 'app.bsky.embed.images' && e.images) {
+    if ((e.$type === 'app.bsky.embed.images' || e.$type === 'app.bsky.embed.images#view') && e.images) {
       for (const img of e.images) {
+        const mime = img.image?.mimeType || (img as any).mimeType || '';
+        if (mime.includes('gif')) hasGif = true;
         images.push({
-          url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
+          url: (img as any).fullsize || getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
           alt: img.alt || '',
         });
       }
@@ -64,7 +85,7 @@ function extractEmbeds(post: PostView): { images: ImageData[]; external: Externa
     };
   }
 
-  return { images, external };
+  return { images, external, video, hasGif };
 }
 
 function extractQuotedPost(post: PostView): QuotedPostData | undefined {
@@ -251,6 +272,9 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let avatarUrl: string | undefined;
   let quotedPost: FlatLine['quotedPost'];
   let mediaTags: string[] = [];
+  let video: VideoData | null = null;
+  let hasGif = false;
+  let hasVideo = false;
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -266,6 +290,9 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     hasImages = images.length > 0;
     externalLink = embeds.external;
     quotedPost = extractQuotedPost(post);
+    video = embeds.video;
+    hasGif = embeds.hasGif;
+    hasVideo = video !== null;
     mediaTags = [];
   } else if (line) {
     displayName = line.displayName || line.handle;
@@ -285,6 +312,16 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     }
     quotedPost = line.quotedPost;
     mediaTags = line.mediaTags ?? [];
+    hasVideo = line.hasVideo;
+    if (hasVideo && line.videoThumbnailUrl && line.videoPlaylistUrl) {
+      video = {
+        thumbnailUrl: line.videoThumbnailUrl,
+        playlistUrl: line.videoPlaylistUrl,
+        alt: line.videoAlt,
+        aspectRatio: line.videoAspectRatio,
+      };
+    }
+    hasGif = mediaTags.some(t => t.includes('动图'));
   } else {
     return null;
   }
@@ -335,6 +372,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             {linkifyText(text)}
           </p>
           {hasImages && <ImageGrid images={images} />}
+          {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
           {externalLink && (
             <a
               href={externalLink.uri}
@@ -352,10 +390,20 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             <div className="mt-2 flex flex-wrap gap-1">
               {mediaTags.map((tag, i) => {
                 const isImage = /[0-9]/.test(tag) || tag.includes('图片');
+                const isGif = tag.includes('动图');
                 const isLink = tag.includes('链接');
+                const isVideo = tag.includes('视频');
+                const isQuote = tag.includes('引用');
+                let iconName: string;
+                if (isGif) iconName = 'video';
+                else if (isImage) iconName = 'camera';
+                else if (isLink) iconName = 'compass';
+                else if (isVideo) iconName = 'video';
+                else if (isQuote) iconName = 'corner-down-right';
+                else iconName = 'bell';
                 return (
                   <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-0.5">
-                    <Icon name={isImage ? 'camera' : isLink ? 'compass' : 'bell'} size={10} />{tag}
+                    <Icon name={iconName} size={10} />{tag}
                   </span>
                 );
               })}

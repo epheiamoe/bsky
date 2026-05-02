@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCompose, useI18n, useDrafts, getCdnImageUrl } from '@bsky/app';
-import type { ComposeImage, Draft } from '@bsky/app';
+import type { ComposeMedia, Draft } from '@bsky/app';
 import type { BskyClient, PostView } from '@bsky/core';
 import { Icon } from './Icon.js';
 
 const MAX_IMAGES = 4;
-const MAX_SIZE = 1024 * 1024; // 1MB per image (generous for Bluesky)
+const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB per image
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for video
 
 interface ComposePageProps {
   client: BskyClient;
@@ -16,6 +17,13 @@ interface ComposePageProps {
 }
 
 interface LocalImage {
+  file: File;
+  preview: string;
+  uploading: boolean;
+  error?: string;
+}
+
+interface LocalVideo {
   file: File;
   preview: string;
   uploading: boolean;
@@ -59,6 +67,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts();
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [images, setImages] = useState<LocalImage[]>([]);
+  const [video, setVideo] = useState<LocalVideo | null>(null);
   const [showDrafts, setShowDrafts] = useState(false);
   const [quotePreview, setQuotePreview] = useState<QuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -107,14 +116,32 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
 
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    if (images.length + files.length > MAX_IMAGES) {
+
+    // Check for video first — Bluesky only allows 1 video, no mixing with images
+    const videoFile = files.find(f => f.type.startsWith('video/'));
+    if (videoFile) {
+      if (video) { alert('Only 1 video allowed'); return; }
+      if (images.length > 0) { alert('Cannot mix video with images'); return; }
+      if (videoFile.size > MAX_VIDEO_SIZE) { alert(`"${videoFile.name}" exceeds 100MB limit`); return; }
+      setVideo({
+        file: videoFile,
+        preview: URL.createObjectURL(videoFile),
+        uploading: false,
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Images only
+    if (video) { alert('Cannot mix images with video'); return; }
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (images.length + imageFiles.length > MAX_IMAGES) {
       alert(t('compose.maxImages', { n: MAX_IMAGES }));
       return;
     }
     const newImages: LocalImage[] = [];
-    for (const file of files) {
-      if (!file.type.startsWith('image/')) continue;
-      if (file.size > MAX_SIZE) {
+    for (const file of imageFiles) {
+      if (file.size > MAX_IMAGE_SIZE) {
         alert(`"${file.name}" ${t('compose.imageOverLimit')}`);
         continue;
       }
@@ -126,11 +153,15 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
     }
     setImages(prev => [...prev, ...newImages].slice(0, MAX_IMAGES));
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [images.length]);
+  }, [images.length, video]);
 
   const removeImage = useCallback((idx: number) => {
     setImages(prev => { URL.revokeObjectURL(prev[idx]!.preview); return prev.filter((_, i) => i !== idx); });
   }, []);
+
+  const removeVideo = useCallback(() => {
+    if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
+  }, [video]);
 
   const charLen = draft.length;
   const isEmpty = charLen === 0;
@@ -165,25 +196,46 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
     e.preventDefault();
     if (isEmpty || submitting) return;
 
-    const uploadedImages: ComposeImage[] = [];
-    setImages(prev => prev.map(i => ({ ...i, uploading: true, error: undefined })));
+    const uploadedMedia: ComposeMedia[] = [];
 
-    for (const img of images) {
+    // Upload video if present
+    if (video) {
+      setVideo(prev => prev ? { ...prev, uploading: true } : null);
       try {
-        const data = new Uint8Array(await img.file.arrayBuffer());
-        const res = await client.uploadBlob(data, img.file.type);
-        uploadedImages.push({
-          blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
+        const data = new Uint8Array(await video.file.arrayBuffer());
+        const res = await client.uploadBlob(data, video.file.type);
+        uploadedMedia.push({
+          type: 'video',
+          blobRef: { $link: res.blob.ref.$link, mimeType: video.file.type, size: video.file.size },
           alt: '',
         });
-      } catch (err) {
-        setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: t('compose.uploadFailed') } : i));
+      } catch {
+        setVideo(prev => prev ? { ...prev, uploading: false, error: t('compose.uploadFailed') } : null);
         return;
       }
     }
 
-    submit(draft.trim(), replyTo ?? undefined, uploadedImages.length > 0 ? uploadedImages : undefined);
-  }, [draft, replyTo, isEmpty, submitting, submit, images, client]);
+    // Upload images
+    if (images.length > 0) {
+      setImages(prev => prev.map(i => ({ ...i, uploading: true, error: undefined })));
+      for (const img of images) {
+        try {
+          const data = new Uint8Array(await img.file.arrayBuffer());
+          const res = await client.uploadBlob(data, img.file.type);
+          uploadedMedia.push({
+            type: 'image',
+            blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
+            alt: '',
+          });
+        } catch {
+          setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: t('compose.uploadFailed') } : i));
+          return;
+        }
+      }
+    }
+
+    submit(draft.trim(), replyTo ?? undefined, uploadedMedia.length > 0 ? uploadedMedia : undefined);
+  }, [draft, replyTo, isEmpty, submitting, submit, images, video, client]);
 
   const truncate = (s: string, max = 40) => s.length > max ? s.slice(0, max) + '…' : s;
 
@@ -274,6 +326,20 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
             className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-base leading-relaxed"
           />
 
+          {/* Video preview */}
+          {video && (
+            <div className="relative rounded-lg overflow-hidden border border-border">
+              <video src={video.preview} className="w-full max-h-64 object-contain bg-black" controls preload="metadata" />
+              {video.uploading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              {video.error && <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center text-red-500 text-xs">{video.error}</div>}
+              <button type="button" onClick={removeVideo} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80"><Icon name="x" size={16} /></button>
+            </div>
+          )}
+
           {images.length > 0 && (
             <div className="grid grid-cols-2 gap-2">
               {images.map((img, i) => (
@@ -291,13 +357,13 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
             </div>
           )}
 
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileSelect} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={images.length >= MAX_IMAGES || submitting}
+              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={(video ? true : images.length >= MAX_IMAGES) || submitting}
                 className="text-text-secondary hover:text-primary transition-colors text-sm disabled:opacity-30">
-                <Icon name="camera" size={18} /> {t('compose.addImage')}{images.length > 0 ? ` (${images.length}/${MAX_IMAGES})` : ''}
+                <Icon name="camera" size={18} /> {t('compose.addImage')}{(images.length > 0 && !video) ? ` (${images.length}/${MAX_IMAGES})` : ''}
               </button>
               <span className={`text-sm tabular-nums ${charLen >= 280 ? 'text-yellow-500' : 'text-text-secondary'}`}>{charLen}/300</span>
             </div>

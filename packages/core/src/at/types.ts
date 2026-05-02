@@ -20,7 +20,7 @@ export function parseAtUri(uri: string): AtUri {
 export interface PostRecord {
   text: string;
   createdAt: string;
-  embed?: ImageEmbed | ExternalEmbed | RecordEmbed | RecordWithMediaEmbed;
+  embed?: ImageEmbed | ExternalEmbed | RecordEmbed | RecordWithMediaEmbed | VideoEmbed;
   facets?: Facet[];
   reply?: { root: { uri: string; cid: string }; parent: { uri: string; cid: string } };
 }
@@ -44,6 +44,14 @@ export interface RecordWithMediaEmbed {
   $type: 'app.bsky.embed.recordWithMedia';
   record: { record: { uri: string; cid: string } };
   media: ImageEmbed | ExternalEmbed;
+}
+
+export interface VideoEmbed {
+  $type: 'app.bsky.embed.video';
+  video: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number };
+  aspectRatio?: { width: number; height: number };
+  alt?: string;
+  captions?: Array<{ lang: string; file: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number } }>;
 }
 
 export interface Facet {

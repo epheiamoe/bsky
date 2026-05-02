@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
-import type { ComposeImage, AppView, Locale } from '@bsky/app';
+import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
@@ -80,7 +80,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Compose
   const compose = useCompose(client, goBack, () => { goHome(); });
   const [composeDraft, setComposeDraft] = useState('');
-  const [composeImages, setComposeImages] = useState<ComposeImage[]>([]);
+  const [composeMedia, setComposeMedia] = useState<ComposeMedia[]>([]);
   const [imagePathInput, setImagePathInput] = useState<string | null>(null);
   const [composeUploadError, setComposeUploadError] = useState<string | null>(null);
   const [draftListOpen, setDraftListOpen] = useState(false);
@@ -115,7 +115,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Reset images when entering compose
   useEffect(() => {
     if (currentView.type === 'compose') {
-      setComposeImages([]);
+      setComposeMedia([]);
       setImagePathInput(null);
       setComposeUploadError(null);
       setDraftListOpen(false);
@@ -235,16 +235,23 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           const path = imagePathInput.trim();
           if (path) {
             try {
+              const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(path);
               if (!existsSync(path)) { setComposeUploadError(t('compose.fileNotFound', { path })); }
-              else if (composeImages.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
+              else if (isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Only 1 video allowed'); }
+              else if (isVideo && composeMedia.length >= 1) { setComposeUploadError('Video cannot be mixed with images'); }
+              else if (!isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Images cannot be mixed with video'); }
+              else if (!isVideo && composeMedia.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
               else {
                 const stat = statSync(path);
-                if (stat.size > 1024 * 1024) { setComposeUploadError(t('compose.imageOverLimit', { name: path })); }
+                const maxSize = isVideo ? 100 * 1024 * 1024 : 1024 * 1024;
+                if (stat.size > maxSize) { setComposeUploadError(t('compose.imageOverLimit', { name: path })); }
                 else {
                   const data = readFileSync(path);
-                  const mime = path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : path.endsWith('.webp') ? 'image/webp' : 'image/jpeg';
+                  const mime = isVideo
+                    ? (path.endsWith('.mp4') ? 'video/mp4' : path.endsWith('.mov') ? 'video/quicktime' : path.endsWith('.webm') ? 'video/webm' : 'video/mp4')
+                    : (path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : path.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
                   client?.uploadBlob(data, mime).then(res => {
-                    setComposeImages(prev => [...prev, { blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: stat.size }, alt: '' }]);
+                    setComposeMedia(prev => [...prev, { type: isVideo ? 'video' : 'image', blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: stat.size }, alt: '' }]);
                     setImagePathInput(null);
                     setComposeUploadError(null);
                   }).catch(e => setComposeUploadError(t('compose.uploadFailed') + ': ' + e.message));
@@ -260,7 +267,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return;
       }
       if (input === 'i' || input === 'I') {
-        if (composeImages.length < 4) setImagePathInput('');
+        const hasVideo = composeMedia.some(m => m.type === 'video');
+        if (hasVideo || composeMedia.length < 4) setImagePathInput('');
         return;
       }
       if (input === 'D') { setDraftListOpen(true); setDraftListIdx(0); return; }
@@ -394,7 +402,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       case 'compose':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
-            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</Text><Text dimColor>{draftSavePrompt ? ' ' + t('compose.draftSavePrompt') : draftListOpen ? ' ' + t('compose.draftListHeader') : imagePathInput !== null ? ' ' + t('keys.composeImage') : ' ' + t('keys.compose')}</Text></Box>
+            <Box height={1}><Text bold color="yellow">{(currentView as { replyTo?: string }).replyTo ? '✏️ ' + t('compose.titleReply') : '✏️ ' + t('compose.title')}</Text><Text dimColor>{draftSavePrompt ? ' ' + t('compose.draftSavePrompt') : draftListOpen ? ' ' + t('compose.draftListHeader') : imagePathInput !== null ? ' ' + t('keys.composeMedia') : ' ' + t('keys.compose')}</Text></Box>
             {(currentView as { replyTo?: string }).replyTo && <Box><Text dimColor>{t('compose.replyTo')} </Text><Text color="blue">{(currentView as { replyTo: string }).replyTo}</Text></Box>}
             {compose.quoteUri && (
               <Box borderStyle="single" borderColor="magenta" paddingX={1} marginBottom={0}>
@@ -431,14 +439,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                 <TextInput
                   value={imagePathInput !== null ? imagePathInput : composeDraft}
                   onChange={imagePathInput !== null ? setImagePathInput : setComposeDraft}
-                  onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeImages.length > 0 ? composeImages : undefined); }}
-                  placeholder={imagePathInput !== null ? t('compose.imagePathPlaceholder') : t('compose.placeholder')}
+                  onSubmit={() => { if (imagePathInput === null && composeDraft.trim()) compose.submit(composeDraft.trim(), (currentView as { replyTo?: string }).replyTo, composeMedia.length > 0 ? composeMedia : undefined); }}
+                  placeholder={imagePathInput !== null ? t('compose.mediaPathPlaceholder') : t('compose.placeholder')}
                 />
               </Box>
             )}
             <Box height={1}>
-              {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>{'🖼 '}{t('compose.imageMode')}</Text>}
-              {composeImages.length > 0 && <Text color="green">{' 📎 ' + composeImages.length + ' ' + t('compose.imageCount')}</Text>}
+              {imagePathInput === null ? <Text color={composeDraft.length > 280 ? 'yellow' : undefined}>{composeDraft.length}/300</Text> : <Text dimColor>{'📎 '}{t('compose.mediaInputMode')}</Text>}
+              {composeMedia.length > 0 && <Text color="green">{' 📎 ' + composeMedia.length + ' ' + t('compose.mediaCount')}</Text>}
               {compose.submitting && <Text color="cyan">{' '}{t('action.sending')}</Text>}
               {composeUploadError && <Text color="red">{' '}{composeUploadError}</Text>}
             </Box>

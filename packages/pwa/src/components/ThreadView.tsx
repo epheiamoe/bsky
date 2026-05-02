@@ -5,6 +5,7 @@ import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
+import { VideoCard } from './VideoCard.js';
 import { truncateName, linkifyText } from './PostCard.js';
 import { ImageGrid } from './PostCard.js';
 import { formatTime, uriToRkey, getPostUrl } from '../utils/format.js';
@@ -356,6 +357,14 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             )}
             {focused.imageUrls?.length > 0 && (
               <ImageGrid images={focused.imageUrls.map(url => ({ url, alt: '' }))} />
+            )}
+            {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+              <VideoCard
+                thumbnailUrl={focused.videoThumbnailUrl}
+                playlistUrl={focused.videoPlaylistUrl}
+                alt={focused.videoAlt}
+                aspectRatio={focused.videoAspectRatio}
+              />
             )}
             {focused.externalLink && (
               <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"

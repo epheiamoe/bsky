@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
-import { getCdnImageUrl, useI18n } from '@bsky/app';
+import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import { wrapLines } from '../utils/text.js';
 
 export interface PostLine {
@@ -27,8 +27,27 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
     lines.push({ text: l, isSelected, isName: false });
   }
 
+  // Videos — show clickable links (Ctrl+click opens in browser)
+  const recordEmbed = post.record.embed as {
+    $type?: string;
+    video?: { ref: { $link: string }; mimeType: string };
+    aspectRatio?: { width: number; height: number };
+    alt?: string;
+  } | undefined;
+
+  if (recordEmbed?.$type === 'app.bsky.embed.video') {
+    const viewVid = (post as any).embed as { thumbnail?: string; playlist?: string; cid?: string } | undefined;
+    const vid = viewVid?.cid ?? recordEmbed.video?.ref?.$link ?? '';
+    const playlistUrl = viewVid?.playlist || getVideoPlaylistUrl(post.author.did, vid);
+    lines.push({ text: '\x1b]8;;' + playlistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07', isSelected, isName: false });
+  }
+
   // Image embed — show clickable URLs (Ctrl+click in terminal)
-  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
+  const embed = post.record.embed as {
+    $type?: string;
+    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
+  } | undefined;
   const imageUrls: string[] = [];
 
   const extract = (e: typeof embed) => {

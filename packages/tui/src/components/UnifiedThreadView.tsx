@@ -179,6 +179,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}
         </Text></Box>
       ))}
+      {/* Video — OSC 8 clickable hyperlink */}
+      {line.hasVideo && line.videoPlaylistUrl && (
+        <Box><Text backgroundColor={bg}>
+          {'\x1b]8;;' + line.videoPlaylistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07'}
+        </Text></Box>
+      )}
       {/* External link */}
       {line.externalLink && (
         <Box><Text backgroundColor={bg}>
@@ -287,6 +293,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                   {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? idx + 1 : 1 }) + '\x1b]8;;\x07'}
                 </Text></Box>
               ))}
+              {/* Video */}
+              {line.hasVideo && line.videoPlaylistUrl && (
+                <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>
+                  {'\x1b]8;;' + line.videoPlaylistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07'}
+                </Text></Box>
+              )}
               {/* Quoted post */}
               {line.quotedPost && renderQuotedPost(line.quotedPost)}
               {/* Stats */}

@@ -404,4 +404,12 @@ export class BskyClient {
       searchParams: params,
     }).json<GetBookmarksResponse>();
   }
+
+  getVideoThumbnailUrl(did: string, cid: string): string {
+    return `https://video.bsky.app/watch/${encodeURIComponent(did)}/${encodeURIComponent(cid)}/thumbnail.jpg`;
+  }
+
+  getVideoPlaylistUrl(did: string, cid: string): string {
+    return `https://video.bsky.app/watch/${encodeURIComponent(did)}/${encodeURIComponent(cid)}/playlist.m3u8`;
+  }
 }

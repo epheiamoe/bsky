@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { ThreadViewPost, NotFoundPost as NFP, PostView } from '@bsky/core';
-import { getCdnImageUrl } from '../utils/imageUrl.js';
+import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from '../utils/imageUrl.js';
 import { isPostLiked, isPostReposted, likePost, repostPost, seedPostViewers } from './usePostActions.js';
 
 export interface FlatLine {
@@ -17,6 +17,11 @@ export interface FlatLine {
   mediaTags: string[];
   imageUrls: string[];
   externalLink: { uri: string; title: string; description: string } | null;
+  hasVideo: boolean;
+  videoThumbnailUrl?: string;
+  videoPlaylistUrl?: string;
+  videoAlt?: string;
+  videoAspectRatio?: { width: number; height: number };
   quotedPost?: {
     uri: string;
     cid: string;
@@ -151,6 +156,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
 
     const rkey = post.uri.split('/').pop() ?? '';
     const isRoot = d === 0;
+    const vid = getVideoInfo(post);
 
     lines.push({
       depth: d,
@@ -166,6 +172,11 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
       imageUrls: getImageUrls(post),
       externalLink: getExternalLink(post),
       quotedPost: getQuotedPost(post),
+      hasVideo: vid.hasVideo,
+      videoThumbnailUrl: vid.thumbnailUrl,
+      videoPlaylistUrl: vid.playlistUrl,
+      videoAlt: vid.alt,
+      videoAspectRatio: vid.aspectRatio,
       isRoot,
       isTruncation: false,
       likeCount: post.likeCount ?? 0,
@@ -190,6 +201,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
           text: `（还有 ${remaining} 条回复未显示）`,
           handle: '', displayName: '', authorAvatar: undefined,
           hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null, quotedPost: undefined,
+          hasVideo: false,
           isRoot: false, isTruncation: true,
           likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
         });
@@ -265,21 +277,54 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
 
 function getMediaTags(post: PostView): string[] {
   const tags: string[] = [];
-  const embed = post.record.embed as { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>; media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> } } | undefined;
+  const embed = post.record.embed as {
+    $type?: string;
+    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
+    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
+  } | undefined;
   if (!embed) return tags;
 
   if (embed.$type === 'app.bsky.embed.images') {
     const count = embed.images?.length ?? 0;
-    tags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
+    const hasGif = embed.images?.some((img: { image: { mimeType: string } }) => img.image.mimeType?.includes('gif'));
+    tags.push(hasGif ? (count === 1 ? '🎞 动图' : `🎞 ${count}张`) : (count === 1 ? '🖼 图片' : `🖼 ${count}张图片`));
+  } else if (embed.$type === 'app.bsky.embed.video') {
+    tags.push('🎬 视频');
   } else if (embed.$type === 'app.bsky.embed.external') {
     tags.push('🔗 链接');
   } else if (embed.$type === 'app.bsky.embed.record') {
     tags.push('📌 引用');
   } else if (embed.$type === 'app.bsky.embed.recordWithMedia') {
-    tags.push('📌🖼 引用+图片');
+    const media = embed.media;
+    if (media?.images) {
+      const hasGif = media.images.some((img: { image: { mimeType: string } }) => img.image.mimeType?.includes('gif'));
+      tags.push(hasGif ? '📌🎞 引用+动图' : '📌🖼 引用+图片');
+    } else {
+      tags.push('📌 引用+媒体');
+    }
   }
 
   return tags;
+}
+
+function getVideoInfo(post: PostView): { hasVideo: boolean; thumbnailUrl?: string; playlistUrl?: string; alt?: string; aspectRatio?: { width: number; height: number } } {
+  const embed = post.record.embed as { $type?: string; aspectRatio?: { width: number; height: number }; alt?: string } | undefined;
+  if (embed?.$type !== 'app.bsky.embed.video') return { hasVideo: false };
+
+  const viewEmbed = (post as any).embed as {
+    $type?: string;
+    thumbnail?: string;
+    playlist?: string;
+    cid?: string;
+  } | undefined;
+
+  return {
+    hasVideo: true,
+    thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, viewEmbed?.cid ?? ''),
+    playlistUrl: viewEmbed?.playlist || getVideoPlaylistUrl(post.author.did, viewEmbed?.cid ?? ''),
+    alt: embed.alt,
+    aspectRatio: embed.aspectRatio,
+  };
 }
 
 function getImageUrls(post: PostView): string[] {
