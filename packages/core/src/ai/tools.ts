@@ -318,6 +318,8 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
             media.push(`外部链接: ${(postRecord.embed as ExternalEmbed).external.uri}`);
           } else if (embedType === 'app.bsky.embed.record') {
             media.push(`引用帖子: ${(postRecord.embed as RecordEmbed).record.uri}`);
+          } else if (embedType === 'app.bsky.embed.video') {
+            media.push('视频: 1 个');
           }
         }
         return JSON.stringify({
@@ -534,16 +536,22 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const record = await client.getRecord(parsed.did, parsed.collection, parsed.rkey);
         const postRecord = record.value as unknown as PostRecord;
         const images: Array<{ did: string; cid: string; mimeType: string; alt: string }> = [];
-        if (postRecord.embed && (postRecord.embed as { $type?: string }).$type === 'app.bsky.embed.images') {
-          for (const img of (postRecord.embed as ImageEmbed).images) {
-            images.push({
-              did: parsed.did,
-              cid: img.image.ref.$link,
-              mimeType: img.image.mimeType,
-              alt: img.alt,
-            });
+        const collect = (embed: unknown) => {
+          const e = embed as { $type?: string };
+          if (e.$type === 'app.bsky.embed.images' && (embed as ImageEmbed).images) {
+            for (const img of (embed as ImageEmbed).images) {
+              images.push({
+                did: parsed.did,
+                cid: img.image.ref.$link,
+                mimeType: img.image.mimeType,
+                alt: img.alt,
+              });
+            }
+          } else if (e.$type === 'app.bsky.embed.recordWithMedia') {
+            collect((embed as RecordWithMediaEmbed).media);
           }
-        }
+        };
+        if (postRecord.embed) collect(postRecord.embed);
         return JSON.stringify({ images, count: images.length });
       },
       requiresWrite: false,
@@ -566,19 +574,33 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const data = await client.downloadBlob(p.did as string, p.cid as string);
         const ext = detectMimeType(data).split('/')[1] || 'jpg';
         const filename = (p.filename as string) || `bsky_image_${new Date().toISOString().replace(/[:.]/g, '-')}.${ext}`;
-        // Write to user's Downloads folder
-        const { writeFileSync, mkdirSync } = await import('fs');
-        const { homedir } = await import('os');
-        const { join } = await import('path');
-        const downloadsDir = join(homedir(), 'Downloads');
-        try { mkdirSync(downloadsDir, { recursive: true }); } catch {}
-        const filepath = join(downloadsDir, filename);
-        writeFileSync(filepath, data);
-        return JSON.stringify({
-          saved: filepath,
-          size: data.length,
-          mimeType: detectMimeType(data),
-        });
+        // Try Node.js filesystem save; fall back to data URL for browser/PWA
+        try {
+          const { writeFileSync, mkdirSync } = await import('fs');
+          const { homedir } = await import('os');
+          const { join } = await import('path');
+          const downloadsDir = join(homedir(), 'Downloads');
+          try { mkdirSync(downloadsDir, { recursive: true }); } catch {}
+          const filepath = join(downloadsDir, filename);
+          writeFileSync(filepath, data);
+          return JSON.stringify({
+            saved: filepath,
+            size: data.length,
+            mimeType: detectMimeType(data),
+          });
+        } catch {
+          // Browser/PWA fallback: return base64 data URL
+          const base64 = Buffer.from(data).toString('base64');
+          const dataUrl = `data:${detectMimeType(data)};base64,${base64}`;
+          return JSON.stringify({
+            saved: false,
+            dataUrl,
+            filename,
+            size: data.length,
+            mimeType: detectMimeType(data),
+            note: 'Image data returned as data URL. In PWA/browser, the frontend can render this as a download link.',
+          });
+        }
       },
       requiresWrite: false,
     },
@@ -590,7 +612,8 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           type: 'object',
           properties: {
             did: { type: 'string', description: 'The DID of the post author' },
-            cid: { type: 'string', description: 'The CID of the image blob' },
+            cid: { type: 'string', description: 'The CID of the image blob (from extract_images_from_post)' },
+            alt: { type: 'string', description: 'Optional ALT text of the image (from extract_images_from_post)' },
           },
           required: ['did', 'cid'],
         },
@@ -601,11 +624,12 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         const base64 = Buffer.from(data).toString('base64');
         const dataUrl = `data:${mimeType};base64,${base64}`;
         // Store for multi-modal promotion in next user message
-        const ai = assistant as unknown as { addPendingImage?: (url: string) => void };
-        ai.addPendingImage?.(dataUrl);
+        const ai = assistant as unknown as { addPendingImage?: (url: string, alt?: string) => void };
+        ai.addPendingImage?.(dataUrl, (p.alt as string) || undefined);
         return JSON.stringify({
           mimeType,
           size: data.length,
+          alt: (p.alt as string) || undefined,
           note: 'Image data stored for visual analysis. If your model supports vision (GPT-4V/Claude Vision/DeepSeek VL), you will be able to see this image in the next message. Text-only models: skip image analysis and describe using metadata only.',
         });
       },
@@ -937,6 +961,8 @@ function formatPostLine(post: PostView, depth: number, prefix: string): string {
       mediaInfo = ` [引用: ${extractRkey(qUri)}]`;
     } else if (embedType === 'app.bsky.embed.recordWithMedia') {
       mediaInfo = ' [引用+媒体]';
+    } else if (embedType === 'app.bsky.embed.video') {
+      mediaInfo = ' [视频]';
     }
   }
 

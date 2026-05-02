@@ -98,7 +98,7 @@ export class AIAssistant {
   private _confirmResolve: ((v: boolean) => void) | null = null;
 
   // Pending images for multi-modal support (view_image tool)
-  private _pendingImages: string[] = [];
+  private _pendingImages: Array<{ url: string; alt?: string }> = [];
 
   constructor(config?: Partial<AIConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config } as AIConfig;
@@ -145,8 +145,8 @@ export class AIAssistant {
   }
 
   /** Store a base64 data URL for multi-modal vision model support */
-  addPendingImage(base64DataUrl: string): void {
-    this._pendingImages.push(base64DataUrl);
+  addPendingImage(base64DataUrl: string, alt?: string): void {
+    this._pendingImages.push({ url: base64DataUrl, alt });
   }
 
   /** Clear pending images after they've been used in a request */
@@ -300,7 +300,12 @@ export class AIAssistant {
         const text: string = typeof msgs[i]!.content === 'string' ? (msgs[i]!.content as string) : '';
         const blocks: ContentBlock[] = [
           { type: 'text' as const, text },
-          ...this._pendingImages.map(url => ({ type: 'image_url' as const, image_url: { url, detail: 'auto' as const } })),
+          ...this._pendingImages.flatMap(img => {
+            const result: ContentBlock[] = [];
+            if (img.alt) result.push({ type: 'text' as const, text: `[图片 ALT: ${img.alt}]` });
+            result.push({ type: 'image_url' as const, image_url: { url: img.url, detail: 'auto' as const } });
+            return result;
+          }),
         ];
         msgs[i] = { ...msgs[i]!, content: blocks } as ChatMessage;
         break;
