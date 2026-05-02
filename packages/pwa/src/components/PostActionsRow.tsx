@@ -61,6 +61,10 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
           <Icon name="bookmark" size={14} filled={isBookmarked(post.uri)} />
         </button>
       )}
+      {/* AI Analysis */}
+      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: post.uri }); }} className="hover:text-purple-500 transition-colors" title="AI Analysis">
+        <Icon name="astroid-as-AI-Button" size={14} />
+      </button>
     </div>
   );
 }

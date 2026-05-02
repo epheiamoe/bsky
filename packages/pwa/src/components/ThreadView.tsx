@@ -5,10 +5,11 @@ import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
-import { VideoCard } from './VideoCard.js';
 import { truncateName, linkifyText } from './PostCard.js';
 import { ImageGrid } from './PostCard.js';
-import { formatTime, uriToRkey, getPostUrl } from '../utils/format.js';
+import type { VideoData } from './VideoCard.js';
+import { VideoCard } from './VideoCard.js';
+import { formatTime, getPostUrl } from '../utils/format.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -27,125 +28,6 @@ function Spinner() {
     </div>
   );
 }
-
-function ActionButtons({
-  uri,
-  cid,
-  handle,
-  rkey,
-  depth,
-  likePost,
-  repostPost,
-  isLiked,
-  isReposted,
-  isBookmarked,
-  toggleBookmark,
-  goTo,
-  onTranslate,
-  onDelete,
-  isOwn,
-}: {
-  uri: string;
-  cid: string;
-  handle: string;
-  rkey: string;
-  depth: number;
-  likePost: (uri: string) => void;
-  repostPost: (uri: string) => void;
-  isLiked: (uri: string) => boolean;
-  isReposted: (uri: string) => boolean;
-  isBookmarked: (uri: string) => boolean;
-  toggleBookmark: (uri: string, cid: string) => void;
-  goTo: (v: AppView) => void;
-  onTranslate?: () => void;
-  onDelete?: () => void;
-  isOwn?: boolean;
-}) {
-  const { t } = useI18n();
-  const sizeClass = depth > 0 ? 'text-xs gap-2' : 'text-sm gap-3';
-  const [showRepostMenu, setShowRepostMenu] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-  const handleCopyLink = () => {
-    const url = getPostUrl(handle, rkey);
-    navigator.clipboard.writeText(url).catch(() => {});
-  };
-
-  return (
-    <div className={`flex items-center ${sizeClass} text-text-secondary mt-2`}>
-      <button
-        onClick={() => likePost(uri)}
-        className={`hover:text-red-500 transition-colors ${isLiked(uri) ? 'text-red-500' : ''}`}
-        title={isLiked(uri) ? t('action.liked') : t('action.like')}
-      >
-        <Icon name="heart" size={depth > 0 ? 16 : 18} filled={isLiked(uri)} />
-      </button>
-      <div className="relative inline-flex">
-        <button
-          onClick={() => { repostPost(uri); setShowRepostMenu(false); }}
-          className={`hover:text-green-500 transition-colors ${isReposted(uri) ? 'text-green-500' : ''}`}
-          title={isReposted(uri) ? t('action.reposted') : t('action.repost')}
-        >
-          <Icon name="repeat" size={depth > 0 ? 16 : 18} />
-        </button>
-        <button
-          onClick={() => setShowRepostMenu(!showRepostMenu)}
-          className="hover:text-text-primary transition-colors ml-0.5"
-          title="Quote"
-        >
-          <Icon name="pen-line" size={12} />
-        </button>
-        {showRepostMenu && (
-          <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-30 py-1 min-w-[120px]">
-            <button onClick={() => { goTo({ type: 'compose', quoteUri: uri }); setShowRepostMenu(false); }} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors flex items-center gap-2"><Icon name="pen-line" size={14} /> Quote</button>
-          </div>
-        )}
-      </div>
-      <button
-        onClick={() => goTo({ type: 'compose', replyTo: uri })}
-        className="hover:text-primary transition-colors"
-        title={t('action.reply')}
-      >
-        <Icon name="corner-down-right" size={depth > 0 ? 16 : 18} />
-      </button>
-      <button
-        onClick={() => toggleBookmark(uri, cid)}
-        className={`hover:text-yellow-500 transition-colors ${isBookmarked(uri) ? 'text-yellow-500' : ''}`}
-        title={isBookmarked(uri) ? t('action.bookmarked') : t('action.bookmark')}
-      >
-        <Icon name="bookmark" size={depth > 0 ? 16 : 18} filled={isBookmarked(uri)} />
-      </button>
-      <button
-        onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: uri })}
-        className="hover:text-purple-500 transition-colors"
-        title={t('thread.aiAnalyze')}
-      >
-        <Icon name="astroid-as-AI-Button" size={depth > 0 ? 16 : 18} />
-      </button>
-      {onTranslate && (
-        <button onClick={onTranslate} className="hover:text-blue-500 transition-colors" title={t('action.translate')}>
-          <Icon name="languages" size={depth > 0 ? 16 : 18} />
-        </button>
-      )}
-      <button onClick={handleCopyLink} className="hover:text-blue-500 transition-colors" title={t('action.copyLink')}>
-        <Icon name="copy" size={depth > 0 ? 16 : 18} />
-      </button>
-      {isOwn && onDelete && (
-        !showDeleteConfirm ? (
-          <button onClick={() => setShowDeleteConfirm(true)} className="hover:text-red-500 transition-colors" title={t('action.delete')}>
-            <Icon name="trash-2" size={depth > 0 ? 16 : 18} />
-          </button>
-        ) : (
-          <span className="flex items-center gap-1">
-            <button onClick={() => { onDelete(); setShowDeleteConfirm(false); }} className="text-green-500 hover:text-green-400 transition-colors" title={t('action.confirm')}><Icon name="badge-check" size={16} /></button>
-            <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:text-text-primary transition-colors" title={t('action.cancel')}><Icon name="badge-alert" size={16} /></button>
-          </span>
-        )
-      )}
-    </div>
-  );
-}
-
 
 export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode }: ThreadViewProps) {
   const {
@@ -387,7 +269,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             {/* Unified action row + extras */}
             <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
               <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-              <button onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: focused.uri })} className="hover:text-purple-500 transition-colors"><Icon name="astroid-as-AI-Button" size={18} /></button>
               {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
               <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
               {focused.handle === client.getHandle() && <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors"><Icon name="trash-2" size={18} /></button>}

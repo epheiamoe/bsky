@@ -115,7 +115,14 @@ function parseHash(): AppView {
     }
     case '/ai': {
       const session = params.get('session');
-      if (session) return { type: 'aiChat', sessionId: decodeURIComponent(session) };
+      const post = params.get('post');
+      const profile = params.get('profile');
+      if (session) {
+        const view: AppView = { type: 'aiChat', sessionId: decodeURIComponent(session) };
+        if (post) (view as { contextPost?: string }).contextPost = decodeURIComponent(post);
+        if (profile) (view as { contextProfile?: string }).contextProfile = decodeURIComponent(profile);
+        return view;
+      }
       const context = params.get('context');
       return context ? { type: 'aiChat', contextUri: decodeURIComponent(context) } : { type: 'aiChat' };
     }
@@ -151,7 +158,14 @@ function encodeView(view: AppView): string {
       return qs ? `#/compose?${qs}` : '#/compose';
     }
     case 'aiChat': {
-      if (view.sessionId) return `#/ai?session=${encodeURIComponent(view.sessionId)}`;
+      if (view.sessionId) {
+        const post = (view as { contextPost?: string }).contextPost;
+        const profile = (view as { contextProfile?: string }).contextProfile;
+        let url = `#/ai?session=${encodeURIComponent(view.sessionId)}`;
+        if (post) url += `&post=${encodeURIComponent(post)}`;
+        if (profile) url += `&profile=${encodeURIComponent(profile)}`;
+        return url;
+      }
       const base = '#/ai';
       return view.contextUri ? `${base}?context=${encodeURIComponent(view.contextUri)}` : base;
     }

@@ -46,7 +46,9 @@ export function useAIChat(
     toolName: string;
     description: string;
   } | null>(null);
-  const lastContext = useRef<string | undefined>();
+  const lastContextUri = useRef<string | undefined>();
+  const lastContextPost = useRef<string | undefined>();
+  const lastContextProfile = useRef<string | undefined>();
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
@@ -112,6 +114,7 @@ export function useAIChat(
           contextRef.current = record.context;
           if (record.context.type === 'post') {
             assistant.addSystemMessage(buildSystemPrompt(record.context.uri, undefined));
+            if (record.messages.length === 0) setGuidingQuestions(P_GUIDING_QUESTIONS);
           } else {
             assistant.addSystemMessage(buildSystemPrompt(undefined, record.context.handle));
           }
@@ -137,8 +140,12 @@ export function useAIChat(
       contextRef.current = { type: 'profile', handle: options.contextProfile };
     }
 
-    const changed = contextUri !== lastContext.current;
-    lastContext.current = contextUri;
+    const changed = contextUri !== lastContextUri.current
+      || options?.contextPost !== lastContextPost.current
+      || options?.contextProfile !== lastContextProfile.current;
+    lastContextUri.current = contextUri;
+    lastContextPost.current = options?.contextPost;
+    lastContextProfile.current = options?.contextProfile;
 
     if (changed) {
       if (!options?.chatId && !options?.contextProfile && !options?.contextPost) {
