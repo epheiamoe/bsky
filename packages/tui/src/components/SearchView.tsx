@@ -40,7 +40,7 @@ export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchVi
       setTab(next.key);
       return;
     }
-    if (key.return && input.trim()) { search(input.trim(), tab); setSearching(true); return; }
+    if (key.return && input.trim()) { search(input.trim(), tab); setSearching(true); goTo({ type: 'search', query: input.trim() }); return; }
     if (key.return) {
       if (tab === 'users' && users.length > 0) { goTo({ type: 'profile', actor: users[userIdx]!.handle }); }
       else if ((tab === 'top' || tab === 'latest') && posts.length > 0) { goTo({ type: 'thread', uri: posts[postIdx]!.uri }); }
