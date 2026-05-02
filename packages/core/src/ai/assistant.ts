@@ -100,6 +100,9 @@ export class AIAssistant {
   // Pending images for multi-modal support (view_image tool)
   private _pendingImages: Array<{ url: string; alt?: string }> = [];
 
+  // User-uploaded images (not yet posted to Bluesky)
+  private _userUploads: Array<{ data: Uint8Array; mimeType: string; alt: string }> = [];
+
   constructor(config?: Partial<AIConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config } as AIConfig;
   }
@@ -148,14 +151,23 @@ export class AIAssistant {
   addPendingImage(base64DataUrl: string, alt?: string): void {
     this._pendingImages.push({ url: base64DataUrl, alt });
   }
-
-  /** Clear pending images after they've been used in a request */
   clearPendingImages(): void {
     this._pendingImages = [];
   }
-
   get hasPendingImages(): boolean {
     return this._pendingImages.length > 0;
+  }
+
+  /** Store a user-uploaded image for later use (e.g., posting via create_post) */
+  addUserUpload(data: Uint8Array, mimeType: string, alt: string): number {
+    this._userUploads.push({ data, mimeType, alt });
+    return this._userUploads.length - 1;
+  }
+  getUserUpload(index: number): { data: Uint8Array; mimeType: string; alt: string } | undefined {
+    return this._userUploads[index];
+  }
+  clearUserUploads(): void {
+    this._userUploads = [];
   }
 
   /** Whether a write-tool confirmation dialog is currently open. */
@@ -367,7 +379,7 @@ export class AIAssistant {
    * Send a message with streaming.
    * Yields intermediate steps (tool_call/tool_result) and tokens.
    */
-  async *sendMessageStreaming(content: string): AsyncGenerator<{
+  async *sendMessageStreaming(content: string, signal?: AbortSignal): AsyncGenerator<{
     type: 'tool_call' | 'tool_result' | 'token' | 'done' | 'thinking';
     content: string;
     toolName?: string;
@@ -409,8 +421,13 @@ export class AIAssistant {
             Authorization: `Bearer ${this.config.apiKey}`,
           },
           body: JSON.stringify(body),
+          signal,
         });
       } catch (e) {
+        if (signal?.aborted) {
+          yield { type: 'done', content: '\n\n[已暂停]' };
+          return;
+        }
         if (e instanceof TypeError && e.message === 'fetch failed') {
           throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
         }
@@ -429,7 +446,12 @@ export class AIAssistant {
       let reasoningContent = '';
       let toolCallAccum: Map<number, { id: string; name: string; arguments: string }> = new Map();
 
+      try {
       while (true) {
+        if (signal?.aborted) {
+          yield { type: 'done', content: '\n\n[已暂停]' };
+          break;
+        }
         const { done, value } = await reader.read();
         if (done) break;
         const text = decoder.decode(value, { stream: true });
@@ -469,6 +491,14 @@ export class AIAssistant {
             }
           } catch { /* skip unparseable chunks */ }
         }
+      }
+      } catch (_err) {
+        // Aborted during SSE reading — yield partial content
+        if (signal?.aborted) {
+          yield { type: 'done', content: fullContent };
+          return;
+        }
+        throw _err;
       }
 
        // Check if we got tool calls

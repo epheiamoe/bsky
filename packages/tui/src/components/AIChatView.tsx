@@ -7,6 +7,7 @@ import { renderMarkdown } from '../utils/markdown.js';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 import clipboard from 'clipboardy';
+import { readFileSync, existsSync, writeFileSync } from 'fs';
 
 interface AIChatViewProps {
   client: BskyClient | null;
@@ -24,7 +25,8 @@ interface AIChatViewProps {
   locale?: string;
 }
 
-type PickMode = { type: 'copy' | 'edit'; buffer: string } | null;
+type PickMode = { type: 'copy' | 'edit' | 'export'; buffer: string } | null;
+type ImageInput = { path: string } | null;
 
 export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
   const storage = getDefaultStorage();
@@ -33,12 +35,15 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
   const postContext = contextPost ?? (isProfile ? undefined : contextUri);
   const { conversations, deleteConversation, refresh } = useChatHistory(storage);
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
+  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [pickMode, setPickMode] = useState<PickMode>(null);
+  const [imageInput, setImageInput] = useState<ImageInput>(null);
   const [lastCopied, setLastCopied] = useState(false);
+  const [exported, setExported] = useState<string | null>(null);
+  const visionEnabled = aiConfig.visionEnabled ?? false;
   const prevMsgCount = useRef(0);
   const wasAtBottom = useRef(true);
   const { t, locale } = useI18n();
@@ -135,6 +140,27 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
         const text = editByIndex(i);
         if (text) setInput(text);
       }
+    } else if (pickMode.type === 'export') {
+      // 1=JSON, 2=HTML, 3=MD
+      const msgs = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+      const format = idx === 1 ? 'json' : idx === 2 ? 'html' : 'md';
+      let content: string;
+      let filename: string;
+      if (format === 'json') {
+        content = JSON.stringify(msgs, null, 2);
+        filename = 'chat.json';
+      } else if (format === 'html') {
+        content = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#0A0A0A;color:#F1F5F9}.user{background:#00A5E0;color:#fff;padding:10px 16px;border-radius:12px;margin:8px 0 8px 40px}.ai{background:#121212;border:1px solid #27272A;padding:10px 16px;border-radius:12px;margin:8px 40px 8px 0}</style></head><body>' +
+          msgs.map(m => `<div class="${m.role}"><strong>${m.role === 'user' ? 'You' : 'AI'}</strong><p>${m.content.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p></div>`).join('') +
+          '</body></html>';
+        filename = 'chat.html';
+      } else {
+        content = msgs.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n\n${m.content}\n`).join('\n');
+        filename = 'chat.md';
+      }
+      writeFileSync(filename, content);
+      setExported(filename);
+      setTimeout(() => setExported(null), 5000);
     }
     setPickMode(null);
   };
@@ -152,6 +178,25 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
       }
       if (/^[0-9]$/.test(input)) {
         setPickMode(prev => prev ? { ...prev, buffer: prev.buffer + input } : null);
+        return;
+      }
+      return;
+    }
+
+    // Image input mode
+    if (imageInput !== null) {
+      if (key.escape) { setImageInput(null); return; }
+      if (key.return) {
+        const path = imageInput.path.trim();
+        if (path && existsSync(path)) {
+          const data = readFileSync(path);
+          const ext = path.split('.').pop()?.toLowerCase() ?? '';
+          const mime = ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+          const idx = addUserImage(data, mime, '');
+          const ref = `\n\n[图片: index=${idx}]`;
+          setInput(prev => prev + ref);
+        }
+        setImageInput(null);
         return;
       }
       return;
@@ -183,6 +228,18 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
         try { clipboard.writeSync(transcript); setLastCopied(true); } catch (e) {}
         return;
       }
+      if (input === 'e' || input === 'E') {
+        if (messages.length > 0) setPickMode({ type: 'export', buffer: '' });
+        return;
+      }
+      if (input === 'i' || input === 'I') {
+        setImageInput({ path: '' });
+        return;
+      }
+    }
+    if (input === 'p' || input === 'P') {
+      if (loading) { stop(); return; }
+      return;
     }
     const page = Math.floor(maxVisible * 0.7);
     if (key.pageUp) { setScrollOffset(s => Math.min(allMessageLines.length - maxVisible, s + page)); return; }
@@ -242,13 +299,16 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
         <Text bold color={focused ? 'magentaBright' : 'magenta'}>{'🤖 '}{t('ai.title')}{focused ? ' ' + t('ai.focused') : ''}</Text>
         <Text dimColor>{' '}{
           pickMode
-            ? (pickMode.type === 'copy' ? t('ai.pickCopy') : t('ai.pickEdit')) + ` [${pickMode.buffer || '?'}]`
-            : pendingConfirmation
-              ? 'Y:确认 N:取消'
-              : t('keys.aiChat') + ' a:复制 r:编辑 t:全部复制'
+            ? (pickMode.type === 'copy' ? t('ai.pickCopy') : pickMode.type === 'edit' ? t('ai.pickEdit') : t('ai.pickExport')) + ` [${pickMode.buffer || '?'}]`
+            : imageInput !== null
+              ? '输入图片路径 · Enter 确认 · Esc 取消'
+              : pendingConfirmation
+                ? 'Y:确认 N:取消'
+                : t('keys.aiChat') + ' a:复制 r:编辑 t:全部复制 e:导出 i:图片' + (loading ? ' p:暂停' : '')
         }</Text>
       </Box>
       {lastCopied && <Box height={1}><Text color="green" bold>{'📋 '}{t('ai.copied')}</Text></Box>}
+      {exported && <Box height={1}><Text color="green" bold>{'📥 '}{t('ai.exported') || 'Exported'}: {exported}</Text></Box>}
       {guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Text dimColor>{t('ai.quickQuestions')}</Text>
@@ -296,7 +356,11 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
       <Box borderStyle="single" borderColor={focused ? 'magentaBright' : 'gray'} height={1}>
         <Text color={focused ? 'yellow' : 'gray'}>{focused ? '▸ ' : '· '}</Text>
         {focused ? (
-          <TextInput value={input} onChange={setInput} onSubmit={handleSend} placeholder={t('ai.placeholder')} />
+          imageInput !== null ? (
+            <TextInput value={imageInput.path} onChange={v => setImageInput({ path: v })} onSubmit={() => {}} placeholder="Input image file path..." />
+          ) : (
+            <TextInput value={input} onChange={setInput} onSubmit={handleSend} placeholder={t('ai.placeholder')} />
+          )
         ) : (
           <Text dimColor>{t('ai.tabFocus')}</Text>
         )}

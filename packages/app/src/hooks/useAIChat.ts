@@ -51,6 +51,7 @@ export function useAIChat(
   const lastContextUri = useRef<string | undefined>();
   const lastContextPost = useRef<string | undefined>();
   const lastContextProfile = useRef<string | undefined>();
+  const abortRef = useRef<AbortController | null>(null);
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
@@ -213,9 +214,12 @@ export function useAIChat(
     setGuidingQuestions([]);
     setLoading(true);
 
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     if (options?.stream) {
       try {
-        const stream = assistant.sendMessageStreaming(text);
+        const stream = assistant.sendMessageStreaming(text, ctrl.signal);
         let streamingContent = '';
 
         for await (const event of stream) {
@@ -279,16 +283,19 @@ export function useAIChat(
           return prev;
         });
       } catch (e) {
-        const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
-        console.error('[useAIChat] stream error:', errorText);
-        setMessages(prev => {
-          const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
-          const updated = [...prev, errMsg];
-          void autoSave(updated);
-          return updated;
-        });
+        if (!ctrl.signal.aborted) {
+          const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
+          console.error('[useAIChat] stream error:', errorText);
+          setMessages(prev => {
+            const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
+            const updated = [...prev, errMsg];
+            void autoSave(updated);
+            return updated;
+          });
+        }
       } finally {
         setLoading(false);
+        abortRef.current = null;
       }
       return;
     }
@@ -313,16 +320,19 @@ export function useAIChat(
         return updated;
       });
     } catch (e) {
-      const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
-      console.error('[useAIChat] non-stream error:', errorText);
-      setMessages(prev => {
-        const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
-        const updated = [...prev, errMsg];
-        void autoSave(updated);
-        return updated;
-      });
+      if (!ctrl.signal.aborted) {
+        const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
+        console.error('[useAIChat] non-stream error:', errorText);
+        setMessages(prev => {
+          const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
+          const updated = [...prev, errMsg];
+          void autoSave(updated);
+          return updated;
+        });
+      }
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   }, [assistant, autoSave, options?.stream]);
 
@@ -398,7 +408,15 @@ export function useAIChat(
     return editByIndex(lastUserIdx);
   }, [assistant, editByIndex]);
 
-  return { messages, loading, guidingQuestions, send, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex };
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
+  const addUserImage = useCallback((data: Uint8Array, mimeType: string, alt: string): number => {
+    return assistant.addUserUpload(data, mimeType, alt);
+  }, [assistant]);
+
+  return { messages, loading, guidingQuestions, send, stop, addUserImage, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex };
 }
 
 // Re-export the AIChatMessage type for consumers

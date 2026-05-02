@@ -31,7 +31,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const { conversations, deleteConversation, refresh } = useChatHistory(storage);
 
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
+  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId: sessionId,
     storage,
     stream: true,
@@ -42,6 +42,10 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     contextPost,
     onChatSaved: refresh,
   });
+  const [exportOpen, setExportOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<{ file: File; preview: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const visionEnabled = aiConfig.visionEnabled ?? false;
 
 
 
@@ -62,11 +66,20 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
   }, []);
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
-    void send(input.trim());
-    setInput('');
-  }, [input, loading, send]);
+    if (pendingFile) {
+      const data = new Uint8Array(await pendingFile.file.arrayBuffer());
+      const idx = addUserImage(data, pendingFile.file.type || 'image/jpeg', '');
+      const ref = `[图片: index=${idx}]`;
+      void send(input.trim() + '\n\n' + ref);
+      setInput('');
+      setPendingFile(null);
+    } else {
+      void send(input.trim());
+      setInput('');
+    }
+  }, [input, loading, send, pendingFile, addUserImage]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -77,6 +90,51 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     },
     [handleSend],
   );
+
+  const handleStop = useCallback(() => {
+    stop();
+  }, [stop]);
+
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type.startsWith('image/')) {
+      setPendingFile({ file, preview: URL.createObjectURL(file) });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, []);
+
+  const handleExport = useCallback((format: 'json' | 'html' | 'md') => {
+    const msgs = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+    let content: string;
+    let filename: string;
+    let mime: string;
+    if (format === 'json') {
+      content = JSON.stringify(msgs, null, 2);
+      filename = 'chat.json';
+      mime = 'application/json';
+    } else if (format === 'html') {
+      content = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat Export</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#0A0A0A;color:#F1F5F9}.user{background:#00A5E0;color:#fff;padding:10px 16px;border-radius:12px;margin:8px 0 8px 40px}.ai{background:#121212;border:1px solid #27272A;padding:10px 16px;border-radius:12px;margin:8px 40px 8px 0}</style></head><body>' +
+        msgs.map(m => `<div class="${m.role}"><strong>${m.role === 'user' ? 'You' : 'AI'}</strong><p>${escapeHtml(m.content)}</p></div>`).join('') +
+        '</body></html>';
+      filename = 'chat.html';
+      mime = 'text/html';
+    } else {
+      content = msgs.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n\n${m.content}\n`).join('\n');
+      filename = 'chat.md';
+      mime = 'text/markdown';
+    }
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    a.click(); URL.revokeObjectURL(url);
+    setExportOpen(false);
+  }, [messages]);
+
+  const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+
 
   const handleNewChat = useCallback(() => {
     goTo({ type: 'aiChat', sessionId: crypto.randomUUID() });
@@ -201,19 +259,33 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             <span className="text-lg"><Icon name="astroid-as-AI-Button" size={18} /></span>
             <h1 className="text-base font-semibold text-text-primary truncate">{t('nav.aiChat')}</h1>
             {messages.length > 0 && (
-              <button
-                onClick={() => {
-                  const txt = messages
-                    .filter(m => m.role === 'user' || m.role === 'assistant')
-                    .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
-                    .join('\n\n');
-                  navigator.clipboard.writeText(txt).catch(() => {});
-                }}
-                className="ml-auto text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border"
-                title={t('ai.copyTranscript')}
-              >
-                <Icon name="copy" size={16} /> {t('ai.copyTranscript')}
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    const txt = messages
+                      .filter(m => m.role === 'user' || m.role === 'assistant')
+                      .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
+                      .join('\n\n');
+                    navigator.clipboard.writeText(txt).catch(() => {});
+                  }}
+                  className="ml-auto text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border"
+                  title={t('ai.copyTranscript')}
+                >
+                  <Icon name="copy" size={16} /> {t('ai.copyTranscript')}
+                </button>
+                <div className="relative">
+                  <button onClick={() => setExportOpen(!exportOpen)} className="text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border">
+                    <Icon name="arrow-big-down" size={16} /> {t('ai.export') || 'Export'}
+                  </button>
+                  {exportOpen && (
+                    <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-50 py-1 min-w-[120px]" onClick={e => e.stopPropagation()}>
+                      {(['json', 'html', 'md'] as const).map(f => (
+                        <button key={f} onClick={() => handleExport(f)} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors">{f.toUpperCase()}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
           {contextUri && (
@@ -359,7 +431,23 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
         {/* Input area */}
         <div className="border-t border-border bg-white dark:bg-[#0A0A0A] px-4 py-3">
+          {pendingFile && (
+            <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2">
+              <img src={pendingFile.preview} alt="" className="w-12 h-12 object-cover rounded border border-border" />
+              <span className="text-xs text-text-secondary">{pendingFile.file.name} ({Math.round(pendingFile.file.size / 1024)}KB)</span>
+              <button onClick={() => setPendingFile(null)} className="text-xs text-red-500 hover:text-red-400">Remove</button>
+            </div>
+          )}
           <div className="flex items-end gap-2 max-w-3xl mx-auto">
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="shrink-0 w-10 h-10 rounded-lg border border-border text-text-secondary hover:text-primary hover:border-primary transition-colors flex items-center justify-center disabled:opacity-50"
+              title="Upload image"
+            >
+              <Icon name="plus" size={20} />
+            </button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -375,13 +463,22 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                 el.style.height = Math.min(el.scrollHeight, 128) + 'px';
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="shrink-0 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              {t('action.send')}
-            </button>
+            {loading ? (
+              <button
+                onClick={handleStop}
+                className="shrink-0 px-5 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors"
+              >
+                {t('action.stop') || 'Stop'}
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() && !pendingFile}
+                className="shrink-0 px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors disabled:opacity-50"
+              >
+                {t('action.send')}
+              </button>
+            )}
           </div>
         </div>
       </main>

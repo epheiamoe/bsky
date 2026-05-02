@@ -702,8 +702,8 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
                   did: { type: 'string', description: 'DID of the image author (get from extract_images_from_post)' },
                   cid: { type: 'string', description: 'CID of the image blob' },
                   alt: { type: 'string', description: 'Alt text for the image' },
+                  pendingImageIndex: { type: 'number', description: 'Index of a user-uploaded image in this conversation (0-based). Use this instead of did/cid for images uploaded by the user in the chat.' },
                 },
-                required: ['did', 'cid'],
               },
               description: 'Optional: Images to attach. Use extract_images_from_post first to get did/cid',
             },
@@ -711,7 +711,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           required: ['text'],
         },
       },
-      handler: async (p) => {
+      handler: async (p, assistant) => {
         const text = p.text as string;
         const record: Record<string, unknown> = {
           text,
@@ -745,12 +745,24 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           };
         }
         // Handle images: download from Bluesky CDN -> upload to user's PDS -> embed
-        const imageList = p.images as Array<{ did: string; cid: string; alt?: string }> | undefined;
+        const imageList = p.images as Array<{ did?: string; cid?: string; alt?: string; pendingImageIndex?: number }> | undefined;
         if (imageList && imageList.length > 0) {
           const uploadedImages: Array<{ image: { ref: { $link: string }; mimeType: string; size: number }; alt: string }> = [];
           for (const img of imageList) {
-            const data = await client.downloadBlob(img.did, img.cid);
-            const mimeType = detectMimeType(data);
+            let data: Uint8Array;
+            let mimeType: string;
+            if (img.pendingImageIndex !== undefined && img.pendingImageIndex !== null) {
+              const ai = assistant as unknown as { getUserUpload?: (i: number) => { data: Uint8Array; mimeType: string; alt: string } | undefined };
+              const upload = ai.getUserUpload?.(img.pendingImageIndex);
+              if (!upload) { uploadedImages.push({ image: { ref: { $link: '' }, mimeType: 'image/jpeg', size: 0 }, alt: img.alt ?? '' }); continue; }
+              data = upload.data;
+              mimeType = upload.mimeType;
+            } else if (img.did && img.cid) {
+              data = await client.downloadBlob(img.did, img.cid);
+              mimeType = detectMimeType(data);
+            } else {
+              continue;
+            }
             const blob = await client.uploadBlob(data, mimeType);
             uploadedImages.push({
               image: { ref: { $link: blob.blob.ref.$link }, mimeType, size: data.length },

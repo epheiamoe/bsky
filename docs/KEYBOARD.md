@@ -198,6 +198,9 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 | `↓` | Scroll down 3 lines | Only when `focused === false` |
 | `u` / `U` | Undo last message pair (remove last user+assistant) | When `!loading` and `!focused` |
 | `r` / `R` | Edit last message (pre-fill input for editing) | When `!loading` and `!focused` |
+| `i` / `I` | Upload image (enter file path then Enter) | When `!loading` and `!focused` |
+| `e` / `E` | Export conversation (1=JSON, 2=HTML, 3=MD) | When `!loading` and `!focused` |
+| `p` / `P` | Pause/stop AI response | When `loading` |
 
 **Write confirmation dialog** (when open, blocks all other keys):
 | Key | Action |
@@ -209,7 +212,7 @@ When `focused === true` (Tab switched focus to AI panel), arrow keys pass throug
 
 **Note**: While `focusedPanel === 'main'`, keys `a` and `t` navigate to feed (overriding their global meaning).
 
-**Footer hint**: `Tab:切换 Esc:返回 PgUp/PgDn:滚动 u:撤销 r:编辑`
+**Footer hint**: `Esc:返回 PgUp/PgDn:滚动 a:复制 r:编辑 t:全部复制 e:导出 i:图片`
 
 ### When Chat History is Open
 
