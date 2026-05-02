@@ -73,18 +73,23 @@ DeepSeek V4 Flash powers AI features not found in the official Bluesky client:
 |---------|:---:|:---:|-------|
 | Timeline (virtual scroll) | ✅ | ✅ | Following / Discover / custom feeds |
 | Custom feed switching | ✅ | ✅ | `f` key / `▾` dropdown, `getSuggestedFeeds` |
-| Thread view (reply tree) | ✅ | ✅ | Expand replies, quote posts |
+| Thread view (reply tree) | ✅ | ✅ | Expand replies, quoted post cards |
+| Quoted post display | ✅ | ✅ | `│` pipe format (TUI) / clickable card (PWA) |
 | Compose post/reply/quote | ✅ | ✅ | Draft save, image upload (max 4) |
-| Delete own post | ✅ | ✅ | `d` key / `🗑` button with confirmation |
-| Like / Repost / Reply | ✅ | ✅ | |
+| Delete own post | ✅ | ✅ | `d` key / `🗑` icon with confirmation |
+| Like / Repost / Reply | ✅ | ✅ | Counts update after action, all views |
+| Repost+Quote unified button | ✅ | ✅ | Popup menu: Repost / Quote |
+| Unifed PostActionsRow (PWA) | N/A | ✅ | Same row in timeline/search/profile/bookmarks/thread |
+| SVG icons (lucide style) | N/A | ✅ | Heart, repeat, bookmark, AI, etc. 50+ icons |
 | Notifications | ✅ | ✅ | |
-| Search | ✅ | ✅ | |
+| Search (4 tabs) | ✅ | ✅ | Hot / Latest / Users / Feeds |
 | Profile view | ✅ | ✅ | Follow/unfollow, tabs, follow lists |
 | Bookmarks (built-in API) | ✅ | ✅ | |
-| AI Chat (31 tools + streaming) | ✅ | ✅ | Thinking display, edit undo |
-| Thinking mode | ✅ | ✅ | Configurable `LLM_THINKING_ENABLED` |
-| Vision mode | ✅ | ✅ | Configurable `LLM_VISION_ENABLED` |
-| AI Translation (7 languages) | ✅ | ✅ | `f` key / button |
+| AI Chat (31 tools + streaming) | ✅ | ✅ | Thinking display, copy/edit by index |
+| AI Session URL | N/A | ✅ | `#/ai?session=uuid` (context persisted) |
+| Thinking mode | ✅ | ✅ | Configurable |
+| Vision mode | ✅ | ✅ | Configurable |
+| AI Translation (7 languages) | ✅ | ✅ | `f` key / icon button |
 | AI Draft Polish | ✅ | ✅ | |
 | Link/handle auto-coloring | ✅ | ✅ | Blue in text |
 | Markdown rendering | ✅ | ✅ | PWA: react-markdown, TUI: custom parser |
@@ -92,8 +97,9 @@ DeepSeek V4 Flash powers AI features not found in the official Bluesky client:
 | i18n (zh/en/ja) | ✅ | ✅ | Singleton store, instant switch |
 | Dark mode | N/A | ✅ | CSS variables |
 | PWA installable | N/A | ✅ | manifest.json + Service Worker |
-| Hash-based routing | N/A | ✅ | `#/feed?feed=at://...` |
+| Hash-based routing | N/A | ✅ | `#/feed?feed=at://...`, `#/search?q=...` |
 | JWT auto-refresh | ✅ | ✅ | |
+| Scroll position restore | N/A | ✅ | Profile/Search/Bookmarks remember position on back |
 
 ---
 
@@ -159,9 +165,9 @@ TUI and PWA are pure render layers consuming the same React hooks.
 | Package | Role |
 |---------|------|
 | `@bsky/core` | AT Protocol client, AI assistant, 31 tools, prompts, types |
-| `@bsky/app` | React hooks (useAuth, useTimeline, useThread, useAIChat…), stores, i18n |
+| `@bsky/app` | React hooks (useAuth, useTimeline, useThread, useAIChat, usePostActions, useActiveFeed, useScrollRestore…), stores, i18n |
 | `@bsky/tui` | Terminal UI via Ink (React-on-terminal) |
-| `@bsky/pwa` | Web UI via React DOM + Tailwind, installable PWA |
+| `@bsky/pwa` | Web UI via React DOM + Tailwind, installable PWA, SVG icons |
 
 ---
 
