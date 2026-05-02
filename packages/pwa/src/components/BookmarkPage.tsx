@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks, useI18n } from '@bsky/app';
+import { useBookmarks, useI18n, useScrollRestore } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -15,6 +15,8 @@ interface BookmarkPageProps {
 export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
   const { t } = useI18n();
   const { bookmarks, loading, removeBookmark, refresh } = useBookmarks(client);
+
+  useScrollRestore('bookmarks', null, !loading && bookmarks.length > 0);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">

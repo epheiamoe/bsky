@@ -13,6 +13,8 @@ export type { ComposeImage, Draft } from './hooks/useCompose.js';
 export { useDrafts } from './hooks/useDrafts.js';
 export type { DraftStore } from './hooks/useDrafts.js';
 export { useActiveFeed, getLastFeedUri, setLastFeedUri } from './hooks/useActiveFeed.js';
+export { useScrollRestore, saveScrollTop, getScrollTop } from './hooks/useScrollRestore.js';
+export { saveViewState, getViewState } from './state/viewStateStore.js';
 export { usePostActions, isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers, seedPostViewer } from './hooks/usePostActions.js';
 export { useAIChat } from './hooks/useAIChat.js';
 export type { AIChatMessage } from './hooks/useAIChat.js';

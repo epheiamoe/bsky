@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useProfile, useI18n } from '@bsky/app';
+import { useProfile, useI18n, saveViewState, getViewState } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 
@@ -26,8 +26,14 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig,
     repostReasons,
   } = useProfile(client, actor);
   const { t } = useI18n();
-  const [postIdx, setPostIdx] = useState(0);
+  const [postIdx, setPostIdx] = useState(() => getViewState(`profile-${actor}`)?.postIdx ?? 0);
   const [followIdx, setFollowIdx] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      saveViewState(`profile-${actor}`, { postIdx });
+    };
+  }, [actor, postIdx]);
   const [translatingBio, setTranslatingBio] = useState(false);
   const [translatedBio, setTranslatedBio] = useState<string | null>(null);
 

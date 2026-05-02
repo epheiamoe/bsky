@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -62,6 +62,9 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
   const sentinelRef = useRef<HTMLDivElement>(null);
   const followScrollRef = useRef<HTMLDivElement>(null);
   const followSentinelRef = useRef<HTMLDivElement>(null);
+
+  // Restore scroll position on back navigation
+  useScrollRestore(`profile-${actor}`, scrollRef, posts.length > 0);
 
   // ── Virtual scroll for posts ──
   const virtualizer = useVirtualizer({

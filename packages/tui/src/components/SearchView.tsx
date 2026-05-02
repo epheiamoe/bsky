@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useSearch, useI18n, addFeed } from '@bsky/app';
+import { useSearch, useI18n, addFeed, saveViewState, getViewState } from '@bsky/app';
 import { getFeedLabel } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { AppView } from '@bsky/app';
@@ -27,10 +27,18 @@ export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchVi
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client);
   const [input, setInput] = useState(query ?? '');
   const [searching, setSearching] = useState(false);
-  const [postIdx, setPostIdx] = useState(0);
-  const [userIdx, setUserIdx] = useState(0);
-  const [feedIdx, setFeedIdx] = useState(0);
+  const saved = input ? getViewState(`search-${input}`) : undefined;
+  const [postIdx, setPostIdx] = useState(saved?.postIdx ?? 0);
+  const [userIdx, setUserIdx] = useState(saved?.userIdx ?? 0);
+  const [feedIdx, setFeedIdx] = useState(saved?.feedIdx ?? 0);
   const { t } = useI18n();
+
+  // Save state on unmount
+  useEffect(() => {
+    return () => {
+      if (input) saveViewState(`search-${input}`, { postIdx, userIdx, feedIdx });
+    };
+  }, [input, postIdx, userIdx, feedIdx]);
 
   useInput((inputChar, key) => {
     if (key.escape) { goBack(); return; }

@@ -328,7 +328,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                       className="absolute bottom-1 right-1 text-xs text-text-secondary/60 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-surface/80"
                       title={t('ai.copyLast')}
                     >
-                      {copiedIdx === i ? '<Icon name="copy" size={16} /> ' + t('ai.copied') : '<Icon name="copy" size={16} />'}
+                      {copiedIdx === i ? <><Icon name="badge-check" size={14} /> {t('ai.copied')}</> : <Icon name="copy" size={14} />}
                     </button>
                   )}
                 </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearch, useI18n, addFeed } from '@bsky/app';
+import { useSearch, useI18n, addFeed, useScrollRestore } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -32,6 +32,9 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
+
+  // Restore scroll position on back navigation (window-level scroll)
+  useScrollRestore(searched ? `search-${input}` : undefined, null, searched && !loading);
 
   useEffect(() => {
     if (initialQuery && !searched) {
