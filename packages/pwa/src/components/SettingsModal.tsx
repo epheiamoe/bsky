@@ -68,10 +68,10 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     document.documentElement.classList.toggle('dark', darkMode);
   };
 
-  const tabs: { key: Tab; emoji: string; labelKey: string }[] = [
-    { key: 'bluesky', emoji: '<Icon name="astroid-as-AI-Button" size={20} />', labelKey: 'settings.tabAccount' },
-    { key: 'ai', emoji: '<Icon name="astroid-as-AI-Button" size={18} />', labelKey: 'settings.tabAI' },
-    { key: 'general', emoji: '<Icon name="settings" size={16} />', labelKey: 'settings.tabGeneral' },
+  const tabs: { key: Tab; iconName: string; labelKey: string }[] = [
+    { key: 'bluesky', iconName: 'at-sign', labelKey: 'settings.tabAccount' },
+    { key: 'ai', iconName: 'astroid-as-AI-Button', labelKey: 'settings.tabAI' },
+    { key: 'general', iconName: 'settings', labelKey: 'settings.tabGeneral' },
   ];
 
   return (
@@ -88,13 +88,13 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
             <button
               key={tabItem.key}
               onClick={() => setTab(tabItem.key)}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1 ${
                 tab === tabItem.key
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-text-secondary hover:text-text-primary'
               }`}
             >
-              {tabItem.emoji}{' '}{t(tabItem.labelKey)}
+              <Icon name={tabItem.iconName} size={16} />{t(tabItem.labelKey)}
             </button>
           ))}
         </div>
