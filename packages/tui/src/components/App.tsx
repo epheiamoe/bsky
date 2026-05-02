@@ -246,7 +246,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               else if (!isVideo && composeMedia.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
               else {
                 const stat = statSync(path);
-                const maxSize = isVideo ? 100 * 1024 * 1024 : 1024 * 1024;
+                const maxSize = isVideo ? 100 * 1024 * 1024 : 2048 * 1024;
                 if (stat.size > maxSize) { setComposeUploadError(t('compose.imageOverLimit', { name: path })); }
                 else {
                   let data = readFileSync(path);
@@ -256,7 +256,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                   const originalSize = data.length;
 
                   // Auto-compress images > 1MB (skip GIFs)
-                  if (!isVideo && !mime.includes('gif') && data.length > 1024 * 1024) {
+                  if (!isVideo && !mime.includes('gif') && data.length > 2048 * 1024) {
                     try {
                       const compressed = await sharp(data)
                         .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })

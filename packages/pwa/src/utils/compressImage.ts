@@ -10,14 +10,14 @@ export interface CompressResult {
 }
 
 /**
- * Auto-compress an image file if it exceeds maxSize (default 1MB).
+ * Auto-compress an image file if it exceeds maxSize (default 2MB, Bluesky limit).
  * Resizes to maxDimension and re-encodes as JPEG at the given quality.
  * GIFs are NOT compressed (to preserve animation).
  * Returns the original file if no compression needed or possible.
  */
 export async function compressImage(
   file: File,
-  maxSize = 1024 * 1024,
+  maxSize = 2 * 1024 * 1024,
   maxDimension = MAX_DIMENSION,
 ): Promise<CompressResult> {
   if (file.size <= maxSize) {

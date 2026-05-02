@@ -32,8 +32,8 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
   const postContext = contextPost ?? (isProfile ? undefined : contextUri);
-  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true });
-  const { conversations, deleteConversation } = useChatHistory(storage);
+  const { conversations, deleteConversation, refresh } = useChatHistory(storage);
+  const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);

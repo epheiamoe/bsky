@@ -29,6 +29,8 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const isProfile = contextUri && !contextUri?.startsWith('at://');
 
+  const { conversations, deleteConversation, refresh } = useChatHistory(storage);
+
   const { messages, loading, guidingQuestions, send, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId: sessionId,
     storage,
@@ -38,8 +40,11 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     locale,
     contextProfile: contextProfile ?? (isProfile ? contextUri : undefined),
     contextPost,
+    onChatSaved: refresh,
   });
-  const { conversations, deleteConversation } = useChatHistory(storage);
+
+
+
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);

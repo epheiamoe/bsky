@@ -6,7 +6,7 @@ import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 
 const MAX_IMAGES = 4;
-const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB per image
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image (Bluesky supports up to 2MB / 4K)
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for video
 
 interface ComposePageProps {

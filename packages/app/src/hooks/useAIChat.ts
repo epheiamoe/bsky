@@ -30,6 +30,8 @@ interface UseAIChatOptions {
   contextProfile?: string;
   /** Post context: at:// URI — passed from navigation, not URL */
   contextPost?: string;
+  /** Called after a new chat is saved — used to refresh conversation list */
+  onChatSaved?: () => void;
 }
 
 export function useAIChat(
@@ -53,6 +55,7 @@ export function useAIChat(
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
   const storage = options?.storage;
   const autoStartedRef = useRef(false);
+  const chatNotifiedRef = useRef(false);
   // Track current context for auto-save persistence
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
@@ -90,6 +93,7 @@ export function useAIChat(
     setMessages([]);
     setGuidingQuestions([]);
     autoStartedRef.current = false;
+    chatNotifiedRef.current = false;
 
     // Add initial system message based on context from options (in-memory from navigation)
     if (options?.contextPost) {
@@ -121,6 +125,14 @@ export function useAIChat(
         } else if (contextUri) {
           assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         }
+        // Sync assistant state with stored messages so editByIndex works
+        const system = assistant.getMessages().filter(m => m.role === 'system');
+        const chatMsgs = record.messages.map(m => ({
+          role: m.role === 'tool_call' ? 'tool' as const : m.role === 'tool_result' ? 'tool' as const : m.role === 'thinking' ? 'tool' as const : m.role as 'user' | 'assistant' | 'system',
+          content: m.content,
+          name: m.toolName,
+        }));
+        assistant.loadMessages([...system, ...chatMsgs]);
       } else {
         setMessages([]);
       }
@@ -184,8 +196,12 @@ export function useAIChat(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      if (!chatNotifiedRef.current) {
+        chatNotifiedRef.current = true;
+        options?.onChatSaved?.();
+      }
     } catch { /* silently fail */ }
-  }, [storage, contextUri]);
+  }, [storage, contextUri, options?.onChatSaved]);
 
   const send = useCallback(async (text: string) => {
     const newUserMsg: AIChatMessage = { role: 'user', content: text };
