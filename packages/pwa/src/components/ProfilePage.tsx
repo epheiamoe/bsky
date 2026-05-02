@@ -6,6 +6,7 @@ import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
 import { useProfile, useI18n, useTranslation, getCdnImageUrl } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
+import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
 
 interface ProfilePageProps {
@@ -411,7 +412,9 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
                   repostBy={repostReasons[post.uri]}
-                />
+                >
+                  <PostActionsRow client={client} goTo={goTo} post={post} />
+                </PostCard>
               </div>
             );
           })}

@@ -3,6 +3,7 @@ import { useThread, useBookmarks, useTranslation, useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
+import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
 import { truncateName, linkifyText } from './PostCard.js';
 import { ImageGrid } from './PostCard.js';
@@ -374,14 +375,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 ))}
               </div>
             )}
-            <div className="flex items-center gap-4 text-sm text-text-secondary mt-3">
-              <button onClick={() => goTo({ type: 'compose', replyTo: focused.uri })} className="hover:text-primary transition-colors flex items-center gap-1"><Icon name="corner-down-right" size={18} />{focused.replyCount}</button>
-              <div className="relative inline-flex">
-                <button onClick={() => repostPost(focused.uri)} className={`hover:text-green-500 transition-colors flex items-center gap-1 ${isReposted(focused.uri) ? 'text-green-500' : ''}`}><Icon name="repeat" size={18} />{focused.repostCount}</button>
-                <button onClick={() => goTo({ type: 'compose', quoteUri: focused.uri })} className="hover:text-text-primary transition-colors ml-0.5" title="Quote"><Icon name="pen-line" size={12} /></button>
-              </div>
-              <button onClick={() => likePost(focused.uri)} className={`hover:text-red-500 transition-colors flex items-center gap-1 ${isLiked(focused.uri) ? 'text-red-500' : ''}`}><Icon name="heart" size={18} filled={isLiked(focused.uri)} />{focused.likeCount}</button>
-              <button onClick={() => toggleBookmark(focused.uri, focused.cid)} className={`hover:text-yellow-500 transition-colors ${isBookmarked(focused.uri) ? 'text-yellow-500' : ''}`}><Icon name="bookmark" size={18} filled={isBookmarked(focused.uri)} /></button>
+            {/* Unified action row + extras */}
+            <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
+              <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
               <button onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: focused.uri })} className="hover:text-purple-500 transition-colors"><Icon name="astroid-as-AI-Button" size={18} /></button>
               {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
               <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
@@ -412,28 +408,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   key={line.uri || line.rkey}
                   style={{ marginLeft: Math.min((line.depth - 1) * 16, 48) }}
                 >
-                  <PostCard
-                    line={line}
-                    onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
-                    goTo={goTo}
-                  >
-                    <ActionButtons
-                      uri={line.uri}
-                      cid={line.cid}
-                      handle={line.handle}
-                      rkey={line.rkey}
-                      depth={line.depth}
-                      likePost={likePost}
-                      repostPost={repostPost}
-                      isLiked={isLiked}
-                      isReposted={isReposted}
-                      isBookmarked={isBookmarked}
-                      toggleBookmark={toggleBookmark}
+                    <PostCard
+                      line={line}
+                      onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
                       goTo={goTo}
-                      onDelete={() => client.deletePost(line.uri)}
-                      isOwn={line.handle === client.getHandle()}
-                    />
-                  </PostCard>
+                    >
+                      <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
+                    </PostCard>
                 </div>
               );
             })}

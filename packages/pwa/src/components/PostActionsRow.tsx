@@ -8,12 +8,11 @@ import { Icon } from './Icon.js';
 interface PostActionsRowProps {
   client?: BskyClient | null;
   goTo: (v: AppView) => void;
-  post: PostView;
-  /** Whether to include bookmark button */
+  /** Post-like object with at least uri, cid, and counts */
+  post: { uri: string; cid: string; replyCount?: number; likeCount?: number; repostCount?: number };
   showBookmark?: boolean;
   isBookmarked?: (uri: string) => boolean;
   onBookmark?: (uri: string, cid: string) => void;
-  /** For thread view — explicit like/repost state from props (overrides module-level) */
   liked?: boolean;
   reposted?: boolean;
 }

@@ -4,6 +4,7 @@ import type { AppView } from '@bsky/app';
 import { useBookmarks, useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
+import { PostActionsRow } from './PostActionsRow.js';
 
 interface BookmarkPageProps {
   client: BskyClient;
@@ -48,7 +49,9 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
                 post={post}
                 onClick={() => goTo({ type: 'thread', uri: post.uri })}
                 goTo={goTo}
-              />
+              >
+                <PostActionsRow client={client} goTo={goTo} post={post} />
+              </PostCard>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
