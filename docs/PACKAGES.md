@@ -16,7 +16,7 @@
 | File | Purpose |
 |------|---------|
 | `src/at/client.ts` | BskyClient class. Auth (createSession), all AT endpoints via `ky`. |
-| `src/at/tools.ts` | `createTools()` → 31 ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
+| `src/ai/tools.ts` | `createTools()` → 31 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
 | `src/at/types.ts` | All AT Protocol TypeScript types. |
 | `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (up to 10 rounds). `translateText()` with dual-mode + retry. `sendMessageStreaming()` for real-time token delivery. |
 

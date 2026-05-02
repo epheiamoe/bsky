@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { BskyClient } from '../src/at/client.js';
-import { createTools } from '../src/at/tools.js';
+import { createTools } from '../src/ai/tools.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';

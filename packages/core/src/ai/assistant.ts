@@ -1,4 +1,4 @@
-import type { ToolDescriptor } from '../at/tools.js';
+import type { ToolDescriptor } from './tools.js';
 import {
   LANG_LABELS,
   PF_TRANSLATE_SIMPLE,

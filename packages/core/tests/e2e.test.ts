@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { BskyClient } from '../src/at/client.js';
-import { createTools } from '../src/at/tools.js';
+import { createTools } from '../src/ai/tools.js';
 import { AIAssistant, translateToChinese, polishDraft, singleTurnAI } from '../src/ai/assistant.js';
 import type { AIConfig } from '../src/ai/assistant.js';
 import dotenv from 'dotenv';

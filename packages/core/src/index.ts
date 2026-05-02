@@ -2,8 +2,8 @@
 // No UI dependencies. Pure functions and classes for Bluesky AT Protocol and AI.
 
 export { BskyClient } from './at/client.js';
-export { createTools } from './at/tools.js';
-export type { ToolDefinition, ToolHandler, ToolDescriptor } from './at/tools.js';
+export { createTools } from './ai/tools.js';
+export type { ToolDefinition, ToolHandler, ToolDescriptor } from './ai/tools.js';
 export { parseAtUri } from './at/types.js';
 export {
   BUILTIN_FEEDS,

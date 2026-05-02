@@ -12,7 +12,7 @@
 6. **`docs/KEYBOARD.md`** — TUI 快捷键
 7. **`CHANGELOG.md`** — 版本历史
 8. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-9. **`packages/core/src/at/tools.ts`** — 31 个工具定义
+9. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
 
 ## 版本
 

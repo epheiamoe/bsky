@@ -1,4 +1,4 @@
-import type { BskyClient } from './client.js';
+import type { BskyClient } from '../at/client.js';
 import type {
   PostView,
   ThreadViewPost,
@@ -8,8 +8,8 @@ import type {
   RecordEmbed,
   RecordWithMediaEmbed,
   PostRecord,
-} from './types.js';
-import { parseAtUri } from './types.js';
+} from '../at/types.js';
+import { parseAtUri } from '../at/types.js';
 
 export interface ToolDefinition {
   name: string;

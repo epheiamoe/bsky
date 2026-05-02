@@ -199,7 +199,7 @@ const { messages, loading, send } = useAIChat(client, aiConfig, contextUri, {
 
 ## Tool System
 
-**File**: `packages/core/src/at/tools.ts`
+**File**: `packages/core/src/ai/tools.ts`
 
 ### ToolDescriptor
 
