@@ -129,6 +129,9 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
     devDependencies:
       '@types/clipboardy':
         specifier: ^2.0.4

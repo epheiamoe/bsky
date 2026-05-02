@@ -66,6 +66,7 @@ const en: LocaleMessages = {
   'compose.mediaCount': 'files',
   'compose.addImage': 'Add Media',
   'compose.imageCount': 'files',
+  'compose.imageCompressed': 'Image compressed: {name} {orig} → {comp} ({ratio}%)',
   'compose.replyTo': 'Reply to:',
   'compose.quoteTo': 'Quoting:',
   'compose.draftListHeader': '📝 Drafts (Esc: back, Enter: load, d: delete, n: new)',

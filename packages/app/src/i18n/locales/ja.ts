@@ -66,6 +66,7 @@ const ja: LocaleMessages = {
   'compose.mediaCount': '個',
   'compose.addImage': 'メディアを追加',
   'compose.imageCount': '個',
+  'compose.imageCompressed': '画像を圧縮しました: {name} {orig} → {comp} ({ratio}%)',
   'compose.replyTo': '返信先:',
   'compose.quoteTo': '引用:',
   'compose.draftListHeader': '📝 下書き (Esc: 戻る, Enter: 読込, d: 削除, n: 新規)',

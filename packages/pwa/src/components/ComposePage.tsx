@@ -3,6 +3,7 @@ import { useCompose, useI18n, useDrafts, getCdnImageUrl } from '@bsky/app';
 import type { ComposeMedia, Draft } from '@bsky/app';
 import type { BskyClient, PostView } from '@bsky/core';
 import { Icon } from './Icon.js';
+import { compressImage, formatSize } from '../utils/compressImage.js';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB per image
@@ -68,6 +69,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [images, setImages] = useState<LocalImage[]>([]);
   const [video, setVideo] = useState<LocalVideo | null>(null);
+  const [compressInfo, setCompressInfo] = useState<string | null>(null);
   const [showDrafts, setShowDrafts] = useState(false);
   const [quotePreview, setQuotePreview] = useState<QuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -114,7 +116,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
     }
   }, [quoteUri, client, setQuoteUri]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
 
     // Check for video first — Bluesky only allows 1 video, no mixing with images
@@ -132,7 +134,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
       return;
     }
 
-    // Images only
+    // Images only — auto-compress oversized ones
     if (video) { alert('Cannot mix images with video'); return; }
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (images.length + imageFiles.length > MAX_IMAGES) {
@@ -140,16 +142,23 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
       return;
     }
     const newImages: LocalImage[] = [];
+    const compressNotices: string[] = [];
     for (const file of imageFiles) {
-      if (file.size > MAX_IMAGE_SIZE) {
-        alert(`"${file.name}" ${t('compose.imageOverLimit')}`);
-        continue;
+      const result = await compressImage(file);
+      if (result.wasCompressed) {
+        compressNotices.push(
+          `${result.originalName}: ${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}`,
+        );
       }
       newImages.push({
-        file,
-        preview: URL.createObjectURL(file),
+        file: result.file,
+        preview: URL.createObjectURL(result.file),
         uploading: false,
       });
+    }
+    if (compressNotices.length > 0) {
+      setCompressInfo(compressNotices.join('; '));
+      setTimeout(() => setCompressInfo(null), 5000);
     }
     setImages(prev => [...prev, ...newImages].slice(0, MAX_IMAGES));
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -245,7 +254,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-text-primary">{replyTo ? '<Icon name="pencil-line" size={16} /> ' + t('compose.titleReply') : '<Icon name="pencil-line" size={16} /> ' + t('compose.title')}</h1>
+            <h1 className="text-lg font-semibold text-text-primary"><Icon name="pencil-line" size={16} /> {replyTo ? t('compose.titleReply') : t('compose.title')}</h1>
             {drafts.length > 0 && (
               <button onClick={() => setShowDrafts(!showDrafts)} className="text-sm text-text-secondary hover:text-primary transition-colors">
                 <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
@@ -325,6 +334,13 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
             rows={4} maxLength={300} placeholder={t('compose.placeholder')} disabled={submitting}
             className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-base leading-relaxed"
           />
+
+          {/* Compression notice */}
+          {compressInfo && (
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5">
+              {t('compose.imageCompressed')}: {compressInfo}
+            </div>
+          )}
 
           {/* Video preview */}
           {video && (

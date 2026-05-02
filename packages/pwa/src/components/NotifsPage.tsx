@@ -48,7 +48,7 @@ function reasonText(reason: string, t: (key: string) => string): string {
 }
 
 function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void }) {
-  const emoji = REASON_EMOJI[n.reason] ?? '<Icon name="bell" size={20} />';
+  const emoji = REASON_EMOJI[n.reason] ?? null;
   const reasonLabel = reasonText(n.reason, t);
   const reasonSubject = n.reasonSubject;
 
@@ -68,7 +68,7 @@ function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1">
-            <span className="text-lg shrink-0">{emoji}</span>
+            <span className="text-lg shrink-0">{emoji}{!emoji && <Icon name="bell" size={20} />}</span>
             <span className="text-text-primary font-semibold text-sm truncate">
               {n.author.displayName || n.author.handle}
             </span>

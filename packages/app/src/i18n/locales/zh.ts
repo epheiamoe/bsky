@@ -70,6 +70,7 @@ const zh: LocaleMessages = {
   'compose.mediaCount': '个',
   'compose.addImage': '添加媒体',
   'compose.imageCount': '个',
+  'compose.imageCompressed': '图片已自动压缩: {name} {orig} → {comp} ({ratio}%)',
   'compose.replyTo': '回复:',
   'compose.quoteTo': '引用:',
   'compose.draftListHeader': '📝 草稿 (Esc: 返回, Enter: 载入, d: 删除, n: 新建)',

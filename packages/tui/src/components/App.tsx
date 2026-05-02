@@ -7,6 +7,7 @@ import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
+import sharp from 'sharp';
 import { Sidebar } from './Sidebar.jsx';
 import { PostList } from './PostList.jsx';
 import { ProfileView } from './ProfileView.jsx';
@@ -83,6 +84,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [composeMedia, setComposeMedia] = useState<ComposeMedia[]>([]);
   const [imagePathInput, setImagePathInput] = useState<string | null>(null);
   const [composeUploadError, setComposeUploadError] = useState<string | null>(null);
+  const [composeInfo, setComposeInfo] = useState<string | null>(null);
   const [draftListOpen, setDraftListOpen] = useState(false);
   const [draftListIdx, setDraftListIdx] = useState(0);
   const [draftSavePrompt, setDraftSavePrompt] = useState(false);
@@ -234,6 +236,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (key.return) {
           const path = imagePathInput.trim();
           if (path) {
+            (async () => {
             try {
               const isVideo = /\.(mp4|mov|webm|avi|mkv)$/i.test(path);
               if (!existsSync(path)) { setComposeUploadError(t('compose.fileNotFound', { path })); }
@@ -246,18 +249,41 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                 const maxSize = isVideo ? 100 * 1024 * 1024 : 1024 * 1024;
                 if (stat.size > maxSize) { setComposeUploadError(t('compose.imageOverLimit', { name: path })); }
                 else {
-                  const data = readFileSync(path);
-                  const mime = isVideo
+                  let data = readFileSync(path);
+                  let mime = isVideo
                     ? (path.endsWith('.mp4') ? 'video/mp4' : path.endsWith('.mov') ? 'video/quicktime' : path.endsWith('.webm') ? 'video/webm' : 'video/mp4')
                     : (path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : path.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
-                  client?.uploadBlob(data, mime).then(res => {
-                    setComposeMedia(prev => [...prev, { type: isVideo ? 'video' : 'image', blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: stat.size }, alt: '' }]);
+                  const originalSize = data.length;
+
+                  // Auto-compress images > 1MB (skip GIFs)
+                  if (!isVideo && !mime.includes('gif') && data.length > 1024 * 1024) {
+                    try {
+                      const compressed = await sharp(data)
+                        .resize({ width: 2048, height: 2048, fit: 'inside', withoutEnlargement: true })
+                        .jpeg({ quality: 82 })
+                        .toBuffer();
+                      const ratio = (compressed.length / data.length * 100).toFixed(0);
+                      setComposeInfo(t('compose.imageCompressed', {
+                        name: path.split(/[/\\]/).pop() || path,
+                        orig: formatSize(data.length),
+                        comp: formatSize(compressed.length),
+                        ratio,
+                      }));
+                      data = Buffer.from(compressed);
+                      mime = 'image/jpeg';
+                    } catch { /* pass — upload original */ }
+                  }
+
+                  client?.uploadBlob(data as Uint8Array, mime).then(res => {
+                    setComposeMedia(prev => [...prev, { type: isVideo ? 'video' : 'image', blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: data.length }, alt: '' }]);
                     setImagePathInput(null);
                     setComposeUploadError(null);
+                    if (composeInfo) setTimeout(() => setComposeInfo(null), 8000);
                   }).catch(e => setComposeUploadError(t('compose.uploadFailed') + ': ' + e.message));
                 }
               }
             } catch (e) { setComposeUploadError(String(e)); }
+            })();
           } else {
             setImagePathInput(null);
           }
@@ -450,6 +476,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               {compose.submitting && <Text color="cyan">{' '}{t('action.sending')}</Text>}
               {composeUploadError && <Text color="red">{' '}{composeUploadError}</Text>}
             </Box>
+            {composeInfo && (
+              <Box height={1}><Text color="yellow">{'💡 '}{composeInfo}</Text></Box>
+            )}
           </Box>
         );
       case 'profile':
@@ -631,4 +660,10 @@ function footerHint(v: { type: string }, canGoBack: boolean, focusedPanel: Focus
   const key = v.type === 'aiChat' ? (focusedPanel === 'ai' ? KEY_MAP['aiChat'] : 'keys.aiMain') : KEY_MAP[v.type];
   const hint = key ? t(key) : '';
   return hint ? back + ' ' + hint : back;
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
