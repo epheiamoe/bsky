@@ -155,7 +155,7 @@ export function truncateName(name: string, max = 15): string {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+)/g;
+const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|#[\p{L}\p{N}_]+)/gu;
 
 export function linkifyText(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -169,6 +169,9 @@ export function linkifyText(text: string): React.ReactNode[] {
     if (token.startsWith('@')) {
       const handle = token.slice(1);
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/profile?actor=${encodeURIComponent(handle)}`} onClick={(e) => e.stopPropagation()}>{token}</a>);
+    } else if (token.startsWith('#')) {
+      const tag = token.slice(1);
+      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/search?q=${encodeURIComponent(tag)}&tab=top`} onClick={(e) => e.stopPropagation()}>{token}</a>);
     } else {
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={token} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{token}</a>);
     }

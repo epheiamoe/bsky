@@ -3,9 +3,9 @@ export type AppView =
   | { type: 'detail'; uri: string }
   | { type: 'thread'; uri: string }
   | { type: 'compose'; replyTo?: string; quoteUri?: string }
-  | { type: 'profile'; actor: string }
+  | { type: 'profile'; actor: string; profileTab?: string }
   | { type: 'notifications' }
-  | { type: 'search'; query?: string }
+  | { type: 'search'; query?: string; searchTab?: string }
   | { type: 'aiChat'; contextUri?: string; sessionId?: string; contextPost?: string; contextProfile?: string }
   | { type: 'bookmarks' };
 

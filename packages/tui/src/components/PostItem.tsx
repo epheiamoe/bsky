@@ -88,6 +88,30 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
     lines.push({ text: '\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: imageUrls.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
   }
 
+  // @handle and #tag — OSC 8 clickable links
+  const handleRegex = /@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+/g;
+  const tagRegex = /#[\p{L}\p{N}_]+/gu;
+  let m: RegExpExecArray | null;
+  const shown = new Set<string>();
+
+  while ((m = handleRegex.exec(text)) !== null) {
+    const h = m[0]!.slice(1);
+    if (!shown.has(h)) {
+      shown.add(h);
+      const url = 'https://bsky.app/profile/' + encodeURIComponent(h);
+      lines.push({ text: '\x1b]8;;' + url + '\x07👤 ' + m[0] + ' ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    }
+  }
+
+  while ((m = tagRegex.exec(text)) !== null) {
+    const tag = m[0]!.slice(1);
+    if (!shown.has('#' + tag)) {
+      shown.add('#' + tag);
+      const url = 'https://bsky.app/search?q=' + encodeURIComponent('#' + tag);
+      lines.push({ text: '\x1b]8;;' + url + '\x07🏷 ' + m[0] + ' ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    }
+  }
+
   // Stats line
   lines.push({ text: `♥ ${post.likeCount ?? 0} ♺ ${post.repostCount ?? 0} 💬 ${post.replyCount ?? 0}${time ? ' · ' + time : ''}`, isSelected, isName: false });
 

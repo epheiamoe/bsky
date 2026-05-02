@@ -12,6 +12,7 @@ import { Icon } from './Icon.js';
 interface ProfilePageProps {
   client: BskyClient;
   actor: string;
+  initialTab?: string;
   goBack: () => void;
   goTo: (v: AppView) => void;
   aiConfig: AIConfig;
@@ -38,7 +39,7 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   );
 }
 
-export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang, translateMode }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -47,7 +48,14 @@ export function ProfilePage({ client, actor, goBack, goTo, aiConfig, targetLang,
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
-  } = useProfile(client, actor);
+  } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
+
+  // Update URL when tab changes so it survives back navigation
+  useEffect(() => {
+    if (tab !== initialTab) {
+      goTo({ type: 'profile', actor, profileTab: tab });
+    }
+  }, [tab]);
 
   const { translate, loading: translatingBio } = useTranslation(
     aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model,

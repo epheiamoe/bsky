@@ -168,11 +168,10 @@ export class BskyClient {
     const searchParams: Record<string, string | number> = { q: params.q, limit: params.limit ?? 50 };
     if (params.cursor) searchParams.cursor = params.cursor;
     if (params.sort) searchParams.sort = params.sort;
-    const kyInstance = this.session ? this.ky : this.publicKy;
-    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return kyInstance.get('app.bsky.feed.searchPosts', {
+    // searchPosts requires authentication — public API returns 403
+    return this.ky.get('app.bsky.feed.searchPosts', {
+      headers: this.getAuthHeaders(),
       searchParams,
-      ...headers,
     }).json<SearchPostsResponse>();
   }
 

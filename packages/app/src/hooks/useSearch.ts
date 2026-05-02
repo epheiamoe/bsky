@@ -15,9 +15,9 @@ export interface SearchState {
   setTab: (t: SearchTab) => void;
 }
 
-export function useSearch(client: BskyClient | null): SearchState {
+export function useSearch(client: BskyClient | null, initialTab?: SearchTab): SearchState {
   const [query, setQuery] = useState('');
-  const [tab, setTab] = useState<SearchTab>('top');
+  const [tab, setTab] = useState<SearchTab>(initialTab ?? 'top');
   const [posts, setPosts] = useState<PostView[]>([]);
   const [users, setUsers] = useState<ProfileViewBasic[]>([]);
   const [feeds, setFeeds] = useState<FeedGeneratorView[]>([]);

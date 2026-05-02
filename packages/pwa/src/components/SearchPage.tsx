@@ -12,6 +12,7 @@ import { truncateName } from './PostCard.js';
 interface SearchPageProps {
   client: BskyClient;
   initialQuery?: string;
+  initialTab?: SearchTab;
   goBack: () => void;
   goTo: (v: AppView) => void;
 }
@@ -27,9 +28,9 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPageProps) {
+export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: SearchPageProps) {
   const { t } = useI18n();
-  const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client);
+  const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
 
@@ -47,17 +48,19 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
     if (!input.trim()) return;
     setSearched(true);
     search(input.trim(), tab);
-    // Persist query in hash URL so back navigation restores it
-    goTo({ type: 'search', query: input.trim() });
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleSearch();
+    goTo({ type: 'search', query: input.trim(), searchTab: tab });
   };
 
   const handleTabSwitch = (t: SearchTab) => {
     setTab(t);
-    if (input.trim()) search(input.trim(), t);
+    if (input.trim()) {
+      search(input.trim(), t);
+      goTo({ type: 'search', query: input.trim(), searchTab: t });
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleSearch();
   };
 
   const handleFeedSubscribe = (feed: FeedGeneratorView) => {

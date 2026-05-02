@@ -14,13 +14,14 @@ export interface FollowListItem {
 export function useProfile(
   client: BskyClient | null,
   actor: string | undefined,
+  initialTab?: ProfileTab,
 ) {
   const [profile, setProfile] = useState<ProfileView | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Feed tabs
-  const [tab, setTab] = useState<ProfileTab>('posts');
+  const [tab, setTab] = useState<ProfileTab>(initialTab ?? 'posts');
   const [posts, setPosts] = useState<PostView[]>([]);
   const [repostReasons, setRepostReasons] = useState<Record<string, string>>({});
   const [feedCursor, setFeedCursor] = useState<string | undefined>();

@@ -26,14 +26,23 @@ export function ProfileView({ client, actor, goBack, cols, rows, goTo, aiConfig,
     repostReasons,
   } = useProfile(client, actor);
   const { t } = useI18n();
-  const [postIdx, setPostIdx] = useState(() => getViewState(`profile-${actor}`)?.postIdx ?? 0);
+  const [postIdx, setPostIdx] = useState(() => {
+    const saved = getViewState(`profile-${actor}`);
+    return saved?.postIdx ?? 0;
+  });
   const [followIdx, setFollowIdx] = useState(0);
+
+  // Restore tab on mount
+  useEffect(() => {
+    const saved = getViewState(`profile-${actor}`);
+    if (saved?.tab !== undefined) setTab(saved.tab === 0 ? 'posts' : 'replies');
+  }, [actor]);
 
   useEffect(() => {
     return () => {
-      saveViewState(`profile-${actor}`, { postIdx });
+      saveViewState(`profile-${actor}`, { postIdx, tab: tab === 'posts' ? 0 : 1 });
     };
-  }, [actor, postIdx]);
+  }, [actor, postIdx, tab]);
   const [translatingBio, setTranslatingBio] = useState(false);
   const [translatedBio, setTranslatedBio] = useState<string | null>(null);
 

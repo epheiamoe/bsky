@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth, useTimeline, useI18n, useDrafts, usePostActions } from '@bsky/app';
-import type { AppView } from '@bsky/app';
+import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
@@ -168,6 +168,7 @@ export function App() {
           <ProfilePage
             client={client}
             actor={(currentView as { actor: string }).actor}
+            initialTab={(currentView as { profileTab?: string }).profileTab}
             goBack={goBack}
             goTo={goTo}
             aiConfig={effectiveAiConfig}
@@ -182,6 +183,7 @@ export function App() {
           <SearchPage
             client={client}
             initialQuery={(currentView as { query?: string }).query}
+            initialTab={(currentView as { searchTab?: SearchTab }).searchTab}
             goBack={goBack}
             goTo={goTo}
           />

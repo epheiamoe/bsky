@@ -95,13 +95,20 @@ function parseHash(): AppView {
     }
     case '/profile': {
       const actor = params.get('actor');
-      return actor ? { type: 'profile', actor: decodeURIComponent(actor) } : { type: 'feed' };
+      if (!actor) return { type: 'feed' };
+      const view: AppView = { type: 'profile', actor: decodeURIComponent(actor) };
+      const tab = params.get('tab');
+      if (tab) (view as { profileTab?: string }).profileTab = decodeURIComponent(tab);
+      return view;
     }
     case '/notifications':
       return { type: 'notifications' };
     case '/search': {
       const q = params.get('q');
-      return q ? { type: 'search', query: decodeURIComponent(q) } : { type: 'search' };
+      const tab = params.get('tab');
+      const view: AppView = q ? { type: 'search', query: decodeURIComponent(q) } : { type: 'search' };
+      if (tab) (view as { searchTab?: string }).searchTab = decodeURIComponent(tab);
+      return view;
     }
     case '/bookmarks':
       return { type: 'bookmarks' };
@@ -140,13 +147,22 @@ function encodeView(view: AppView): string {
       return '#/feed';
     case 'thread':
       return `#/thread?uri=${encodeURIComponent(view.uri)}`;
-    case 'profile':
-      return `#/profile?actor=${encodeURIComponent(view.actor)}`;
+    case 'profile': {
+      const tab = (view as { profileTab?: string }).profileTab;
+      let url = `#/profile?actor=${encodeURIComponent(view.actor)}`;
+      if (tab) url += `&tab=${encodeURIComponent(tab)}`;
+      return url;
+    }
     case 'notifications':
       return '#/notifications';
     case 'search': {
       const base = '#/search';
-      return view.query ? `${base}?q=${encodeURIComponent(view.query)}` : base;
+      const params = new URLSearchParams();
+      if (view.query) params.set('q', encodeURIComponent(view.query));
+      const tab = (view as { searchTab?: string }).searchTab;
+      if (tab) params.set('tab', encodeURIComponent(tab));
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
     }
     case 'bookmarks':
       return '#/bookmarks';

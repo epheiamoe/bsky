@@ -16,11 +16,11 @@ interface SearchViewProps {
   goTo: (v: AppView) => void;
 }
 
-const TABS: { key: SearchTab; label: string }[] = [
-  { key: 'top', label: '热门' },
-  { key: 'latest', label: '最新' },
-  { key: 'users', label: '用户' },
-  { key: 'feeds', label: '动态源' },
+const TABS: { key: SearchTab; label: string; idx: number }[] = [
+  { key: 'top', label: '热门', idx: 0 },
+  { key: 'latest', label: '最新', idx: 1 },
+  { key: 'users', label: '用户', idx: 2 },
+  { key: 'feeds', label: '动态源', idx: 3 },
 ];
 
 export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchViewProps) {
@@ -33,12 +33,23 @@ export function SearchView({ client, query, goBack, cols, rows, goTo }: SearchVi
   const [feedIdx, setFeedIdx] = useState(saved?.feedIdx ?? 0);
   const { t } = useI18n();
 
+  // Restore saved tab on mount
+  useEffect(() => {
+    if (saved?.tabIdx !== undefined) {
+      const found = TABS.find(tb => tb.idx === saved.tabIdx);
+      if (found) setTab(found.key);
+    }
+  }, []);
+
   // Save state on unmount
   useEffect(() => {
     return () => {
-      if (input) saveViewState(`search-${input}`, { postIdx, userIdx, feedIdx });
+      if (input) {
+        const tabIdx = TABS.find(tb => tb.key === tab)?.idx ?? 0;
+        saveViewState(`search-${input}`, { postIdx, userIdx, feedIdx, tabIdx });
+      }
     };
-  }, [input, postIdx, userIdx, feedIdx]);
+  }, [input, postIdx, userIdx, feedIdx, tab]);
 
   useInput((inputChar, key) => {
     if (key.escape) { goBack(); return; }
