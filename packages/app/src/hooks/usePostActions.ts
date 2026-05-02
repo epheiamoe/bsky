@@ -6,6 +6,9 @@ let _liked = new Set<string>();
 let _reposted = new Set<string>();
 const _likeRecords = new Map<string, string>();
 const _repostRecords = new Map<string, string>();
+// Optimistic count adjustments (±1 per action, reset on seed)
+const _likeCountAdj = new Map<string, number>();
+const _repostCountAdj = new Map<string, number>();
 const _tickers: Array<() => void> = [];
 
 function notifyAll() { _tickers.forEach(fn => fn()); }
@@ -20,6 +23,14 @@ function uriToParts(uri: string) {
 
 export function isPostLiked(uri: string): boolean { return _liked.has(uri); }
 export function isPostReposted(uri: string): boolean { return _reposted.has(uri); }
+
+export function getLikeCount(uri: string, staticCount: number): number {
+  return Math.max(0, staticCount + (_likeCountAdj.get(uri) ?? 0));
+}
+
+export function getRepostCount(uri: string, staticCount: number): number {
+  return Math.max(0, staticCount + (_repostCountAdj.get(uri) ?? 0));
+}
 
 export function seedPostViewer(post: any): void {
   if (!post) return;
@@ -49,6 +60,7 @@ export async function likePost(client: BskyClient | null, postUri: string, cid?:
       }
       _liked.delete(postUri);
       _likeRecords.delete(postUri);
+      _likeCountAdj.set(postUri, (_likeCountAdj.get(postUri) ?? 0) - 1);
       notifyAll();
       return;
     }
@@ -59,6 +71,7 @@ export async function likePost(client: BskyClient | null, postUri: string, cid?:
     });
     _liked.add(postUri);
     if (res?.uri) _likeRecords.set(postUri, res.uri);
+    _likeCountAdj.set(postUri, (_likeCountAdj.get(postUri) ?? 0) + 1);
     notifyAll();
   } catch (e) { console.error('Like error:', e); }
 }
@@ -74,6 +87,7 @@ export async function repostPost(client: BskyClient | null, postUri: string, cid
       }
       _reposted.delete(postUri);
       _repostRecords.delete(postUri);
+      _repostCountAdj.set(postUri, (_repostCountAdj.get(postUri) ?? 0) - 1);
       notifyAll();
       return;
     }
@@ -84,6 +98,7 @@ export async function repostPost(client: BskyClient | null, postUri: string, cid
     });
     _reposted.add(postUri);
     if (res?.uri) _repostRecords.set(postUri, res.uri);
+    _repostCountAdj.set(postUri, (_repostCountAdj.get(postUri) ?? 0) + 1);
     notifyAll();
   } catch (e) { console.error('Repost error:', e); }
 }
