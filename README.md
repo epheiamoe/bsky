@@ -187,5 +187,7 @@ TUI and PWA are pure render layers consuming the same React hooks.
 | `AGENTS.md` | AI agent / contributor guide |
 
 ---
+## License
+[MIT](LICENSE) — Free to use, modify, and distribute.
 
-**Version**: 0.2.0 — [Changelog](CHANGELOG.md)
+**Version**: 0.3.0 — [Changelog](CHANGELOG.md)

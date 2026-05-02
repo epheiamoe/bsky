@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-05-02
+
+### Added
+
+- **Video support** (PWA + TUI):
+  - Core: `VideoEmbed` type, `getVideoThumbnailUrl()`/`getVideoPlaylistUrl()` CDN helpers
+  - PWA: `VideoCard` component with `hls.js` lazy-loading, thumbnail + play button
+  - TUI: `🎬 视频` indicator with OSC 8 clickable link (Ctrl+Click → browser playback)
+- **GIF support**: `getCdnImageUrl` detects `image/gif` → `@gif` extension preserves animation; PWA `<img>` native, TUI OSC 8 link
+- **Compose video upload** (PWA + TUI):
+  - Same "Media" button (`i` key / `📷` icon), auto-detects image vs video
+  - Video ≤ 100MB, 1 video per post; mutually exclusive with images (Bluesky limit)
+  - `ComposeImage` → `ComposeMedia` (adds `type: 'image' | 'video'`, backward compat)
+- **Auto image compression** (>1MB):
+  - PWA: Canvas API (`toBlob` JPEG/WebP), resize to 2048px, quality 82→65→40 fallback
+  - TUI: `sharp` native library, same resize/quality strategy
+  - Both show explicit notification: "filename: 2.3MB → 0.8MB"
+- **#tag rendering** (PWA + TUI):
+  - PWA: `linkifyText` regex `#[\p{L}\p{N}_]+`, click → `#/search?q=tag&tab=top`
+  - TUI: `#tag` and `@handle` shown as OSC 8 clickable links (Ctrl+Click → browser)
+- **AI button in all views**: `PostActionsRow` now includes `astroid-as-AI-Button` (FeedTimeline, Search, Bookmarks, Thread replies)
+- **State preservation across navigation**:
+  - PWA: search tab (`&tab=`), profile tab (`&tab=`) encoded in URL
+  - TUI: search tab, profile tab saved/restored via `viewStateStore`
+- **`docs/AI_CONTEXT.md`**: Complete documentation of AI context injection mechanism, effect delegation, extension guide
+
+### Fixed
+
+- **AI `search_posts` tool**: `public.api.bsky.app` returns 403 for search → now always uses authenticated endpoint (`this.ky`)
+- **AI context injection**: Effect 3 `changed` check now tracks `contextUri`, `contextPost`, `contextProfile` independently (was only `contextUri`); guiding questions restored on page refresh from storage
+- **AI session URL persistence**: `encodeView`/`parseHash` now include `&post=`/`&profile=` in URL for refresh survival
+- **Icon plain text bugs**: `ComposePage.tsx` header and `NotifsPage.tsx` fallback both had `<Icon>` as string literals → rendered as text
+- **ThreadView dead code**: Removed unused `ActionButtons` component (395 lines), duplicate AI button
+
+### Changed
+
+- **`tools.ts` moved**: `packages/core/src/at/tools.ts` → `packages/core/src/ai/tools.ts` (AI module, not AT Protocol utility)
+- **i18n labels**: "图片/Image/画像" → "媒体/Media/メディア" in compose context
+- **Profile tab**: `useProfile` now accepts optional `initialTab` parameter
+- **TUI compose footer**: Updated key hints to reflect media mode (`i:媒体`/`i:Media`/`i:メディア`)
+
 ## [0.2.0] — 2026-05-01
 
 ### Added
