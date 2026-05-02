@@ -6,6 +6,7 @@ import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
 import type { AppView } from '@bsky/app';
 import { PostCard } from './PostCard.js';
+import { PostActionsRow } from './PostActionsRow.js';
 import { truncateName } from './PostCard.js';
 
 interface SearchPageProps {
@@ -43,6 +44,8 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
     if (!input.trim()) return;
     setSearched(true);
     search(input.trim(), tab);
+    // Persist query in hash URL so back navigation restores it
+    goTo({ type: 'search', query: input.trim() });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -100,10 +103,13 @@ export function SearchPage({ client, initialQuery, goBack, goTo }: SearchPagePro
           {(tab === 'top' || tab === 'latest') && (
             posts.length > 0 ? (
               <div>
-                {posts.map(post => (
-                  <PostCard key={post.uri} post={post}
-                    onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo} />
-                ))}
+                  {posts.map(post => (
+                    <PostCard key={post.uri} post={post}
+                      onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
+                    >
+                      <PostActionsRow client={client} goTo={goTo} post={post} />
+                    </PostCard>
+                  ))}
               </div>
             ) : searched ? (
               <div className="flex flex-col items-center justify-center py-16 px-4">
