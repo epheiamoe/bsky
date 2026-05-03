@@ -26,7 +26,7 @@ interface SettingsModalProps {
   onLogout: () => void;
 }
 
-type Tab = 'bluesky' | 'ai' | 'general';
+type Tab = 'bluesky' | 'ai' | 'scenario' | 'general';
 
 export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin, onLogout }: SettingsModalProps) {
   const { t, locale, setLocale, localeLabels, availableLocales } = useI18n();
@@ -41,6 +41,11 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [model, setModel] = useState(config.aiConfig.model);
   const [thinkingEnabled, setThinkingEnabled] = useState(config.thinkingEnabled ?? true);
   const [visionEnabled, setVisionEnabled] = useState(config.visionEnabled ?? false);
+  const [scenarioModels, setScenarioModels] = useState({
+    aiChat: config.scenarioModels?.aiChat || '',
+    translate: config.scenarioModels?.translate || '',
+    polish: config.scenarioModels?.polish || '',
+  });
 
   // Detect current provider from baseUrl
   const currentProvider = useMemo(() => getProviderByBaseUrl(baseUrl), [baseUrl]);
@@ -96,6 +101,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       ...config,
       thinkingEnabled,
       visionEnabled,
+      scenarioModels,
       aiConfig: {
         apiKey,
         baseUrl,
@@ -118,6 +124,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const tabs: { key: Tab; iconName: string; labelKey: string }[] = [
     { key: 'bluesky', iconName: 'at-sign', labelKey: 'settings.tabAccount' },
     { key: 'ai', iconName: 'astroid-as-AI-Button', labelKey: 'settings.tabAI' },
+    { key: 'scenario', iconName: 'database', labelKey: 'settings.tabScenario' },
     { key: 'general', iconName: 'settings', labelKey: 'settings.tabGeneral' },
   ];
 
@@ -271,6 +278,46 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 />
                 <span className="text-sm text-text-primary">{t('settings.visionMode')}</span>
               </label>
+              <button
+                onClick={saveAi}
+                className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
+              >
+                {t('settings.saveAI')}
+              </button>
+            </>
+          )}
+
+          {tab === 'scenario' && (
+            <>
+              <p className="text-text-secondary text-xs">Assign models to different scenarios. Leave blank to use the default AI model.</p>
+              {(['aiChat', 'translate', 'polish'] as const).map(scenario => {
+                const label = scenario === 'aiChat' ? 'AI Chat' : scenario === 'translate' ? 'Translation' : 'Draft Polish';
+                return (
+                  <div key={scenario}>
+                    <label className="text-xs text-text-secondary mb-1 block">{label}</label>
+                    <div className="flex gap-2">
+                      {currentProvider ? (
+                        <select
+                          value={scenarioModels[scenario]}
+                          onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
+                          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        >
+                          <option value="">Same as default</option>
+                          {currentProvider.models.map(m => (
+                            <option key={m.id} value={m.id}>{m.label}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text" value={scenarioModels[scenario]} onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
+                          placeholder="Custom model ID"
+                          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
               <button
                 onClick={saveAi}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"

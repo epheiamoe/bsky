@@ -644,9 +644,10 @@ export async function singleTurnAI(
   userPrompt: string,
   temperature = 0.3,
   maxTokens = 2000,
+  modelOverride?: string,
 ): Promise<string> {
   const body = {
-    model: config.model,
+    model: modelOverride || config.model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -707,6 +708,7 @@ export async function translateText(
   targetLang: string,
   mode: 'simple' | 'json' = 'simple',
   maxRetries = 3,
+  modelOverride?: string,
 ): Promise<TranslationResult> {
   const langLabel = LANG_LABELS[targetLang] ?? targetLang;
 
@@ -717,7 +719,7 @@ export async function translateText(
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
       const body: Record<string, unknown> = {
-        model: config.model,
+        model: modelOverride || config.model,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: text },
@@ -806,12 +808,13 @@ export async function translateToChinese(config: AIConfig, text: string): Promis
 /**
  * Polish/refine post draft
  */
-export async function polishDraft(config: AIConfig, draft: string, requirement: string): Promise<string> {
+export async function polishDraft(config: AIConfig, draft: string, requirement: string, modelOverride?: string): Promise<string> {
   return singleTurnAI(
     config,
     P_POLISH_SYSTEM,
     PF_POLISH_USER(requirement, draft),
     0.7,
     2000,
+    modelOverride,
   );
 }

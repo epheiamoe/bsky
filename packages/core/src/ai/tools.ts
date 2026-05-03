@@ -654,7 +654,9 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           mimeType,
           size: data.length,
           alt,
-          note: 'Image data stored for visual analysis. If your model supports vision (GPT-4V/Claude Vision/DeepSeek VL), you will be able to see this image in the next message. Text-only models: skip image analysis and describe using metadata only.',
+          note: ((assistant as unknown as { config?: { visionEnabled?: boolean } })?.config?.visionEnabled)
+            ? 'Image stored — you will see this image in your next response. Please describe or analyze it now.'
+            : 'Image stored as metadata only. Vision mode is OFF — you cannot see image pixels. Enable it in Settings.',
         });
       },
       requiresWrite: false,

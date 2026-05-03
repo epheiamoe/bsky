@@ -37,6 +37,12 @@ export function App() {
     visionEnabled: appConfig.visionEnabled,
   }), [appConfig.aiConfig, appConfig.thinkingEnabled, appConfig.visionEnabled]);
 
+  const scenarioModels = useMemo(() => ({
+    aiChat: appConfig.scenarioModels?.aiChat || appConfig.aiConfig.model,
+    translate: appConfig.scenarioModels?.translate || appConfig.aiConfig.model,
+    polish: appConfig.scenarioModels?.polish || appConfig.aiConfig.model,
+  }), [appConfig.scenarioModels, appConfig.aiConfig.model]);
+
   // ── Sync dark mode on mount ──
   useEffect(() => {
     document.documentElement.classList.toggle('dark', getAppConfig().darkMode);
@@ -151,6 +157,7 @@ export function App() {
             aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
+            translateModel={scenarioModels.translate}
           />
         );
       case 'compose':
@@ -174,6 +181,7 @@ export function App() {
             aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
+            translateModel={scenarioModels.translate}
           />
         );
       case 'notifications':

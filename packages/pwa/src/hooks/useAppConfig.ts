@@ -9,6 +9,12 @@ export interface AppConfig {
   darkMode: boolean;
   thinkingEnabled: boolean;
   visionEnabled: boolean;
+  /** Per-scenario model overrides. Empty string = use aiConfig.model */
+  scenarioModels: {
+    aiChat: string;
+    translate: string;
+    polish: string;
+  };
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -22,6 +28,11 @@ const DEFAULT_CONFIG: AppConfig = {
   darkMode: false,
   thinkingEnabled: true,
   visionEnabled: false,
+  scenarioModels: {
+    aiChat: '',
+    translate: '',
+    polish: '',
+  },
 };
 
 export function getAppConfig(): AppConfig {
