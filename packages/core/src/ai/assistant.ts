@@ -372,12 +372,12 @@ export class AIAssistant {
       body.tool_choice = 'auto';
     }
 
-    const url = `${this.config.baseUrl}/v1/chat/completions`;
+      const url = `${cleanBaseUrl(this.config.baseUrl)}/v1/chat/completions`;
 
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: 'POST',
+      let res: Response;
+      try {
+        res = await fetch(url, {
+          method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.config.apiKey}`,
@@ -385,8 +385,8 @@ export class AIAssistant {
         body: JSON.stringify(body),
       });
     } catch (e) {
-      if (e instanceof TypeError && e.message === 'fetch failed') {
-        throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+      if (e instanceof TypeError) {
+        throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
       }
       throw e;
     }
@@ -457,8 +457,8 @@ export class AIAssistant {
           yield { type: 'done', content: '\n\n[已暂停]' };
           return;
         }
-        if (e instanceof TypeError && e.message === 'fetch failed') {
-          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+        if (e instanceof TypeError) {
+          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
         }
         throw e;
       }
@@ -671,8 +671,8 @@ export async function singleTurnAI(
       body: JSON.stringify(body),
     });
   } catch (e) {
-    if (e instanceof TypeError && e.message === 'fetch failed') {
-      throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${e.message})`);
+    if (e instanceof TypeError) {
+      throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
     }
     throw e;
   }

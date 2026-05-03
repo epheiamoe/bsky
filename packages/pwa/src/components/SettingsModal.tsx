@@ -57,6 +57,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     const provider = getProviderById(providerId);
     if (provider) {
       setBaseUrl(provider.baseUrl);
+      // Load existing key for this provider (or keep current if none saved)
+      const savedKey = config.apiKeys?.[providerId];
+      if (savedKey) setApiKey(savedKey);
       // Auto-select first model
       const firstModel = provider.models[0];
       if (firstModel) {
@@ -97,13 +100,16 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const saveAi = () => {
+    const providerId = currentProvider?.id || 'custom';
+    const newApiKeys = { ...config.apiKeys, [providerId]: apiKey };
     const updated = {
       ...config,
       thinkingEnabled,
       visionEnabled,
+      apiKeys: newApiKeys,
       scenarioModels,
       aiConfig: {
-        apiKey,
+        apiKey: apiKey,                   // active key for current provider
         baseUrl,
         model,
         provider: currentProvider?.id,
@@ -296,24 +302,18 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   <div key={scenario}>
                     <label className="text-xs text-text-secondary mb-1 block">{label}</label>
                     <div className="flex gap-2">
-                      {currentProvider ? (
-                        <select
-                          value={scenarioModels[scenario]}
-                          onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
-                          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        >
-                          <option value="">Same as default</option>
-                          {currentProvider.models.map(m => (
-                            <option key={m.id} value={m.id}>{m.label}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="text" value={scenarioModels[scenario]} onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
-                          placeholder="Custom model ID"
-                          className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                        />
-                      )}
+                      <select
+                        value={scenarioModels[scenario]}
+                        onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
+                        className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Same as default</option>
+                        {PROVIDERS.map(p =>
+                          p.models.map(m => (
+                            <option key={`${p.id}/${m.id}`} value={`${p.id}/${m.id}`}>{p.label} / {m.label}</option>
+                          ))
+                        )}
+                      </select>
                     </div>
                   </div>
                 );

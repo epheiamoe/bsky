@@ -176,6 +176,7 @@ const en: LocaleMessages = {
   'settings.title': 'Settings',
   'settings.tabAccount': 'Account',
   'settings.tabAI': 'AI',
+  'settings.tabScenario': 'Scenario',
   'settings.tabGeneral': 'General',
   'settings.blueskyDesc': 'Update Bluesky credentials (will refresh session after re-login)',
   'settings.updateLogin': 'Update Login',

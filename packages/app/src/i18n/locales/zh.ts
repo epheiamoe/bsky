@@ -188,6 +188,7 @@ const zh: LocaleMessages = {
   'settings.title': '设置',
   'settings.tabAccount': '账号',
   'settings.tabAI': 'AI',
+  'settings.tabScenario': '场景',
   'settings.tabGeneral': '通用',
   'settings.blueskyDesc': '更新 Bluesky 登录凭证（重新登录后将刷新 session）',
   'settings.updateLogin': '更新登录',

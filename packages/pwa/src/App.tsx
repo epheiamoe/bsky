@@ -5,6 +5,7 @@ import type { PostView } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { getFeedConfig, setLastFeedUri, seedPostViewers } from '@bsky/app';
+import { getProviderById } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -37,11 +38,18 @@ export function App() {
     visionEnabled: appConfig.visionEnabled,
   }), [appConfig.aiConfig, appConfig.thinkingEnabled, appConfig.visionEnabled]);
 
-  const scenarioModels = useMemo(() => ({
-    aiChat: appConfig.scenarioModels?.aiChat || appConfig.aiConfig.model,
-    translate: appConfig.scenarioModels?.translate || appConfig.aiConfig.model,
-    polish: appConfig.scenarioModels?.polish || appConfig.aiConfig.model,
-  }), [appConfig.scenarioModels, appConfig.aiConfig.model]);
+  const scenarioModels = useMemo(() => {
+    const resolve = (key: string): string => {
+      const v = appConfig.scenarioModels?.[key as keyof typeof appConfig.scenarioModels] || '';
+      if (!v || !v.includes('/')) return v || appConfig.aiConfig.model;
+      return v.split('/').pop() || appConfig.aiConfig.model;
+    };
+    return {
+      aiChat: resolve('aiChat'),
+      translate: resolve('translate'),
+      polish: resolve('polish'),
+    };
+  }, [appConfig.scenarioModels, appConfig.aiConfig.model]);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {

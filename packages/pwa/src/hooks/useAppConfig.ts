@@ -9,6 +9,8 @@ export interface AppConfig {
   darkMode: boolean;
   thinkingEnabled: boolean;
   visionEnabled: boolean;
+  /** Per-provider API keys. Key = provider ID (e.g., 'deepseek', 'mistral') */
+  apiKeys: Record<string, string>;
   /** Per-scenario model overrides. Empty string = use aiConfig.model */
   scenarioModels: {
     aiChat: string;
@@ -28,6 +30,7 @@ const DEFAULT_CONFIG: AppConfig = {
   darkMode: false,
   thinkingEnabled: true,
   visionEnabled: false,
+  apiKeys: {},
   scenarioModels: {
     aiChat: '',
     translate: '',
