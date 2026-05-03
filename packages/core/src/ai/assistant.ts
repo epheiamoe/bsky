@@ -110,6 +110,10 @@ export class AIAssistant {
     this.config = { ...DEFAULT_CONFIG, ...config } as AIConfig;
   }
 
+  updateConfig(config: Partial<AIConfig>): void {
+    this.config = { ...this.config, ...config };
+  }
+
   setTools(tools: ToolDescriptor[]): void {
     this.tools = tools;
     this.toolMap.clear();

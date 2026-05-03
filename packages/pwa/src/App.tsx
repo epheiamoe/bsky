@@ -32,12 +32,6 @@ export function App() {
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollIndexRef = useRef(0);
 
-  const effectiveAiConfig = useMemo(() => ({
-    ...appConfig.aiConfig,
-    thinkingEnabled: appConfig.thinkingEnabled,
-    visionEnabled: appConfig.visionEnabled,
-  }), [appConfig.aiConfig, appConfig.thinkingEnabled, appConfig.visionEnabled]);
-
   const scenarioModels = useMemo(() => {
     const resolve = (key: string): string => {
       const v = appConfig.scenarioModels?.[key as keyof typeof appConfig.scenarioModels] || '';
@@ -50,6 +44,13 @@ export function App() {
       polish: resolve('polish'),
     };
   }, [appConfig.scenarioModels, appConfig.aiConfig.model]);
+
+  const effectiveAiConfig = useMemo(() => ({
+    ...appConfig.aiConfig,
+    model: scenarioModels.aiChat || appConfig.aiConfig.model,
+    thinkingEnabled: appConfig.thinkingEnabled,
+    visionEnabled: appConfig.visionEnabled,
+  }), [appConfig.aiConfig, scenarioModels.aiChat, appConfig.thinkingEnabled, appConfig.visionEnabled]);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {

@@ -41,6 +41,11 @@ export function useAIChat(
   options?: UseAIChatOptions,
 ) {
   const [assistant] = useState(() => new AIAssistant(aiConfig));
+
+  // Keep assistant config in sync when provider/model/baseUrl changes
+  useEffect(() => {
+    assistant.updateConfig(aiConfig);
+  }, [aiConfig, assistant]);
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
