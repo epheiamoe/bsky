@@ -309,9 +309,20 @@ export class AIAssistant {
 
   private _buildMessages(): ChatMessage[] {
     let msgs = this.messages;
-    // Strip reasoning_content for providers that don't support it
+    // For providers without native reasoning_content support (Mistral, etc):
+    // merge reasoning_content into content as a thinking preface,
+    // then remove the field so we don't trigger extra_forbidden errors.
     if (this.config.reasoningStyle !== 'reasoning_content') {
-      msgs = msgs.map(({ reasoning_content: _, ...m }) => m);
+      msgs = msgs.map(m => {
+        const rc = (m as any).reasoning_content as string | undefined;
+        if (!rc || m.role !== 'assistant') return m;
+        const { reasoning_content: _, ...rest } = m as any;
+        const prefix = `【上一步思考过程】\n${rc}\n\n`;
+        if (typeof rest.content === 'string') {
+          rest.content = prefix + rest.content;
+        }
+        return rest;
+      });
     }
     if (!this.hasPendingImages || !this.config.visionEnabled) return msgs;
     msgs = [...msgs];
