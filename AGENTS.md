@@ -95,7 +95,7 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - **useActiveFeed**: Tracks last active feed URI module-level. `goTo({ type: 'feed' })` resolves to last active or default feed.
 - **AI sessions**: URL uses `#/ai?session=uuid` (not `contextUri`). Context stored in `ChatRecord.context` field, injected into system prompt via `PF_POST_CONTEXT`/`PF_PROFILE_CONTEXT`. Sessions created with `crypto.randomUUID()`.
 - **Scroll restoration**: `useScrollRestore` hook in `@bsky/app` persists scroll positions across view changes via module-level Map.
-- **Wiki docs**: `.zread/wiki/` directory contains auto-generated project documentation by `zread-cli`. These are useful reference material — DO NOT remove them. Consult them as needed for architecture understanding.
+- **Wiki docs**: `.wiki/` directory contains auto-generated project documentation. These are useful reference material — DO NOT remove them. Consult them as needed for architecture understanding.
 
 ## Local Development Notes
 

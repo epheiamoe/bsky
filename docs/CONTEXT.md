@@ -153,20 +153,27 @@ cd packages/core && npx vitest run --config vitest.config.ts
 5. 改 AI 行为：编辑 `prompts.ts` → rebuild
 6. 帖子操作栏统一用 `PostActionsRow`，不要手写
 7. 引用帖从 `post.embed`（顶层）读，不用 `post.record.embed`
-8. PWA 图标用 `<Icon name="...">`，TUI 保持 emoji
+8. PWA 图标用 `<Icon name="...">`，按钮用纯文字不用 emoji — TUI 保持 emoji
+9. 图片上传不在 AI 对话中自动发到 Bluesky — 只在 create_post 时上传
+10. AI 搜索工具（search_posts）强制使用 authenticated endpoint — public API 返回 403
 
 ## 关键文件速查
 
-| 文件 | 状态 | 职责 |
-|------|------|------|
-| `packages/app/src/hooks/usePostActions.ts` | NEW | 模块级赞/转状态+计数 |
-| `packages/app/src/hooks/useActiveFeed.ts` | NEW | 模块级活跃 feed 跟踪 |
-| `packages/app/src/hooks/useScrollRestore.ts` | NEW | 跨视图滚动保存/恢复 |
-| `packages/pwa/src/components/PostActionsRow.tsx` | NEW | 统一帖子行为栏 |
-| `packages/pwa/src/components/Icon.tsx` | NEW | SVG 图标组件 |
-| `packages/pwa/src/icons/` | NEW | 50+ SVG 文件 |
-| `packages/pwa/src/hooks/useHashRouter.ts` | CHANGED | 默认 feed 回退 + session 参数 |
-| `packages/app/src/hooks/useThread.ts` | CHANGED | 引用帖提取 + 模块级状态 |
-| `packages/app/src/hooks/useTimeline.ts` | CHANGED | lastGoodFeed 缓存 |
-| `packages/app/src/hooks/useAIChat.ts` | CHANGED | editByIndex + session context |
-| `packages/app/src/services/chatStorage.ts` | CHANGED | ChatRecord.context 字段 |
+| 文件 | 职责 |
+|------|------|
+| `packages/app/src/hooks/usePostActions.ts` | 模块级赞/转状态+计数 |
+| `packages/app/src/hooks/useActiveFeed.ts` | 模块级活跃 feed 跟踪 |
+| `packages/app/src/hooks/useScrollRestore.ts` | 跨视图滚动保存/恢复 |
+| `packages/pwa/src/components/PostActionsRow.tsx` | 统一帖子行为栏 |
+| `packages/pwa/src/components/Icon.tsx` | SVG 图标组件 |
+| `packages/pwa/src/components/VideoCard.tsx` | HLS 视频播放器 |
+| `packages/pwa/src/icons/` | 50+ SVG 文件 |
+| `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
+| `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由 |
+| `packages/app/src/hooks/useThread.ts` | 讨论串处理 |
+| `packages/app/src/hooks/useTimeline.ts` | 时间线 |
+| `packages/app/src/hooks/useAIChat.ts` | AI 对话（stop/addUserImage/editByIndex） |
+| `packages/core/src/ai/tools.ts` | 31 个 AI 工具定义 |
+| `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
+| `packages/core/src/ai/assistant.ts` | AI 对话引擎（addUserUpload/AbortSignal 支持） |
+| `packages/app/src/services/chatStorage.ts` | ChatRecord.context 字段 |

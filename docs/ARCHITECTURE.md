@@ -1,6 +1,6 @@
 # Bluesky TUI — Architecture & Development Reference
 
-> Last updated: 2026-04-29. Complete reference for PWA migration.
+> Last updated: 2026-05-03. Complete reference for PWA migration.
 
 ## Monorepo Structure
 

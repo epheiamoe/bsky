@@ -10,17 +10,20 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useTimeline` | `createTimelineStore()` | `{ posts, loading, cursor, loadMore, refresh }` |
 | `usePostDetail` | `createPostDetailStore()` | `{ post, flatThread, translate, actions }` |
 | `useNavigation` | `createNavigation()` | `{ currentView, canGoBack, goTo, goBack, goHome }` |
-| `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, expandReplies }` |
+| `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, expandReplies, isLiked, isReposted }` |
 | `useCompose` | (inline state) | `{ draft, setDraft, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, submit }` |
-| `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, chatId, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, retry }` |
+| `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, stop, addUserImage, chatId, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex }` |
 | `useDrafts` | `createDraftsStore()` | `{ drafts, saveDraft, deleteDraft, loadDraft }` |
 | `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
-| `useChatHistory` | `FileChatStorage` | `{ conversations, loadConversation, saveConversation, deleteConversation }` |
+| `useChatHistory` | `FileChatStorage` | `{ conversations, loadConversation, saveConversation, deleteConversation, refresh }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |
 | `useProfile` | (inline state) | `{ profile, loading, error, tab, setTab, posts, feedCursor, feedLoading, loadMoreFeed, isFollowing, handleFollow, handleUnfollow, followList, followItems, loadMoreFollowList, openFollowList, closeFollowList, repostReasons }` |
 | `useSearch` | (inline state) | `{ query, results, loading, search }` |
 | `useNotifications` | (inline state) | `{ notifications, loading, unreadCount, refresh }` |
 | `useBookmarks` | (inline state) | `{ bookmarks, loading, isBookmarked, addBookmark, removeBookmark, toggleBookmark, refresh }` |
+| `useActiveFeed` | Module-level ref | `{ getLastFeedUri, setLastFeedUri }` — tracks last active feed URI across views |
+| `usePostActions` | Module-level Sets/Maps | `{ isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers }` — shared like/repost state |
+| `useScrollRestore` | Module-level Map | `{ saveScrollTop, getScrollTop }` — preserves scroll position across view changes |
 
 ## Store Subscribe Pattern
 
@@ -73,16 +76,30 @@ function useAIChat(
   aiConfig: AIConfig,
   contextUri?: string,
   options?: {
-    chatId?: string;        // Load existing conversation
-    storage?: ChatStorage;  // Auto-save after each send
-    stream?: boolean;       // Enable per-token streaming (default: false for TUI)
+    chatId?: string;           // Load existing conversation
+    storage?: ChatStorage;     // Auto-save after each send
+    stream?: boolean;          // Enable per-token streaming (default: false for TUI)
+    userHandle?: string;       // Current user's handle (for system prompt)
+    userDisplayName?: string;  // Current user's display name
+    environment?: 'tui' | 'pwa';
+    locale?: string;
+    contextPost?: string;      // Post URI to analyze (in-memory, not URL)
+    contextProfile?: string;   // Profile handle to analyze (in-memory, not URL)
+    onChatSaved?: () => void;  // Called when new chat is saved (triggers sidebar refresh)
   }
 ): {
-  messages: AIChatMessage[];   // Includes tool_call, tool_result, and assistant roles
+  messages: AIChatMessage[];
   loading: boolean;
   guidingQuestions: string[];
   send: (text: string) => Promise<void>;
+  stop: () => void;             // Abort current streaming response
+  addUserImage: (data: Uint8Array, mimeType: string, alt: string) => number;
   chatId: string;
+  pendingConfirmation: { toolName: string; description: string } | null;
+  confirmAction: () => void;
+  rejectAction: () => void;
+  edit: () => string | null;
+  editByIndex: (n: number) => string | null;
 }
 ```
 

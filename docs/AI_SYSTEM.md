@@ -138,10 +138,10 @@ throw new Error('translateText failed after 4 attempts');
 
 ### sendMessageStreaming
 
-A separate method on `AIAssistant` for real-time token delivery. Unlike `sendMessage` (which waits for the full response), this method returns a `ReadableStream` that yields tokens as they arrive.
+A separate method on `AIAssistant` for real-time token delivery. Unlike `sendMessage` (which waits for the full response), this method uses `fetch()` with `stream: true` and returns an async generator that yields tokens as they arrive via a manual SSE parser.
 
 ```typescript
-sendMessageStreaming(content: string): Promise<ReadableStream<StreamChunk>>
+sendMessageStreaming(content: string, signal?: AbortSignal): AsyncGenerator<{
 
 interface StreamChunk {
   type: 'token' | 'tool_call' | 'tool_result' | 'done' | 'error';
@@ -153,7 +153,7 @@ interface StreamChunk {
 
 ### SSE Parser
 
-The stream is parsed as Server-Sent Events (SSE). Each line prefixed with `data: ` is a JSON object matching the OpenAI-compatible streaming format (`choices[0].delta`).
+The stream body uses SSE format (`data: ` prefixed lines), parsed manually from the `fetch` response reader. Each line prefixed with `data: ` is a JSON object matching the OpenAI-compatible streaming format (`choices[0].delta`).
 
 ```
 data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hello"}}]}
@@ -211,13 +211,13 @@ interface ToolDescriptor {
     inputSchema: { type: 'object'; properties: Record<string, { type: string; description: string }>; required: string[] };
   };
   handler: (params: Record<string, unknown>) => Promise<string>;  // Returns JSON string
-  requiresWrite: boolean;   // true for create_post, like, repost, follow, upload_blob
+  requiresWrite: boolean;   // true for create_post, like, repost, follow
 }
 ```
 
 ### All 31 Tools
 
-**Read Tools (24)**:
+**Read Tools (27)**:
 - `resolve_handle` — resolve handle → DID
 - `get_record` — get raw AT record
 - `list_records` — list repo collection records
@@ -228,7 +228,7 @@ interface ToolDescriptor {
 - `get_feed_generator` — feed generator details
 - `get_feed` — feed content
 - `get_post_thread` — raw thread tree
-- `get_post_thread_flat` — **flattened thread with depth markers** (prefer for AI context)
+- `get_post_thread_flat` — flattened thread with depth markers (prefer for AI context)
 - `get_post_subtree` — expand folded replies
 - `get_post_context` — full context: thread + media + text
 - `get_likes` — who liked a post
@@ -239,15 +239,16 @@ interface ToolDescriptor {
 - `get_follows` / `get_followers` / `get_suggested_follows` — social graph
 - `list_notifications` — notifications
 - `extract_images_from_post` — extract blob refs (did+cid)
-- `download_image` — download blob as base64
+- `download_image` — download blob (TUI saves to disk, PWA returns data URL)
+- `view_image` — download + convert to base64 for vision model
 - `extract_external_link` — extract link embed
-- `fetch_web_markdown` — **fetch external URL as markdown via r.jina.ai proxy**
+- `fetch_web_markdown` — fetch external URL as markdown via r.jina.ai proxy
 
-**Write Tools (6, require confirmation)**:
-- `create_post` — post/reply/quote
-- `like` / `repost` — engagement
-- `follow` — follow user
-- `upload_blob` — upload image
+**Write Tools (4, require confirmation)**:
+- `create_post` — post/reply/quote (supports `pendingImageIndex` for chat-uploaded images)
+- `like` — like a post
+- `repost` — repost a post
+- `follow` — follow a user
 
 ### Thread Flattening Format
 
@@ -266,13 +267,11 @@ depth:0 | alice.bsky.social (Alice) (post:abc123)
 
 ## System Prompts
 
-**Main assistant** (from `contracts/system_prompts.md`):
+**Main assistant** (from `packages/core/src/ai/prompts.ts`):
 ```
-你是一个深度集成 Bluesky 的终端助手。你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。
-当用户提及某个帖子时，主动使用 get_post_thread_flat 和 get_post_context。
-回答简练，适合终端显示，支持 Markdown（由 ink 渲染）。
+你是用户的 Bluesky 助手，帮助用户浏览和分析 Bluesky 上的内容。
+可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。
+【重要规则】绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。
+所有写操作必须由用户明确要求后才执行。
 ```
-
-**Translation**: `将以下文本翻译成{目标语言}，保持原意，仅输出翻译结果，不做解释。`
-
-**Draft Polish**: `你是一个文字润色助手，根据用户要求调整以下帖子草稿，只返回润色后的文本。`
+All prompts are centralized in `packages/core/src/ai/prompts.ts` — edit this file to customize AI behavior.
