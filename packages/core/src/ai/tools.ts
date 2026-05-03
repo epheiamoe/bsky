@@ -629,7 +629,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       handler: async (p, assistant) => {
         const data = await client.downloadBlob(p.did as string, p.cid as string);
         const mimeType = detectMimeType(data);
-        const base64 = Buffer.from(data).toString('base64');
+        const base64 = toBase64(data);
         const dataUrl = `data:${mimeType};base64,${base64}`;
         // Store for multi-modal promotion in next user message
         const ai = assistant as unknown as { addPendingImage?: (url: string, alt?: string) => void };
