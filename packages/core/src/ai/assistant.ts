@@ -462,7 +462,7 @@ export class AIAssistant {
           return;
         }
         if (e instanceof TypeError) {
-          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
+          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. If you are in China/HK, check VPN/proxy settings — some providers (e.g. Mistral) may be DNS-poisoned. (${(e as Error).message})`);
         }
         throw e;
       }
