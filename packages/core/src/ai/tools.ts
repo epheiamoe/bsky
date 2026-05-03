@@ -45,6 +45,14 @@ function detectMimeType(data: Uint8Array): string {
   return 'application/octet-stream';
 }
 
+/** Cross-platform base64 encoding (works in Node.js and browser) */
+function toBase64(data: Uint8Array): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(data).toString('base64');
+  let binary = '';
+  for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]!);
+  return btoa(binary);
+}
+
 export function createTools(client: BskyClient): ToolDescriptor[] {
   const tools: ToolDescriptor[] = [
     // ======================== READ TOOLS ========================
@@ -590,7 +598,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           });
         } catch {
           // Browser/PWA fallback: return base64 data URL
-          const base64 = Buffer.from(data).toString('base64');
+          const base64 = toBase64(data);
           const dataUrl = `data:${detectMimeType(data)};base64,${base64}`;
           return JSON.stringify({
             saved: false,

@@ -339,6 +339,9 @@ export class AIAssistant {
     if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
       (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
     }
+    if (this.config.reasoningStyle === 'structured_content' && this.config.thinkingEnabled !== false) {
+      (body as any).reasoning_effort = 'high';
+    }
 
     // Only include tools if we have any
     if (this.tools.length > 0) {
@@ -403,6 +406,9 @@ export class AIAssistant {
       };
       if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
         (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
+      }
+      if (this.config.reasoningStyle === 'structured_content' && this.config.thinkingEnabled !== false) {
+        (body as any).reasoning_effort = 'high';
       }
 
       if (this.tools.length > 0) {

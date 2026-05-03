@@ -1,51 +1,25 @@
 // ── Multi-Provider Registry ──
+// Default config lives in providers.json for easy editing.
+// The TS interface ensures type safety; users edit the JSON file.
+
+import providerData from './providers.json';
 
 export interface ModelInfo {
-  id: string;           // API identifier (e.g., 'deepseek-v4-flash')
-  label: string;        // Human-readable label
-  /** Supports thinking/reasoning visibility in streaming (e.g., delta.reasoning_content) */
+  id: string;
+  label: string;
   thinking: boolean;
-  /** Supports vision / image input (multi-modal with image_url ContentBlocks) */
   vision: boolean;
 }
 
 export interface ProviderInfo {
-  id: string;           // Internal key (e.g., 'deepseek', 'mistral')
-  label: string;        // UI label (e.g., 'DeepSeek')
-  baseUrl: string;      // Default API endpoint (without trailing /v1)
+  id: string;
+  label: string;
+  baseUrl: string;
   models: ModelInfo[];
-  /** How reasoning content is delivered in SSE streaming:
-   *  - 'reasoning_content': delta.reasoning_content string (DeepSeek, xAI grok-4.3)
-   *  - 'structured_content': delta.content as array [{type:'thinking',thinking:[{text:'...'}]}] (Mistral)
-   *  - 'none': no reasoning content exposed
-   */
   reasoningStyle: 'reasoning_content' | 'structured_content' | 'none';
 }
 
-export const PROVIDERS: ProviderInfo[] = [
-  {
-    id: 'deepseek',
-    label: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com',
-    reasoningStyle: 'reasoning_content',
-    models: [
-      { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', thinking: true, vision: false },
-      { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', thinking: true, vision: false },
-    ],
-  },
-  {
-    id: 'mistral',
-    label: 'Mistral',
-    baseUrl: 'https://api.mistral.ai',
-    reasoningStyle: 'structured_content',
-    models: [
-      { id: 'mistral-small-latest', label: 'Mistral Small (24B)', thinking: true, vision: true },
-      { id: 'pixtral-large-latest', label: 'Pixtral Large (多模态)', thinking: false, vision: true },
-      { id: 'mistral-medium-latest', label: 'Mistral Medium (128B)', thinking: false, vision: true },
-      { id: 'ministral-3b-latest', label: 'Ministral 3B (最快)', thinking: false, vision: false },
-    ],
-  },
-];
+export const PROVIDERS: ProviderInfo[] = providerData as ProviderInfo[];
 
 // ── Helpers ──
 

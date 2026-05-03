@@ -1,0 +1,24 @@
+[
+  {
+    "id": "deepseek",
+    "label": "DeepSeek",
+    "baseUrl": "https://api.deepseek.com",
+    "reasoningStyle": "reasoning_content",
+    "models": [
+      { "id": "deepseek-v4-flash", "label": "DeepSeek V4 Flash", "thinking": true, "vision": false },
+      { "id": "deepseek-v4-pro", "label": "DeepSeek V4 Pro", "thinking": true, "vision": false }
+    ]
+  },
+  {
+    "id": "mistral",
+    "label": "Mistral",
+    "baseUrl": "https://api.mistral.ai",
+    "reasoningStyle": "structured_content",
+    "models": [
+      { "id": "mistral-small-latest", "label": "Mistral Small (24B)", "thinking": true, "vision": true },
+      { "id": "pixtral-large-latest", "label": "Pixtral Large (Vision)", "thinking": false, "vision": true },
+      { "id": "mistral-medium-latest", "label": "Mistral Medium (128B)", "thinking": false, "vision": true },
+      { "id": "ministral-3b-latest", "label": "Ministral 3B (Fast)", "thinking": false, "vision": false }
+    ]
+  }
+]
