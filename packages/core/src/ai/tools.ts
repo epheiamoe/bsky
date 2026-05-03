@@ -615,29 +615,45 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'view_image',
-        description: 'View and analyze a Bluesky post image. This tool is for VISION MODELS ONLY (GPT-4V, Claude Vision, DeepSeek VL, etc). Plain text models cannot understand image data — they will see base64 gibberish. If your model is text-only, skip this tool.',
+        description: 'View and analyze a Bluesky post image. This tool is for VISION MODELS ONLY. Use uploadIndex to view images uploaded by the user in the chat. Use did+cid to view images from Bluesky posts.',
         inputSchema: {
           type: 'object',
           properties: {
             did: { type: 'string', description: 'The DID of the post author' },
             cid: { type: 'string', description: 'The CID of the image blob (from extract_images_from_post)' },
-            alt: { type: 'string', description: 'Optional ALT text of the image (from extract_images_from_post)' },
+            alt: { type: 'string', description: 'Optional ALT text of the image' },
+            uploadIndex: { type: 'number', description: 'Index of a user-uploaded image (from chat messages). Use this instead of did/cid for images the user uploaded in the chat.' },
           },
-          required: ['did', 'cid'],
+          required: [],
         },
       },
       handler: async (p, assistant) => {
-        const data = await client.downloadBlob(p.did as string, p.cid as string);
-        const mimeType = detectMimeType(data);
+        let data: Uint8Array;
+        let mimeType: string;
+        let alt = (p.alt as string) || undefined;
+
+        if (p.uploadIndex !== undefined && p.uploadIndex !== null) {
+          const ai = assistant as unknown as { getUserUpload?: (i: number) => { data: Uint8Array; mimeType: string; alt: string } | undefined };
+          const upload = ai.getUserUpload?.(p.uploadIndex as number);
+          if (!upload) return JSON.stringify({ error: `Upload index ${p.uploadIndex} not found. Images may have been cleared.` });
+          data = upload.data;
+          mimeType = upload.mimeType;
+          alt = alt || upload.alt;
+        } else if (p.did && p.cid) {
+          data = await client.downloadBlob(p.did as string, p.cid as string);
+          mimeType = detectMimeType(data);
+        } else {
+          return JSON.stringify({ error: 'Provide either did+cid (for post images) or uploadIndex (for chat-uploaded images)' });
+        }
+
         const base64 = toBase64(data);
         const dataUrl = `data:${mimeType};base64,${base64}`;
-        // Store for multi-modal promotion in next user message
         const ai = assistant as unknown as { addPendingImage?: (url: string, alt?: string) => void };
-        ai.addPendingImage?.(dataUrl, (p.alt as string) || undefined);
+        ai.addPendingImage?.(dataUrl, alt);
         return JSON.stringify({
           mimeType,
           size: data.length,
-          alt: (p.alt as string) || undefined,
+          alt,
           note: 'Image data stored for visual analysis. If your model supports vision (GPT-4V/Claude Vision/DeepSeek VL), you will be able to see this image in the next message. Text-only models: skip image analysis and describe using metadata only.',
         });
       },

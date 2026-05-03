@@ -308,8 +308,13 @@ export class AIAssistant {
   }
 
   private _buildMessages(): ChatMessage[] {
-    if (!this.hasPendingImages || !this.config.visionEnabled) return this.messages;
-    const msgs = [...this.messages];
+    let msgs = this.messages;
+    // Strip reasoning_content for providers that don't support it
+    if (this.config.reasoningStyle !== 'reasoning_content') {
+      msgs = msgs.map(({ reasoning_content: _, ...m }) => m);
+    }
+    if (!this.hasPendingImages || !this.config.visionEnabled) return msgs;
+    msgs = [...msgs];
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i]!.role === 'user') {
         const text: string = typeof msgs[i]!.content === 'string' ? (msgs[i]!.content as string) : '';
