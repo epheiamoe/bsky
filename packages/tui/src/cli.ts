@@ -10,6 +10,7 @@ import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
+import { getProviderByBaseUrl } from '@bsky/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -35,6 +36,8 @@ interface AppConfig {
     model: string;
     thinkingEnabled?: boolean;
     visionEnabled?: boolean;
+    provider?: string;
+    reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
   };
   targetLang?: string;
 }
@@ -43,15 +46,19 @@ function getConfigFromEnv(): AppConfig | null {
   const handle = process.env.BLUESKY_HANDLE;
   const password = process.env.BLUESKY_APP_PASSWORD;
   if (!handle || !password) return null;
+  const baseUrl = process.env.LLM_BASE_URL || 'https://api.deepseek.com';
+  const provider = getProviderByBaseUrl(baseUrl);
   return {
     blueskyHandle: handle,
     blueskyPassword: password,
     aiConfig: {
       apiKey: process.env.LLM_API_KEY || '',
-      baseUrl: process.env.LLM_BASE_URL || 'https://api.deepseek.com',
+      baseUrl,
       model: process.env.LLM_MODEL || 'deepseek-v4-flash',
       thinkingEnabled: process.env.LLM_THINKING_ENABLED !== 'false',
       visionEnabled: process.env.LLM_VISION_ENABLED === 'true',
+      provider: provider?.id,
+      reasoningStyle: provider?.reasoningStyle,
     },
     targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
   };

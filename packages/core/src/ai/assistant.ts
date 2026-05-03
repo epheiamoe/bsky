@@ -6,6 +6,7 @@ import {
   P_POLISH_SYSTEM,
   PF_POLISH_USER,
 } from './prompts.js';
+import { cleanBaseUrl, shouldSendThinkingParam } from './providers.js';
 
 export interface ContentBlock {
   type: 'text' | 'image_url';
@@ -79,6 +80,8 @@ export type AIConfig = {
   model: string;
   thinkingEnabled?: boolean;
   visionEnabled?: boolean;
+  provider?: string;       // 'deepseek' | 'mistral' | etc
+  reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
 };
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {
@@ -332,8 +335,10 @@ export class AIAssistant {
       messages: this._buildMessages(),
       temperature: 0.7,
       max_tokens: 4096,
-      thinking: { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
     };
+    if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
+      (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
+    }
 
     // Only include tools if we have any
     if (this.tools.length > 0) {
@@ -395,8 +400,10 @@ export class AIAssistant {
         temperature: 0.7,
         max_tokens: 4096,
         stream: true,
-        thinking: { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
       };
+      if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
+        (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
+      }
 
       if (this.tools.length > 0) {
         body.tools = this.tools.map((t) => ({
@@ -410,7 +417,7 @@ export class AIAssistant {
         body.tool_choice = 'auto';
       }
 
-      const url = `${this.config.baseUrl}/v1/chat/completions`;
+      const url = `${cleanBaseUrl(this.config.baseUrl)}/v1/chat/completions`;
 
       let res: Response;
       try {
@@ -473,8 +480,25 @@ export class AIAssistant {
             }
 
             if (delta.content) {
-              fullContent += delta.content;
-              yield { type: 'token', content: delta.content };
+              // Handle structured content (Mistral: arrays of thinking/text blocks)
+              if (Array.isArray(delta.content)) {
+                for (const block of delta.content) {
+                  if (block.type === 'thinking' && block.thinking) {
+                    for (const t of block.thinking) {
+                      if (t.type === 'text' && t.text) {
+                        reasoningContent += t.text;
+                        yield { type: 'thinking', content: t.text };
+                      }
+                    }
+                  } else if (block.type === 'text' && block.text) {
+                    fullContent += block.text;
+                    yield { type: 'token', content: block.text };
+                  }
+                }
+              } else {
+                fullContent += delta.content;
+                yield { type: 'token', content: delta.content };
+              }
             }
 
             if (delta.tool_calls) {
@@ -608,10 +632,10 @@ export async function singleTurnAI(
     temperature,
     max_tokens: maxTokens,
     stream: false,
-    thinking: { type: config.thinkingEnabled !== false ? 'enabled' : 'disabled' },
+    thinking: config.provider && shouldSendThinkingParam(config.provider) ? { type: config.thinkingEnabled !== false ? 'enabled' : 'disabled' } : undefined,
   };
 
-  const url = `${config.baseUrl}/v1/chat/completions`;
+  const url = `${cleanBaseUrl(config.baseUrl)}/v1/chat/completions`;
 
   let res: Response;
   try {

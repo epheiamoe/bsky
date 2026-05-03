@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useI18n } from '@bsky/app';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { updateAppConfig } from '../hooks/useAppConfig.js';
 import type { TargetLang, Locale } from '@bsky/app';
+import { PROVIDERS, getProviderByBaseUrl, getModelInfo, getProviderById } from '@bsky/core';
+import type { ProviderInfo, ModelInfo } from '@bsky/core';
 import { Icon } from './Icon.js';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
@@ -40,6 +42,40 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [thinkingEnabled, setThinkingEnabled] = useState(config.thinkingEnabled ?? true);
   const [visionEnabled, setVisionEnabled] = useState(config.visionEnabled ?? false);
 
+  // Detect current provider from baseUrl
+  const currentProvider = useMemo(() => getProviderByBaseUrl(baseUrl), [baseUrl]);
+  const currentModelInfo = useMemo(() => getModelInfo(currentProvider?.id || '', model), [currentProvider, model]);
+  const isCustom = !currentProvider || !currentModelInfo;
+
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const providerId = e.target.value;
+    const provider = getProviderById(providerId);
+    if (provider) {
+      setBaseUrl(provider.baseUrl);
+      // Auto-select first model
+      const firstModel = provider.models[0];
+      if (firstModel) {
+        setModel(firstModel.id);
+        setThinkingEnabled(firstModel.thinking);
+        setVisionEnabled(firstModel.vision);
+      }
+    }
+  };
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const modelId = e.target.value;
+    if (modelId === '__custom__') {
+      setModel('');
+    } else {
+      setModel(modelId);
+      const info = getModelInfo(currentProvider?.id || '', modelId);
+      if (info) {
+        setThinkingEnabled(info.thinking);
+        setVisionEnabled(info.vision);
+      }
+    }
+  };
+
   const [targetLang, setTargetLang] = useState(config.targetLang);
   const [darkMode, setDarkMode] = useState(config.darkMode);
 
@@ -56,7 +92,18 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const saveAi = () => {
-    const updated = { ...config, thinkingEnabled, visionEnabled, aiConfig: { apiKey, baseUrl, model } };
+    const updated = {
+      ...config,
+      thinkingEnabled,
+      visionEnabled,
+      aiConfig: {
+        apiKey,
+        baseUrl,
+        model,
+        provider: currentProvider?.id,
+        reasoningStyle: currentProvider?.reasoningStyle,
+      },
+    };
     updateAppConfig(updated);
     onConfigChange(updated);
   };
@@ -134,6 +181,21 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
           {tab === 'ai' && (
             <>
               <p className="text-text-secondary text-xs">{t('settings.aiDesc')}</p>
+              {/* Provider selector */}
+              <div>
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.provider') || 'Provider'}</label>
+                <select
+                  value={currentProvider?.id || '__custom__'}
+                  onChange={handleProviderChange}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="__custom__">Custom</option>
+                  {PROVIDERS.map(p => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+              {/* API Key */}
               <div>
                 <label className="text-xs text-text-secondary mb-1 block">{t('settings.apiKey')}</label>
                 <input
@@ -142,6 +204,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              {/* Base URL */}
               <div>
                 <label className="text-xs text-text-secondary mb-1 block">{t('settings.baseUrl')}</label>
                 <input
@@ -150,13 +213,45 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              {/* Model selector */}
               <div>
                 <label className="text-xs text-text-secondary mb-1 block">{t('settings.model')}</label>
-                <input
-                  type="text" value={model} onChange={e => setModel(e.target.value)}
-                  placeholder="deepseek-v4-flash"
-                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                {currentProvider ? (
+                  <select
+                    value={isCustom ? '__custom__' : model}
+                    onChange={handleModelChange}
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {currentProvider.models.map(m => (
+                      <option key={m.id} value={m.id}>{m.label} ({m.id})</option>
+                    ))}
+                    <option value="__custom__">Custom model...</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text" value={model} onChange={e => setModel(e.target.value)}
+                    placeholder="model-id"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                )}
+                {/* Model capabilities hint */}
+                {currentModelInfo ? (
+                  <p className="text-xs text-text-secondary/70 mt-1">
+                    <span className={currentModelInfo.thinking ? 'text-green-500' : 'text-text-secondary/50'}>Thinking: {currentModelInfo.thinking ? 'Yes' : 'No'}</span>
+                    <span className="mx-2">|</span>
+                    <span className={currentModelInfo.vision ? 'text-green-500' : 'text-text-secondary/50'}>Vision: {currentModelInfo.vision ? 'Yes' : 'No'}</span>
+                  </p>
+                ) : isCustom ? (
+                  <p className="text-xs text-text-secondary/50 mt-1">Custom model — configure think/vision below</p>
+                ) : null}
+                {/* Custom model input when '__custom__' is selected */}
+                {isCustom && currentProvider && (
+                  <input
+                    type="text" value={model} onChange={e => setModel(e.target.value)}
+                    placeholder="Custom model ID"
+                    className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm mt-2 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                )}
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input

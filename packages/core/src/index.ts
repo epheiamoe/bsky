@@ -51,3 +51,15 @@ export {
   PF_AUTO_ANALYSIS,
   P_GUIDING_QUESTIONS,
 } from './ai/prompts.js';
+
+// Multi-provider support
+export {
+  PROVIDERS,
+  getProviderById,
+  getProviderByBaseUrl,
+  getModelInfo,
+  cleanBaseUrl,
+  isCustomModel,
+  shouldSendThinkingParam,
+} from './ai/providers.js';
+export type { ProviderInfo, ModelInfo } from './ai/providers.js';
