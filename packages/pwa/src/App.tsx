@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAuth, useTimeline, useI18n, useDrafts, usePostActions } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
-import type { PostView } from '@bsky/core';
+import type { PostView, AIConfig } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { getFeedConfig, setLastFeedUri, seedPostViewers } from '@bsky/app';
@@ -32,25 +32,35 @@ export function App() {
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollIndexRef = useRef(0);
 
-  const scenarioModels = useMemo(() => {
-    const resolve = (key: string): string => {
-      const v = appConfig.scenarioModels?.[key as keyof typeof appConfig.scenarioModels] || '';
-      if (!v || !v.includes('/')) return v || appConfig.aiConfig.model;
-      return v.split('/').pop() || appConfig.aiConfig.model;
-    };
+  // Resolve full AIConfig for a scenario model string ("provider/model" or just "model" or "")
+  const resolveScenarioConfig = useCallback((scenarioModel: string): AIConfig => {
+    if (!scenarioModel || !scenarioModel.includes('/')) {
+      return { ...appConfig.aiConfig };
+    }
+    const [providerId, model] = scenarioModel.split('/');
+    if (!providerId || !model) return { ...appConfig.aiConfig };
+    const provider = getProviderById(providerId);
     return {
-      aiChat: resolve('aiChat'),
-      translate: resolve('translate'),
-      polish: resolve('polish'),
+      ...appConfig.aiConfig,
+      baseUrl: provider?.baseUrl || appConfig.aiConfig.baseUrl,
+      model,
+      apiKey: appConfig.apiKeys?.[providerId] || appConfig.aiConfig.apiKey,
+      provider: provider?.id,
+      reasoningStyle: provider?.reasoningStyle,
     };
-  }, [appConfig.scenarioModels, appConfig.aiConfig.model]);
+  }, [appConfig]);
+
+  const scenarioModels = useMemo(() => ({
+    aiChat: resolveScenarioConfig(appConfig.scenarioModels?.aiChat || ''),
+    translate: resolveScenarioConfig(appConfig.scenarioModels?.translate || ''),
+    polish: resolveScenarioConfig(appConfig.scenarioModels?.polish || ''),
+  }), [resolveScenarioConfig, appConfig.scenarioModels]);
 
   const effectiveAiConfig = useMemo(() => ({
-    ...appConfig.aiConfig,
-    model: scenarioModels.aiChat || appConfig.aiConfig.model,
+    ...scenarioModels.aiChat,
     thinkingEnabled: appConfig.thinkingEnabled,
     visionEnabled: appConfig.visionEnabled,
-  }), [appConfig.aiConfig, scenarioModels.aiChat, appConfig.thinkingEnabled, appConfig.visionEnabled]);
+  }), [scenarioModels.aiChat, appConfig.thinkingEnabled, appConfig.visionEnabled]);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {
@@ -166,7 +176,7 @@ export function App() {
             aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
-            translateModel={scenarioModels.translate}
+            translateConfig={scenarioModels.translate}
           />
         );
       case 'compose':
@@ -190,7 +200,7 @@ export function App() {
             aiConfig={effectiveAiConfig}
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
-            translateModel={scenarioModels.translate}
+            translateConfig={scenarioModels.translate}
           />
         );
       case 'notifications':

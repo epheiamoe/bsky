@@ -19,6 +19,7 @@ interface ProfilePageProps {
   targetLang: string;
   translateMode: 'simple' | 'json';
   translateModel?: string;
+  translateConfig?: AIConfig;
 }
 
 const ESTIMATED_POST_HEIGHT = 150;
@@ -40,7 +41,7 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   );
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateModel }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateModel, translateConfig }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -59,7 +60,9 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   }, [tab]);
 
   const { translate, loading: translatingBio } = useTranslation(
-    aiConfig.apiKey, aiConfig.baseUrl, translateModel || aiConfig.model,
+    translateConfig?.apiKey || aiConfig.apiKey,
+    translateConfig?.baseUrl || aiConfig.baseUrl,
+    translateConfig?.model || translateModel || aiConfig.model,
     targetLang as TargetLang, translateMode,
   );
   const [translatedBio, setTranslatedBio] = useState<string | null>(null);

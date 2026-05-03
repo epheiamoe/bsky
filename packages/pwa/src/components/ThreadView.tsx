@@ -20,6 +20,7 @@ interface ThreadViewProps {
   targetLang: string;
   translateMode: 'simple' | 'json';
   translateModel?: string;
+  translateConfig?: AIConfig;
 }
 
 function Spinner() {
@@ -30,7 +31,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateModel }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateModel, translateConfig }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -44,7 +45,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
-    aiConfig.apiKey, aiConfig.baseUrl, translateModel || aiConfig.model,
+    translateConfig?.apiKey || aiConfig.apiKey,
+    translateConfig?.baseUrl || aiConfig.baseUrl,
+    translateConfig?.model || translateModel || aiConfig.model,
     targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es',
     translateMode,
   );
