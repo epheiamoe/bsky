@@ -5,46 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] — 2026-05-02
+## [0.3.0] — 2026-05-03
 
 ### Added
 
-- **Video support** (PWA + TUI):
-  - Core: `VideoEmbed` type, `getVideoThumbnailUrl()`/`getVideoPlaylistUrl()` CDN helpers
-  - PWA: `VideoCard` component with `hls.js` lazy-loading, thumbnail + play button
-  - TUI: `🎬 视频` indicator with OSC 8 clickable link (Ctrl+Click → browser playback)
-- **GIF support**: `getCdnImageUrl` detects `image/gif` → `@gif` extension preserves animation; PWA `<img>` native, TUI OSC 8 link
-- **Compose video upload** (PWA + TUI):
-  - Same "Media" button (`i` key / `📷` icon), auto-detects image vs video
-  - Video ≤ 100MB, 1 video per post; mutually exclusive with images (Bluesky limit)
-  - `ComposeImage` → `ComposeMedia` (adds `type: 'image' | 'video'`, backward compat)
-- **Auto image compression** (>1MB):
-  - PWA: Canvas API (`toBlob` JPEG/WebP), resize to 2048px, quality 82→65→40 fallback
-  - TUI: `sharp` native library, same resize/quality strategy
-  - Both show explicit notification: "filename: 2.3MB → 0.8MB"
-- **#tag rendering** (PWA + TUI):
-  - PWA: `linkifyText` regex `#[\p{L}\p{N}_]+`, click → `#/search?q=tag&tab=top`
-  - TUI: `#tag` and `@handle` shown as OSC 8 clickable links (Ctrl+Click → browser)
-- **AI button in all views**: `PostActionsRow` now includes `astroid-as-AI-Button` (FeedTimeline, Search, Bookmarks, Thread replies)
-- **State preservation across navigation**:
-  - PWA: search tab (`&tab=`), profile tab (`&tab=`) encoded in URL
-  - TUI: search tab, profile tab saved/restored via `viewStateStore`
-- **`docs/AI_CONTEXT.md`**: Complete documentation of AI context injection mechanism, effect delegation, extension guide
+- **视频 + GIF 支持**：`VideoEmbed` 类型、`VideoCard`（PWA HLS 播放器）、TUI OSC 8 Ctrl+Click
+- **发帖媒体上传**：同一按钮自动检测图片/视频，`ComposeMedia`（`type: 'image' | 'video'`）
+- **自动图片压缩**（>2MB）：PWA Canvas API、TUI `sharp`，通知用户压缩结果
+- **#tag 链接**：PWA `linkifyText` 支持 `#tag` → 搜索跳转、TUI OSC 8 可点击
+- **AI 上下文注入修复**：Effect 3 `changed` 正确追踪所有上下文，URL 编码 `contextPost`/`contextProfile`
+- **PostActionsRow AI 按钮**：所有视图（feed/search/bookmark/thread）均有紫色 AI 按钮
+- **多提供商支持**：提供商注册表、DeepSeek + Mistral、PWA Settings 提供商/模型下拉
+- **多场景模型配置**：AI 对话/翻译/润色独立模型选择、按提供商分离 API 密钥
+- **AI 对话图片上传**：`+` 按钮（PWA）/ `i` 键（TUI）、`_userUploads` 本地安全存储
+- **暂停/停止**：`AbortController`、PWA 文字暂停按钮、TUI `p` 键
+- **导出按钮**：JSON / HTML / Markdown（PWA 下拉 / TUI `e` 键）
+- **黑夜滚动条**：PWA CSS 暗色主题
+- **图像永久上下文**：查看的图片在对话中跨轮次持久存在
+- **`docs/AI_CONTEXT.md`**：AI 上下文注入文档
 
 ### Fixed
 
-- **AI `search_posts` tool**: `public.api.bsky.app` returns 403 for search → now always uses authenticated endpoint (`this.ky`)
-- **AI context injection**: Effect 3 `changed` check now tracks `contextUri`, `contextPost`, `contextProfile` independently (was only `contextUri`); guiding questions restored on page refresh from storage
-- **AI session URL persistence**: `encodeView`/`parseHash` now include `&post=`/`&profile=` in URL for refresh survival
-- **Icon plain text bugs**: `ComposePage.tsx` header and `NotifsPage.tsx` fallback both had `<Icon>` as string literals → rendered as text
-- **ThreadView dead code**: Removed unused `ActionButtons` component (395 lines), duplicate AI button
+- **AI `search_posts`**：公开 API 403 → 强制认证端点
+- **Icon 纯文本 bug**：`ComposePage.tsx` 标题、`NotifsPage.tsx` 回退
+- **编辑按钮跨会话失效**：Effect 2 恢复时同步 `assistant.loadMessages()`
+- **会话列表不刷新**：`onChatSaved` 回调触发 `useChatHistory.refresh`
+- **图片限制 1MB → 2MB**：Bluesky 现在支持 2MB/4K
+- **`view_image` 提示误导**：根据 `visionEnabled` 动态生成
+- **Mistral 422 `extra_forbidden`**：推理内容合并到 content 并清理 `reasoning_content` 字段
+- **浏览器 `Failed to fetch`**：同时处理两种大小写错误消息
+- **`makeRequest()` URL 不一致**：统一使用 `cleanBaseUrl`
+- **切换提供商后请求仍发往旧端点**：`AIAssistant.updateConfig()` + `useEffect` 同步
+- **场景模型不切换提供商**：`resolveScenarioConfig()` 解析完整 `AIConfig`
+- **Buffer 在 PWA 中未定义**：`toBase64()` 跨平台工具
+- **网络错误提示**：VPN/代理/DNS 污染建议
+- **DNS 污染（Mistral 在中国）**：`AGENTS.local.md` 网络排查指南
 
 ### Changed
 
-- **`tools.ts` moved**: `packages/core/src/at/tools.ts` → `packages/core/src/ai/tools.ts` (AI module, not AT Protocol utility)
-- **i18n labels**: "图片/Image/画像" → "媒体/Media/メディア" in compose context
-- **Profile tab**: `useProfile` now accepts optional `initialTab` parameter
-- **TUI compose footer**: Updated key hints to reflect media mode (`i:媒体`/`i:Media`/`i:メディア`)
+- **`tools.ts` 从 `at/` 移到 `ai/`**：澄清这是 AI 模块，不是 AT 协议工具
+- **i18n**：图片 → 媒体、"同一默认"场景模型标签
+- **提供商配置解耦到 `providers.json`**：方便编辑
+- **`CONTEXT.md`**：v0.3.0 教训（7 条新教训）、当前文件表
 
 ## [0.2.0] — 2026-05-01
 

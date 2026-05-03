@@ -343,6 +343,8 @@ export class AIAssistant {
           }),
         ];
         msgs[i] = { ...msgs[i]!, content: blocks } as ChatMessage;
+        // Persist images into the actual message store so they survive across turns
+        this.messages[i] = { ...this.messages[i]!, content: blocks } as ChatMessage;
         break;
       }
     }

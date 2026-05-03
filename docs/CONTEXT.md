@@ -16,13 +16,14 @@
 
 ## 版本
 
-**v0.2.0** — Git tag `v0.2.0`
+**v0.3.0** — Git tag `v0.3.0`
 
 ## 项目状态
 
 - **PWA 在线**: https://ai-bsky.pages.dev
 - **GitHub**: https://github.com/epheiamoe/bsky
 - **PWA 部署**: `cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true`
+- **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
 
 ## 🔴 关键教训
@@ -74,6 +75,34 @@
 ### 12. 各帖子列表不统一
 **根因**：FeedTimeline 有 `FeedCardActions`、ThreadView 有 `ActionButtons`、Search/Profile/Bookmark 无按钮。
 **修复**：新建 `PostActionsRow` 共享组件（reply+repost/quote popup+like+bookmark），全局替换。
+
+### 13. AI 工具搜索公开 API 返回 403
+**根因**：`public.api.bsky.app/xrpc/app.bsky.feed.searchPosts` 需要认证。
+**修复**：`searchPosts` 强制使用 authenticated endpoint (`this.ky`) — `client.ts`。
+
+### 14. `view_image` 工具返回提示误导 AI
+**根因**：`view_image` 工具返回硬编码了 "Text-only models: skip image analysis" — AI 读到后自我限制。
+**修复**：工具返回动态化 — `visionEnabled ? "you will see this image" : "vision mode is OFF"`。
+
+### 15. 浏览器 `TypeError: Failed to fetch`（大小写不匹配）
+**根因**：catch 检查 `e.message === 'fetch failed'`（Node.js 格式），但浏览器抛出 `'Failed to fetch'`（大写 F）→ 漏过 → 给用户显示原始错误。
+**修复**：改为 `e instanceof TypeError`（不检查 message）→ `client.ts`。
+
+### 16. DNS 污染导致 API 不可达
+**根因**：Mistral 在中国被 DNS 污染，VPN 规则模式下被错判为直连 → `Failed to fetch`。
+**教训**：遇到网络错误先确认 API URL 可通过浏览器/curl 直接访问；不要修改代码来"修复"网络问题。
+
+### 17. `useAIChat` 中 `useState(() => new AIAssistant(aiConfig))` 仅运行一次
+**根因**：初始化器在第一次挂载时运行；`aiConfig` prop 变化后 assistant 仍保留旧 `baseUrl`/`apiKey`。
+**修复**：`AIAssistant.updateConfig()` + `useEffect(() => assistant.updateConfig(aiConfig))`。
+
+### 18. 场景模型只提取模型名，不切换提供商
+**根因**：场景 "deepseek/deepseek-v4-flash" 只提取 <code>deepseek-v4-flash</code>，但 `baseUrl` 和 `apiKey` 仍用主配置 → 请求发到错误端点。
+**修复**：`App.tsx` 中的 `resolveScenarioConfig()` 从场景模型字符串解析出完整 `AIConfig`（含 `baseUrl`、`apiKey`、`provider`）。
+
+### 19. 查看图片后上下文不持久
+**根因**：`_buildMessages()` 将图片注入到 messages 副本后立即清除 `_pendingImages`，但未写回 `this.messages`。
+**修复**：注入图片后也更新 `this.messages[i].content = blocks` → 视觉上下文在对话轮次间持久。
 
 ---
 
@@ -176,4 +205,6 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/core/src/ai/tools.ts` | 31 个 AI 工具定义 |
 | `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
 | `packages/core/src/ai/assistant.ts` | AI 对话引擎（addUserUpload/AbortSignal 支持） |
+| `packages/core/src/ai/providers.ts` | 多提供商注册表（DeepSeek + Mistral） |
+| `packages/core/src/ai/providers.json` | 提供商配置文件 |
 | `packages/app/src/services/chatStorage.ts` | ChatRecord.context 字段 |
