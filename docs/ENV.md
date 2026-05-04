@@ -12,8 +12,9 @@
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LLM_API_KEY` | (required) | API key for OpenAI-compatible API |
-| `LLM_BASE_URL` | `https://api.deepseek.com` | API base URL |
-| `LLM_MODEL` | `deepseek-v4-flash` | Model name |
+
+> **TUI**: Non-credential AI settings (baseUrl, model, provider, scenario models, per-provider API keys) are stored in `bsky-tui.config.json` (gitignored). See `bsky-tui.config.example.json` for template.
+> **PWA**: All settings stored in `localStorage` via `useAppConfig.ts`.
 
 ## Translation
 
@@ -27,24 +28,33 @@
 BLUESKY_HANDLE=your-handle.bsky.social
 BLUESKY_APP_PASSWORD=your-app-password
 LLM_API_KEY=sk-your-api-key
-LLM_BASE_URL=https://api.deepseek.com
-LLM_MODEL=deepseek-v4-flash
-TRANSLATE_TARGET_LANG=zh
+```
+> Think/Vision mode, model selection, and per-scenario config are no longer in .env — see `bsky-tui.config.example.json`.
+
+## TUI Structured Config
+
+`bsky-tui.config.json` stores:
+```json
+{
+  "targetLang": "zh",
+  "translateMode": "simple",
+  "aiConfig": { "baseUrl", "model", "provider", "reasoningStyle", "thinkingEnabled", "visionEnabled" },
+  "apiKeys": { "deepseek": "...", "mistral": "..." },
+  "scenarioModels": { "aiChat": "", "translate": "", "polish": "" }
+}
 ```
 
 ## PWA Configuration
 
-In PWA, these values come from user input (login form) or localStorage:
+In PWA, credentials come from login form; settings from localStorage `bsky_app_config`:
 
 ```typescript
-const config = {
-  blueskyHandle: userInput.handle,
-  blueskyPassword: userInput.password,
-  aiConfig: {
-    apiKey: localStorage.getItem('ai_api_key') ?? '',
-    baseUrl: 'https://api.deepseek.com',
-    model: 'deepseek-chat',
-  },
-  targetLang: localStorage.getItem('target_lang') ?? 'zh',
-};
-```
+interface AppConfig {
+  aiConfig: AIConfig;              // apiKey, baseUrl, model, provider, thinking/vision
+  targetLang: string;              // default 'zh'
+  translateMode: 'simple' | 'json';
+  darkMode: boolean;
+  apiKeys: Record<string, string>; // per-provider
+  scenarioModels: { aiChat, translate, polish };
+  enabledWidgets: string[];        // widget IDs shown in right panel
+}

@@ -17,7 +17,7 @@ AIAssistant.sendMessage(text)        ← packages/core/src/ai/assistant.ts
     │     │                             with messages[] + tools[]
     │     │
     │     ├──▶ response has tool_calls?
-    │     │     YES → execute tools → add tool results → goto makeRequest (max 10 rounds)
+    │     │     YES → execute tools → add tool results → goto makeRequest (unlimited, user-controlled)
     │     │     NO  → return final response
     │     │
     │     └──▶ tool execution via toolMap.get(toolName).handler(args)
@@ -56,8 +56,20 @@ interface AIConfig {
   apiKey: string;
   baseUrl: string;     // default: 'https://api.deepseek.com'
   model: string;       // default: 'deepseek-v4-flash'
+  provider?: string;   // 'deepseek' | 'mistral'
+  reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
+  thinkingEnabled?: boolean;   // derived from ModelInfo for known models
+  visionEnabled?: boolean;     // derived from ModelInfo for known models
 }
 ```
+
+### Polish Draft (wired to UI)
+
+The `polishDraft()` function is now accessible via:
+- **PWA**: Polish Widget in right component panel (compose view `lg+`) or via 润色 button (small screens) 
+- The widget calls `polishDraft(config, draft, requirement)` and provides copy/results, replace buttons
+- Config uses scenario model `scenarioModels.polish` (resolved via `resolveScenarioConfig`)
+- **TUI**: Not yet wired (Polish is PWA-only for now)
 
 ## Single-Turn Functions
 

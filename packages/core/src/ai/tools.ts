@@ -505,7 +505,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       handler: async (p) => {
         const res = await client.getSuggestedFollows(p.actor as string);
         return JSON.stringify({
-          suggestions: res.suggestions.map((s) => ({ handle: s.actor.handle, displayName: s.actor.displayName })),
+          suggestions: res.suggestions.map((s) => ({ handle: s.handle, displayName: s.displayName })),
         });
       },
       requiresWrite: false,

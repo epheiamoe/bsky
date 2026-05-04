@@ -114,6 +114,8 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
         model,
         provider: currentProvider?.id,
         reasoningStyle: currentProvider?.reasoningStyle,
+        thinkingEnabled: thinkingEnabled,
+        visionEnabled: visionEnabled,
       },
     };
     updateAppConfig(updated);
@@ -266,24 +268,39 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   />
                 )}
               </div>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={thinkingEnabled}
-                  onChange={e => setThinkingEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm text-text-primary">{t('settings.thinkMode')}</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={visionEnabled}
-                  onChange={e => setVisionEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm text-text-primary">{t('settings.visionMode')}</span>
-              </label>
+              {/* Model capabilities — auto-derived for known models, editable for custom */}
+              {currentModelInfo ? (
+                <div className="flex items-center gap-4 text-sm">
+                  <span className={currentModelInfo.thinking ? 'text-green-500' : 'text-text-secondary/40'}>
+                    Thinking: {currentModelInfo.thinking ? 'Yes' : 'No'}
+                  </span>
+                  <span className={currentModelInfo.vision ? 'text-green-500' : 'text-text-secondary/40'}>
+                    Vision: {currentModelInfo.vision ? 'Yes' : 'No'}
+                  </span>
+                  <span className="text-text-secondary/40 text-xs">(auto)</span>
+                </div>
+              ) : (
+                <>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={thinkingEnabled}
+                      onChange={e => setThinkingEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm text-text-primary">{t('settings.thinkMode')}</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={visionEnabled}
+                      onChange={e => setVisionEnabled(e.target.checked)}
+                      className="w-4 h-4 accent-primary"
+                    />
+                    <span className="text-sm text-text-primary">{t('settings.visionMode')}</span>
+                  </label>
+                </>
+              )}
               <button
                 onClick={saveAi}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { getFeedConfig, setLastFeedUri, seedPostViewers } from '@bsky/app';
-import { getProviderById } from '@bsky/core';
+import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
 import { LoginPage } from './components/LoginPage.js';
@@ -17,6 +17,12 @@ import { ProfilePage } from './components/ProfilePage.js';
 import { SearchPage } from './components/SearchPage.js';
 import { NotifsPage } from './components/NotifsPage.js';
 import { BookmarkPage } from './components/BookmarkPage.js';
+import { ComponentsPage } from './components/ComponentsPage.js';
+import { PolishWidget } from './components/widgets/PolishWidget.js';
+import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWidget.js';
+import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
+import { TrendsWidget } from './components/widgets/TrendsWidget.js';
+import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
@@ -40,6 +46,7 @@ export function App() {
     const [providerId, model] = scenarioModel.split('/');
     if (!providerId || !model) return { ...appConfig.aiConfig };
     const provider = getProviderById(providerId);
+    const modelInfo = provider ? getModelInfo(providerId, model) : undefined;
     return {
       ...appConfig.aiConfig,
       baseUrl: provider?.baseUrl || appConfig.aiConfig.baseUrl,
@@ -47,6 +54,8 @@ export function App() {
       apiKey: appConfig.apiKeys?.[providerId] || appConfig.aiConfig.apiKey,
       provider: provider?.id,
       reasoningStyle: provider?.reasoningStyle,
+      thinkingEnabled: modelInfo?.thinking ?? appConfig.aiConfig.thinkingEnabled ?? true,
+      visionEnabled: modelInfo?.vision ?? appConfig.aiConfig.visionEnabled ?? false,
     };
   }, [appConfig]);
 
@@ -58,9 +67,46 @@ export function App() {
 
   const effectiveAiConfig = useMemo(() => ({
     ...scenarioModels.aiChat,
-    thinkingEnabled: appConfig.thinkingEnabled,
-    visionEnabled: appConfig.visionEnabled,
-  }), [scenarioModels.aiChat, appConfig.thinkingEnabled, appConfig.visionEnabled]);
+  }), [scenarioModels.aiChat]);
+
+  // ── Register widgets ──
+  useEffect(() => {
+    registerWidget({
+      id: 'polish',
+      titleKey: 'action.polish',
+      icon: 'file-text',
+      views: ['compose'],
+      defaultOpen: true,
+    }, (props) => React.createElement(PolishWidget, props));
+    registerWidget({
+      id: 'profilePreview',
+      titleKey: 'widget.profilePreview',
+      icon: 'at-sign',
+      views: ['thread'],
+      defaultOpen: true,
+    }, (props) => React.createElement(ProfilePreviewWidget, props));
+    registerWidget({
+      id: 'suggestedFollows',
+      titleKey: 'widget.suggestedFollows',
+      icon: 'compass',
+      views: [],
+      defaultOpen: false,
+    }, (props) => React.createElement(SuggestedFollowsWidget, props));
+    registerWidget({
+      id: 'suggestedFeeds',
+      titleKey: 'widget.suggestedFeeds',
+      icon: 'home',
+      views: [],
+      defaultOpen: false,
+    }, (props) => React.createElement(SuggestedFeedsWidget, props));
+    registerWidget({
+      id: 'trends',
+      titleKey: 'widget.trends',
+      icon: 'bell',
+      views: [],
+      defaultOpen: false,
+    }, (props) => React.createElement(TrendsWidget, props));
+  }, []);
 
   // ── Sync dark mode on mount ──
   useEffect(() => {
@@ -187,6 +233,7 @@ export function App() {
             quoteUri={(currentView as { quoteUri?: string }).quoteUri}
             goBack={goBack}
             goHome={goHome}
+            polishConfig={scenarioModels.polish}
           />
         );
       case 'profile':
@@ -230,6 +277,8 @@ export function App() {
         );
       case 'bookmarks':
         return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
+      case 'components':
+        return <ComponentsPage goBack={goBack} goTo={goTo} client={client} />;
       default:
         return <div className="p-6 text-text-secondary">{t('common.unknownPage')}</div>;
     }
@@ -248,6 +297,7 @@ export function App() {
       onConfigChange={setAppConfig}
       onRelogin={handleRelogin}
       draftCount={drafts.length}
+      polishConfig={scenarioModels.polish}
     >
       {renderView()}
     </Layout>

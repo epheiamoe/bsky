@@ -24,6 +24,10 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useActiveFeed` | Module-level ref | `{ getLastFeedUri, setLastFeedUri }` — tracks last active feed URI across views |
 | `usePostActions` | Module-level Sets/Maps | `{ isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers }` — shared like/repost state |
 | `useScrollRestore` | Module-level Map | `{ saveScrollTop, getScrollTop }` — preserves scroll position across view changes |
+| `registerWidget` / `getWidgetsForView` | Module-level Map | Widget registry: `registerWidget(def, render)` + `getWidgetsForView(view)` |
+| `toggleWidget` / `getEnabledWidgetIds` | Module-level Set | Widget enable/disable state, persisted in AppConfig.enabledWidgets |
+| `setComposeDraftForWidgets` / `replaceComposeDraft` | Module-level bridge | ComposePage → right panel widget draft sync |
+| `setFocusedProfileActor` / `getFocusedProfileActor` | Module-level bridge | ThreadView → ProfilePreviewWidget actor sync |
 
 ## Store Subscribe Pattern
 
@@ -104,8 +108,8 @@ function useAIChat(
 ```
 
 When `stream: true`, the hook uses `assistant.sendMessageStreaming()` which yields `StreamEvent`
-objects (`token | tool_call | tool_result | done`). Tokens are accumulated into the last assistant
-message in real time. The non-streaming path (`stream: false`, default) uses `assistant.sendMessage()`
+objects (`token | tool_call | tool_result | done | thinking`). Tokens are accumulated into the last assistant
+message in real time. Tool call events now carry `toolCallId` for proper tool_call_id chain. The non-streaming path (`stream: false`, default) uses `assistant.sendMessage()`
 which returns intermediate steps + final content in one response.
 
 ### useThread

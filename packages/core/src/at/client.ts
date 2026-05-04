@@ -18,6 +18,7 @@ import type {
   GetFeedResponse,
   GetFeedGeneratorsResponse,
   GetFeedGeneratorResponse,
+  GetTrendsResponse,
   ListRecordsResponse,
   GetRecordResponse,
   UploadBlobResponse,
@@ -252,6 +253,17 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       searchParams: params,
     }).json<GetSuggestedFeedsResponse>();
+  }
+
+  async getTrends(limit = 20, personalizedFor?: string): Promise<GetTrendsResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (personalizedFor) params.personalizedFor = personalizedFor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.unspecced.getTrends', {
+      searchParams: params,
+      ...headers,
+    }).json<GetTrendsResponse>();
   }
 
   async getFeed(feedUri: string, limit = 50, cursor?: string): Promise<GetFeedResponse> {

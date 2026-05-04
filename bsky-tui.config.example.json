@@ -1,0 +1,22 @@
+{
+  "$schema": "./packages/tui/schemas/config.schema.json",
+  "targetLang": "zh",
+  "translateMode": "simple",
+  "aiConfig": {
+    "baseUrl": "https://api.deepseek.com",
+    "model": "deepseek-v4-flash",
+    "provider": "deepseek",
+    "reasoningStyle": "reasoning_content",
+    "thinkingEnabled": true,
+    "visionEnabled": false
+  },
+  "apiKeys": {
+    "deepseek": "",
+    "mistral": ""
+  },
+  "scenarioModels": {
+    "aiChat": "",
+    "translate": "",
+    "polish": ""
+  }
+}

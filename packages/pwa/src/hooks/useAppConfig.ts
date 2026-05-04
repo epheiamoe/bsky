@@ -17,6 +17,8 @@ export interface AppConfig {
     translate: string;
     polish: string;
   };
+  /** Enabled widget IDs (right panel) */
+  enabledWidgets: string[];
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -36,6 +38,7 @@ const DEFAULT_CONFIG: AppConfig = {
     translate: '',
     polish: '',
   },
+  enabledWidgets: [],
 };
 
 export function getAppConfig(): AppConfig {

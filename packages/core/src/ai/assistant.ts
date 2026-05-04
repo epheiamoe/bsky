@@ -207,9 +207,8 @@ export class AIAssistant {
 
     const intermediateSteps: Array<{ type: 'tool_call' | 'tool_result' | 'assistant' | 'user'; content: string }> = [];
     let toolCallsExecuted = 0;
-    const MAX_TOOL_ROUNDS = 10;
-
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    // No hard limit — user can pause/stop manually
+    for (let round = 0; ; round++) {
       const response = await this.makeRequest();
 
       const choice = response.choices[0];
@@ -229,7 +228,13 @@ export class AIAssistant {
 
         for (const tc of message.tool_calls) {
           const toolName = tc.function.name;
-          const toolArgs = JSON.parse(tc.function.arguments);
+          let toolArgs: Record<string, unknown>;
+          try {
+            toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+          } catch {
+            toolArgs = { _raw: tc.function.arguments };
+            console.warn(`[assistant] Malformed JSON in tool call "${toolName}" arguments, using raw string`);
+          }
           const toolDesc = this.toolMap.get(toolName);
 
           intermediateSteps.push({
@@ -307,8 +312,7 @@ export class AIAssistant {
         intermediateSteps,
       };
     }
-
-    throw new Error('Max tool calling rounds exceeded');
+    // Loop is unbounded — stop() or user pause controls termination
   }
 
   private _buildMessages(): ChatMessage[] {
@@ -413,12 +417,12 @@ export class AIAssistant {
     type: 'tool_call' | 'tool_result' | 'token' | 'done' | 'thinking';
     content: string;
     toolName?: string;
+    toolCallId?: string;
   }> {
     this.addUserMessage(content);
 
-    const MAX_TOOL_ROUNDS = 10;
-
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    // No hard limit — user can pause/stop manually via AbortSignal
+    for (let round = 0; ; round++) {
       const body: ChatCompletionRequest = {
         model: this.config.model,
         messages: this._buildMessages(),
@@ -572,10 +576,16 @@ export class AIAssistant {
 
         for (const tc of toolCalls) {
           const toolName = tc.function.name;
-          const toolArgs = JSON.parse(tc.function.arguments);
+          let toolArgs: Record<string, unknown>;
+          try {
+            toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+          } catch {
+            toolArgs = { _raw: tc.function.arguments };
+            console.warn(`[assistant] Malformed JSON in tool call "${toolName}" arguments, using raw string`);
+          }
           const toolDesc = this.toolMap.get(toolName);
 
-          yield { type: 'tool_call', content: `${toolName}(${JSON.stringify(toolArgs)})`, toolName };
+          yield { type: 'tool_call', content: `${toolName}(${JSON.stringify(toolArgs)})`, toolName, toolCallId: tc.id };
 
           let toolResult: string;
           if (toolDesc) {
@@ -586,7 +596,7 @@ export class AIAssistant {
               const approved = await this._waitForConfirmation();
               if (!approved) {
                 toolResult = 'User cancelled the operation.';
-                yield { type: 'tool_result', content: toolResult, toolName };
+                yield { type: 'tool_result', content: toolResult, toolName, toolCallId: tc.id };
                 this.messages.push({
                   role: 'tool',
                   content: toolResult,
@@ -625,8 +635,7 @@ export class AIAssistant {
       yield { type: 'done', content: fullContent };
       return;
     }
-
-    throw new Error('Max tool calling rounds exceeded');
+    // Streaming loop unbounded — AbortSignal controls termination
   }
 }
 

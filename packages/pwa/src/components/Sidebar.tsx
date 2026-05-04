@@ -28,7 +28,7 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: S
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
   return (
-    <nav className="flex flex-col py-4 px-3 gap-1">
+    <nav className="flex flex-col py-4 px-3 gap-1 flex-1">
       {SIDEBAR_TABS.map((tab) => {
         const isActive = tab.type === 'profile'
           ? currentView.type === 'profile'
@@ -64,6 +64,19 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: S
           </button>
         );
       })}
+      <div className="mt-auto pt-3 border-t border-border">
+        <button
+          onClick={() => goTo({ type: 'components' } as unknown as AppView)}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
+            currentView.type === 'components'
+              ? 'bg-primary/10 text-primary font-semibold border-primary'
+              : 'text-text-secondary hover:bg-surface border-transparent'
+          }`}
+        >
+          <Icon name="component" size={20} className="mr-2" />
+          <span>组件</span>
+        </button>
+      </div>
     </nav>
   );
 }

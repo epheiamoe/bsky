@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard.js';
@@ -19,7 +19,6 @@ interface ThreadViewProps {
   aiConfig: AIConfig;
   targetLang: string;
   translateMode: 'simple' | 'json';
-  translateModel?: string;
   translateConfig?: AIConfig;
 }
 
@@ -31,7 +30,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateModel, translateConfig }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -47,7 +46,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const { translate, loading: translating } = useTranslation(
     translateConfig?.apiKey || aiConfig.apiKey,
     translateConfig?.baseUrl || aiConfig.baseUrl,
-    translateConfig?.model || translateModel || aiConfig.model,
+    translateConfig?.model || aiConfig.model,
     targetLang as 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es',
     translateMode,
   );
@@ -63,7 +62,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   // Fetch follow status when focused post changes
   useEffect(() => {
-    if (!client || !focused?.handle) { setIsFollowing(false); return; }
+    if (!client || !focused?.handle) { setIsFollowing(false); setFocusedProfileActor(null); return; }
+    setFocusedProfileActor(focused.handle);
     client.getProfile(focused.handle).then(p => {
       setIsFollowing(!!p.viewer?.following);
       setFollowUri(p.viewer?.following);

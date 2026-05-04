@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import type { BskyClient } from '@bsky/core';
+import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, getWidgetsForView } from '@bsky/app';
+import type { AIConfig, BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { Sidebar } from './Sidebar';
 import { SettingsModal } from './SettingsModal';
+import { WidgetPanel } from './WidgetPanel.js';
 import { Icon } from './Icon.js';
 
 interface LayoutProps {
@@ -20,6 +22,9 @@ interface LayoutProps {
   onConfigChange: (config: AppConfig) => void;
   onRelogin: (handle: string, password: string) => Promise<void>;
   draftCount?: number;
+  polishConfig?: AIConfig;
+  composeDraft?: string;
+  onComposeDraftChange?: (text: string) => void;
 }
 
 export function Layout({
@@ -35,6 +40,9 @@ export function Layout({
   onConfigChange,
   onRelogin,
   draftCount,
+  polishConfig,
+  composeDraft,
+  onComposeDraftChange,
 }: LayoutProps) {
   const { t } = useI18n();
   const [dark, setDark] = useState(() => {
@@ -44,6 +52,37 @@ export function Layout({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Widget state — module-level + local reactive counter
+  const [widgetTick, setWidgetTick] = useState(0);
+  const enabledIds = getEnabledWidgetIds();
+
+  // Init widget state from config on mount. If empty, enable all default-open widgets.
+  useEffect(() => {
+    const existing = config.enabledWidgets || [];
+    if (existing.length > 0) {
+      initEnabledWidgets(existing);
+    } else {
+      // Auto-enable widgets with defaultOpen: true
+      const allWidgets = getWidgetsForView(currentView.type);
+      const defaultIds = allWidgets.filter(w => w.defaultOpen).map(w => w.id);
+      initEnabledWidgets(defaultIds);
+      // Persist the auto-enablement
+      if (defaultIds.length > 0) {
+        const updated = { ...config, enabledWidgets: defaultIds };
+        onConfigChange(updated);
+      }
+    }
+    setWidgetTick(t => t + 1);
+  }, []);
+
+  const handleToggleWidget = useCallback((id: string) => {
+    toggleWidget(id);
+    setWidgetTick(t => t + 1);
+    // Persist to AppConfig
+    const updated = { ...config, enabledWidgets: getEnabledWidgetIds() };
+    onConfigChange(updated);
+  }, [config, onConfigChange]);
+
   const authenticated = client.isAuthenticated();
   const handle = authenticated ? client.getHandle() : null;
 
@@ -52,6 +91,17 @@ export function Layout({
   }, [dark]);
 
   const toggleDark = useCallback(() => setDark((d) => !d), []);
+
+  // Widget context for the right panel
+  const widgetContext = {
+    composeDraft,
+    onComposeDraftChange,
+    polishConfig,
+    viewType: currentView.type,
+    client,
+    goTo,
+    threadUri: currentView.type === 'thread' ? (currentView as { uri?: string }).uri : undefined,
+  };
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-text-primary font-sans">
@@ -145,12 +195,13 @@ export function Layout({
           {children}
         </main>
 
-        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100vh-3rem)] sticky top-12 border-l border-border flex-shrink-0 p-4">
-          <div className="text-text-secondary text-sm">
-            <p className="text-lg mb-2"><Icon name="astroid-as-AI-Button" size={18} /></p>
-            <p className="font-semibold text-text-primary mb-1">{t('layout.aiSuggestions')}</p>
-            <p className="text-xs">(TODO)</p>
-          </div>
+        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100vh-3rem)] sticky top-12 border-l border-border flex-shrink-0">
+          <WidgetPanel
+            viewType={currentView.type}
+            enabledIds={enabledIds}
+            context={widgetContext}
+            onCloseWidget={handleToggleWidget}
+          />
         </aside>
       </div>
 

@@ -18,7 +18,6 @@ interface ProfilePageProps {
   aiConfig: AIConfig;
   targetLang: string;
   translateMode: 'simple' | 'json';
-  translateModel?: string;
   translateConfig?: AIConfig;
 }
 
@@ -41,7 +40,7 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   );
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateModel, translateConfig }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -62,7 +61,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const { translate, loading: translatingBio } = useTranslation(
     translateConfig?.apiKey || aiConfig.apiKey,
     translateConfig?.baseUrl || aiConfig.baseUrl,
-    translateConfig?.model || translateModel || aiConfig.model,
+    translateConfig?.model || aiConfig.model,
     targetLang as TargetLang, translateMode,
   );
   const [translatedBio, setTranslatedBio] = useState<string | null>(null);

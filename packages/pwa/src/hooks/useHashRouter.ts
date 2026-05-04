@@ -112,6 +112,8 @@ function parseHash(): AppView {
     }
     case '/bookmarks':
       return { type: 'bookmarks' };
+    case '/components':
+      return { type: 'components' };
     case '/compose': {
       const replyTo = params.get('replyTo');
       const quoteUri = params.get('quoteUri');
@@ -166,6 +168,8 @@ function encodeView(view: AppView): string {
     }
     case 'bookmarks':
       return '#/bookmarks';
+    case 'components':
+      return '#/components';
     case 'compose': {
       const params = new URLSearchParams();
       if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));

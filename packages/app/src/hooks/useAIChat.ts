@@ -137,6 +137,7 @@ export function useAIChat(
           role: m.role === 'tool_call' ? 'tool' as const : m.role === 'tool_result' ? 'tool' as const : m.role === 'thinking' ? 'tool' as const : m.role as 'user' | 'assistant' | 'system',
           content: m.content,
           name: m.toolName,
+          tool_call_id: m.toolCallId,
         }));
         assistant.loadMessages([...system, ...chatMsgs]);
       } else {
@@ -240,7 +241,7 @@ export function useAIChat(
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
-                { role: 'tool_call', content: `🔧 ${event.content}`, toolName: event.toolName },
+                { role: 'tool_call', content: `🔧 ${event.content}`, toolName: event.toolName, toolCallId: (event as any).toolCallId },
               ];
               return newMsgs;
             });
@@ -249,7 +250,7 @@ export function useAIChat(
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
-                { role: 'tool_result', content: summary, toolName: event.toolName },
+                { role: 'tool_result', content: summary, toolName: event.toolName, toolCallId: (event as any).toolCallId },
               ];
               return newMsgs;
             });

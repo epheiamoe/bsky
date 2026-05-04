@@ -6,7 +6,9 @@ export interface AIChatMessage {
   role: 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'thinking';
   content: string;
   toolName?: string;
+  toolCallId?: string;
   isError?: boolean;
+  /** Intentionally omitted: image data is not yet supported in export/import */
 }
 
 export interface ChatRecord {

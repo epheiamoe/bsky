@@ -25,6 +25,8 @@ export type {
   BookmarkResult,
   GetSuggestedFeedsResponse,
   FeedGeneratorView,
+  TrendingTopic,
+  GetTrendsResponse,
 } from './at/types.js';
 
 // AI exports

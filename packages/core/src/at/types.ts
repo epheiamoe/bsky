@@ -196,7 +196,7 @@ export interface GetFollowersResponse {
 }
 
 export interface GetSuggestedFollowsResponse {
-  suggestions: Array<{ actor: ProfileViewBasic }>;
+  suggestions: ProfileView[];
 }
 
 export interface GetFeedResponse {
@@ -211,6 +211,19 @@ export interface GetFeedGeneratorsResponse {
 export interface GetSuggestedFeedsResponse {
   feeds: FeedGeneratorView[];
   cursor?: string;
+}
+
+export interface TrendingTopic {
+  topic: string;
+  displayName: string;
+  description: string;
+  link: string;
+}
+
+export interface GetTrendsResponse {
+  trends: TrendingTopic[];
+  /** Optional: the DID of the account used for personalization */
+  personalizedFor?: string;
 }
 
 export interface GetFeedGeneratorResponse {

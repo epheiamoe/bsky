@@ -43,13 +43,14 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     onChatSaved: refresh,
   });
   const [exportOpen, setExportOpen] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<{ file: File; preview: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
 
-
-
-
+  // Scroll
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -64,6 +65,16 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     const el = scrollContainerRef.current;
     if (!el) return;
     setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  }, []);
+
+  // File upload handler
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type.startsWith('image/')) {
+      setPendingFile({ file, preview: URL.createObjectURL(file) });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -95,42 +106,118 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     stop();
   }, [stop]);
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ═══════════════════ Export ═══════════════════
+  const handleExport = useCallback((format: 'json' | 'html' | 'md') => {
+    if (format === 'json') {
+      // Complete export: all messages with tool_call_id, toolName, etc.
+      // NOTE: Image data is intentionally omitted — not yet supported in export/import.
+      const exp: Record<string, unknown> = {
+        format: 'bsky-chat-v1',
+        exportedAt: new Date().toISOString(),
+        model: aiConfig.model,
+        provider: aiConfig.provider || null,
+        messages: messages.map(m => {
+          const entry: Record<string, unknown> = { role: m.role, content: m.content };
+          if (m.toolName) entry.toolName = m.toolName;
+          if (m.toolCallId) entry.toolCallId = m.toolCallId;
+          if (m.isError) entry.isError = m.isError;
+          return entry;
+        }),
+      };
+      if (contextUri) exp.contextUri = contextUri;
+      if (contextPost) exp.contextPost = contextPost;
+      if (contextProfile) exp.contextProfile = contextProfile;
+      downloadFile(JSON.stringify(exp, null, 2), 'chat.json', 'application/json');
+    } else if (format === 'html') {
+      const visible = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat Export</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#0A0A0A;color:#F1F5F9}.user{background:#00A5E0;color:#fff;padding:10px 16px;border-radius:12px;margin:8px 0 8px 40px}.ai{background:#121212;border:1px solid #27272A;padding:10px 16px;border-radius:12px;margin:8px 40px 8px 0}</style></head><body>' +
+        visible.map(m => `<div class="${m.role}"><strong>${m.role === 'user' ? 'You' : 'AI'}</strong><p>${escapeHtml(m.content)}</p></div>`).join('') +
+        '</body></html>';
+      downloadFile(html, 'chat.html', 'text/html');
+    } else {
+      const visible = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+      const md = visible.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n\n${m.content}\n`).join('\n');
+      downloadFile(md, 'chat.md', 'text/markdown');
+    }
+    setExportOpen(false);
+  }, [messages, aiConfig, contextUri, contextPost, contextProfile]);
+
+  // ═══════════════════ Import ═══════════════════
+  const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type.startsWith('image/')) {
-      setPendingFile({ file, preview: URL.createObjectURL(file) });
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+    setImportError(null);
+    setImportSuccess(null);
 
-  const handleExport = useCallback((format: 'json' | 'html' | 'md') => {
-    const msgs = messages.filter(m => m.role === 'user' || m.role === 'assistant');
-    let content: string;
-    let filename: string;
-    let mime: string;
-    if (format === 'json') {
-      content = JSON.stringify(msgs, null, 2);
-      filename = 'chat.json';
-      mime = 'application/json';
-    } else if (format === 'html') {
-      content = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Chat Export</title><style>body{font-family:sans-serif;max-width:800px;margin:auto;padding:20px;background:#0A0A0A;color:#F1F5F9}.user{background:#00A5E0;color:#fff;padding:10px 16px;border-radius:12px;margin:8px 0 8px 40px}.ai{background:#121212;border:1px solid #27272A;padding:10px 16px;border-radius:12px;margin:8px 40px 8px 0}</style></head><body>' +
-        msgs.map(m => `<div class="${m.role}"><strong>${m.role === 'user' ? 'You' : 'AI'}</strong><p>${escapeHtml(m.content)}</p></div>`).join('') +
-        '</body></html>';
-      filename = 'chat.html';
-      mime = 'text/html';
-    } else {
-      content = msgs.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n\n${m.content}\n`).join('\n');
-      filename = 'chat.md';
-      mime = 'text/markdown';
+    try {
+      const text = await file.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        setImportError('Invalid JSON file.');
+        return;
+      }
+
+      const data = parsed as Record<string, unknown>;
+      // Validate format
+      if (data.format !== 'bsky-chat-v1') {
+        setImportError(`Unsupported format: "${data.format || 'none'}". Expected "bsky-chat-v1".`);
+        return;
+      }
+      if (!Array.isArray(data.messages)) {
+        setImportError('Missing required field: "messages" is not an array.');
+        return;
+      }
+      const msgs = data.messages as Array<Record<string, unknown>>;
+      for (let i = 0; i < msgs.length; i++) {
+        const m = msgs[i]!;
+        if (!m.role || !m.content) {
+          setImportError(`Invalid message at index ${i}: missing "role" or "content".`);
+          return;
+        }
+        if (!['user', 'assistant', 'tool_call', 'tool_result', 'thinking'].includes(String(m.role))) {
+          setImportError(`Unknown role "${m.role}" at index ${i}.`);
+          return;
+        }
+      }
+
+      // Convert to AIChatMessage format and create new chat
+      const imported: AIChatMessage[] = msgs.map(m => ({
+        role: m.role as AIChatMessage['role'],
+        content: String(m.content),
+        toolName: typeof m.toolName === 'string' ? m.toolName : undefined,
+        toolCallId: typeof m.toolCallId === 'string' ? m.toolCallId : undefined,
+        isError: typeof m.isError === 'boolean' ? m.isError : undefined,
+      }));
+
+      // Create a new session with imported messages
+      const newId = crypto.randomUUID();
+      if (storage) {
+        await storage.saveChat({
+          id: newId,
+          title: file.name.replace(/\.json$/i, '') || 'Imported Chat',
+          messages: imported,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      setImportSuccess('Imported successfully.');
+      goTo({ type: 'aiChat', sessionId: newId });
+    } catch (_err) {
+      setImportError('Failed to read file.');
+    } finally {
+      if (importFileRef.current) importFileRef.current.value = '';
     }
+  }, [storage, goTo]);
+
+  const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename;
     a.click(); URL.revokeObjectURL(url);
-    setExportOpen(false);
-  }, [messages]);
+  };
 
   const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -268,14 +355,14 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                       .join('\n\n');
                     navigator.clipboard.writeText(txt).catch(() => {});
                   }}
-                  className="ml-auto text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border"
-                  title={t('ai.copyTranscript')}
+                  className="ml-auto text-text-secondary hover:text-primary transition-colors p-1"
+                  title="Copy transcript"
                 >
-                  <Icon name="copy" size={16} /> {t('ai.copyTranscript')}
+                  <Icon name="copy" size={16} />
                 </button>
                 <div className="relative">
-                  <button onClick={() => setExportOpen(!exportOpen)} className="text-xs text-text-secondary hover:text-primary transition-colors px-2 py-1 rounded border border-border">
-                    <Icon name="arrow-big-down" size={16} /> {t('ai.export') || 'Export'}
+                  <button onClick={() => setExportOpen(!exportOpen)} className="text-text-secondary hover:text-primary transition-colors p-1" title="Export">
+                    <Icon name="arrow-big-down" size={16} />
                   </button>
                   {exportOpen && (
                     <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-50 py-1 min-w-[120px]" onClick={e => e.stopPropagation()}>
@@ -285,6 +372,21 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                     </div>
                   )}
                 </div>
+                <button
+                  onClick={() => importFileRef.current?.click()}
+                  className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5"
+                  title="Import JSON"
+                >
+                  <Icon name="upload" size={16} />
+                </button>
+                <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+                {/* Import toast */}
+                {importError && (
+                  <div className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
+                )}
+                {importSuccess && (
+                  <div className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
+                )}
               </>
             )}
           </div>

@@ -4,13 +4,14 @@ import { render } from 'ink';
 import { App } from './components/App.jsx';
 import { SetupWizard } from './components/SetupWizard.jsx';
 import type { SetupConfig } from './components/SetupWizard.jsx';
+import { getTuiConfig } from './config/configStore.js';
+import type { TuiConfig } from './config/configStore.js';
 import dotenv from 'dotenv';
 import path from 'path';
-import { writeFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
-import { getProviderByBaseUrl } from '@bsky/core';
+import { getProviderById } from '@bsky/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,11 +24,7 @@ for (const envPath of envPaths) {
   dotenv.config({ path: envPath });
 }
 
-const HANDLE = process.env.BLUESKY_HANDLE;
-const APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD;
-const LLM_API_KEY = process.env.LLM_API_KEY;
-
-interface AppConfig {
+export interface AppConfig {
   blueskyHandle: string;
   blueskyPassword: string;
   aiConfig: {
@@ -40,44 +37,52 @@ interface AppConfig {
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
   };
   targetLang?: string;
+  translateMode?: 'simple' | 'json';
+  /** Per-provider API keys */
+  apiKeys: Record<string, string>;
+  /** Per-scenario model overrides. "provider/model" format */
+  scenarioModels: {
+    aiChat: string;
+    translate: string;
+    polish: string;
+  };
+}
+
+function resolveAiApiKey(tuiConfig: TuiConfig, providerId: string | undefined): string {
+  // Env LLM_API_KEY takes precedence (for single-provider setups)
+  const envKey = process.env.LLM_API_KEY;
+  if (envKey) return envKey;
+  // Otherwise, look up from config's per-provider keys
+  if (providerId && tuiConfig.apiKeys[providerId]) return tuiConfig.apiKeys[providerId]!;
+  return '';
 }
 
 function getConfigFromEnv(): AppConfig | null {
   const handle = process.env.BLUESKY_HANDLE;
   const password = process.env.BLUESKY_APP_PASSWORD;
   if (!handle || !password) return null;
-  const baseUrl = process.env.LLM_BASE_URL || 'https://api.deepseek.com';
-  const provider = getProviderByBaseUrl(baseUrl);
+
+  const tuiConfig = getTuiConfig();
+  const providerId = tuiConfig.aiConfig.provider;
+  const apiKey = resolveAiApiKey(tuiConfig, providerId);
+
   return {
     blueskyHandle: handle,
     blueskyPassword: password,
     aiConfig: {
-      apiKey: process.env.LLM_API_KEY || '',
-      baseUrl,
-      model: process.env.LLM_MODEL || 'deepseek-v4-flash',
-      thinkingEnabled: process.env.LLM_THINKING_ENABLED !== 'false',
-      visionEnabled: process.env.LLM_VISION_ENABLED === 'true',
-      provider: provider?.id,
-      reasoningStyle: provider?.reasoningStyle,
+      apiKey,
+      baseUrl: tuiConfig.aiConfig.baseUrl,
+      model: tuiConfig.aiConfig.model,
+      thinkingEnabled: tuiConfig.aiConfig.thinkingEnabled ?? true,
+      visionEnabled: tuiConfig.aiConfig.visionEnabled ?? false,
+      provider: providerId,
+      reasoningStyle: tuiConfig.aiConfig.reasoningStyle,
     },
-    targetLang: process.env.TRANSLATE_TARGET_LANG || 'zh',
+    targetLang: tuiConfig.targetLang,
+    translateMode: tuiConfig.translateMode,
+    apiKeys: tuiConfig.apiKeys,
+    scenarioModels: tuiConfig.scenarioModels,
   };
-}
-
-function writeEnvFile(config: SetupConfig): string {
-  const envPath = path.resolve(process.cwd(), '.env');
-  const lines = [
-    `BLUESKY_HANDLE=${config.blueskyHandle}`,
-    `BLUESKY_APP_PASSWORD=${config.blueskyPassword}`,
-    `LLM_API_KEY=${config.llmApiKey}`,
-    `LLM_BASE_URL=${config.llmBaseUrl || 'https://api.deepseek.com'}`,
-    `LLM_MODEL=${config.llmModel || 'deepseek-v4-flash'}`,
-    `LLM_THINKING_ENABLED=${config.llmThinkingEnabled !== false}`,
-    `LLM_VISION_ENABLED=${config.llmVisionEnabled === true}`,
-    config.locale ? `TRANSLATE_TARGET_LANG=${config.locale}` : '',
-  ].filter(Boolean);
-  writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
-  return envPath;
 }
 
 function Root({ isRawModeSupported }: { isRawModeSupported: boolean }) {
@@ -85,9 +90,10 @@ function Root({ isRawModeSupported }: { isRawModeSupported: boolean }) {
 
   if (!appConfig) {
     return React.createElement(SetupWizard, {
-      onComplete: (config: SetupConfig) => {
-        const envPath = writeEnvFile(config);
-        dotenv.config({ path: envPath, override: true });
+      onComplete: (_config: SetupConfig) => {
+        // reload env (SetupWizard writes .env + configStore)
+        const cwdEnv = path.resolve(process.cwd(), '.env');
+        dotenv.config({ path: cwdEnv, override: true });
         const newConfig = getConfigFromEnv();
         if (newConfig) {
           setAppConfig(newConfig);

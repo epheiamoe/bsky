@@ -16,15 +16,20 @@
 
 ## 版本
 
-**v0.3.0** — Git tag `v0.3.0`
+**v0.3.1** — Git tag `v0.3.1`
 
 ## 项目状态
 
 - **PWA 在线**: https://ai-bsky.pages.dev
 - **GitHub**: https://github.com/epheiamoe/bsky
 - **PWA 部署**: `cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true`
+- **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
 - **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
+- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / 我 / AI 对话 / 发帖 / **组件**
+- **右侧组件栏** (lg+) : 当前视图启用的 widgets，页面限定组件置顶
+- **组件页** `#/components` : 大屏小屏统一入口，启用/禁用所有 widget
+- **JSON 导出/导入**: `bsky-chat-v1` 格式，含完整 tool_call_id 等元数据（暂不含图片）
 
 ## 🔴 关键教训
 
@@ -103,6 +108,22 @@
 ### 19. 查看图片后上下文不持久
 **根因**：`_buildMessages()` 将图片注入到 messages 副本后立即清除 `_pendingImages`，但未写回 `this.messages`。
 **修复**：注入图片后也更新 `this.messages[i].content = blocks` → 视觉上下文在对话轮次间持久。
+
+### 20. 编辑消息后 API 400 "missing field tool_call_id"
+**根因**：`tool_call_id` 在全链路中丢失 — streaming 事件未携带 → `AIChatMessage` 无此字段 → 存储恢复丢失 → `editByIndex` 后重发时 tool 消息缺少 ID。
+**修复**：4 处改动：`AIChatMessage` 加 `toolCallId?: string`；assistant.ts yield 事件加 `toolCallId: tc.id`；useAIChat 创建/恢复 AIChatMessage 时传递 `toolCallId`。
+
+### 21. 工具调用 10 轮上限过大对话中断
+**根因**：`MAX_TOOL_ROUNDS = 10` 硬限制，复杂分析任务（多轮 get_post_context + get_profile + search_posts）超过上限抛错。
+**修复**：两处循环改为 `for (;;)` 无限循环，用户通过暂停/停止按钮手动控制。
+
+### 22. AI tool_call arguments JSON 格式不良造成崩溃
+**根因**：`JSON.parse(tc.function.arguments)` 无 try-catch，AI 输出不完整 JSON 时直接崩溃 "Expected property name in JSON"。
+**修复**：两处 parse 加 try-catch，回退到 `{ _raw: rawText }` 继续运行，不中断对话。
+
+### 23. 右侧组件栏「用完就消失」+ 按钮/组件互斥逻辑
+**根因**：PolishWidget 的 handleReplace 调用了 onClose（副作用是 toggleWidget 关闭组件），且按钮 visibility 用 `lg:hidden` 硬写。
+**修复**：handleReplace 移除 onClose()；按钮 visibility 改为 `getEnabledWidgetIds().includes('polish') ? 'lg:hidden' : ''` — 组件启用时大屏隐藏按钮（侧边栏已有），关闭时所有屏幕显示按钮（退路）。
 
 ---
 
@@ -193,18 +214,28 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/hooks/usePostActions.ts` | 模块级赞/转状态+计数 |
 | `packages/app/src/hooks/useActiveFeed.ts` | 模块级活跃 feed 跟踪 |
 | `packages/app/src/hooks/useScrollRestore.ts` | 跨视图滚动保存/恢复 |
+| `packages/app/src/hooks/widgetRegistry.ts` | Widget 注册表：`registerWidget/getWidgetsForView` |
+| `packages/app/src/hooks/widgetStore.ts` | Widget 状态：启用/关闭 + ComposePage 草稿桥接 |
 | `packages/pwa/src/components/PostActionsRow.tsx` | 统一帖子行为栏 |
-| `packages/pwa/src/components/Icon.tsx` | SVG 图标组件 |
+| `packages/pwa/src/components/Icon.tsx` | SVG 图标组件（`import.meta.glob`） |
+| `packages/pwa/src/components/WidgetPanel.tsx` | 右侧组件栏渲染 |
+| `packages/pwa/src/components/WidgetPicker.tsx` | 添加/移除组件面板 |
+| `packages/pwa/src/components/WidgetModal.tsx` | 组件弹出窗口（小屏幕） |
+| `packages/pwa/src/components/ComponentsPage.tsx` | `#/components` 组件页面 |
+| `packages/pwa/src/components/widgets/PolishWidget.tsx` | 润色组件（compose only） |
+| `packages/pwa/src/components/widgets/ProfilePreviewWidget.tsx` | 资料页预览（thread only） |
+| `packages/pwa/src/components/widgets/SuggestedFollowsWidget.tsx` | 推荐关注（全部视图） |
+| `packages/pwa/src/components/widgets/SuggestedFeedsWidget.tsx` | 推荐动态源（全部视图） |
+| `packages/pwa/src/components/widgets/TrendsWidget.tsx` | 趋势（全部视图） |
 | `packages/pwa/src/components/VideoCard.tsx` | HLS 视频播放器 |
-| `packages/pwa/src/icons/` | 50+ SVG 文件 |
 | `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
-| `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由 |
+| `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/components` 路由） |
 | `packages/app/src/hooks/useThread.ts` | 讨论串处理 |
 | `packages/app/src/hooks/useTimeline.ts` | 时间线 |
-| `packages/app/src/hooks/useAIChat.ts` | AI 对话（stop/addUserImage/editByIndex） |
+| `packages/app/src/hooks/useAIChat.ts` | AI 对话 |
 | `packages/core/src/ai/tools.ts` | 31 个 AI 工具定义 |
 | `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
-| `packages/core/src/ai/assistant.ts` | AI 对话引擎（addUserUpload/AbortSignal 支持） |
-| `packages/core/src/ai/providers.ts` | 多提供商注册表（DeepSeek + Mistral） |
+| `packages/core/src/ai/assistant.ts` | AI 对话引擎 |
+| `packages/core/src/ai/providers.ts` | 多提供商注册表 |
 | `packages/core/src/ai/providers.json` | 提供商配置文件 |
 | `packages/app/src/services/chatStorage.ts` | ChatRecord.context 字段 |

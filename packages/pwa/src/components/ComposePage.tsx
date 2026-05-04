@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCompose, useI18n, useDrafts, getCdnImageUrl } from '@bsky/app';
+import { useCompose, useI18n, useDrafts, getCdnImageUrl, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds } from '@bsky/app';
 import type { ComposeMedia, Draft } from '@bsky/app';
-import type { BskyClient, PostView } from '@bsky/core';
+import type { BskyClient, PostView, AIConfig } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
+import { WidgetModal } from './WidgetModal.js';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image (Bluesky supports up to 2MB / 4K)
@@ -15,6 +16,7 @@ interface ComposePageProps {
   quoteUri?: string;
   goBack: () => void;
   goHome: () => void;
+  polishConfig?: AIConfig;
 }
 
 interface LocalImage {
@@ -62,7 +64,7 @@ function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string 
   return images;
 }
 
-export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: ComposePageProps) {
+export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishConfig }: ComposePageProps) {
   const { t } = useI18n();
   const { draft, setDraft, submitting, error, setReplyTo, setQuoteUri, submit } = useCompose(client, goBack, goHome);
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts();
@@ -73,6 +75,7 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
   const [showDrafts, setShowDrafts] = useState(false);
   const [quotePreview, setQuotePreview] = useState<QuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
+  const [showPolishModal, setShowPolishModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -115,6 +118,13 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
       setQuotePreview(null);
     }
   }, [quoteUri, client, setQuoteUri]);
+
+  // Bridge draft to widget system (right panel PolishWidget)
+  useEffect(() => { setComposeDraftForWidgets(draft); }, [draft]);
+  useEffect(() => {
+    registerComposeDraftSetter(setDraft);
+    return () => registerComposeDraftSetter(null);
+  }, []);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -255,6 +265,14 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-text-primary"><Icon name="pencil-line" size={16} /> {replyTo ? t('compose.titleReply') : t('compose.title')}</h1>
+            {polishConfig && draft.trim() && (
+              <button
+                onClick={() => setShowPolishModal(true)}
+                className={`text-sm text-purple-500 hover:text-purple-600 transition-colors flex items-center gap-1${getEnabledWidgetIds().includes('polish') ? ' lg:hidden' : ''}`}
+              >
+                <Icon name="file-text" size={14} /> {t('action.polish')}
+              </button>
+            )}
             {drafts.length > 0 && (
               <button onClick={() => setShowDrafts(!showDrafts)} className="text-sm text-text-secondary hover:text-primary transition-colors">
                 <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
@@ -395,6 +413,19 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome }: Compo
           )}
         </form>
       </main>
+
+      {showPolishModal && polishConfig && (
+        <WidgetModal
+          widgetId="polish"
+          context={{
+            composeDraft: draft,
+            onComposeDraftChange: (text: string) => setDraft(text),
+            polishConfig,
+            viewType: 'compose',
+          }}
+          onClose={() => setShowPolishModal(false)}
+        />
+      )}
     </div>
   );
 }

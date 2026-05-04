@@ -7,7 +7,8 @@ export type AppView =
   | { type: 'notifications' }
   | { type: 'search'; query?: string; searchTab?: string }
   | { type: 'aiChat'; contextUri?: string; sessionId?: string; contextPost?: string; contextProfile?: string }
-  | { type: 'bookmarks' };
+  | { type: 'bookmarks' }
+  | { type: 'components' };
 
 export interface NavigationState {
   currentView: AppView;

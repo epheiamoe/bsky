@@ -42,3 +42,27 @@ export {
   setDefaultFeed,
 } from './state/feedConfig.js';
 export type { FeedConfigData } from './state/feedConfig.js';
+
+export {
+  registerWidget,
+  getWidget,
+  getWidgets,
+  getWidgetsForView,
+} from './hooks/widgetRegistry.js';
+export type { WidgetDefinition, WidgetProps, WidgetContext } from './hooks/widgetRegistry.js';
+
+export {
+  initEnabledWidgets,
+  getEnabledWidgetIds,
+  isWidgetEnabled,
+  enableWidget,
+  disableWidget,
+  toggleWidget,
+  getEnabledWidgetsForView,
+  setComposeDraftForWidgets,
+  getComposeDraftForWidgets,
+  registerComposeDraftSetter,
+  replaceComposeDraft,
+  setFocusedProfileActor,
+  getFocusedProfileActor,
+} from './hooks/widgetStore.js';

@@ -3,13 +3,13 @@
 ## `packages/core` — Zero UI Dependencies
 
 **Exports** (`src/index.ts`):
-- `BskyClient` — AT Protocol HTTP client
+- `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`)
 - `createTools(tools)` — 31 tool definitions + handlers
-- `AIAssistant` — OpenAI-compatible chat with function calling
+- `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
 - `singleTurnAI`, `polishDraft`
-- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `StreamChunk`, etc.
+- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `TrendingTopic`, `GetTrendsResponse`, etc.
 
 **Key files**:
 
@@ -18,7 +18,7 @@
 | `src/at/client.ts` | BskyClient class. Auth (createSession), all AT endpoints via `ky`. |
 | `src/ai/tools.ts` | `createTools()` → 31 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
 | `src/at/types.ts` | All AT Protocol TypeScript types. |
-| `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (up to 10 rounds). `translateText()` with dual-mode + retry. `sendMessageStreaming()` for real-time token delivery. |
+| `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (unlimited rounds, user-controlled). `translateText()` with dual-mode + retry. `sendMessageStreaming()` for real-time token delivery. `polishDraft()` for draft refinement. |
 
 **Dependencies**: `ky`, `dotenv` (dev), `@types/node` (dev).
 **Zero UI deps**: No React, no Ink, no DOM.
@@ -61,6 +61,15 @@
 | `FileChatStorage` (class) | `services/chatStorage.ts` |
 | `ChatStorage` (interface) | `services/chatStorage.ts` |
 | `ChatRecord`, `ChatSummary` (types) | `services/chatStorage.ts` |
+
+### Widget System
+| Export | File | Purpose |
+|--------|------|---------|
+| `registerWidget(def, render)` | `hooks/widgetRegistry.ts` | 注册组件定义 |
+| `getWidgetsForView(viewType)` | `hooks/widgetRegistry.ts` | 获取视图可用组件 |
+| `initEnabledWidgets / toggleWidget` | `hooks/widgetStore.ts` | 模块级组件启用/关闭状态 |
+| `setComposeDraftForWidgets` | `hooks/widgetStore.ts` | 发帖草稿桥接 |
+| `setFocusedProfileActor` | `hooks/widgetStore.ts` | 帖子作者桥接 |
 
 ### Stores (internal, not exported)
 | Store | File | Pattern |

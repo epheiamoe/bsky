@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
-import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId } from '@bsky/core';
+import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
@@ -24,6 +24,13 @@ interface AppConfig {
   blueskyPassword: string;
   aiConfig: AIConfig;
   targetLang?: string;
+  translateMode?: 'simple' | 'json';
+  apiKeys: Record<string, string>;
+  scenarioModels: {
+    aiChat: string;
+    translate: string;
+    polish: string;
+  };
 }
 
 type FocusTarget = 'main' | 'ai' | 'compose';
@@ -92,6 +99,27 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
   const [showSettings, setShowSettings] = useState(false);
+
+  // ── Scenario config resolution (mirrors PWA: per-model thinking/vision) ──
+  const resolveScenarioConfig = useCallback((scenarioModel: string): AIConfig => {
+    if (!scenarioModel || !scenarioModel.includes('/')) {
+      return { ...config.aiConfig };
+    }
+    const [providerId, model] = scenarioModel.split('/');
+    if (!providerId || !model) return { ...config.aiConfig };
+    const provider = getProviderById(providerId);
+    const modelInfo = provider ? getModelInfo(providerId, model) : undefined;
+    return {
+      ...config.aiConfig,
+      baseUrl: provider?.baseUrl || config.aiConfig.baseUrl,
+      model,
+      apiKey: config.apiKeys?.[providerId] || config.aiConfig.apiKey,
+      provider: provider?.id,
+      reasoningStyle: provider?.reasoningStyle,
+      thinkingEnabled: modelInfo?.thinking ?? config.aiConfig.thinkingEnabled ?? true,
+      visionEnabled: modelInfo?.vision ?? config.aiConfig.visionEnabled ?? false,
+    };
+  }, [config]);
 
   // Auto-login
   const [wasAuthenticated, setWasAuthenticated] = useState(false);
