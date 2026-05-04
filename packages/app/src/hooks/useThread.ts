@@ -15,7 +15,7 @@ export interface FlatLine {
   authorAvatar?: string;
   hasReplies: boolean;
   mediaTags: string[];
-  imageUrls: string[];
+  imageDetails: Array<{ url: string; alt: string }>;
   externalLink: { uri: string; title: string; description: string } | null;
   hasVideo: boolean;
   videoThumbnailUrl?: string;
@@ -30,7 +30,7 @@ export interface FlatLine {
     displayName: string;
     authorAvatar?: string;
     mediaTags: string[];
-    imageUrls: string[];
+    imageDetails: Array<{ url: string; alt: string }>;
     externalLink: { uri: string; title: string; description: string } | null;
   };
   isRoot: boolean;
@@ -169,7 +169,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
       authorAvatar: post.author.avatar,
       hasReplies: !!node.replies && node.replies.length > 0,
       mediaTags: getMediaTags(post),
-      imageUrls: getImageUrls(post),
+      imageDetails: getImageDetails(post),
       externalLink: getExternalLink(post),
       quotedPost: getQuotedPost(post),
       hasVideo: vid.hasVideo,
@@ -200,7 +200,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
           depth: d + 1, uri: '', cid: '', rkey: '',
           text: `（还有 ${remaining} 条回复未显示）`,
           handle: '', displayName: '', authorAvatar: undefined,
-          hasReplies: false, mediaTags: [], imageUrls: [], externalLink: null, quotedPost: undefined,
+          hasReplies: false, mediaTags: [], imageDetails: [], externalLink: null, quotedPost: undefined,
           hasVideo: false,
           isRoot: false, isTruncation: true,
           likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
@@ -243,7 +243,7 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
   if (!rec?.uri) return undefined;
 
   const quotedMediaTags: string[] = [];
-  const quotedImageUrls: string[] = [];
+  const quotedImageDetails: Array<{ url: string; alt: string }> = [];
   let quotedExternalLink: FlatLine['externalLink'] | null = null;
 
   if (rec.embeds?.[0]) {
@@ -254,7 +254,7 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         const url = (img as any).fullsize || getCdnImageUrl(did, (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
-        if (url) quotedImageUrls.push(url);
+        if (url) quotedImageDetails.push({ url, alt: (img as any).alt || '' });
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       quotedMediaTags.push('🔗 链接');
@@ -270,7 +270,7 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
     displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
     authorAvatar: rec.author?.avatar,
     mediaTags: quotedMediaTags,
-    imageUrls: quotedImageUrls,
+    imageDetails: quotedImageDetails,
     externalLink: quotedExternalLink,
   };
 }
@@ -327,8 +327,8 @@ function getVideoInfo(post: PostView): { hasVideo: boolean; thumbnailUrl?: strin
   };
 }
 
-function getImageUrls(post: PostView): string[] {
-  const urls: string[] = [];
+function getImageDetails(post: PostView): Array<{ url: string; alt: string }> {
+  const details: Array<{ url: string; alt: string }> = [];
   const embed = post.record.embed as {
     $type?: string;
     images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
@@ -339,14 +339,17 @@ function getImageUrls(post: PostView): string[] {
     if (!e) return;
     if (e.$type === 'app.bsky.embed.images' && e.images) {
       for (const img of e.images) {
-        urls.push(getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType));
+        details.push({
+          url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
+          alt: img.alt || '',
+        });
       }
     } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
       collect(e.media);
     }
   };
   collect(embed);
-  return urls;
+  return details;
 }
 
 function getExternalLink(post: PostView): FlatLine['externalLink'] {

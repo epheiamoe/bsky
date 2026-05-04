@@ -96,6 +96,9 @@ const ja: LocaleMessages = {
   'compose.submitThread': 'スレッド投稿 ({n}件)',
   'compose.threadTitle': 'スレッド投稿',
   'compose.partialFail': '{n} 件投稿、{m} 件失敗',
+  'compose.altWarning': '{n} 件のメディアにALTテキストがありません。ALTテキストは視覚障害者がメディアの内容を理解するのに役立ちます。',
+  'compose.altPlaceholder': 'ALTテキストを入力（画像の説明、任意）',
+  'compose.altLabel': 'ALT',
 
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',

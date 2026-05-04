@@ -28,7 +28,7 @@ interface QuotedPostData {
   displayName: string;
   authorAvatar?: string;
   mediaTags: string[];
-  imageUrls: string[];
+  imageDetails: Array<{ url: string; alt: string }>;
   externalLink: ExternalLink | null;
 }
 
@@ -115,7 +115,7 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
   const rec = embed.record;
   if (!rec?.uri) return undefined;
 
-  const imageUrls: string[] = [];
+  const imageDetails: Array<{ url: string; alt: string }> = [];
   let externalLink: ExternalLink | null = null;
   const mediaTags: string[] = [];
 
@@ -126,7 +126,7 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
       mediaTags.push(count === 1 ? '图片' : `${count}张图片`);
       for (const img of e.images) {
         const url = (img as any).fullsize || getCdnImageUrl(rec.author?.did ?? '', (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
-        if (url) imageUrls.push(url);
+        if (url) imageDetails.push({ url, alt: (img as any).alt || '' });
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
       mediaTags.push('🔗 链接');
@@ -142,7 +142,7 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
     displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
     authorAvatar: rec.author?.avatar,
     mediaTags,
-    imageUrls,
+    imageDetails,
     externalLink,
   };
 }
@@ -200,12 +200,13 @@ function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; init
 function ImageGrid({ images }: { images: ImageData[] }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
 
   const grid = (() => {
     const n = images.length;
     if (n === 1) return 'grid-cols-1';
     if (n === 2) return 'grid-cols-2 gap-[2px]';
-    if (n === 3) return 'grid-cols-2 gap-[2px]'; // 2-col grid, first 2 in row 1, 3rd spans
+    if (n === 3) return 'grid-cols-2 gap-[2px]';
     return 'grid-cols-2 gap-[2px]';
   })();
 
@@ -215,15 +216,45 @@ function ImageGrid({ images }: { images: ImageData[] }) {
         <div className={`grid ${grid}`}>
           {images.map((img, i) => {
             const spanFull = images.length === 3 && i === 2;
+            const hasAlt = !!img.alt?.trim();
             return (
-              <img
-                key={i}
-                src={img.url}
-                alt={img.alt || t('post.imageAlt', { n: i + 1 })}
-                width="800" height="600"
-                className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
-                onClick={(e) => { e.stopPropagation(); setLightbox(i); }}
-              />
+              <div key={i} className="relative">
+                <img
+                  src={img.url}
+                  alt={img.alt || t('post.imageAlt', { n: i + 1 })}
+                  width="800" height="600"
+                  className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); setLightbox(i); }}
+                />
+                {hasAlt && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAltPopup(altPopup?.index === i ? null : { index: i, text: img.alt });
+                    }}
+                    className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors"
+                    title={img.alt}
+                  >
+                    <svg width="24" height="14" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
+                      <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">ALT</text>
+                    </svg>
+                  </button>
+                )}
+                {altPopup?.index === i && (
+                  <div
+                    className="absolute top-1 right-1 z-20 bg-white dark:bg-[#1A1A1A] border border-border rounded-lg p-2 max-w-[200px] shadow-lg text-xs text-text-primary"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <p className="whitespace-pre-wrap break-words">{img.alt}</p>
+                      <button onClick={() => setAltPopup(null)} className="text-text-secondary hover:text-text-primary flex-shrink-0">
+                        <Icon name="x" size={12} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -306,8 +337,8 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     repostCount = line.repostCount;
     replyCount = line.replyCount;
     avatarUrl = line.authorAvatar;
-    if (line.imageUrls?.length) {
-      images = line.imageUrls.map(url => ({ url, alt: '' }));
+    if (line.imageDetails?.length) {
+      images = line.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }));
       hasImages = true;
     }
     if (line.externalLink) {
@@ -428,10 +459,10 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
                 <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
               </div>
               <p className="text-xs text-text-primary line-clamp-3 break-all">{linkifyText(quotedPost.text)}</p>
-              {quotedPost.imageUrls && quotedPost.imageUrls.length > 0 && (
+              {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
                 <div className="mt-1 flex gap-1">
-                  {quotedPost.imageUrls.slice(0, 2).map((url, idx) => (
-                    <img key={idx} src={url} className="w-16 h-16 object-cover rounded-md" alt="" />
+                  {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                    <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
                   ))}
                 </div>
               )}

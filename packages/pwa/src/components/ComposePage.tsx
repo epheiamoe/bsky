@@ -26,6 +26,7 @@ interface LocalImage {
   preview: string;
   uploading: boolean;
   error?: string;
+  altText: string;
 }
 
 interface LocalVideo {
@@ -186,6 +187,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
         file: result.file,
         preview: URL.createObjectURL(result.file),
         uploading: false,
+        altText: '',
       });
     }
     if (compressNotices.length > 0) {
@@ -206,6 +208,16 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
       const imgs = next.get(postId) ?? [];
       if (imgs[idx]) URL.revokeObjectURL(imgs[idx]!.preview);
       next.set(postId, imgs.filter((_, i) => i !== idx));
+      return next;
+    });
+  }, []);
+
+  const setImageAlt = useCallback((postId: string, idx: number, alt: string) => {
+    setPerPostImages(prev => {
+      const next = new Map(prev);
+      const imgs = [...(next.get(postId) ?? [])];
+      if (imgs[idx]) imgs[idx] = { ...imgs[idx]!, altText: alt };
+      next.set(postId, imgs);
       return next;
     });
   }, []);
@@ -284,7 +296,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
             uploaded.push({
               type: 'image',
               blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
-              alt: '',
+              alt: img.altText,
             });
           } catch {
             alert(t('compose.uploadFailed') || `Failed to upload image`);
@@ -294,6 +306,16 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
       }
 
       if (uploaded.length > 0) mediaMap.set(post.id, uploaded);
+    }
+
+    // Check for missing ALT text
+    let noAltCount = 0;
+    for (const [, media] of mediaMap) {
+      noAltCount += media.filter(m => m.type === 'image' && !m.alt.trim()).length;
+    }
+    if (noAltCount > 0) {
+      const confirmed = window.confirm(t('compose.altWarning', { n: noAltCount }));
+      if (!confirmed) return;
     }
 
     await submit(mediaMap);
@@ -470,12 +492,25 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
 
                   {/* Image preview per post */}
                   {imgs.length > 0 && (
-                    <div className="grid grid-cols-2 gap-1">
+                    <div className="space-y-1.5">
+                      <div className="grid grid-cols-2 gap-1">
+                        {imgs.map((img, i) => (
+                          <div key={i} className="relative rounded overflow-hidden border border-border aspect-square">
+                            <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => removeImage(post.id, i)} className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs hover:bg-black/80 flex items-center justify-center"><Icon name="x" size={12} /></button>
+                          </div>
+                        ))}
+                      </div>
                       {imgs.map((img, i) => (
-                        <div key={i} className="relative rounded overflow-hidden border border-border aspect-square">
-                          <img src={img.preview} alt="" className="w-full h-full object-cover" />
-                          <button type="button" onClick={() => removeImage(post.id, i)} className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs hover:bg-black/80 flex items-center justify-center"><Icon name="x" size={12} /></button>
-                        </div>
+                        <input
+                          key={i}
+                          type="text"
+                          value={img.altText}
+                          onChange={(e) => setImageAlt(post.id, i, e.target.value)}
+                          placeholder={t('compose.altPlaceholder')}
+                          maxLength={500}
+                          className="w-full px-2 py-1 text-xs rounded border border-border bg-surface text-text-primary placeholder:text-text-secondary/40 focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
                       ))}
                     </div>
                   )}

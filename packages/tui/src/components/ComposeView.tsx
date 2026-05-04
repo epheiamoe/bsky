@@ -15,7 +15,7 @@ interface ComposeViewProps {
   composeMedia: ComposeMedia[];
   uploadError: string | null;
   composeInfo: string | null;
-  mode: 'text' | 'media' | 'drafts' | 'savePrompt' | 'polishReq' | 'polishResult';
+  mode: 'text' | 'media' | 'drafts' | 'savePrompt' | 'polishReq' | 'polishResult' | 'altReq';
   imagePathInput: string | null;
   setImagePathInput: (v: string | null) => void;
   drafts: AppDraft[];
@@ -26,6 +26,8 @@ interface ComposeViewProps {
   polishPhase?: string;
   polishRequirement?: string;
   setPolishRequirement?: (v: string) => void;
+  altReqText?: string;
+  setAltReqText?: (v: string) => void;
 }
 
 export function ComposeView({
@@ -36,6 +38,7 @@ export function ComposeView({
   drafts, draftListIdx, cols,
   polishResult, polishError, polishPhase,
   polishRequirement, setPolishRequirement,
+  altReqText, setAltReqText,
 }: ComposeViewProps) {
   const { t } = useI18n();
   const isReply = !!replyTo;
@@ -154,6 +157,14 @@ export function ComposeView({
             </Box>
           )}
         </Box>
+      ) : mode === 'altReq' ? (
+        <Box borderStyle="single" borderColor="green" padding={1} marginTop={0}>
+          <TextInput
+            value={altReqText ?? ''}
+            onChange={setAltReqText ?? (() => {})}
+            placeholder={t('compose.altPlaceholder')}
+          />
+        </Box>
       ) : mode === 'drafts' || mode === 'savePrompt' ? (
         <Box height={1} />
       ) : (
@@ -172,6 +183,8 @@ export function ComposeView({
           <Text dimColor>{'📎 '}{t('compose.mediaInputMode')}</Text>
         ) : mode === 'polishReq' ? (
           <Text dimColor>{t('action.polish')}{': Enter '}{t('action.confirm')}{' · Esc '}{t('action.cancel')}</Text>
+        ) : mode === 'altReq' ? (
+          <Text dimColor>{t('compose.altLabel')}{': Enter '}{t('action.confirm')}{' · Esc '}{t('action.cancel')}</Text>
         ) : mode === 'polishResult' ? null : mode === 'text' ? (
           <>
             <Text color={(activePost?.text?.length ?? 0) > 280 ? 'yellow' : undefined}>
@@ -185,6 +198,18 @@ export function ComposeView({
         {uploadError && <Text color="red">{' '}{uploadError}</Text>}
         {error && <Text color="red">{' '}{error}</Text>}
       </Box>
+
+      {/* Media ALT display */}
+      {composeMedia.length > 0 && mode !== 'media' && mode !== 'altReq' && (
+        <Box flexDirection="column" marginTop={0}>
+          {composeMedia.map((m, i) => (
+            <Box key={i} height={1}>
+              <Text dimColor>{'  📎 '}{m.type}{i + 1}</Text>
+              {m.alt.trim() && <Text dimColor>{' ALT: '}{m.alt}</Text>}
+            </Box>
+          ))}
+        </Box>
+      )}
 
       {composeInfo && (
         <Box height={1}><Text color="yellow">{'💡 '}{composeInfo}</Text></Box>

@@ -96,6 +96,9 @@ const en: LocaleMessages = {
   'compose.submitThread': 'Publish ({n})',
   'compose.threadTitle': 'Thread',
   'compose.partialFail': '{n} posted, {m} failed due to error',
+  'compose.altWarning': 'Your {n} media items have no ALT text. ALT text helps visually impaired users better understand your media.',
+  'compose.altPlaceholder': 'ALT text (describe the image, optional)',
+  'compose.altLabel': 'ALT',
 
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',

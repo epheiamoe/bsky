@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
@@ -101,6 +101,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [polishRequirement, setPolishRequirement] = useState('');
   const [polishResult, setPolishResult] = useState('');
   const [polishError, setPolishError] = useState<string | null>(null);
+  // ALT text during upload
+  const [altReqText, setAltReqText] = useState('');
+  const [altReqActive, setAltReqActive] = useState(false);
+  const altReqBlob = useRef<{ type: 'image' | 'video'; blobRef: { $link: string; mimeType: string; size: number } } | null>(null);
 
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
@@ -157,6 +161,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       setDraftListOpen(false);
       setDraftSavePrompt(false);
       setComposePostIdx(0);
+      setPolishPhase('idle');
+      setAltReqActive(false);
+      setAltReqText('');
+      altReqBlob.current = null;
       const replyTo = (currentView as { replyTo?: string }).replyTo;
       if (replyTo) compose.setReplyTo(replyTo);
       const qUri = (currentView as { quoteUri?: string }).quoteUri;
@@ -239,6 +247,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       if (currentView.type === 'bookmarks') {
         const bm = bookmarks.bookmarks[bookmarkIdx];
         if (bm) goTo({ type: 'thread', uri: bm.uri });
+        return;
+      }
+      if (currentView.type === 'compose' && !draftSavePrompt && !draftListOpen && imagePathInput === null && polishPhase === 'idle' && !altReqActive) {
+        // ALT check before submit
+        const noAlt = composeMedia.filter(m => m.type === 'image' && !m.alt.trim()).length;
+        if (noAlt > 0) {
+          // TODO: show modal warning
+          // For now, just submit anyway
+        }
+        const nonEmpty = compose.posts.filter(p => p.text.trim());
+        if (nonEmpty.length > 0) {
+          const mediaMap = composeMedia.length > 0 ? new Map<string, ComposeMedia[]>([[compose.posts[composePostIdx]?.id ?? compose.posts[0]!.id, composeMedia]]) : undefined;
+          compose.submit(mediaMap);
+        }
         return;
       }
       return;
@@ -330,6 +352,33 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         }
         return;
       }
+      if (altReqActive) {
+        if (key.return) {
+          if (altReqBlob.current) {
+            setComposeMedia(prev => [...prev, {
+              ...altReqBlob.current!,
+              alt: altReqText,
+            }]);
+            altReqBlob.current = null;
+            setAltReqActive(false);
+            setAltReqText('');
+          }
+          return;
+        }
+        if (key.escape) {
+          if (altReqBlob.current) {
+            setComposeMedia(prev => [...prev, {
+              ...altReqBlob.current!,
+              alt: '',
+            }]);
+            altReqBlob.current = null;
+            setAltReqActive(false);
+            setAltReqText('');
+          }
+          return;
+        }
+        return;
+      }
       if (imagePathInput !== null) {
         if (key.return) {
           const path = imagePathInput.trim();
@@ -373,7 +422,10 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                   }
 
                   client?.uploadBlob(data as Uint8Array, mime).then(res => {
-                    setComposeMedia(prev => [...prev, { type: isVideo ? 'video' : 'image', blobRef: { $link: res.blob.ref.$link, mimeType: mime, size: data.length }, alt: '' }]);
+                    const blobRef = { $link: res.blob.ref.$link, mimeType: mime, size: data.length };
+                    altReqBlob.current = { type: isVideo ? 'video' : 'image', blobRef };
+                    setAltReqText('');
+                    setAltReqActive(true);
                     setImagePathInput(null);
                     setComposeUploadError(null);
                     if (composeInfo) setTimeout(() => setComposeInfo(null), 8000);
@@ -548,7 +600,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             composeMedia={composeMedia}
             uploadError={composeUploadError}
             composeInfo={composeInfo}
-            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : 'text'}
+            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : altReqActive ? 'altReq' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : 'text'}
             imagePathInput={imagePathInput}
             setImagePathInput={setImagePathInput}
             drafts={drafts}
@@ -559,6 +611,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             polishPhase={polishPhase}
             polishRequirement={polishRequirement}
             setPolishRequirement={setPolishRequirement}
+            altReqText={altReqText}
+            setAltReqText={setAltReqText}
           />
         );
       case 'profile':

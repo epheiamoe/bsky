@@ -174,10 +174,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       {/* Text */}
       <Box><Text backgroundColor={bg}>{line.text}</Text></Box>
       {/* Images — OSC 8 clickable hyperlinks */}
-      {line.imageUrls?.map((url, i) => (
-        <Box key={i}><Text backgroundColor={bg}>
-          {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}
-        </Text></Box>
+      {line.imageDetails?.map((d, i) => (
+        <Box key={i} flexDirection="column"><Text backgroundColor={bg}>
+          {'\x1b]8;;' + d.url + '\x07🖼 ' + t('post.imageCount', { n: line.imageDetails!.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}
+        </Text>
+        {d.alt && <Text backgroundColor={bg} dimColor>{'  ALT: '}{d.alt}</Text>}
+        </Box>
       ))}
       {/* Video — OSC 8 clickable hyperlink */}
       {line.hasVideo && line.videoPlaylistUrl && (
@@ -208,8 +210,10 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       {qp.text.split('\n').map((line, i) => (
         <Box key={i}><Text color="magenta">{'│ '}{line || ' '}</Text></Box>
       ))}
-      {qp.imageUrls?.map((url, idx) => (
-        <Box key={idx}><Text color="magenta">{'│ '}{'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: qp.imageUrls!.length > 1 ? idx + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}</Text></Box>
+      {qp.imageDetails?.map((d, idx) => (
+        <Box key={idx} flexDirection="column"><Text color="magenta">{'│ '}{'\x1b]8;;' + d.url + '\x07🖼 ' + t('post.imageCount', { n: qp.imageDetails!.length > 1 ? idx + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07'}</Text>
+        {d.alt && <Text color="magenta" dimColor>{'│ ALT: '}{d.alt}</Text>}
+        </Box>
       ))}
     </Box>
   );
@@ -288,10 +292,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
               {/* Text */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>
               {/* Images */}
-              {line.imageUrls?.map((url, idx) => (
-                <Box key={idx}><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>
-                  {'\x1b]8;;' + url + '\x07🖼 ' + t('post.imageCount', { n: line.imageUrls!.length > 1 ? idx + 1 : 1 }) + '\x1b]8;;\x07'}
-                </Text></Box>
+              {line.imageDetails?.map((d, idx) => (
+                <Box key={idx} flexDirection="column"><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>
+                  {'\x1b]8;;' + d.url + '\x07🖼 ' + t('post.imageCount', { n: line.imageDetails!.length > 1 ? idx + 1 : 1 }) + '\x1b]8;;\x07'}
+                </Text>
+                {d.alt && <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined} dimColor>{'  ALT: '}{d.alt}</Text></Box>}
+                </Box>
               ))}
               {/* Video */}
               {line.hasVideo && line.videoPlaylistUrl && (

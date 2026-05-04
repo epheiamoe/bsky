@@ -220,10 +220,10 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
                 </div>
                 <p className="text-sm text-text-primary line-clamp-4 break-all">{linkifyText(focused.quotedPost.text)}</p>
-                {focused.quotedPost.imageUrls && focused.quotedPost.imageUrls.length > 0 && (
+                {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
                   <div className="mt-1 flex gap-1">
-                    {focused.quotedPost.imageUrls.slice(0, 2).map((url, idx) => (
-                      <img key={idx} src={url} className="w-16 h-16 object-cover rounded-md" alt="" />
+                    {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                      <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
                     ))}
                   </div>
                 )}
@@ -241,8 +241,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
               </div>
             )}
-            {focused.imageUrls?.length > 0 && (
-              <ImageGrid images={focused.imageUrls.map(url => ({ url, alt: '' }))} />
+            {focused.imageDetails?.length > 0 && (
+              <ImageGrid images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))} />
             )}
             {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
               <VideoCard

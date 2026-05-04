@@ -101,6 +101,9 @@ const zh: LocaleMessages = {
   'compose.submitThread': '发布串 ({n}篇)',
   'compose.threadTitle': '发帖串',
   'compose.partialFail': '已发布 {n} 篇，剩余 {m} 篇因错误未发布',
+  'compose.altWarning': '您的 {n} 张媒体没有添加ALT文字。ALT文字可以帮助视障群体更好地了解您媒体的内容。',
+  'compose.altPlaceholder': '输入ALT文字（描述图片内容，可选）',
+  'compose.altLabel': 'ALT',
 
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',
