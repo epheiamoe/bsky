@@ -4,6 +4,7 @@ import type { AppView } from '@bsky/app';
 import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, getWidgetsForView } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
+import { saveAppConfig } from '../hooks/useAppConfig.js';
 import { Sidebar } from './Sidebar';
 import { SettingsModal } from './SettingsModal';
 import { WidgetPanel } from './WidgetPanel.js';
@@ -69,6 +70,7 @@ export function Layout({
       // Persist the auto-enablement
       if (defaultIds.length > 0) {
         const updated = { ...config, enabledWidgets: defaultIds };
+        saveAppConfig(updated);
         onConfigChange(updated);
       }
     }
@@ -78,8 +80,9 @@ export function Layout({
   const handleToggleWidget = useCallback((id: string) => {
     toggleWidget(id);
     setWidgetTick(t => t + 1);
-    // Persist to AppConfig
+    // Persist to AppConfig and localStorage
     const updated = { ...config, enabledWidgets: getEnabledWidgetIds() };
+    saveAppConfig(updated);
     onConfigChange(updated);
   }, [config, onConfigChange]);
 

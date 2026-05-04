@@ -96,6 +96,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [draftListOpen, setDraftListOpen] = useState(false);
   const [draftListIdx, setDraftListIdx] = useState(0);
   const [draftSavePrompt, setDraftSavePrompt] = useState(false);
+  // Polish
+  const [polishPhase, setPolishPhase] = useState<'idle' | 'req' | 'loading' | 'result'>('idle');
+  const [polishRequirement, setPolishRequirement] = useState('');
+  const [polishResult, setPolishResult] = useState('');
+  const [polishError, setPolishError] = useState<string | null>(null);
 
   // AI
   const [focusedPanel, setFocusedPanel] = useState<FocusTarget>('main');
@@ -168,6 +173,23 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     const data = compose.toDraftData();
     await saveDraft(data);
   }, [compose, saveDraft]);
+
+  const handlePolishCall = useCallback(async (text: string, requirement: string) => {
+    if (!client) return;
+    setPolishPhase('loading');
+    setPolishError(null);
+    try {
+      const polishConfig = resolveScenarioConfig(config.scenarioModels.polish);
+      const { polishDraft } = await import('@bsky/core');
+      const result = await polishDraft(polishConfig, text, requirement);
+      setPolishResult(result);
+      setPolishPhase('result');
+    } catch (e) {
+      setPolishError(e instanceof Error ? e.message : String(e));
+      setPolishResult('');
+      setPolishPhase('result');
+    }
+  }, [client, config, resolveScenarioConfig]);
 
   // ═════════════════════ KEYBOARD ═════════════════════
   useInput((input, key) => {
@@ -279,6 +301,35 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         }
         return;
       }
+      if (polishPhase === 'req') {
+        if (key.return && polishRequirement.trim()) {
+          const activePost = compose.posts[composePostIdx];
+          if (activePost?.text.trim()) {
+            handlePolishCall(activePost.text, polishRequirement.trim());
+          }
+          return;
+        }
+        if (key.escape) { setPolishPhase('idle'); setPolishRequirement(''); return; }
+        return;
+      }
+      if (polishPhase === 'loading') return;
+      if (polishPhase === 'result') {
+        if (key.escape) { setPolishPhase('idle'); setPolishError(null); return; }
+        if ((input === 'r' || input === 'R') && polishResult) {
+          const activePost = compose.posts[composePostIdx];
+          if (activePost) { compose.setPostText(activePost.id, polishResult); }
+          setPolishPhase('idle');
+          return;
+        }
+        if (input === 'c' || input === 'C') {
+          if (polishResult) {
+            process.stderr.write(polishResult);
+          }
+          setPolishPhase('idle');
+          return;
+        }
+        return;
+      }
       if (imagePathInput !== null) {
         if (key.return) {
           const path = imagePathInput.trim();
@@ -346,6 +397,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       }
       if (input === 'D') { setDraftListOpen(true); setDraftListIdx(0); return; }
       if (input === 'P') { compose.addPost(); setComposePostIdx(compose.posts.length); return; }
+      if ((input === 'f' || input === 'F') && compose.posts[composePostIdx]?.text?.trim()) {
+        setPolishRequirement('');
+        setPolishPhase('req');
+        return;
+      }
       if (input === 'X' && compose.posts.length > 1) {
         const id = compose.posts[composePostIdx]?.id;
         if (id) compose.removePost(id);
@@ -492,12 +548,17 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             composeMedia={composeMedia}
             uploadError={composeUploadError}
             composeInfo={composeInfo}
-            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : imagePathInput !== null ? 'media' : 'text'}
+            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : 'text'}
             imagePathInput={imagePathInput}
             setImagePathInput={setImagePathInput}
             drafts={drafts}
             draftListIdx={draftListIdx}
             cols={mainW}
+            polishResult={polishResult}
+            polishError={polishError}
+            polishPhase={polishPhase}
+            polishRequirement={polishRequirement}
+            setPolishRequirement={setPolishRequirement}
           />
         );
       case 'profile':

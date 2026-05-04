@@ -15,12 +15,17 @@ interface ComposeViewProps {
   composeMedia: ComposeMedia[];
   uploadError: string | null;
   composeInfo: string | null;
-  mode: 'text' | 'media' | 'drafts' | 'savePrompt';
+  mode: 'text' | 'media' | 'drafts' | 'savePrompt' | 'polishReq' | 'polishResult';
   imagePathInput: string | null;
   setImagePathInput: (v: string | null) => void;
   drafts: AppDraft[];
   draftListIdx: number;
   cols: number;
+  polishResult?: string;
+  polishError?: string | null;
+  polishPhase?: string;
+  polishRequirement?: string;
+  setPolishRequirement?: (v: string) => void;
 }
 
 export function ComposeView({
@@ -29,6 +34,8 @@ export function ComposeView({
   composeMedia, uploadError, composeInfo,
   mode, imagePathInput, setImagePathInput,
   drafts, draftListIdx, cols,
+  polishResult, polishError, polishPhase,
+  polishRequirement, setPolishRequirement,
 }: ComposeViewProps) {
   const { t } = useI18n();
   const isReply = !!replyTo;
@@ -115,7 +122,7 @@ export function ComposeView({
         </Box>
       )}
 
-      {/* Text / media input */}
+      {/* Text / media / polish input */}
       {mode === 'media' ? (
         <Box borderStyle="single" borderColor="gray" padding={1} marginTop={0}>
           <TextInput
@@ -123,6 +130,29 @@ export function ComposeView({
             onChange={setImagePathInput}
             placeholder={t('compose.mediaPathPlaceholder')}
           />
+        </Box>
+      ) : mode === 'polishReq' ? (
+        <Box borderStyle="single" borderColor="magenta" padding={1} marginTop={0}>
+          <TextInput
+            value={polishRequirement ?? ''}
+            onChange={setPolishRequirement ?? (() => {})}
+            placeholder={t('action.polishPlaceholder')}
+          />
+        </Box>
+      ) : mode === 'polishResult' ? (
+        <Box flexDirection="column" borderStyle="single" borderColor={polishError ? 'red' : 'green'} padding={1} marginTop={0}>
+          {polishPhase === 'loading' ? (
+            <Text color="cyan">{t('action.polishing')}</Text>
+          ) : polishError ? (
+            <Text color="red">{polishError}</Text>
+          ) : (
+            <Box flexDirection="column">
+              <Text>{polishResult}</Text>
+              <Box height={1}>
+                <Text dimColor>{'[R] '}{t('action.replace')}{' · [C] '}{t('action.copy')}{' · [Esc] '}{t('action.cancel')}</Text>
+              </Box>
+            </Box>
+          )}
         </Box>
       ) : mode === 'drafts' || mode === 'savePrompt' ? (
         <Box height={1} />
@@ -140,7 +170,9 @@ export function ComposeView({
       <Box height={1}>
         {mode === 'media' ? (
           <Text dimColor>{'📎 '}{t('compose.mediaInputMode')}</Text>
-        ) : mode === 'text' ? (
+        ) : mode === 'polishReq' ? (
+          <Text dimColor>{t('action.polish')}{': Enter '}{t('action.confirm')}{' · Esc '}{t('action.cancel')}</Text>
+        ) : mode === 'polishResult' ? null : mode === 'text' ? (
           <>
             <Text color={(activePost?.text?.length ?? 0) > 280 ? 'yellow' : undefined}>
               {(activePost?.text?.length ?? 0)}/300

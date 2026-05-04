@@ -132,15 +132,16 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
     }
   }, [draftId, drafts]);
 
-  // Bridge first post's draft to widget system
+  // Bridge first non-empty post's draft to widget system (right panel PolishWidget)
   useEffect(() => {
-    const firstText = posts[0]?.text ?? '';
-    setComposeDraftForWidgets(firstText);
+    const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
+    setComposeDraftForWidgets(polishPost?.text ?? '');
   }, [posts]);
 
   useEffect(() => {
     registerComposeDraftSetter((text) => {
-      if (posts[0]) setPostText(posts[0].id, text);
+      const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
+      if (polishPost) setPostText(polishPost.id, text);
     });
     return () => registerComposeDraftSetter(null);
   }, [posts]);
@@ -302,6 +303,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
 
   const isReply = !!replyTo;
   const nonEmptyCount = posts.filter(p => p.text.trim()).length;
+  const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
@@ -310,12 +312,13 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
           <div className="flex items-center gap-2">
             <h1 className="text-lg font-semibold text-text-primary"><Icon name="pencil-line" size={16} /> {isReply ? t('compose.titleReply') : posts.length > 1 ? t('compose.threadTitle') : t('compose.title')}</h1>
-            {polishConfig && posts[0]?.text?.trim() && (
+            {polishConfig && polishPost?.text?.trim() && (
               <button
                 onClick={() => setShowPolishModal(true)}
                 className={`text-sm text-purple-500 hover:text-purple-600 transition-colors flex items-center gap-1${getEnabledWidgetIds().includes('polish') ? ' lg:hidden' : ''}`}
               >
                 <Icon name="file-text" size={14} /> {t('action.polish')}
+                {posts.length > 1 && <span className="text-xs text-text-secondary ml-1">帖子 {posts.indexOf(polishPost!) + 1}/{posts.length}</span>}
               </button>
             )}
           </div>
@@ -518,12 +521,12 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
         </form>
       </main>
 
-      {showPolishModal && polishConfig && posts[0] && (
+      {showPolishModal && polishConfig && polishPost && (
         <WidgetModal
           widgetId="polish"
           context={{
-            composeDraft: posts[0].text,
-            onComposeDraftChange: (text: string) => setPostText(posts[0]!.id, text),
+            composeDraft: polishPost.text,
+            onComposeDraftChange: (text: string) => setPostText(polishPost.id, text),
             polishConfig,
             viewType: 'compose',
           }}
