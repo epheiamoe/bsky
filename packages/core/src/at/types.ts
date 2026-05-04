@@ -283,3 +283,30 @@ export interface GetBookmarksResponse {
   cursor?: string;
   bookmarks: BookmarkResult[];
 }
+
+export interface DraftPostInput {
+  text: string;
+}
+
+export interface DraftInput {
+  posts: DraftPostInput[];
+  deviceId?: string;
+  deviceName?: string;
+  langs?: string[];
+}
+
+export interface DraftView {
+  id: string;
+  draft: DraftInput;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DraftsResponse {
+  cursor?: string;
+  drafts: DraftView[];
+}
+
+export interface CreateDraftResponse {
+  id: string;
+}

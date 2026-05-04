@@ -13,6 +13,7 @@ const zh: LocaleMessages = {
   'nav.login': '登录',
   'nav.menu': '菜单',
   'nav.back': '返回',
+  'nav.drafts': '草稿',
 
   // ── Actions ──
   'action.refresh': '刷新',
@@ -90,6 +91,26 @@ const zh: LocaleMessages = {
   'compose.draftListHeader': '📝 草稿 (Esc: 返回, Enter: 载入, d: 删除, n: 新建)',
   'compose.draftSavePrompt': '保存草稿？[y/n/esc]',
   'compose.noDrafts': '暂无草稿',
+  'compose.saveDraft': '保存草稿',
+  'compose.draftSaved': '草稿已保存',
+  'compose.draftSaveHint': '是否保存草稿？',
+  'compose.addPost': '添加帖子',
+  'compose.removePost': '删除帖子',
+  'compose.submitThread': '发布串 ({n}篇)',
+  'compose.threadTitle': '发帖串',
+  'compose.partialFail': '已发布 {n} 篇，剩余 {m} 篇因错误未发布',
+
+  'drafts.title': '草稿',
+  'drafts.empty': '没有草稿',
+  'drafts.notSynced': '此草稿未保存到服务器',
+  'drafts.sync': '同步',
+  'drafts.syncing': '同步中…',
+  'drafts.syncSuccess': '已同步到服务器',
+  'drafts.deleteConfirm': '确定删除此草稿？',
+  'drafts.serverDelete': '远程草稿已删除',
+  'drafts.threadPreview': '{n} 篇帖子串',
+  'drafts.replyPreview': '回复草稿',
+  'drafts.saved': '草稿已保存',
 
   // ── Thread ──
   'thread.title': '帖子',
@@ -248,6 +269,7 @@ const zh: LocaleMessages = {
   'keys.aiChat': 'Esc:返回 PgUp/PgDn:滚动',
   'keys.aiFocused': 'Esc:返回主面板',
   'keys.aiHistory': 'Esc 返回 ↑↓:选 N:新建 L:加载 D:删除',
+  'keys.drafts': '↑↓/jk:导航 Enter:加载 D:删除 S:同步 R:刷新 Esc:返回',
 
   // ── View breadcrumbs (TUI) ──
   'breadcrumb.feed': '时间线',

@@ -25,6 +25,9 @@ import type {
   CreateRecordResponse,
   CreateBookmarkResponse,
   GetBookmarksResponse,
+  DraftInput,
+  DraftsResponse,
+  CreateDraftResponse,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -414,6 +417,36 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       searchParams: params,
     }).json<GetBookmarksResponse>();
+  }
+
+  async createDraft(draft: DraftInput): Promise<CreateDraftResponse> {
+    return this.ky.post('app.bsky.draft.createDraft', {
+      headers: this.getAuthHeaders(),
+      json: { draft },
+    }).json<CreateDraftResponse>();
+  }
+
+  async updateDraft(id: string, draft: DraftInput): Promise<void> {
+    await this.ky.post('app.bsky.draft.updateDraft', {
+      headers: this.getAuthHeaders(),
+      json: { draft: { id, draft } },
+    });
+  }
+
+  async getDrafts(limit = 50, cursor?: string): Promise<DraftsResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.ky.get('app.bsky.draft.getDrafts', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<DraftsResponse>();
+  }
+
+  async deleteDraft(id: string): Promise<void> {
+    await this.ky.post('app.bsky.draft.deleteDraft', {
+      headers: this.getAuthHeaders(),
+      json: { id },
+    });
   }
 
   getVideoThumbnailUrl(did: string, cid: string): string {

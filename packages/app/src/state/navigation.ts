@@ -2,12 +2,13 @@ export type AppView =
   | { type: 'feed'; feedUri?: string }
   | { type: 'detail'; uri: string }
   | { type: 'thread'; uri: string }
-  | { type: 'compose'; replyTo?: string; quoteUri?: string }
+  | { type: 'compose'; replyTo?: string; quoteUri?: string; draftId?: string }
   | { type: 'profile'; actor: string; profileTab?: string }
   | { type: 'notifications' }
   | { type: 'search'; query?: string; searchTab?: string }
   | { type: 'aiChat'; contextUri?: string; sessionId?: string; contextPost?: string; contextProfile?: string }
   | { type: 'bookmarks' }
+  | { type: 'drafts' }
   | { type: 'components' };
 
 export interface NavigationState {

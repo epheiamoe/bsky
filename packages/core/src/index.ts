@@ -27,6 +27,11 @@ export type {
   FeedGeneratorView,
   TrendingTopic,
   GetTrendsResponse,
+  DraftInput,
+  DraftPostInput,
+  DraftView,
+  DraftsResponse,
+  CreateDraftResponse,
 } from './at/types.js';
 
 // AI exports

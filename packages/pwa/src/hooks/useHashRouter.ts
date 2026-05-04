@@ -14,6 +14,7 @@ import { BUILTIN_FEEDS } from '@bsky/core';
  *   #/notifications
  *   #/search / #/search?q=...
  *   #/bookmarks
+ *   #/drafts
  *   #/compose / #/compose?replyTo=at://...
  *   #/ai / #/ai?context=at://...
  */
@@ -112,14 +113,18 @@ function parseHash(): AppView {
     }
     case '/bookmarks':
       return { type: 'bookmarks' };
+    case '/drafts':
+      return { type: 'drafts' };
     case '/components':
       return { type: 'components' };
     case '/compose': {
       const replyTo = params.get('replyTo');
       const quoteUri = params.get('quoteUri');
+      const draftId = params.get('draftId');
       const view: AppView = { type: 'compose' };
       if (replyTo) (view as { replyTo?: string }).replyTo = decodeURIComponent(replyTo);
       if (quoteUri) (view as { quoteUri?: string }).quoteUri = decodeURIComponent(quoteUri);
+      if (draftId) (view as { draftId?: string }).draftId = decodeURIComponent(draftId);
       return view;
     }
     case '/ai': {
@@ -168,12 +173,16 @@ function encodeView(view: AppView): string {
     }
     case 'bookmarks':
       return '#/bookmarks';
+    case 'drafts':
+      return '#/drafts';
     case 'components':
       return '#/components';
     case 'compose': {
       const params = new URLSearchParams();
       if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));
       if (view.quoteUri) params.set('quoteUri', encodeURIComponent(view.quoteUri));
+      const dId = (view as { draftId?: string }).draftId;
+      if (dId) params.set('draftId', encodeURIComponent(dId));
       const qs = params.toString();
       return qs ? `#/compose?${qs}` : '#/compose';
     }

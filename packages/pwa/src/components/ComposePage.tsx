@@ -1,21 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCompose, useI18n, useDrafts, getCdnImageUrl, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds } from '@bsky/app';
-import type { ComposeMedia, Draft } from '@bsky/app';
+import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app';
 import type { BskyClient, PostView, AIConfig } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 import { WidgetModal } from './WidgetModal.js';
 
 const MAX_IMAGES = 4;
-const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB per image (Bluesky supports up to 2MB / 4K)
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB for video
+const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
 
 interface ComposePageProps {
   client: BskyClient;
   replyTo?: string;
   quoteUri?: string;
+  draftId?: string;
   goBack: () => void;
   goHome: () => void;
+  goTo: (v: AppView) => void;
   polishConfig?: AIConfig;
 }
 
@@ -64,31 +66,30 @@ function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string 
   return images;
 }
 
-export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishConfig }: ComposePageProps) {
+export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
   const { t } = useI18n();
-  const { draft, setDraft, submitting, error, setReplyTo, setQuoteUri, submit } = useCompose(client, goBack, goHome);
-  const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts();
+  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, goHome);
+  const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
-  const [images, setImages] = useState<LocalImage[]>([]);
-  const [video, setVideo] = useState<LocalVideo | null>(null);
+  const [perPostImages, setPerPostImages] = useState<Map<string, LocalImage[]>>(new Map());
+  const [perPostVideos, setPerPostVideos] = useState<Map<string, LocalVideo | null>>(new Map());
   const [compressInfo, setCompressInfo] = useState<string | null>(null);
   const [showDrafts, setShowDrafts] = useState(false);
   const [quotePreview, setQuotePreview] = useState<QuotePreview | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [showPolishModal, setShowPolishModal] = useState(false);
+  const [draftSaveHint, setDraftSaveHint] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileTargetPostId, setFileTargetPostId] = useState<string | null>(null);
 
+  // Initialize replyTo / quoteUri
   useEffect(() => {
     if (replyTo) {
       setReplyTo(replyTo);
       const parts = replyTo.match(/^at:\/\/(did:plc:[^/]+)\/([^/]+)\/([^/]+)$/);
       if (parts) {
         const did = parts[1]!;
-        const collection = parts[2]!;
-        const rkey = parts[3]!;
-        client.getRecord(did, collection, rkey).then(() => {
-          client.getProfile(did).then(profile => setReplyHandle(profile.handle)).catch(() => setReplyHandle(did));
-        }).catch(() => {});
+        client.getProfile(did).then(profile => setReplyHandle(profile.handle)).catch(() => setReplyHandle(did));
       }
     } else {
       setReplyTo(undefined);
@@ -119,35 +120,55 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishC
     }
   }, [quoteUri, client, setQuoteUri]);
 
-  // Bridge draft to widget system (right panel PolishWidget)
-  useEffect(() => { setComposeDraftForWidgets(draft); }, [draft]);
+  // Load draft if draftId is provided
   useEffect(() => {
-    registerComposeDraftSetter(setDraft);
+    if (draftId) {
+      const draft = drafts.find(d => d.id === draftId);
+      if (draft) {
+        loadFromDraft(draft.posts, draft.replyTo, draft.quoteUri);
+        // Clear draftId from URL (load once)
+        goTo({ type: 'compose' } as AppView);
+      }
+    }
+  }, [draftId, drafts]);
+
+  // Bridge first post's draft to widget system
+  useEffect(() => {
+    const firstText = posts[0]?.text ?? '';
+    setComposeDraftForWidgets(firstText);
+  }, [posts]);
+
+  useEffect(() => {
+    registerComposeDraftSetter((text) => {
+      if (posts[0]) setPostText(posts[0].id, text);
+    });
     return () => registerComposeDraftSetter(null);
-  }, []);
+  }, [posts]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!fileTargetPostId) return;
     const files = Array.from(e.target.files ?? []);
 
-    // Check for video first — Bluesky only allows 1 video, no mixing with images
+    const currentImages = perPostImages.get(fileTargetPostId) ?? [];
+    const currentVideo = perPostVideos.get(fileTargetPostId) ?? null;
+
     const videoFile = files.find(f => f.type.startsWith('video/'));
     if (videoFile) {
-      if (video) { alert('Only 1 video allowed'); return; }
-      if (images.length > 0) { alert('Cannot mix video with images'); return; }
+      if (currentVideo) { alert('Only 1 video allowed'); return; }
+      if (currentImages.length > 0) { alert('Cannot mix video with images'); return; }
       if (videoFile.size > MAX_VIDEO_SIZE) { alert(`"${videoFile.name}" exceeds 100MB limit`); return; }
-      setVideo({
+      setPerPostVideos(prev => new Map(prev).set(fileTargetPostId, {
         file: videoFile,
         preview: URL.createObjectURL(videoFile),
         uploading: false,
-      });
+      }));
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
-    // Images only — auto-compress oversized ones
-    if (video) { alert('Cannot mix images with video'); return; }
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    if (images.length + imageFiles.length > MAX_IMAGES) {
+    if (currentVideo) { alert('Cannot mix images with video'); return; }
+    if (currentImages.length + imageFiles.length > MAX_IMAGES) {
       alert(t('compose.maxImages', { n: MAX_IMAGES }));
       return;
     }
@@ -170,93 +191,117 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishC
       setCompressInfo(compressNotices.join('; '));
       setTimeout(() => setCompressInfo(null), 5000);
     }
-    setImages(prev => [...prev, ...newImages].slice(0, MAX_IMAGES));
+    setPerPostImages(prev => {
+      const next = new Map(prev);
+      next.set(fileTargetPostId, [...(next.get(fileTargetPostId) ?? []), ...newImages].slice(0, MAX_IMAGES));
+      return next;
+    });
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [images.length, video]);
+  }, [fileTargetPostId, perPostImages, perPostVideos, t]);
 
-  const removeImage = useCallback((idx: number) => {
-    setImages(prev => { URL.revokeObjectURL(prev[idx]!.preview); return prev.filter((_, i) => i !== idx); });
+  const removeImage = useCallback((postId: string, idx: number) => {
+    setPerPostImages(prev => {
+      const next = new Map(prev);
+      const imgs = next.get(postId) ?? [];
+      if (imgs[idx]) URL.revokeObjectURL(imgs[idx]!.preview);
+      next.set(postId, imgs.filter((_, i) => i !== idx));
+      return next;
+    });
   }, []);
 
-  const removeVideo = useCallback(() => {
-    if (video) { URL.revokeObjectURL(video.preview); setVideo(null); }
-  }, [video]);
+  const removeVideo = useCallback((postId: string) => {
+    setPerPostVideos(prev => {
+      const next = new Map(prev);
+      const vid = next.get(postId) ?? null;
+      if (vid) URL.revokeObjectURL(vid.preview);
+      next.set(postId, null);
+      return next;
+    });
+  }, []);
 
-  const charLen = draft.length;
-  const isEmpty = charLen === 0;
-
-  const handleBack = useCallback(() => {
-    if (draft.trim().length > 0) {
-      const shouldSave = confirm(t('compose.saveDraftBeforeLeave') || 'Save draft before leaving?');
-      if (shouldSave) {
-        saveDraft({
-          id: crypto.randomUUID(),
-          text: draft,
-          replyTo,
-          quoteUri,
-        });
-      }
+  const handleBack = useCallback(async () => {
+    const hasContent = posts.some(p => p.text.trim());
+    if (hasContent) {
+      setDraftSaveHint(true);
+    } else {
+      goBack();
     }
+  }, [posts, goBack]);
+
+  const confirmSaveDraft = useCallback(async () => {
+    const data = toDraftData();
+    await saveDraft(data);
+    setDraftSaveHint(false);
     goBack();
-  }, [draft, replyTo, quoteUri, goBack, saveDraft, t]);
+  }, [toDraftData, saveDraft, goBack]);
 
-  const handleLoadDraft = useCallback((d: Draft) => {
-    setDraft(d.text);
-    if (d.replyTo) {
-      setReplyTo(d.replyTo);
-    }
-    if (d.quoteUri) {
-      setQuoteUri(d.quoteUri);
-    }
+  const discardDraft = useCallback(() => {
+    setDraftSaveHint(false);
+    goBack();
+  }, [goBack]);
+
+  const handleLoadDraft = useCallback((draft: AppDraft) => {
+    loadFromDraft(draft.posts, draft.replyTo, draft.quoteUri);
     setShowDrafts(false);
-  }, [setDraft, setReplyTo, setQuoteUri]);
+  }, [loadFromDraft]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEmpty || submitting) return;
+    if (submitting) return;
 
-    const uploadedMedia: ComposeMedia[] = [];
+    const mediaMap = new Map<string, ComposeMedia[]>();
 
-    // Upload video if present
-    if (video) {
-      setVideo(prev => prev ? { ...prev, uploading: true } : null);
-      try {
-        const data = new Uint8Array(await video.file.arrayBuffer());
-        const res = await client.uploadBlob(data, video.file.type);
-        uploadedMedia.push({
-          type: 'video',
-          blobRef: { $link: res.blob.ref.$link, mimeType: video.file.type, size: video.file.size },
-          alt: '',
-        });
-      } catch {
-        setVideo(prev => prev ? { ...prev, uploading: false, error: t('compose.uploadFailed') } : null);
-        return;
-      }
-    }
+    // Upload media for all posts
+    for (const post of posts) {
+      if (!post.text.trim()) continue;
+      const imgs = perPostImages.get(post.id) ?? [];
+      const vid = perPostVideos.get(post.id) ?? null;
+      if (imgs.length === 0 && !vid) continue;
 
-    // Upload images
-    if (images.length > 0) {
-      setImages(prev => prev.map(i => ({ ...i, uploading: true, error: undefined })));
-      for (const img of images) {
+      const uploaded: ComposeMedia[] = [];
+
+      if (vid) {
         try {
-          const data = new Uint8Array(await img.file.arrayBuffer());
-          const res = await client.uploadBlob(data, img.file.type);
-          uploadedMedia.push({
-            type: 'image',
-            blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
+          const data = new Uint8Array(await vid.file.arrayBuffer());
+          const res = await client.uploadBlob(data, vid.file.type);
+          uploaded.push({
+            type: 'video',
+            blobRef: { $link: res.blob.ref.$link, mimeType: vid.file.type, size: vid.file.size },
             alt: '',
           });
         } catch {
-          setImages(prev => prev.map((i, idx) => idx === images.indexOf(img) ? { ...i, uploading: false, error: t('compose.uploadFailed') } : i));
+          alert(t('compose.uploadFailed') || `Failed to upload video for post`);
           return;
         }
       }
+
+      if (imgs.length > 0) {
+        for (const img of imgs) {
+          try {
+            const data = new Uint8Array(await img.file.arrayBuffer());
+            const res = await client.uploadBlob(data, img.file.type);
+            uploaded.push({
+              type: 'image',
+              blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
+              alt: '',
+            });
+          } catch {
+            alert(t('compose.uploadFailed') || `Failed to upload image`);
+            return;
+          }
+        }
+      }
+
+      if (uploaded.length > 0) mediaMap.set(post.id, uploaded);
     }
 
-    submit(draft.trim(), replyTo ?? undefined, uploadedMedia.length > 0 ? uploadedMedia : undefined);
-  }, [draft, replyTo, isEmpty, submitting, submit, images, video, client]);
+    await submit(mediaMap);
+  }, [posts, perPostImages, perPostVideos, submitting, submit, client, t]);
 
   const truncate = (s: string, max = 40) => s.length > max ? s.slice(0, max) + '…' : s;
+
+  const isReply = !!replyTo;
+  const nonEmptyCount = posts.filter(p => p.text.trim()).length;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
@@ -264,8 +309,8 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishC
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold text-text-primary"><Icon name="pencil-line" size={16} /> {replyTo ? t('compose.titleReply') : t('compose.title')}</h1>
-            {polishConfig && draft.trim() && (
+            <h1 className="text-lg font-semibold text-text-primary"><Icon name="pencil-line" size={16} /> {isReply ? t('compose.titleReply') : posts.length > 1 ? t('compose.threadTitle') : t('compose.title')}</h1>
+            {polishConfig && posts[0]?.text?.trim() && (
               <button
                 onClick={() => setShowPolishModal(true)}
                 className={`text-sm text-purple-500 hover:text-purple-600 transition-colors flex items-center gap-1${getEnabledWidgetIds().includes('polish') ? ' lg:hidden' : ''}`}
@@ -273,40 +318,63 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishC
                 <Icon name="file-text" size={14} /> {t('action.polish')}
               </button>
             )}
-            {drafts.length > 0 && (
-              <button onClick={() => setShowDrafts(!showDrafts)} className="text-sm text-text-secondary hover:text-primary transition-colors">
-                <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
+          </div>
+          <div className="flex items-center gap-2">
+            {!isReply && drafts.length > 0 && (
+              <button onClick={() => goTo({ type: 'drafts' })} className="text-sm text-text-secondary hover:text-primary transition-colors flex items-center gap-1">
+                <Icon name="file-text" size={16} /> {t('drafts.title')} ({drafts.length})
               </button>
             )}
+            <button type="submit" form="compose-form" disabled={nonEmptyCount === 0 || submitting}
+              className="px-4 py-1.5 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold disabled:opacity-50 transition-colors text-sm">
+              {submitting ? t('action.sending') : posts.length > 1 ? t('compose.submitThread', { n: nonEmptyCount }) : t('action.send')}
+            </button>
           </div>
-          <div className="w-10" />
         </div>
       </header>
 
       <main className="max-w-content mx-auto px-4 py-4">
-        {/* Drafts list */}
+        {/* Draft save hint */}
+        {draftSaveHint && (
+          <div className="mb-4 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">{t('compose.draftSaveHint')}</p>
+            <div className="flex gap-2">
+              <button onClick={confirmSaveDraft} className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-hover transition-colors">
+                {t('compose.saveDraft')}
+              </button>
+              <button onClick={discardDraft} className="px-3 py-1.5 border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary transition-colors">
+                {t('action.cancel')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Drafts list overlay */}
         {showDrafts && (
           <div className="mb-4 border border-border rounded-lg bg-surface p-3 space-y-2">
             <p className="text-sm font-semibold text-text-primary">
-              <Icon name="file-text" size={16} /> {t('compose.drafts') || 'Drafts'}
+              <Icon name="file-text" size={16} /> {t('drafts.title')}
             </p>
             <div className="border-t border-border" />
             {drafts.length === 0 && (
-              <p className="text-sm text-text-secondary">{t('compose.noDrafts') || 'No saved drafts'}</p>
+              <p className="text-sm text-text-secondary">{t('drafts.empty')}</p>
             )}
             {drafts.map(d => (
               <div key={d.id} className="flex items-center justify-between gap-2 py-1">
-                <span className="text-sm text-text-primary flex-1 truncate">{truncate(d.text.trim() || '(empty)')}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm text-text-primary block truncate">{truncate(d.posts[0]?.text?.trim() || '(empty)')}</span>
+                  <span className="text-xs text-text-secondary">{d.posts.length > 1 ? `+${d.posts.length - 1}` : ''} {new Date(d.updatedAt).toLocaleDateString()}</span>
+                </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
                   <button onClick={() => handleLoadDraft(d)} className="text-xs text-primary hover:text-primary-hover px-2 py-0.5 rounded border border-primary/30 hover:bg-primary/10 transition-colors">Load</button>
-                  <button onClick={() => deleteDraft(d.id)} className="text-xs text-red-500 hover:text-red-600 px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
+                  <button onClick={() => saveDraft(d)} className="text-xs text-red-500 hover:text-red-600 px-2 py-0.5 rounded border border-red-500/30 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">Delete</button>
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="compose-form" onSubmit={handleSubmit} className="space-y-3">
           {replyTo && replyHandle && (
             <div className="text-sm text-text-secondary bg-surface rounded-lg px-3 py-2 border border-border">
               {t('compose.replyTo')} <span className="text-primary font-medium">@{replyHandle}</span>
@@ -346,80 +414,116 @@ export function ComposePage({ client, replyTo, quoteUri, goBack, goHome, polishC
             </div>
           )}
 
-          <textarea
-            value={draft}
-            onChange={e => { if (e.target.value.length <= 300) setDraft(e.target.value); }}
-            rows={4} maxLength={300} placeholder={t('compose.placeholder')} disabled={submitting}
-            className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-base leading-relaxed"
-          />
+          {/* Post cards */}
+          {posts.map((post, idx) => {
+            const isFirst = idx === 0;
+            const isLast = idx === posts.length - 1;
+            const imgs = perPostImages.get(post.id) ?? [];
+            const vid = perPostVideos.get(post.id) ?? null;
+            const charLen = post.text.length;
 
-          {/* Compression notice */}
+            return (
+              <div key={post.id}>
+                {idx > 0 && (
+                  <div className="flex justify-center py-1">
+                    <div className="w-0.5 h-4 bg-border rounded" />
+                    <span className="text-xs text-text-secondary mx-2">↓</span>
+                    <div className="w-0.5 h-4 bg-border rounded" />
+                  </div>
+                )}
+                <div className="border border-border rounded-lg bg-surface p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-secondary font-medium">
+                      {t('compose.title')} {idx + 1}/{posts.length}
+                    </span>
+                    {!isReply && !isFirst && (
+                      <button
+                        type="button"
+                        onClick={() => removePost(post.id)}
+                        className="text-text-secondary hover:text-red-500 transition-colors"
+                        title={t('compose.removePost')}
+                      >
+                        <Icon name="x" size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <textarea
+                    value={post.text}
+                    onChange={e => setPostText(post.id, e.target.value)}
+                    rows={3} maxLength={300}
+                    placeholder={t('compose.placeholder')}
+                    disabled={submitting}
+                    className="w-full px-3 py-2 rounded border border-border bg-white dark:bg-[#1A1A1A] text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-sm leading-relaxed"
+                  />
+
+                  {/* Video preview per post */}
+                  {vid && (
+                    <div className="relative rounded-lg overflow-hidden border border-border">
+                      <video src={vid.preview} className="w-full max-h-48 object-contain bg-black" controls preload="metadata" />
+                      <button type="button" onClick={() => removeVideo(post.id)} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80 flex items-center justify-center"><Icon name="x" size={14} /></button>
+                    </div>
+                  )}
+
+                  {/* Image preview per post */}
+                  {imgs.length > 0 && (
+                    <div className="grid grid-cols-2 gap-1">
+                      {imgs.map((img, i) => (
+                        <div key={i} className="relative rounded overflow-hidden border border-border aspect-square">
+                          <img src={img.preview} alt="" className="w-full h-full object-cover" />
+                          <button type="button" onClick={() => removeImage(post.id, i)} className="absolute top-1 right-1 w-5 h-5 bg-black/60 text-white rounded-full text-xs hover:bg-black/80 flex items-center justify-center"><Icon name="x" size={12} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Controls per post */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button type="button"
+                        onClick={() => { setFileTargetPostId(post.id); fileInputRef.current?.click(); }}
+                        disabled={submitting || (vid ? true : imgs.length >= MAX_IMAGES)}
+                        className="text-text-secondary hover:text-primary transition-colors text-xs disabled:opacity-30 flex items-center gap-1">
+                        <Icon name="camera" size={14} /> {imgs.length > 0 ? `(${imgs.length}/${MAX_IMAGES})` : ''}
+                      </button>
+                      <span className={`text-xs tabular-nums ${charLen >= 280 ? 'text-yellow-500' : 'text-text-secondary'}`}>{charLen}/300</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" />
+
+          {/* Compression info */}
           {compressInfo && (
             <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5">
               {t('compose.imageCompressed')}: {compressInfo}
             </div>
           )}
 
-          {/* Video preview */}
-          {video && (
-            <div className="relative rounded-lg overflow-hidden border border-border">
-              <video src={video.preview} className="w-full max-h-64 object-contain bg-black" controls preload="metadata" />
-              {video.uploading && (
-                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
-              )}
-              {video.error && <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center text-red-500 text-xs">{video.error}</div>}
-              <button type="button" onClick={removeVideo} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80"><Icon name="x" size={16} /></button>
-            </div>
-          )}
-
-          {images.length > 0 && (
-            <div className="grid grid-cols-2 gap-2">
-              {images.map((img, i) => (
-                <div key={i} className="relative rounded-lg overflow-hidden border border-border aspect-square">
-                  <img src={img.preview} alt="" className="w-full h-full object-cover" />
-                  {img.uploading && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    </div>
-                  )}
-                  {img.error && <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center text-red-500 text-xs">{img.error}</div>}
-                  <button type="button" onClick={() => removeImage(i)} className="absolute top-1 right-1 w-6 h-6 bg-black/60 text-white rounded-full text-xs hover:bg-black/80"><Icon name="x" size={16} /></button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" />
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => fileInputRef.current?.click()} disabled={(video ? true : images.length >= MAX_IMAGES) || submitting}
-                className="text-text-secondary hover:text-primary transition-colors text-sm disabled:opacity-30">
-                <Icon name="camera" size={18} /> {t('compose.addImage')}{(images.length > 0 && !video) ? ` (${images.length}/${MAX_IMAGES})` : ''}
-              </button>
-              <span className={`text-sm tabular-nums ${charLen >= 280 ? 'text-yellow-500' : 'text-text-secondary'}`}>{charLen}/300</span>
-            </div>
-
-            <button type="submit" disabled={isEmpty || submitting}
-              className="px-6 py-2 rounded-full bg-primary hover:bg-primary-hover text-white font-semibold disabled:opacity-50 transition-colors text-sm">
-              {submitting ? t('action.sending') : t('action.send')}
+          {/* Add post button (for new threads, not replies) */}
+          {!isReply && posts.length < 10 && (
+            <button type="button" onClick={addPost}
+              className="w-full px-3 py-2 rounded-lg border border-dashed border-border text-text-secondary hover:text-primary hover:border-primary transition-colors text-sm flex items-center justify-center gap-1">
+              <Icon name="plus" size={14} /> {t('compose.addPost')}
             </button>
-          </div>
+          )}
 
+          {/* Error */}
           {error && (
             <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{error}</div>
           )}
         </form>
       </main>
 
-      {showPolishModal && polishConfig && (
+      {showPolishModal && polishConfig && posts[0] && (
         <WidgetModal
           widgetId="polish"
           context={{
-            composeDraft: draft,
-            onComposeDraftChange: (text: string) => setDraft(text),
+            composeDraft: posts[0].text,
+            onComposeDraftChange: (text: string) => setPostText(posts[0]!.id, text),
             polishConfig,
             viewType: 'compose',
           }}
