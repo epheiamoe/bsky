@@ -232,7 +232,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                       e.stopPropagation();
                       setAltPopup(altPopup?.index === i ? null : { index: i, text: img.alt });
                     }}
-                    className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors"
+                    className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
                     title={img.alt}
                   >
                     <svg width="24" height="14" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -240,19 +240,6 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                       <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">ALT</text>
                     </svg>
                   </button>
-                )}
-                {altPopup?.index === i && (
-                  <div
-                    className="absolute top-1 right-1 z-20 bg-white dark:bg-[#1A1A1A] border border-border rounded-lg p-2 max-w-[200px] shadow-lg text-xs text-text-primary"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex items-start justify-between gap-1">
-                      <p className="whitespace-pre-wrap break-words">{img.alt}</p>
-                      <button onClick={() => setAltPopup(null)} className="text-text-secondary hover:text-text-primary flex-shrink-0">
-                        <Icon name="x" size={12} />
-                      </button>
-                    </div>
-                  </div>
                 )}
               </div>
             );
@@ -264,6 +251,20 @@ function ImageGrid({ images }: { images: ImageData[] }) {
           </div>
         )}
       </div>
+      {altPopup && (
+        <>
+          <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={() => setAltPopup(null)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] bg-white dark:bg-[#1A1A1A] border border-border rounded-lg p-4 max-w-[360px] w-[calc(100%-2rem)] shadow-2xl">
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className="text-xs text-text-secondary font-semibold tracking-wide">ALT</span>
+              <button onClick={() => setAltPopup(null)} className="text-text-secondary hover:text-text-primary">
+                <Icon name="x" size={16} />
+              </button>
+            </div>
+            <p className="text-sm text-text-primary whitespace-pre-wrap break-words leading-relaxed">{altPopup.text}</p>
+          </div>
+        </>
+      )}
       {lightbox !== null && createPortal(
         <ImageLightbox images={images} initial={lightbox} onClose={() => setLightbox(null)} />,
         document.body
