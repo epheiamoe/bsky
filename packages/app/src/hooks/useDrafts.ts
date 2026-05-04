@@ -7,6 +7,7 @@ export interface DraftStore {
   drafts: AppDraft[];
   loading: boolean;
   saving: boolean;
+  setClient(c: BskyClient | null): void;
   saveDraft(data: { posts: { text: string }[]; replyTo?: string; quoteUri?: string }, draftId?: string): Promise<string>;
   deleteDraft(id: string): Promise<void>;
   syncDraft(id: string): Promise<void>;
@@ -14,10 +15,12 @@ export interface DraftStore {
   loadDraft(id: string): AppDraft | undefined;
 }
 
-let _draftStoreInstance: DraftStore | null = null;
+// Module-level mutable client ref — avoids stale closure capture via singleton
+let _clientRef: BskyClient | null = null;
 
-export function createDraftsStore(client: BskyClient | null): DraftStore {
-  if (_draftStoreInstance) return _draftStoreInstance;
+export function createDraftsStore(initialClient: BskyClient | null): DraftStore {
+  // Update the shared ref when a valid client comes in
+  if (initialClient) _clientRef = initialClient;
 
   const storage = getDefaultDraftStorage();
 
@@ -25,6 +28,10 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
     drafts: [],
     loading: false,
     saving: false,
+
+    setClient(c: BskyClient | null) {
+      _clientRef = c;
+    },
 
     async saveDraft(data, draftId) {
       store.saving = true;
@@ -45,13 +52,13 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
         };
 
         // Try PDS first
-        if (client?.isAuthenticated()) {
+        if (_clientRef?.isAuthenticated()) {
           try {
             if (draft.serverId) {
-              await client.updateDraft(draft.serverId, { posts: draft.posts });
+              await _clientRef.updateDraft(draft.serverId, { posts: draft.posts });
               draft.syncStatus = 'synced';
             } else {
-              const res = await client.createDraft({ posts: draft.posts });
+              const res = await _clientRef.createDraft({ posts: draft.posts });
               draft.serverId = res.id;
               draft.syncStatus = 'synced';
             }
@@ -86,8 +93,8 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
       if (!draft) return;
 
       // Delete from PDS if synced
-      if (draft.serverId && client?.isAuthenticated()) {
-        try { await client.deleteDraft(draft.serverId); } catch { /* ignore */ }
+      if (draft.serverId && _clientRef?.isAuthenticated()) {
+        try { await _clientRef.deleteDraft(draft.serverId); } catch { /* ignore */ }
       }
 
       // Delete from local storage
@@ -97,12 +104,12 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
 
     async syncDraft(id) {
       const draft = store.drafts.find(d => d.id === id);
-      if (!draft || !client?.isAuthenticated()) return;
+      if (!draft || !_clientRef?.isAuthenticated()) return;
 
       if (draft.serverId) {
-        await client.updateDraft(draft.serverId, { posts: draft.posts });
+        await _clientRef.updateDraft(draft.serverId, { posts: draft.posts });
       } else {
-        const res = await client.createDraft({ posts: draft.posts });
+        const res = await _clientRef.createDraft({ posts: draft.posts });
         draft.serverId = res.id;
       }
 
@@ -126,9 +133,9 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
         }
 
         // Try fetching from PDS
-        if (client?.isAuthenticated()) {
+        if (_clientRef?.isAuthenticated()) {
           try {
-            const res = await client.getDrafts();
+            const res = await _clientRef.getDrafts();
             const serverDrafts = res.drafts ?? [];
 
             const localByServerId = new Map<string, AppDraft>();
@@ -186,13 +193,15 @@ export function createDraftsStore(client: BskyClient | null): DraftStore {
     },
   };
 
-  _draftStoreInstance = store;
   return store;
 }
 
 export function useDrafts(client: BskyClient | null) {
   const [store] = useState(() => createDraftsStore(client));
   const [, tick] = useState(0);
+
+  // Always sync the latest client to the store
+  useEffect(() => { store.setClient(client); }, [client, store]);
 
   useEffect(() => {
     store.refreshDrafts().then(() => tick(n => n + 1));
