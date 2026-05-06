@@ -32,12 +32,12 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
   return (
     <div className="flex items-center gap-3 text-text-secondary text-xs mt-1">
       {/* Reply */}
-      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'compose', replyTo: post.uri }); }} className="hover:text-primary transition-colors flex items-center gap-0.5" title="Reply">
+      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'compose', replyTo: post.uri }); }} className="hover:text-primary transition-colors flex items-center gap-0.5 btn-press" title="Reply">
         <Icon name="corner-down-right" size={14} />{post.replyCount ?? 0}
       </button>
       {/* Repost + Quote popup */}
       <div className="relative inline-flex items-center">
-        <button onClick={(e) => { e.stopPropagation(); setRepopup(!repopup); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 ${isR ? 'text-green-500' : ''}`} title="Repost / Quote">
+        <button onClick={(e) => { e.stopPropagation(); setRepopup(!repopup); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 btn-press ${isR ? 'text-green-500' : ''}`} title="Repost / Quote">
           <Icon name="repeat" size={14} />{rc}
         </button>
         {repopup && (
@@ -52,17 +52,17 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
         )}
       </div>
       {/* Like */}
-      <button onClick={(e) => { e.stopPropagation(); likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 ${isL ? 'text-red-500' : ''}`} title={isL ? 'Unlike' : 'Like'}>
+      <button onClick={(e) => { e.stopPropagation(); likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 btn-press ${isL ? 'text-red-500' : ''}`} title={isL ? 'Unlike' : 'Like'}>
         <Icon name="heart" size={14} filled={isL} />{lc}
       </button>
       {/* Bookmark */}
       {showBookmark && isBookmarked && onBookmark && (
-        <button onClick={(e) => { e.stopPropagation(); onBookmark(post.uri, post.cid); }} className={`hover:text-yellow-500 transition-colors ${isBookmarked(post.uri) ? 'text-yellow-500' : ''}`} title="Bookmark">
+        <button onClick={(e) => { e.stopPropagation(); onBookmark(post.uri, post.cid); }} className={`hover:text-yellow-500 transition-colors btn-press ${isBookmarked(post.uri) ? 'text-yellow-500' : ''}`} title="Bookmark">
           <Icon name="bookmark" size={14} filled={isBookmarked(post.uri)} />
         </button>
       )}
       {/* AI Analysis */}
-      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: post.uri }); }} className="hover:text-purple-500 transition-colors" title="AI Analysis">
+      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: post.uri }); }} className="hover:text-purple-500 transition-colors btn-press" title="AI Analysis">
         <Icon name="astroid-as-AI-Button" size={14} />
       </button>
     </div>

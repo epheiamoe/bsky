@@ -44,7 +44,7 @@ export function DraftsPage({ client, goBack, goTo }: DraftsPageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -70,8 +70,8 @@ export function DraftsPage({ client, goBack, goTo }: DraftsPageProps) {
         </div>
       ) : drafts.length > 0 ? (
         <div>
-          {drafts.map((draft) => (
-            <div key={draft.id} className="border-b border-border">
+          {drafts.map((draft, i) => (
+            <div key={draft.id} className={`border-b border-border animate-slideUp stagger-${(i % 6) + 1}`}>
               <button
                 onClick={() => goTo({ type: 'compose', draftId: draft.id })}
                 className="w-full text-left px-4 py-3 hover:bg-surface transition-colors"

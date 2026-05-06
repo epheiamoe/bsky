@@ -68,7 +68,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center gap-3">
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors text-lg shrink-0"><Icon name="arrow-big-left" size={20} /></button>
         <h1 className="text-text-primary font-semibold text-lg"><Icon name="compass" size={18} /> {t('search.title')}</h1>

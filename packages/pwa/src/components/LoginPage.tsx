@@ -31,7 +31,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
   const displayError = localError ?? error;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <p className="text-5xl mb-3"><Icon name="astroid-as-AI-Button" size={20} /></p>

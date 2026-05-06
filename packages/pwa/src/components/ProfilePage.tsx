@@ -115,7 +115,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   // ── Loading ──
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A]">
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] animate-fadeIn">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -124,7 +124,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   // ── Not found ──
   if (!profile) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0A0A0A] px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
         <button
           onClick={goBack}
           className="text-text-secondary hover:text-text-primary transition-colors text-lg mb-4"
@@ -143,7 +143,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     const isFollowers = followList === 'followers';
     const count = isFollowers ? profile.followersCount : profile.followsCount;
     return (
-      <div className="flex flex-col h-[calc(100vh-3rem)] bg-white dark:bg-[#0A0A0A]">
+      <div className="flex flex-col h-[calc(100vh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
         <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeFollowList}
@@ -216,7 +216,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   // ── Main profile view ──
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] bg-white dark:bg-[#0A0A0A]">
+    <div className="flex flex-col h-[calc(100vh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       {/* Header bar */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
         <button

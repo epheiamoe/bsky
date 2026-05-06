@@ -119,7 +119,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   if (loading) return <Spinner />;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center gap-3">
           <button

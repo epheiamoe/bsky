@@ -47,7 +47,7 @@ function reasonText(reason: string, t: (key: string) => string): string {
   return t(map[reason] ?? reason);
 }
 
-function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void }) {
+function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void; index: number }) {
   const emoji = REASON_EMOJI[n.reason] ?? null;
   const reasonLabel = reasonText(n.reason, t);
   const reasonSubject = n.reasonSubject;
@@ -55,7 +55,7 @@ function NotifItem({ n, t, goTo }: { n: Notification; t: (key: string) => string
   return (
     <div
       onClick={reasonSubject ? () => goTo({ type: 'thread', uri: reasonSubject! }) : undefined}
-      className={`border-b border-border px-4 py-3 hover:bg-surface transition-colors ${reasonSubject ? 'cursor-pointer' : ''}`}>
+      className={`border-b border-border px-4 py-3 hover:bg-surface transition-colors animate-slideUp stagger-${(index % 6) + 1} ${reasonSubject ? 'cursor-pointer' : ''}`}>
       <div className="flex gap-3">
         <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden">
           {n.author.avatar ? (
@@ -96,7 +96,7 @@ export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
   const { notifications, loading, refresh } = useNotifications(client);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
+    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -122,8 +122,8 @@ export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
         </div>
       ) : notifications.length > 0 ? (
         <div>
-          {notifications.map((n) => (
-            <NotifItem key={n.uri} n={n} t={t} goTo={goTo} />
+          {notifications.map((n, i) => (
+            <NotifItem key={n.uri} n={n} t={t} goTo={goTo} index={i} />
           ))}
         </div>
       ) : (

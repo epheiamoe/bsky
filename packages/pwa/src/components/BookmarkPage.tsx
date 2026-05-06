@@ -30,7 +30,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
   useScrollRestore('bookmarks', scrollRef, !loading && bookmarks.length > 0);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
+    <div className="flex flex-col h-[calc(100vh-3rem)] animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button

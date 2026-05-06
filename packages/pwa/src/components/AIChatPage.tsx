@@ -252,7 +252,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div className="flex h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] font-sans">
+    <div className="flex h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
