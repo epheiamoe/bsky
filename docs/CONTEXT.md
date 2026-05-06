@@ -16,7 +16,7 @@
 
 ## 版本
 
-**v0.4.1** — Git tag `v0.4.0` (drafts + thread + ALT + polish fixes)
+**v0.4.2** — Git tag `v0.4.1` (drafts + thread + ALT + polish + video fixes)
 
 ## 项目状态
 
@@ -150,6 +150,10 @@
 ### 28. ALT 弹窗被 overflow-hidden 裁剪
 **根因**：ALT 浮窗用 `absolute` 定位在 `overflow-hidden` 父容器内，长文本被切。
 **修复**：移至 `overflow-hidden` 外部，改为 `fixed` 定位 + 半透明 backdrop (z-[9998]) + 居中卡片 (z-[9999])。
+
+### 29. PWA 视频无法播放
+**根因**：`VideoCard` 有条件渲染 `<video>`（`{playing ? <video> : <thumbnail>}`），但 `handlePlay` 同步检查 `videoRef.current` —— 此时 re-render 尚未发生，ref 为 `null` → 直接 return。即使 ref 可用，`play()` 也在 `hls.attachMedia()` 后立即调用，早于 `MANIFEST_PARSED` 事件 → `play()` reject。且 `hls.on(ERROR)` 捕获所有错误（含可恢复的），一次错误永久停播。
+**修复**：始终渲染 `<video>`（`hidden` when idle）确保 ref 永不为 null；HLS 初始化移至 `useEffect`（`playing=true` 时触发）；`play()` 在 `MANIFEST_PARSED` 回调中调用；仅 `data.fatal` 设置 error；出错显示 retry 按钮；`useEffect` cleanup 中销毁 hls 实例。
 
 ---
 
