@@ -65,11 +65,13 @@ interface AIConfig {
 
 ### Polish Draft (wired to UI)
 
-The `polishDraft()` function is now accessible via:
-- **PWA**: Polish Widget in right component panel (compose view `lg+`) or via 润色 button (small screens) 
-- The widget calls `polishDraft(config, draft, requirement)` and provides copy/results, replace buttons
-- Config uses scenario model `scenarioModels.polish` (resolved via `resolveScenarioConfig`)
-- **TUI**: Not yet wired (Polish is PWA-only for now)
+The `polishDraft()` function is accessible via:
+- **PWA**: Polish Widget in right component panel (compose view `lg+`) or via 润色 button (small screens).
+  Targets first non-empty post in multi-post threads (not hardcoded post[0]).
+  The widget calls `polishDraft(config, draft, requirement)` and provides copy/results, replace buttons.
+- **TUI**: Press `f` in compose text mode → polish requirement input → AI polish call → show result with [R] Replace / [C] Copy / [Esc] dismiss.
+  Uses `resolveScenarioConfig(config.scenarioModels.polish)` for per-scenario model config.
+  Targets the currently active post (via Tab cycling) in multi-post threads.
 
 ## Single-Turn Functions
 

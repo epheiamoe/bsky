@@ -11,9 +11,9 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `usePostDetail` | `createPostDetailStore()` | `{ post, flatThread, translate, actions }` |
 | `useNavigation` | `createNavigation()` | `{ currentView, canGoBack, goTo, goBack, goHome }` |
 | `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, expandReplies, isLiked, isReposted }` |
-| `useCompose` | (inline state) | `{ draft, setDraft, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, submit }` |
+| `useCompose` | (inline state) | `{ posts: ComposePostItem[], addPost, removePost, setPostText, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, submit, loadFromDraft, toDraftData }` |
 | `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, stop, addUserImage, chatId, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex }` |
-| `useDrafts` | `createDraftsStore()` | `{ drafts, saveDraft, deleteDraft, loadDraft }` |
+| `useDrafts` | `createDraftsStore(client)` | `{ drafts: AppDraft[], loading, saving, saveDraft, deleteDraft, syncDraft, refreshDrafts, loadDraft }` |
 | `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
 | `useChatHistory` | `FileChatStorage` | `{ conversations, loadConversation, saveConversation, deleteConversation, refresh }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |
@@ -25,9 +25,10 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `usePostActions` | Module-level Sets/Maps | `{ isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers }` — shared like/repost state |
 | `useScrollRestore` | Module-level Map | `{ saveScrollTop, getScrollTop }` — preserves scroll position across view changes |
 | `registerWidget` / `getWidgetsForView` | Module-level Map | Widget registry: `registerWidget(def, render)` + `getWidgetsForView(view)` |
-| `toggleWidget` / `getEnabledWidgetIds` | Module-level Set | Widget enable/disable state, persisted in AppConfig.enabledWidgets |
-| `setComposeDraftForWidgets` / `replaceComposeDraft` | Module-level bridge | ComposePage → right panel widget draft sync |
+| `toggleWidget` / `getEnabledWidgetIds` | Module-level Set | Widget enable/disable state, persisted in AppConfig.enabledWidgets via localStorage |
+| `setComposeDraftForWidgets` / `replaceComposeDraft` | Module-level bridge | ComposePage → right panel widget draft sync (targets first non-empty post) |
 | `setFocusedProfileActor` / `getFocusedProfileActor` | Module-level bridge | ThreadView → ProfilePreviewWidget actor sync |
+| `AppDraft` / `DraftStorage` | `services/draftStorage.ts` | Draft types + storage abstraction with PDS+local fallback |
 
 ## Store Subscribe Pattern
 
@@ -144,9 +145,16 @@ interface FlatLine {
   authorAvatar?: string;  // CDN URL for author avatar
   hasReplies: boolean;
   mediaTags: string[];    // E.g. ['🖼 图片', '🔗 链接', '📌 引用']
-  imageUrls: string[];    // CDN URLs for embedded images
+  imageDetails: Array<{ url: string; alt: string }>;  // CDN URLs + ALT text for embedded images
   externalLink: { uri: string; title: string; description: string } | null;
+  hasVideo: boolean;
+  videoThumbnailUrl?: string;
+  videoPlaylistUrl?: string;
+  videoAlt?: string;
+  videoAspectRatio?: { width: number; height: number };
+  quotedPost?: { /* FlatLine-like with imageDetails */ };
   isRoot: boolean;
+  isTruncation: boolean;
   likeCount: number;
   repostCount: number;
   replyCount: number;

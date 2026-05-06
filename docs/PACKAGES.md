@@ -3,13 +3,13 @@
 ## `packages/core` — Zero UI Dependencies
 
 **Exports** (`src/index.ts`):
-- `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`)
+- `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`)
 - `createTools(tools)` — 31 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
 - `singleTurnAI`, `polishDraft`
-- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `TrendingTopic`, `GetTrendsResponse`, etc.
+- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `TrendingTopic`, `GetTrendsResponse`, `DraftInput`, `DraftView`, `DraftsResponse`, `CreateDraftResponse`, etc.
 
 **Key files**:
 
@@ -43,7 +43,7 @@
 | `useTimeline(client)` | `hooks/useTimeline.ts` | `{ posts, loading, cursor, loadMore, refresh }` |
 | `usePostDetail(client, uri, goTo, aiKey, aiBaseUrl, targetLang)` | `hooks/usePostDetail.ts` | `{ post, flatThread, translate, actions }` |
 | `useThread(client, uri, goTo)` | `hooks/useThread.ts` | `{ flatLines, focusedIndex, up, down, focus, replyToFocused }` |
-| `useCompose(client, goBack, onSuccess?)` | `hooks/useCompose.ts` | `{ draft, setDraft, submitting, submit }` |
+| `useCompose(client, goBack, onSuccess?)` | `hooks/useCompose.ts` | `{ posts: ComposePostItem[], addPost, removePost, setPostText, submitting, submit, loadFromDraft, toDraftData }` |
 | `useProfile(client, actor)` | `hooks/useProfile.ts` | `{ profile, follows, followers }` |
 | `useSearch(client)` | `hooks/useSearch.ts` | `{ query, results, search }` |
 | `useNotifications(client)` | `hooks/useNotifications.ts` | `{ notifications, unreadCount, refresh }` |
@@ -61,6 +61,10 @@
 | `FileChatStorage` (class) | `services/chatStorage.ts` |
 | `ChatStorage` (interface) | `services/chatStorage.ts` |
 | `ChatRecord`, `ChatSummary` (types) | `services/chatStorage.ts` |
+| `DraftStorage` (interface) | `services/draftStorage.ts` |
+| `FileDraftStorage` (class) | `services/draftStorage.ts` |
+| `AppDraft` (type) | `services/draftStorage.ts` |
+| `setDraftStorageFactory()`, `getDefaultDraftStorage()` | `services/draftStorage.ts` |
 
 ### Widget System
 | Export | File | Purpose |
@@ -157,13 +161,14 @@ Hash-based SPA routing (no server required):
 ```
 #/                         → FeedTimeline (home timeline)
 #/post/{uri}               → ThreadView (post + replies)
-#/compose                  → ComposePage (new post)
+#/compose                  → ComposePage (new post, 支持 draftId 参数)
 #/compose?reply={uri}      → ComposePage (reply)
 #/compose?quote={uri}      → ComposePage (quote post)
 #/profile/{actor}          → ProfilePage
 #/search                   → SearchPage (or #/search?q={term})
 #/notifications            → NotifsPage
 #/bookmarks                → BookmarkPage
+#/drafts                   → DraftsPage
 #/chat                     → AIChatPage
 #/chat/{chatId}            → AIChatPage (restore saved conversation)
 #/login                    → LoginPage

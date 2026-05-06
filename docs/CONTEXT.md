@@ -16,7 +16,7 @@
 
 ## 版本
 
-**v0.3.1** — Git tag `v0.3.1`
+**v0.4.1** — Git tag `v0.4.0` (drafts + thread + ALT + polish fixes)
 
 ## 项目状态
 
@@ -30,6 +30,12 @@
 - **右侧组件栏** (lg+) : 当前视图启用的 widgets，页面限定组件置顶
 - **组件页** `#/components` : 大屏小屏统一入口，启用/禁用所有 widget
 - **JSON 导出/导入**: `bsky-chat-v1` 格式，含完整 tool_call_id 等元数据（暂不含图片）
+- **AT Protocol 草稿**: `app.bsky.draft.*` 通过 PDS 私有存储，本地 IndexedDB(TUI: JSON 文件) 回退
+- **帖子串发布**: 多帖 compose，顺序 createRecord + reply 链
+- **ALT 文本**: 上传时输入 + 提交前缺失警告 + PWA SVG 徽章 + TUI 完整显示
+- **PWA 润色修复**: 目标不再是 hardcoded post[0]，改为第一个有文字帖子
+- **TUI 润色**: `f` 键 → 输入要求 → AI 润色 → [R]替换/[C]复制/[Esc]取消
+- **组件状态持久化**: Layout.tsx 调用 `saveAppConfig()` 写入 localStorage
 
 ## 🔴 关键教训
 
@@ -125,6 +131,26 @@
 **根因**：PolishWidget 的 handleReplace 调用了 onClose（副作用是 toggleWidget 关闭组件），且按钮 visibility 用 `lg:hidden` 硬写。
 **修复**：handleReplace 移除 onClose()；按钮 visibility 改为 `getEnabledWidgetIds().includes('polish') ? 'lg:hidden' : ''` — 组件启用时大屏隐藏按钮（侧边栏已有），关闭时所有屏幕显示按钮（退路）。
 
+### 24. 组件启用状态不持久化
+**根因**：`Layout.handleToggleWidget` 调用 `onConfigChange(updated)`（setAppConfig，仅 React state），从不调用 `saveAppConfig()`。刷新后 localStorage 仍为空数组，Layout mount 重新 auto-enable。
+**修复**：`handleToggleWidget` 和 Layout mount 路径均追加 `saveAppConfig(updated)`。
+
+### 25. 多帖润色只操作 post[0]
+**根因**：PWA ComposePage 硬编码 `posts[0]`。TUI 完全没有润色功能。
+**修复**：PWA 改为 `posts.find(p => p.text.trim())`（第一个有内容帖子）；TUI 新增 `f` 键 → polishReq 模式 → AI 调用 → polishResult 显示。
+
+### 26. 草稿永远「未保存到服务器」
+**根因**：`useDrafts` 单例 `_draftStoreInstance` 缓存了首次渲染时的 `client`（此时 auth 未完成，`client === null`）。后续所有 `saveDraft` 执行 `null?.isAuthenticated()` → 永不同步。
+**修复**：模块级 `_clientRef` + 可变对象 `setClient()` 方法 + `useEffect` 同步最新 client。
+
+### 27. TUI compose submit 缺失
+**根因**：ComposeView 提取时 TextInput 丢失了 `onSubmit`，且全局键盘 handler 的 `key.return` 未处理 compose。
+**修复**：在 `key.return` handler 加 compose 分支：检查 composeMedia 是否有空 alt（预留警告），构建 mediaMap 调用 `compose.submit()`。
+
+### 28. ALT 弹窗被 overflow-hidden 裁剪
+**根因**：ALT 浮窗用 `absolute` 定位在 `overflow-hidden` 父容器内，长文本被切。
+**修复**：移至 `overflow-hidden` 外部，改为 `fixed` 定位 + 半透明 backdrop (z-[9998]) + 居中卡片 (z-[9999])。
+
 ---
 
 ## 🔑 关键架构模式
@@ -206,6 +232,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 8. PWA 图标用 `<Icon name="...">`，按钮用纯文字不用 emoji — TUI 保持 emoji
 9. 图片上传不在 AI 对话中自动发到 Bluesky — 只在 create_post 时上传
 10. AI 搜索工具（search_posts）强制使用 authenticated endpoint — public API 返回 403
+11. FlatLine 图片数据从 `imageUrls: string[]` 改为 `imageDetails: Array<{url, alt}>` — 所有消费方需同步
+12. DraftStore 的 `saveDraft/syncDraft/refreshDrafts` 使用模块级 `_clientRef`，不可闭包捕获 client
 
 ## 关键文件速查
 
@@ -214,10 +242,16 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/hooks/usePostActions.ts` | 模块级赞/转状态+计数 |
 | `packages/app/src/hooks/useActiveFeed.ts` | 模块级活跃 feed 跟踪 |
 | `packages/app/src/hooks/useScrollRestore.ts` | 跨视图滚动保存/恢复 |
+| `packages/app/src/hooks/useCompose.ts` | 发帖 hook v2（posts[] 数组 + 帖子串 submit） |
+| `packages/app/src/hooks/useDrafts.ts` | 草稿存储 v2（PDS + 本地回退 + _clientRef） |
+| `packages/app/src/services/draftStorage.ts` | DraftStorage 接口 + FileDraftStorage + 工厂模式 |
 | `packages/app/src/hooks/widgetRegistry.ts` | Widget 注册表：`registerWidget/getWidgetsForView` |
 | `packages/app/src/hooks/widgetStore.ts` | Widget 状态：启用/关闭 + ComposePage 草稿桥接 |
+| `packages/core/src/at/client.ts` | BskyClient + draft XRPC 方法 (createDraft/updateDraft/getDrafts/deleteDraft) |
 | `packages/pwa/src/components/PostActionsRow.tsx` | 统一帖子行为栏 |
 | `packages/pwa/src/components/Icon.tsx` | SVG 图标组件（`import.meta.glob`） |
+| `packages/pwa/src/components/ComposePage.tsx` | 发帖页 v2（多帖卡片 + per-post media + ALT 输入） |
+| `packages/pwa/src/components/DraftsPage.tsx` | 草稿列表（书签风格 + syncStatus 标签 + 同步按钮） |
 | `packages/pwa/src/components/WidgetPanel.tsx` | 右侧组件栏渲染 |
 | `packages/pwa/src/components/WidgetPicker.tsx` | 添加/移除组件面板 |
 | `packages/pwa/src/components/WidgetModal.tsx` | 组件弹出窗口（小屏幕） |
@@ -229,8 +263,10 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/widgets/TrendsWidget.tsx` | 趋势（全部视图） |
 | `packages/pwa/src/components/VideoCard.tsx` | HLS 视频播放器 |
 | `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
-| `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/components` 路由） |
-| `packages/app/src/hooks/useThread.ts` | 讨论串处理 |
+| `packages/pwa/src/services/indexeddb-draft-storage.ts` | IndexedDB draft 存储（PWA） |
+| `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/drafts`/`/components`） |
+| `packages/tui/src/components/ComposeView.tsx` | TUI 发帖渲染（多帖 + polishReq/altReq 模式） |
+| `packages/app/src/hooks/useThread.ts` | FlatLine 含 imageDetails[{url,alt}] |
 | `packages/app/src/hooks/useTimeline.ts` | 时间线 |
 | `packages/app/src/hooks/useAIChat.ts` | AI 对话 |
 | `packages/core/src/ai/tools.ts` | 31 个 AI 工具定义 |

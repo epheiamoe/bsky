@@ -26,7 +26,7 @@ Processed in App.tsx:87 in this order. Each returns immediately.
 
 | Key | Action | Context |
 |-----|--------|---------|
-| `Tab` | Toggle `focusedPanel` between `'main'` and `'ai'` | Only in aiChat view |
+| `Tab` | Toggle `focusedPanel` between `'main'` and `'ai'`; compose: cycle post index | aiChat + compose |
 | `Esc` | See table below | Varies by view |
 | `,` (comma) | Open Settings view (.env editor) | Global |
 
@@ -166,23 +166,50 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 
 Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts are BLOCKED while composing.
 
-### Normal Mode
+### Normal (Text) Mode
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Submit post (via TextInput onSubmit) |
-| `Esc` | Go back |
+| `Enter` | Submit post |
+| `Esc` | Go back (prompt save draft if content exists) |
 | `i` / `I` | Enter media path input mode (image or video, max 4 images / 1 video) |
+| `D` | Open draft list (save/load/delete/sync) |
+| `P` | Add new post to thread |
+| `X` | Remove current post from thread |
+| `f` / `F` | Polish: enter polish requirement input mode |
+| `Tab` | Cycle post index (multi-post only) |
 
 ### Media Path Input Mode (image or video)
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Validate + upload media (check exists, size < 1MB image / 100MB video, count check) |
+| `Enter` | Validate + upload media, then enter ALT text input |
 | `Esc` | Cancel media input |
 | Any other key | Type media path |
 
-**Footer hint**: `Enter:发送 · Esc:取消 · i:媒体 · D:草稿`
+### ALT Text Input Mode
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Confirm ALT text → save media |
+| `Esc` | Skip ALT → save media with empty alt |
+
+### Polish Requirement Input Mode
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Submit requirement → AI polish call |
+| `Esc` | Cancel polish |
+
+### Polish Result Mode
+
+| Key | Action |
+|-----|--------|
+| `R` | Replace current post text with polished result |
+| `C` | Copy result to clipboard (stderr) |
+| `Esc` | Dismiss result |
+
+**Footer hint**: `Enter:发送 · Esc:取消 · i:媒体 · D:草稿 · f:润色 · P:加帖 · X:删帖`
 
 ---
 
