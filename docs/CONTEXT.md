@@ -137,7 +137,7 @@
 
 ### 25. 多帖润色只操作 post[0]
 **根因**：PWA ComposePage 硬编码 `posts[0]`。TUI 完全没有润色功能。
-**修复**：PWA 改为 `posts.find(p => p.text.trim())`（第一个有内容帖子）；TUI 新增 `f` 键 → polishReq 模式 → AI 调用 → polishResult 显示。
+**修复**：PWA 新增 `polishTargetPostId` 状态，`onFocus` 时跟踪当前聚焦帖子，按钮/桥接/bridge 均读取该值，fallback 到第一个非空帖子；TUI 新增 `f` 键 → polishReq 模式 → AI 调用 → polishResult 显示。
 
 ### 26. 草稿永远「未保存到服务器」
 **根因**：`useDrafts` 单例 `_draftStoreInstance` 缓存了首次渲染时的 `client`（此时 auth 未完成，`client === null`）。后续所有 `saveDraft` 执行 `null?.isAuthenticated()` → 永不同步。

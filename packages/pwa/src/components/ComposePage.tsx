@@ -82,6 +82,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
   const [draftSaveHint, setDraftSaveHint] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileTargetPostId, setFileTargetPostId] = useState<string | null>(null);
+  const [polishTargetPostId, setPolishTargetPostId] = useState<string | null>(null);
+
+  // Keep polish target in sync: default to first non-empty post, or first post
+  useEffect(() => {
+    setPolishTargetPostId(prev => {
+      if (prev && posts.some(p => p.id === prev)) return prev;
+      return posts.find(p => p.text.trim())?.id ?? posts[0]?.id ?? null;
+    });
+  }, [posts]);
 
   // Initialize replyTo / quoteUri
   useEffect(() => {
@@ -133,19 +142,19 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
     }
   }, [draftId, drafts]);
 
-  // Bridge first non-empty post's draft to widget system (right panel PolishWidget)
+  // Bridge the currently-focused post's draft to widget system
   useEffect(() => {
-    const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
-    setComposeDraftForWidgets(polishPost?.text ?? '');
-  }, [posts]);
+    const targetPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
+    setComposeDraftForWidgets(targetPost?.text ?? '');
+  }, [posts, polishTargetPostId]);
 
   useEffect(() => {
     registerComposeDraftSetter((text) => {
-      const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
-      if (polishPost) setPostText(polishPost.id, text);
+      const targetPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
+      if (targetPost) setPostText(targetPost.id, text);
     });
     return () => registerComposeDraftSetter(null);
-  }, [posts]);
+  }, [posts, polishTargetPostId]);
 
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!fileTargetPostId) return;
@@ -325,7 +334,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
 
   const isReply = !!replyTo;
   const nonEmptyCount = posts.filter(p => p.text.trim()).length;
-  const polishPost = posts.find(p => p.text.trim()) ?? posts[0];
+  const polishPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A]">
@@ -476,6 +485,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome
                   <textarea
                     value={post.text}
                     onChange={e => setPostText(post.id, e.target.value)}
+                    onFocus={() => setPolishTargetPostId(post.id)}
                     rows={3} maxLength={300}
                     placeholder={t('compose.placeholder')}
                     disabled={submitting}
