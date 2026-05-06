@@ -174,6 +174,12 @@ const zh: LocaleMessages = {
   'profile.unfollow': '取消关注',
   'profile.tabPosts': '帖子',
   'profile.tabReplies': '帖子和回复',
+  'profile.sendMessage': '私信',
+  'profile.editProfile': '编辑个人资料',
+  'profile.change': '更改',
+  'profile.displayName': '名称',
+  'profile.description': '描述',
+  'profile.banner': '横幅',
 
   // ── Bookmarks ──
   'bookmarks.title': '书签',

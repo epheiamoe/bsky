@@ -189,11 +189,6 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
 
           return (
             <div key={msg.id} className={`flex ${own ? 'justify-end' : 'justify-start'} items-end gap-2 group animate-messageIn`}>
-              {!own && (
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs shrink-0">
-                  {getMemberName()[0]}
-                </div>
-              )}
               <div className={`flex flex-col ${own ? 'items-end' : 'items-start'} max-w-[75%]`}>
                 {/* Quote embed */}
                 {msgView.embed?.record?.value && (
@@ -275,11 +270,6 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                   </div>
                 )}
               </div>
-              {own && (
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs shrink-0">
-                  {getMemberName()[0]}
-                </div>
-              )}
             </div>
           );
         })}

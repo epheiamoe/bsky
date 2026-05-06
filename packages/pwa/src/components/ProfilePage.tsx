@@ -7,6 +7,7 @@ import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore }
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
+import { EditProfileModal } from './EditProfileModal.js';
 import { Icon } from './Icon.js';
 
 interface ProfilePageProps {
@@ -68,6 +69,8 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   const [bannerLightbox, setBannerLightbox] = useState(false);
   const [avatarLightbox, setAvatarLightbox] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -256,6 +259,28 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
             )}
 
             <div className="flex gap-2 items-end">
+              {isOwn ? (
+                <button
+                  onClick={() => setShowEditProfile(true)}
+                  className="hover:text-primary transition-colors"
+                  title={t('profile.editProfile')}
+                >
+                  <Icon name="pencil" size={18} />
+                </button>
+              ) : (profile.viewer?.following && profile.viewer?.followedBy) ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      const res = await client.getConvoForMembers([profile.did]);
+                      goTo({ type: 'dmChat', conversationId: res.convo.id });
+                    } catch { /* silently fail if DMs unavailable */ }
+                  }}
+                  className="hover:text-primary transition-colors"
+                  title={t('profile.sendMessage')}
+                >
+                  <Icon name="message-square" size={18} />
+                </button>
+              ) : null}
               <button
                 onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile: actor })}
                 className="hover:text-purple-500 transition-colors flex items-center gap-1 text-sm"
@@ -263,7 +288,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
               >
                 <Icon name="astroid-as-AI-Button" size={18} /> AI
               </button>
-              {!profile.viewer?.blockedBy && (
+              {!profile.viewer?.blockedBy && !isOwn && (
                 <button
                   onClick={isFollowing ? handleUnfollow : handleFollow}
                   className={`px-5 py-2 rounded-full font-semibold text-sm transition-colors ${
@@ -461,6 +486,9 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
       )}
       {avatarLightbox && profile.avatar && (
         <ImageModal src={profile.avatar} alt={profile.handle} onClose={() => setAvatarLightbox(false)} />
+      )}
+      {showEditProfile && profile && (
+        <EditProfileModal client={client} profile={profile} onClose={() => setShowEditProfile(false)} onSaved={() => { setShowEditProfile(false); }} />
       )}
     </div>
   );

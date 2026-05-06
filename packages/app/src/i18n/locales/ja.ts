@@ -165,6 +165,12 @@ const ja: LocaleMessages = {
   'profile.unfollow': 'フォロー解除',
   'profile.tabPosts': '投稿',
   'profile.tabReplies': '投稿と返信',
+  'profile.sendMessage': 'メッセージ',
+  'profile.editProfile': 'プロフィール編集',
+  'profile.change': '変更',
+  'profile.displayName': '名前',
+  'profile.description': '説明',
+  'profile.banner': 'バナー',
 
   'bookmarks.title': 'ブックマーク',
   'bookmarks.empty': 'まだブックマークがありません。投稿で v を押してブックマークしてください。',

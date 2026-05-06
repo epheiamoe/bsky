@@ -165,6 +165,12 @@ const en: LocaleMessages = {
   'profile.unfollow': 'Unfollow',
   'profile.tabPosts': 'Posts',
   'profile.tabReplies': 'Posts & Replies',
+  'profile.sendMessage': 'Message',
+  'profile.editProfile': 'Edit Profile',
+  'profile.change': 'Change',
+  'profile.displayName': 'Name',
+  'profile.description': 'Description',
+  'profile.banner': 'Banner',
 
   'bookmarks.title': 'Bookmarks',
   'bookmarks.empty': 'No bookmarks yet. Press v on a post to bookmark it.',

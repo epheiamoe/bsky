@@ -551,4 +551,19 @@ export class BskyClient {
   async leaveConvo(convoId: string): Promise<{ convo: ConvoView }> {
     return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.leaveConvo', { convoId });
   }
+
+  async putProfile(params: { displayName?: string; description?: string; avatar?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number }; banner?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number } }): Promise<void> {
+    const did = this.getDID();
+    const record: Record<string, unknown> = {
+      $type: 'app.bsky.actor.profile',
+      displayName: params.displayName,
+      description: params.description,
+    };
+    if (params.avatar) record.avatar = params.avatar;
+    if (params.banner) record.banner = params.banner;
+    await this.ky.post('com.atproto.repo.putRecord', {
+      headers: this.getAuthHeaders(),
+      json: { repo: did, collection: 'app.bsky.actor.profile', rkey: 'self', record },
+    });
+  }
 }
