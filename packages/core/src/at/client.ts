@@ -28,8 +28,6 @@ import type {
   DraftInput,
   DraftsResponse,
   CreateDraftResponse,
-  GetServiceAuthResponse,
-  ChatAuth,
   ConvoListResponse,
   ConvoView,
   GetMessagesResponse,
@@ -48,7 +46,6 @@ export class BskyClient {
   private session: CreateSessionResponse | null = null;
   private ky: KyInstance;
   private publicKy: KyInstance;
-  private _chatAuth: ChatAuth | null = null;
 
   constructor() {
     const self = this;
@@ -470,35 +467,17 @@ export class BskyClient {
 
   // ── Chat (DM) methods ──
 
-  /** Get a service auth token for the chat service. Caches until expiry. */
-  async getChatAuth(): Promise<string> {
-    if (this._chatAuth && Date.now() < this._chatAuth.expiresAt) {
-      return this._chatAuth.token;
-    }
-    const res = await this.ky.post('com.atproto.server.getServiceAuth', {
-      headers: this.getAuthHeaders(),
-      json: { aud: CHAT_SERVICE_DID, lxm: 'chat.bsky.convo.listConvos' },
-    }).json<GetServiceAuthResponse>();
-    const token = res.token;
-    const base64 = token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(atob(base64));
-    this._chatAuth = { token, expiresAt: (payload.exp - 30) * 1000 };
-    return token;
-  }
-
   private async chatGet<T>(path: string, params?: Record<string, string | number>): Promise<T> {
-    const token = await this.getChatAuth();
     const searchParams: Record<string, string | number> = params ?? {};
     return this.ky.get(path, {
-      headers: { Authorization: `Bearer ${token}`, 'xrpc-service-proxy': CHAT_SERVICE_DID },
+      headers: { ...this.getAuthHeaders(), 'xrpc-service-proxy': CHAT_SERVICE_DID },
       searchParams,
     }).json<T>();
   }
 
   private async chatPost<T>(path: string, body: unknown): Promise<T> {
-    const token = await this.getChatAuth();
     return this.ky.post(path, {
-      headers: { Authorization: `Bearer ${token}`, 'xrpc-service-proxy': CHAT_SERVICE_DID },
+      headers: { ...this.getAuthHeaders(), 'xrpc-service-proxy': CHAT_SERVICE_DID },
       json: body,
     }).json<T>();
   }

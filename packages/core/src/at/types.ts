@@ -313,15 +313,6 @@ export interface CreateDraftResponse {
 
 // ── Chat (DM) types ──
 
-export interface ChatAuth {
-  token: string;
-  expiresAt: number;
-}
-
-export interface GetServiceAuthResponse {
-  token: string;
-}
-
 export interface ConvoView {
   id: string;
   rev: string;
