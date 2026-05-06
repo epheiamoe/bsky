@@ -66,10 +66,10 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
                   const config = getAppConfig();
                   saveAppConfig({ ...config, enabledWidgets: getEnabledWidgetIds() });
                 }}
-                className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                className={`text-xs px-3 py-1 rounded-full transition-colors ${
                   getEnabledWidgetIds().includes(w.id)
-                    ? 'text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20'
-                    : 'text-primary border-primary hover:bg-primary/10'
+                    ? 'bg-red-500 text-white hover:bg-red-600'
+                    : 'bg-primary text-white hover:bg-primary-hover'
                 }`}
               >
                 {getEnabledWidgetIds().includes(w.id) ? t('action.disable') : t('action.enable')}

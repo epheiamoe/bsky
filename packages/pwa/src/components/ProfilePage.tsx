@@ -288,7 +288,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
               >
                 <Icon name="astroid-as-AI-Button" size={18} /> AI
               </button>
-              {!profile.viewer?.blockedBy && !isOwn && (
+              {!profile.viewer?.blockedBy && (
                 <button
                   onClick={isFollowing ? handleUnfollow : handleFollow}
                   className={`px-5 py-2 rounded-full font-semibold text-sm transition-colors ${
