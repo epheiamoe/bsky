@@ -31,6 +31,7 @@
 - **组件页** `#/components` : 大屏小屏统一入口，启用/禁用所有 widget
 - **JSON 导出/导入**: `bsky-chat-v1` 格式，含完整 tool_call_id 等元数据（暂不含图片）
 - **AT Protocol 草稿**: `app.bsky.draft.*` 通过 PDS 私有存储，本地 IndexedDB(TUI: JSON 文件) 回退
+- **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应(8 常用) + 引用帖 (URI 粘贴自动检测) + PWA 动画
 - **帖子串发布**: 多帖 compose，顺序 createRecord + reply 链
 - **ALT 文本**: 上传时输入 + 提交前缺失警告 + PWA SVG 徽章 + TUI 完整显示
 - **PWA 润色修复**: 目标不再是 hardcoded post[0]，改为第一个有文字帖子
