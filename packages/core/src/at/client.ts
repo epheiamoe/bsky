@@ -97,6 +97,7 @@ export class BskyClient {
     this.chatKy = ky.create({
       prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
+      hooks: { afterResponse: [withRefresh] },
     });
   }
 
