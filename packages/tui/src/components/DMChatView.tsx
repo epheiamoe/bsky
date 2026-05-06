@@ -43,7 +43,7 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
     if (!('text' in msg)) continue;
     const msgView = msg as ChatMessage;
     const own = msgView.sender.did === did;
-    const sender = own ? t('time.justNow') : getMemberName().slice(0, 12);
+    const sender = own ? 'you' : getMemberName().slice(0, 12);
     const prefix = own ? '  ' : '';
     const fullText = `${prefix}${sender}: ${msgView.text}`;
     const wrapped = wrapText(fullText, cols - 4);
