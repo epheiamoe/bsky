@@ -475,9 +475,9 @@ export class BskyClient {
     if (this._chatAuth && Date.now() < this._chatAuth.expiresAt) {
       return this._chatAuth.token;
     }
-    const res = await this.ky.get('com.atproto.server.getServiceAuth', {
+    const res = await this.ky.post('com.atproto.server.getServiceAuth', {
       headers: this.getAuthHeaders(),
-      searchParams: { aud: CHAT_SERVICE_DID, lxm: 'chat.bsky.convo.listConvos' },
+      json: { aud: CHAT_SERVICE_DID, lxm: 'chat.bsky.convo.listConvos' },
     }).json<GetServiceAuthResponse>();
     const token = res.token;
     const base64 = token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/');
@@ -490,7 +490,7 @@ export class BskyClient {
     const token = await this.getChatAuth();
     const searchParams: Record<string, string | number> = params ?? {};
     return this.ky.get(path, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'xrpc-service-proxy': CHAT_SERVICE_DID },
       searchParams,
     }).json<T>();
   }
@@ -498,7 +498,7 @@ export class BskyClient {
   private async chatPost<T>(path: string, body: unknown): Promise<T> {
     const token = await this.getChatAuth();
     return this.ky.post(path, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'xrpc-service-proxy': CHAT_SERVICE_DID },
       json: body,
     }).json<T>();
   }
