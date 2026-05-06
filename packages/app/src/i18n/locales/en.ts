@@ -259,6 +259,8 @@ const en: LocaleMessages = {
   'keys.aiFocused': 'Esc:Return to main',
   'keys.aiHistory': 'Esc:Back ↑↓:Select N:New L:Load D:Delete',
   'keys.drafts': '↑↓/jk:Navigate Enter:Load D:Delete S:Sync R:Refresh Esc:Back',
+  'keys.dm': 'j/k:Nav Enter:Open r:Refresh',
+  'keys.dmChat': 'Type · Enter:Send · Esc:Back',
 
   'breadcrumb.feed': 'Timeline',
   'breadcrumb.thread': 'Thread',
@@ -305,6 +307,19 @@ const en: LocaleMessages = {
   'feed.addFeedUri': 'Enter Feed URI (at://...)',
   'feed.recommended': 'Recommended Feeds',
   'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',
+
+  // ── DMs ──
+  'nav.dm': 'Messages',
+  'dm.empty': 'No conversations yet',
+  'dm.noMessages': 'No messages yet',
+  'dm.placeholder': 'Type a message...',
+  'dm.send': 'Send',
+  'dm.tabFocus': 'Tab to focus',
+  'dm.systemMessage': '[System message]',
+  'dm.deletedMessage': 'Message deleted',
+  'dm.unknown': 'Unknown user',
+  'dm.resolvingQuote': 'Resolving quoted post...',
+  'time.justNow': 'now',
 };
 
 export default en;

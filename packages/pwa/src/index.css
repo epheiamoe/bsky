@@ -124,3 +124,20 @@ body {
 .dark ::-webkit-scrollbar-track { background: #121212; }
 .dark ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 4px; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #3a3a3e; }
+
+/* ── Animation utilities ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes messageIn {
+  from { opacity: 0; transform: translateY(4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
+.animate-slideUp { animation: slideUp 0.2s ease-out; }
+.animate-messageIn { animation: messageIn 0.25s ease-out; }

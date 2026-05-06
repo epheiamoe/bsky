@@ -275,6 +275,8 @@ const zh: LocaleMessages = {
   'keys.aiFocused': 'Esc:返回主面板',
   'keys.aiHistory': 'Esc 返回 ↑↓:选 N:新建 L:加载 D:删除',
   'keys.drafts': '↑↓/jk:导航 Enter:加载 D:删除 S:同步 R:刷新 Esc:返回',
+  'keys.dm': 'j/k:导航 Enter:打开 r:刷新',
+  'keys.dmChat': '输入消息 · Enter 发送 · Esc 返回',
 
   // ── View breadcrumbs (TUI) ──
   'breadcrumb.feed': '时间线',
@@ -327,6 +329,19 @@ const zh: LocaleMessages = {
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',
+
+  // ── DMs ──
+  'nav.dm': '私信',
+  'dm.empty': '暂无对话',
+  'dm.noMessages': '暂无消息',
+  'dm.placeholder': '输入消息...',
+  'dm.send': '发送',
+  'dm.tabFocus': 'Tab 聚焦输入',
+  'dm.systemMessage': '[系统消息]',
+  'dm.deletedMessage': '消息已删除',
+  'dm.unknown': '未知用户',
+  'dm.resolvingQuote': '正在解析引用帖子...',
+  'time.justNow': '刚刚',
 };
 
 export default zh;

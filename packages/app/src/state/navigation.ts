@@ -9,7 +9,9 @@ export type AppView =
   | { type: 'aiChat'; contextUri?: string; sessionId?: string; contextPost?: string; contextProfile?: string }
   | { type: 'bookmarks' }
   | { type: 'drafts' }
-  | { type: 'components' };
+  | { type: 'components' }
+  | { type: 'dm' }
+  | { type: 'dmChat'; conversationId: string };
 
 export interface NavigationState {
   currentView: AppView;

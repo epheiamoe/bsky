@@ -38,7 +38,9 @@
 | **推荐关注** | ⬜ | ✅ | SuggestedFollowsWidget + AT API |
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ⬜ | ⬜ | 自定义 Feed |
-| **DM 私信** | ⬜ | ⬜ | chat.bsky.convo.* |
+| **DM 私信** | ✅ | ✅ | chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 动画 |
+| **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
+| **页面动画** | ⬜ | ⬜ | 其他页面加微动效（DM 页面已有 fadeIn/slideUp/messageIn） |
 | **推送通知** | N/A | ⬜ | Web Push API |
 | **资料页预览 (组件)** | ⬜ | ✅ | ProfilePreviewWidget — thread 视图置顶显示作者资料 |
 | **资料页 AI 按钮** | ✅ | ✅ | TUI: a 键, PWA: 🤖 AI 按钮 |

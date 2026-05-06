@@ -259,6 +259,8 @@ const ja: LocaleMessages = {
   'keys.aiFocused': 'Esc:メインに戻る',
   'keys.aiHistory': 'Esc:戻る ↑↓:選択 N:新規 L:読込 D:削除',
   'keys.drafts': '↑↓/jk:選択 Enter:読込 D:削除 S:同期 R:更新 Esc:戻る',
+  'keys.dm': 'j/k:選択 Enter:開く r:更新',
+  'keys.dmChat': '入力 · Enter:送信 · Esc:戻る',
 
   'breadcrumb.feed': 'タイムライン',
   'breadcrumb.thread': 'スレッド',
@@ -305,6 +307,19 @@ const ja: LocaleMessages = {
   'feed.addFeedUri': 'フィードURIを入力 (at://...)',
   'feed.recommended': 'おすすめフィード',
   'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
+
+  // ── DMs ──
+  'nav.dm': 'メッセージ',
+  'dm.empty': '会話はありません',
+  'dm.noMessages': 'メッセージがありません',
+  'dm.placeholder': 'メッセージを入力...',
+  'dm.send': '送信',
+  'dm.tabFocus': 'Tabでフォーカス',
+  'dm.systemMessage': '[システムメッセージ]',
+  'dm.deletedMessage': 'メッセージが削除されました',
+  'dm.unknown': '不明なユーザー',
+  'dm.resolvingQuote': '引用投稿を解析中...',
+  'time.justNow': 'たった今',
 };
 
 export default ja;

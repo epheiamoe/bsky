@@ -28,16 +28,27 @@ import type {
   DraftInput,
   DraftsResponse,
   CreateDraftResponse,
+  GetServiceAuthResponse,
+  ChatAuth,
+  ConvoListResponse,
+  ConvoView,
+  GetMessagesResponse,
+  GetConvoResponse,
+  MessageInput,
+  MessageView,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
 
+const CHAT_SERVICE_DID = 'did:web:api.bsky.chat';
+
 export class BskyClient {
   private session: CreateSessionResponse | null = null;
   private ky: KyInstance;
   private publicKy: KyInstance;
+  private _chatAuth: ChatAuth | null = null;
 
   constructor() {
     const self = this;
@@ -455,5 +466,90 @@ export class BskyClient {
 
   getVideoPlaylistUrl(did: string, cid: string): string {
     return `https://video.bsky.app/watch/${encodeURIComponent(did)}/${encodeURIComponent(cid)}/playlist.m3u8`;
+  }
+
+  // ── Chat (DM) methods ──
+
+  /** Get a service auth token for the chat service. Caches until expiry. */
+  async getChatAuth(): Promise<string> {
+    if (this._chatAuth && Date.now() < this._chatAuth.expiresAt) {
+      return this._chatAuth.token;
+    }
+    const res = await this.ky.get('com.atproto.server.getServiceAuth', {
+      headers: this.getAuthHeaders(),
+      searchParams: { aud: CHAT_SERVICE_DID, lxm: 'chat.bsky.convo.listConvos' },
+    }).json<GetServiceAuthResponse>();
+    const token = res.token;
+    const payload = JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString());
+    this._chatAuth = { token, expiresAt: (payload.exp - 30) * 1000 };
+    return token;
+  }
+
+  private async chatGet<T>(path: string, params?: Record<string, string | number>): Promise<T> {
+    const token = await this.getChatAuth();
+    const searchParams: Record<string, string | number> = params ?? {};
+    return this.ky.get(path, {
+      headers: { Authorization: `Bearer ${token}` },
+      searchParams,
+    }).json<T>();
+  }
+
+  private async chatPost<T>(path: string, body: unknown): Promise<T> {
+    const token = await this.getChatAuth();
+    return this.ky.post(path, {
+      headers: { Authorization: `Bearer ${token}` },
+      json: body,
+    }).json<T>();
+  }
+
+  async listConvos(limit = 30, cursor?: string): Promise<ConvoListResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.chatGet<ConvoListResponse>('chat.bsky.convo.listConvos', params);
+  }
+
+  async getConvoForMembers(members: string[]): Promise<GetConvoResponse> {
+    return this.chatGet<GetConvoResponse>('chat.bsky.convo.getConvoForMembers', {
+      members: members.join(','),
+    });
+  }
+
+  async getMessages(convoId: string, limit = 30, cursor?: string): Promise<GetMessagesResponse> {
+    const params: Record<string, string | number> = { convoId, limit };
+    if (cursor) params.cursor = cursor;
+    return this.chatGet<GetMessagesResponse>('chat.bsky.convo.getMessages', params);
+  }
+
+  async sendMessage(convoId: string, message: MessageInput): Promise<MessageView> {
+    const res = await this.chatPost<{ message: MessageView }>('chat.bsky.convo.sendMessage', {
+      convoId,
+      message,
+    });
+    return res.message;
+  }
+
+  async addReaction(convoId: string, messageId: string, value: string): Promise<MessageView> {
+    const res = await this.chatPost<{ message: MessageView }>('chat.bsky.convo.addReaction', {
+      convoId,
+      messageId,
+      value,
+    });
+    return res.message;
+  }
+
+  async removeReaction(convoId: string, messageId: string, value: string): Promise<MessageView> {
+    const res = await this.chatPost<{ message: MessageView }>('chat.bsky.convo.removeReaction', {
+      convoId,
+      messageId,
+      value,
+    });
+    return res.message;
+  }
+
+  async updateRead(convoId: string, messageId?: string): Promise<{ convo: ConvoView }> {
+    return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.updateRead', {
+      convoId,
+      ...(messageId ? { messageId } : {}),
+    });
   }
 }

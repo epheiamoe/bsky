@@ -32,6 +32,15 @@ export type {
   DraftView,
   DraftsResponse,
   CreateDraftResponse,
+  ConvoView,
+  ConvoListResponse,
+  GetMessagesResponse,
+  GetConvoResponse,
+  MessageView,
+  MessageInput,
+  DeletedMessageView,
+  SystemMessageView,
+  ReactionView,
 } from './at/types.js';
 
 // AI exports

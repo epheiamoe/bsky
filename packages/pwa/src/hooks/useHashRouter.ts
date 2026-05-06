@@ -115,6 +115,11 @@ function parseHash(): AppView {
       return { type: 'bookmarks' };
     case '/drafts':
       return { type: 'drafts' };
+    case '/dm': {
+      const conv = params.get('conv');
+      if (conv) return { type: 'dmChat', conversationId: decodeURIComponent(conv) };
+      return { type: 'dm' };
+    }
     case '/components':
       return { type: 'components' };
     case '/compose': {
@@ -177,6 +182,10 @@ function encodeView(view: AppView): string {
       return '#/drafts';
     case 'components':
       return '#/components';
+    case 'dm':
+      return '#/dm';
+    case 'dmChat':
+      return `#/dm?conv=${encodeURIComponent(view.conversationId)}`;
     case 'compose': {
       const params = new URLSearchParams();
       if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));

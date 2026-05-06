@@ -23,6 +23,7 @@ interface LayoutProps {
   onConfigChange: (config: AppConfig) => void;
   onRelogin: (handle: string, password: string) => Promise<void>;
   draftCount?: number;
+  dmCount?: number;
   polishConfig?: AIConfig;
   composeDraft?: string;
   onComposeDraftChange?: (text: string) => void;
@@ -41,6 +42,7 @@ export function Layout({
   onConfigChange,
   onRelogin,
   draftCount,
+  dmCount,
   polishConfig,
   composeDraft,
   onComposeDraftChange,
@@ -175,6 +177,7 @@ export function Layout({
               goTo={(v) => { goTo(v); setSidebarOpen(false); }}
               client={client}
               draftCount={draftCount}
+              dmCount={dmCount}
             />
             <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3">
               <button
@@ -191,7 +194,7 @@ export function Layout({
       <div className="flex">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex flex-col w-sidebar h-[calc(100vh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
-          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} />
+          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} />
         </aside>
 
         <main className="flex-1 max-w-content mx-auto w-full min-h-[calc(100vh-3rem)]">

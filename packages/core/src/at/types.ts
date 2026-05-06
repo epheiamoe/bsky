@@ -310,3 +310,91 @@ export interface DraftsResponse {
 export interface CreateDraftResponse {
   id: string;
 }
+
+// ── Chat (DM) types ──
+
+export interface ChatAuth {
+  token: string;
+  expiresAt: number;
+}
+
+export interface GetServiceAuthResponse {
+  token: string;
+}
+
+export interface ConvoView {
+  id: string;
+  rev: string;
+  members: ProfileViewBasic[];
+  lastMessage?: MessageView | DeletedMessageView | SystemMessageView;
+  lastReaction?: { message: MessageView; reaction: ReactionView };
+  muted: boolean;
+  status: 'request' | 'accepted';
+  unreadCount: number;
+  kind: 'direct' | 'group';
+}
+
+export interface MessageInput {
+  text: string;
+  facets?: Array<{
+    index: { byteStart: number; byteEnd: number };
+    features: Array<{ $type: string; [k: string]: unknown }>;
+  }>;
+  embed?: { $type: 'app.bsky.embed.record'; record: { uri: string; cid: string } };
+}
+
+export interface MessageView {
+  id: string;
+  rev: string;
+  text: string;
+  facets?: Array<{
+    index: { byteStart: number; byteEnd: number };
+    features: Array<{ $type: string; [k: string]: unknown }>;
+  }>;
+  embed?: { $type: string; record: { uri: string; cid: string; author?: ProfileViewBasic; value?: { text: string } } };
+  reactions: ReactionView[];
+  sender: { did: string };
+  sentAt: string;
+}
+
+export interface DeletedMessageView {
+  id: string;
+  rev: string;
+  sender: { did: string };
+  sentAt: string;
+}
+
+export interface SystemMessageView {
+  id: string;
+  rev: string;
+  sentAt: string;
+  data: { $type: string; [k: string]: unknown };
+}
+
+export interface ReactionView {
+  value: string;
+  sender: { did: string };
+  createdAt: string;
+}
+
+export interface ConvoListResponse {
+  cursor?: string;
+  convos: ConvoView[];
+}
+
+export interface GetMessagesResponse {
+  cursor?: string;
+  messages: Array<MessageView | DeletedMessageView | SystemMessageView>;
+}
+
+export interface SendMessageResponse {
+  id: string;
+  rev: string;
+  text: string;
+  sender: { did: string };
+  sentAt: string;
+}
+
+export interface GetConvoResponse {
+  convo: ConvoView;
+}

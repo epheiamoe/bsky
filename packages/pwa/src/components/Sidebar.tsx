@@ -11,11 +11,13 @@ interface SidebarProps {
   client: BskyClient;
   notifCount?: number;
   draftCount?: number;
+  dmCount?: number;
 }
 
 const SIDEBAR_TABS = [
   { icon: 'home' as IconName, key: 'nav.feed', type: 'feed' as const, needsHandle: false },
   { icon: 'bell' as IconName, key: 'nav.notifications', type: 'notifications' as const, needsHandle: false },
+  { icon: 'message-square' as IconName, key: 'nav.dm', type: 'dm' as const, needsHandle: false },
   { icon: 'compass' as IconName, key: 'nav.search', type: 'search' as const, needsHandle: false },
   { icon: 'bookmark' as IconName, key: 'nav.bookmarks', type: 'bookmarks' as const, needsHandle: false },
   { icon: 'at-sign' as IconName, key: 'nav.profile', type: 'profile' as const, needsHandle: true },
@@ -23,7 +25,7 @@ const SIDEBAR_TABS = [
   { icon: 'pen-line' as IconName, key: 'nav.compose', type: 'compose' as const, needsHandle: false },
 ] as const;
 
-export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: SidebarProps) {
+export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmCount }: SidebarProps) {
   const { t } = useI18n();
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
@@ -59,6 +61,11 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount }: S
             {tab.type === 'compose' && draftCount != null && draftCount > 0 && (
               <span className="bg-yellow-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
                 {draftCount > 99 ? '99+' : draftCount}
+              </span>
+            )}
+            {tab.type === 'dm' && dmCount != null && dmCount > 0 && (
+              <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+                {dmCount > 99 ? '99+' : dmCount}
               </span>
             )}
           </button>

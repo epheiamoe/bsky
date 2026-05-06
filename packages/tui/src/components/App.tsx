@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts, useConvoList } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
@@ -19,6 +19,8 @@ import { SettingsView } from './SettingsView.jsx';
 import { enableMouseTracking, disableMouseTracking, parseMouseEvent } from '../utils/mouse.js';
 import type { MouseEvent } from '../utils/mouse.js';
 import { ComposeView } from './ComposeView.jsx';
+import { DMListView } from './DMListView.jsx';
+import { DMChatView } from './DMChatView.jsx';
 
 interface AppConfig {
   blueskyHandle: string;
@@ -57,6 +59,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const bookmarks = useBookmarks(client);
   const [bookmarkIdx, setBookmarkIdx] = useState(0);
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts(client);
+  const { convos, loading: dmLoading, error: dmError, refresh: refreshDMs } = useConvoList(client);
+  const [dmIdx, setDmIdx] = useState(0);
   const { t, locale } = useI18n(config.targetLang as Locale);
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
@@ -474,6 +478,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'a') { if (currentView.type !== 'aiChat') goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: threadUri ?? undefined }); return; }
     if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
+    if (k === 'm') { if (currentView.type !== 'feed') { goTo({ type: 'dm' }); } return; }
 
     // ── Feed-specific ──
     if (currentView.type === 'feed') {
@@ -506,6 +511,22 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const bm = bookmarks.bookmarks[bookmarkIdx] as any;
         const quoteUri = bm?.embed?.record?.uri as string | undefined;
         if (quoteUri) goTo({ type: 'thread', uri: quoteUri });
+      }
+      return;
+    }
+
+    // ── DM list specific ──
+    if (currentView.type === 'dm') {
+      if (k === 'j') setDmIdx(i => Math.min(convos.length - 1, i + 1));
+      else if (k === 'k') setDmIdx(i => Math.max(0, i - 1));
+      else if (k === 'r') refreshDMs();
+      else if (key.return) {
+        const c = convos[dmIdx];
+        if (c && client) {
+          const members = c.members || [];
+          const other = members.find(m => m.did !== client.getDID());
+          if (other) goTo({ type: 'dmChat', conversationId: other.did });
+        }
       }
       return;
     }
@@ -645,6 +666,31 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             })}
           </Box>
         );
+      case 'dm':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="green" paddingX={1}>
+            <Box height={1}><Text bold color="green">💬 {t('nav.dm')}</Text><Text dimColor>{' '}[j/k] Nav [Enter] Open [r] Refresh</Text></Box>
+            <DMListView
+              convos={convos}
+              loading={dmLoading}
+              error={dmError}
+              selectedIndex={dmIdx}
+              width={mainW - 4}
+              height={rows - 5}
+              currentDid={client!.getDID()}
+              t={t}
+            />
+          </Box>
+        );
+      case 'dmChat':
+        return (
+          <DMChatView
+            client={client!}
+            conversationId={(currentView as { conversationId: string }).conversationId}
+            goBack={goBack}
+            cols={mainW}
+          />
+        );
       default:
         return <Text>{t('common.unknownPage')}</Text>;
     }
@@ -774,8 +820,8 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
   );
 }
 
-const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖' };
-const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks' };
+const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', dm: '💬', dmChat: '💬' };
+const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', dm: 'nav.dm', dmChat: 'nav.dm' };
 
 function viewLabel(v: { type: string }, t: (key: string) => string): string {
   const emoji = VIEW_EMOJI[v.type] ?? '';
@@ -787,6 +833,7 @@ const KEY_MAP: Record<string, string> = {
   feed: 'keys.feed', thread: 'keys.thread', compose: 'keys.compose',
   profile: 'keys.profile', notifications: 'keys.notifications', search: 'keys.search',
   aiChat: 'keys.aiChat', bookmarks: 'keys.bookmarks',
+  dm: 'keys.dm', dmChat: 'keys.dmChat',
 };
 
 function footerHint(v: { type: string }, canGoBack: boolean, focusedPanel: FocusTarget, t: (key: string) => string): string {

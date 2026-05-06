@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, useConvoList } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
@@ -18,6 +18,8 @@ import { SearchPage } from './components/SearchPage.js';
 import { NotifsPage } from './components/NotifsPage.js';
 import { BookmarkPage } from './components/BookmarkPage.js';
 import { DraftsPage } from './components/DraftsPage.js';
+import { ConvoListPage } from './components/ConvoListPage.js';
+import { DMChatPage } from './components/DMChatPage.js';
 import { ComponentsPage } from './components/ComponentsPage.js';
 import { IndexedDBDraftStorage } from './services/indexeddb-draft-storage.js';
 import { PolishWidget } from './components/widgets/PolishWidget.js';
@@ -38,6 +40,8 @@ export function App() {
   // Seed timeline posts into global like/repost state
   useEffect(() => { if (timeline.posts.length > 0) seedPostViewers(timeline.posts as any[]); }, [timeline.posts]);
   const { drafts } = useDrafts(client);
+  const { convos } = useConvoList(client);
+  const dmCount = convos.reduce((sum, c) => sum + c.unreadCount, 0);
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
@@ -286,6 +290,10 @@ export function App() {
         return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
       case 'drafts':
         return <DraftsPage client={client} goBack={goBack} goTo={goTo} />;
+      case 'dm':
+        return <ConvoListPage client={client} goBack={goBack} goTo={goTo} />;
+      case 'dmChat':
+        return <DMChatPage client={client} conversationId={(currentView as { conversationId: string }).conversationId} goBack={goBack} goTo={goTo} />;
       case 'components':
         return <ComponentsPage goBack={goBack} goTo={goTo} client={client} />;
       default:
@@ -306,6 +314,7 @@ export function App() {
       onConfigChange={setAppConfig}
       onRelogin={handleRelogin}
       draftCount={drafts.length}
+      dmCount={dmCount}
       polishConfig={scenarioModels.polish}
     >
       {renderView()}

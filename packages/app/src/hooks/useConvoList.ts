@@ -1,0 +1,41 @@
+import { useState, useCallback } from 'react';
+import type { BskyClient, ConvoView, ConvoListResponse } from '@bsky/core';
+
+export function useConvoList(client: BskyClient | null) {
+  const [convos, setConvos] = useState<ConvoView[]>([]);
+  const [cursor, setCursor] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (reset = false) => {
+    if (!client) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res: ConvoListResponse = await client.listConvos(30, reset ? undefined : cursor);
+      setConvos(reset ? res.convos : prev => [...prev, ...res.convos]);
+      setCursor(res.cursor);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [client, cursor]);
+
+  const refresh = useCallback(async () => {
+    if (!client) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res: ConvoListResponse = await client.listConvos(30);
+      setConvos(res.convos);
+      setCursor(res.cursor);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [client]);
+
+  return { convos, cursor, loading, error, load, refresh };
+}
