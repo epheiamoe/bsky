@@ -39,13 +39,13 @@ import { parseAtUri } from './types.js';
 
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
-
-const CHAT_SERVICE_DID = 'did:web:api.bsky.chat';
+const CHAT_API = 'https://api.bsky.chat';
 
 export class BskyClient {
   private session: CreateSessionResponse | null = null;
   private ky: KyInstance;
   private publicKy: KyInstance;
+  private chatKy: KyInstance;
 
   constructor() {
     const self = this;
@@ -92,6 +92,10 @@ export class BskyClient {
     });
     this.publicKy = ky.create({
       prefixUrl: PUBLIC_API + '/xrpc',
+      timeout: 30000,
+    });
+    this.chatKy = ky.create({
+      prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
     });
   }
@@ -469,15 +473,15 @@ export class BskyClient {
 
   private async chatGet<T>(path: string, params?: Record<string, string | number>): Promise<T> {
     const searchParams: Record<string, string | number> = params ?? {};
-    return this.ky.get(path, {
-      headers: { ...this.getAuthHeaders(), 'xrpc-service-proxy': CHAT_SERVICE_DID },
+    return this.chatKy.get(path, {
+      headers: this.getAuthHeaders(),
       searchParams,
     }).json<T>();
   }
 
   private async chatPost<T>(path: string, body: unknown): Promise<T> {
-    return this.ky.post(path, {
-      headers: { ...this.getAuthHeaders(), 'xrpc-service-proxy': CHAT_SERVICE_DID },
+    return this.chatKy.post(path, {
+      headers: this.getAuthHeaders(),
       json: body,
     }).json<T>();
   }
