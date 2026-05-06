@@ -480,7 +480,8 @@ export class BskyClient {
       searchParams: { aud: CHAT_SERVICE_DID, lxm: 'chat.bsky.convo.listConvos' },
     }).json<GetServiceAuthResponse>();
     const token = res.token;
-    const payload = JSON.parse(Buffer.from(token.split('.')[1]!, 'base64url').toString());
+    const base64 = token.split('.')[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
     this._chatAuth = { token, expiresAt: (payload.exp - 30) * 1000 };
     return token;
   }
