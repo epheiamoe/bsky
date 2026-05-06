@@ -59,6 +59,7 @@ These fire in **all non-compose views**, after earlier conditions clear.
 | `a` | `goTo({ type: 'aiChat' })` | AI chat |
 | `c` | `goTo({ type: 'compose' })` | Compose (no reply context) |
 | `b` | `goTo({ type: 'bookmarks' })` | Bookmarks |
+| `m` | `goTo({ type: 'dm' })` | DM 私信（feed 视图中 `m` 仍然用于"加载更多"） |
 
 ### Global Key Reserve Rules
 
@@ -66,12 +67,12 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 
 | Key | Reason |
 |-----|--------|
-| `t`, `n`, `p`, `s`, `a`, `c`, `b` | Global navigation |
+| `t`, `n`, `p`, `s`, `a`, `c`, `b`, `m` | Global navigation (`m` guarded: feeds use `m` for load more) |
 | `Esc` | Universal back |
 | `Tab` | AI focus toggle |
 | `Ctrl+G` | AI chat launcher |
 
-**When adding a new view-specific shortcut, pick from**: `f`, `z`, `x`, `w`, `u`, `o`, `g`, `q`, `e`, `d` (except in bookmarks), `l` (except in thread/ai-history), `h` (except in thread), `y` (except in thread), `i` (except in compose), `,` (comma).
+**When adding a new view-specific shortcut, pick from**: `f`, `z`, `x`, `w`, `u`, `o`, `g`, `q`, `e`, `d` (except in bookmarks), `l` (except in thread/ai-history), `h` (except in thread), `y` (except in thread), `i` (except in compose), `,` (comma). Note: `m` is reserved for DM + feed load more.
 
 ---
 
@@ -146,6 +147,30 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `q` | Open quoted post in thread |
 
 **Footer hint**: `↑↓/jk:导航 Enter:查看 d:删除 r:刷新 q:引用`
+
+---
+
+## DM View
+
+**DM list**:
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | Open selected conversation |
+| `r` | Refresh conversation list |
+
+**Footer hint**: `j/k:Nav Enter:Open r:Refresh`
+
+**DM chat**:
+
+| Key | Action |
+|-----|--------|
+| `Esc` | Back to DM list |
+| `Enter` | Send message (when input focused) |
+
+**Footer hint**: `输入消息 · Enter 发送 · Esc 返回`
 
 ---
 

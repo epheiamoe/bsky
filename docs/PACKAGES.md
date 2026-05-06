@@ -3,13 +3,13 @@
 ## `packages/core` — Zero UI Dependencies
 
 **Exports** (`src/index.ts`):
-- `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`)
+- `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`, `listConvos`, `getConvoForMembers`, `getMessages`, `sendMessage`, `addReaction`, `removeReaction`, `updateRead`, `deleteMessageForSelf`, `muteConvo`, `unmuteConvo`, `putProfile`)
 - `createTools(tools)` — 31 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
 - `singleTurnAI`, `polishDraft`
-- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `TrendingTopic`, `GetTrendsResponse`, `DraftInput`, `DraftView`, `DraftsResponse`, `CreateDraftResponse`, etc.
+- Types: `PostView`, `ProfileView`, `ThreadViewPost`, `AIConfig`, `ChatMessage`, `TrendingTopic`, `GetTrendsResponse`, `DraftInput`, `DraftView`, `DraftsResponse`, `CreateDraftResponse`, `ConvoView`, `MessageView`, `ReactionView`, `MessageInput`, etc.
 
 **Key files**:
 
@@ -136,9 +136,13 @@
 | `ProfilePage` | `components/ProfilePage.tsx` | User profile, follows/followers, author feed |
 | `SearchPage` | `components/SearchPage.tsx` | Search actors + posts |
 | `NotifsPage` | `components/NotifsPage.tsx` | Notification feed with read/unread grouping |
-| `BookmarkPage` | `components/BookmarkPage.tsx` | Bookmarks list |
+| `BookmarkPage` | `components/BookmarkPage.tsx` | Bookmarks list (virtual scroll) |
 | `LoginPage` | `components/LoginPage.tsx` | Bluesky handle + app-password auth form |
 | `SettingsModal` | `components/SettingsModal.tsx` | AI key, base URL, model, language preferences |
+| `ConvoListPage` | `components/ConvoListPage.tsx` | DM conversation list (avatar + handle + last message + unread badge) |
+| `DMChatPage` | `components/DMChatPage.tsx` | DM chat view (message bubbles + emoji reactions + quote embed + delete + mute + load older) |
+| `EditProfileModal` | `components/EditProfileModal.tsx` | Edit profile bottom-sheet (avatar/banner upload + name/description) |
+| `ComponentsPage` | `components/ComponentsPage.tsx` | Widget management page with persistence |
 
 ### Hooks
 
@@ -156,22 +160,21 @@
 
 ### Routing
 
-Hash-based SPA routing (no server required):
+Hash-based SPA routing (`useHashRouter.ts`):
 
 ```
-#/                         → FeedTimeline (home timeline)
-#/post/{uri}               → ThreadView (post + replies)
-#/compose                  → ComposePage (new post, 支持 draftId 参数)
-#/compose?reply={uri}      → ComposePage (reply)
-#/compose?quote={uri}      → ComposePage (quote post)
-#/profile/{actor}          → ProfilePage
-#/search                   → SearchPage (or #/search?q={term})
-#/notifications            → NotifsPage
-#/bookmarks                → BookmarkPage
-#/drafts                   → DraftsPage
-#/chat                     → AIChatPage
-#/chat/{chatId}            → AIChatPage (restore saved conversation)
-#/login                    → LoginPage
+#/feed                      → FeedTimeline (home timeline)
+#/feed?feed=at://...        → FeedTimeline (specific feed URI)
+#/thread?uri=at://...       → ThreadView
+#/compose / ?replyTo=... / ?draftId=...
+#/profile?actor=...         → ProfilePage
+#/search / ?q=... / ?tab=...
+#/notifications             → NotifsPage
+#/bookmarks                 → BookmarkPage
+#/drafts                    → DraftsPage
+#/ai?session=...            → AIChatPage
+#/dm                        → ConvoListPage (DM 会话列表)
+#/dm?conv=id                → DMChatPage (DM 对话)
 ```
 
 ---

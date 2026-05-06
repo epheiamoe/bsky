@@ -16,7 +16,7 @@
 
 ## 版本
 
-**v0.5.0** — Git tag `v0.4.2` (drafts + thread + ALT + polish + video + DM fixes)
+**v0.5.2** — DM Phase 2 + 滚动修复 + 资料页 EditProfile + 虚拟滚动 + 组件持久化
 
 ## 项目状态
 
@@ -31,7 +31,12 @@
 - **组件页** `#/components` : 大屏小屏统一入口，启用/禁用所有 widget
 - **JSON 导出/导入**: `bsky-chat-v1` 格式，含完整 tool_call_id 等元数据（暂不含图片）
 - **AT Protocol 草稿**: `app.bsky.draft.*` 通过 PDS 私有存储，本地 IndexedDB(TUI: JSON 文件) 回退
-- **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应(8 常用) + 引用帖 (URI 粘贴自动检测) + PWA 动画
+- **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应(8 常用) + 引用帖 (URI 粘贴自动检测) + 删除 + 静音 + 加载更早 + PWA 动画
+- **DM 鉴权**: `api.bsky.chat` 直连 + session JWT + auto-refresh（与主 API 共用 `afterResponse` 钩子）
+- **资料页 DM 按钮**: 互相关注者的资料页 AI 按钮左边显示 SVG-only 私信按钮
+- **编辑个人资料**: 自己的资料页底部浮窗编辑头像/横幅/名称/描述
+- **滚动位置恢复**: 时间线改为像素值恢复（解决 5-6 帖偏移）；书签页添加虚拟滚动
+- **草稿黄点**: 仅显示未保存成功的草稿数量（syncStatus !== 'synced'）
 - **帖子串发布**: 多帖 compose，顺序 createRecord + reply 链
 - **ALT 文本**: 上传时输入 + 提交前缺失警告 + PWA SVG 徽章 + TUI 完整显示
 - **PWA 润色修复**: 目标不再是 hardcoded post[0]，改为第一个有文字帖子
@@ -157,9 +162,35 @@
 **修复**：始终渲染 `<video>`（`hidden` when idle）确保 ref 永不为 null；HLS 初始化移至 `useEffect`（`playing=true` 时触发）；`play()` 在 `MANIFEST_PARSED` 回调中调用；仅 `data.fatal` 设置 error；出错显示 retry 按钮；`useEffect` cleanup 中销毁 hls 实例。
 
 ### 30. DM 私信实现
-**架构**：`@bsky/core` 加 `chatAuth()` + 6 个 `chat.bsky.convo.*` 方法（listConvos, getConvoForMembers, getMessages, sendMessage, addReaction, removeReaction, updateRead）。鉴权通过 `com.atproto.server.getServiceAuth` 获取 `aud: did:web:api.bsky.chat` 的服务 JWT，缓存到过期。
-**关键决策**：emoji 反应使用固定常用列表（👍❤️😂😮😢😡🔥🎉），PWA 点击切换/添加，TUI 无反应快速操作（简化版）。引用帖通过粘贴 `at://` 或 `bsky.app` URL 自动检测解析 `getRecord()` 获取 cid 后嵌入。
-**教训**：聊天服务鉴权与普通 API 不同，需独立 JWT；`t('time.justNow')` 需加入 i18n 否则编译报错。
+**架构**：`@bsky/core` 加 `chatKy`（指向 `api.bsky.chat/xrpc`）+ 7 个 `chat.bsky.convo.*` 方法。鉴权使用 session JWT 直连 `api.bsky.chat`（不需要 PDS 代理、不需要 `getServiceAuth`、不需要 `xrpc-service-proxy`）。`chatKy` 也挂 `afterResponse` 钩子自动刷新 JWT。
+**关键决策**：emoji 反应使用固定常用列表（👍❤️😂😮😢😡🔥🎉），PWA 点击切换/添加，TUI 简化版。引用帖通过粘贴 `at://` 或 `bsky.app` URL 自动检测 resolves handle → `getRecord()` → embed。
+**教训**：`getServiceAuth` 在 PDS 返回 501（未实现），实际 `api.bsky.chat` 直接信任 PDS 签发的 session JWT。`sendMessage` 的 Lexicon 输出 schema 是 `MessageView` 直接返回（不是 `{ message: MessageView }`），需与 `addReaction`/`removeReaction` 区分。
+
+### 31. 资料页私信按钮 + 编辑个人资料
+**私信按钮**：互相关注者的资料页，AI 按钮左边，SVG only（`message-square` 图标），无文字避免手机排版异常。点击 → `getConvoForMembers([profile.did])` → 导航到 DM。
+**编辑资料**：自己的资料页，铅笔图标 → 底部浮窗（`EditProfileModal`），支持头像/横幅上传 + 名称/描述编辑。通过 `com.atproto.repo.putRecord` 写入 `app.bsky.actor.profile`。
+**判断 own profile**：`client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID())`。
+
+### 32. Scroll 位置恢复：索引 → 像素值
+**根因**：`FeedTimeline` 用 `scrollToIndex(N)` 恢复滚动位置，但调用时虚拟器只有估算高度（`ESTIMATED_POST_HEIGHT=120px`），实际帖子 ~170px → 偏移 5-6 帖。
+**修复**：改为像素值恢复 `scrollRef.current.scrollTop = savedPixel`，虚拟器自然根据像素计算哪些条目可见。`App.tsx` 中 `feedScrollIndexRef` → `feedScrollTopRef`，`FeedTimeline` props 从 `initialScrollIndex`/`onFirstVisibleIndexChange` → `initialScrollTop`/`onScrollTopChange`。
+**规范**：所有页面的滚动恢复必须使用像素值而非索引。参考 `docs/SCROLL.md`。
+
+### 33. DMChatPage auto-scroll 守卫
+**根因**：`useEffect([messages])` 无条件 `scrollIntoView` 到底部 → 用户翻看历史消息时新消息到达被拉回 → `loadOlder` 加载更早消息也被拉回。
+**修复**：加 `isNearBottom` 守卫（`scrollHeight - scrollTop - clientHeight < 120`），仅当用户接近底部时才自动滚动。
+
+### 34. BookmarkPage 虚拟滚动
+**根因**：收藏列表用简单 `.map()`，无虚拟化，可积累数百条 PostCard + PostActionsRow，性能堪忧。
+**修复**：改为 `@tanstack/react-virtual` + `useScrollRestore('bookmarks', scrollRef, ...)` 容器 ref 滚动。
+
+### 35. chat API 鉴权演进
+**错误路径（已废）**：
+1. `getServiceAuth` → `bsky.social/xrpc/com.atproto.server.getServiceAuth` → 501（PDS 未实现）
+2. session JWT + `xrpc-service-proxy: did:web:api.bsky.chat` → `bsky.social/xrpc/chat.*` → 501（PDS 不支持聊天代理）
+3. 同上但用用户 PDS host → 501（同样不支持）
+**正确路径（最终）**：`chatKy = ky.create({ prefixUrl: 'https://api.bsky.chat/xrpc', hooks: { afterResponse: [withRefresh] } })` + `this.getAuthHeaders()`（session JWT）。
+**陷阱**：`sendMessage` 返回 `MessageView` 直接（不是 `{ message: MessageView }`），但 `addReaction`/`removeReaction` 返回 `{ message: MessageView }` — 需逐个确认 Lexicon schema。
 
 ---
 
@@ -273,11 +304,19 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/widgets/TrendsWidget.tsx` | 趋势（全部视图） |
 | `packages/pwa/src/components/VideoCard.tsx` | HLS 视频播放器 |
 | `packages/pwa/src/components/ConvoListPage.tsx` | DM 会话列表 |
-| `packages/pwa/src/components/DMChatPage.tsx` | DM 对话视图（气泡 + 反应 + 引用） |
+| `packages/pwa/src/components/DMChatPage.tsx` | DM 对话视图（气泡 + 反应 + 引用 + 删除 + 静音） |
+| `packages/pwa/src/components/EditProfileModal.tsx` | 编辑个人资料底部浮窗 |
+| `packages/pwa/src/components/ComponentsPage.tsx` | 组件管理页（含持久化 toggle） |
 | `packages/tui/src/components/DMChatView.tsx` | TUI DM 对话 |
 | `packages/tui/src/components/DMListView.tsx` | TUI DM 会话列表 |
 | `packages/app/src/hooks/useConvoList.ts` | 会话列表 hook |
 | `packages/app/src/hooks/useChatMessages.ts` | 对话消息 hook + URI 解析 |
+| `packages/pwa/src/icons/message-square.svg` | DM 图标 |
+| `packages/pwa/src/icons/refresh-cw.svg` | 刷新图标 |
+| `packages/pwa/src/icons/smile.svg` | 反应图标 |
+| `packages/pwa/src/icons/plus-circle.svg` | 添加图标 |
+| `docs/DM.md` | DM 公开文档（API/鉴权/模型/教训） |
+| `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范 |
 | `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
 | `packages/pwa/src/services/indexeddb-draft-storage.ts` | IndexedDB draft 存储（PWA） |
 | `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/drafts`/`/components`） |

@@ -38,9 +38,13 @@
 | **推荐关注** | ⬜ | ✅ | SuggestedFollowsWidget + AT API |
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ⬜ | ⬜ | 自定义 Feed |
-| **DM 私信** | ✅ | ✅ | chat.bsky.convo.* — Phase 1(文字+反应+引用帖) + Phase 2(删除消息+加载更早+静音+已读+引用帖修复+动画) |
+| **DM 私信** | ✅ | ✅ | Phase 1+2: send/get/list/delete/mute/read + emoji 反应(8 常用) + 引用帖(URI 粘贴) + 动画 + 加载更早 |
+| **资料页 DM 按钮** | N/A | ✅ | 互相关注者资料页，SVG-only 私信按钮 |
+| **编辑个人资料** | N/A | ✅ | 底部浮窗：头像/横幅/名称/描述 + putProfile API |
 | **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
 | **页面动画** | ⬜ | ⬜ | 其他页面加微动效（DM 页面已有 fadeIn/slideUp/messageIn） |
+| **虚拟滚动** | N/A | ✅ | FeedTimeline / ProfilePage / BookmarkPage |
+| **滚动位置恢复** | ✅ | ✅ | TUI: idx state; PWA: 像素值模式 |
 | **推送通知** | N/A | ⬜ | Web Push API |
 | **资料页预览 (组件)** | ⬜ | ✅ | ProfilePreviewWidget — thread 视图置顶显示作者资料 |
 | **资料页 AI 按钮** | ✅ | ✅ | TUI: a 键, PWA: 🤖 AI 按钮 |
