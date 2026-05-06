@@ -16,7 +16,7 @@
 
 ## 版本
 
-**v0.4.2** — Git tag `v0.4.1` (drafts + thread + ALT + polish + video fixes)
+**v0.5.0** — Git tag `v0.4.2` (drafts + thread + ALT + polish + video + DM fixes)
 
 ## 项目状态
 
@@ -155,6 +155,11 @@
 **根因**：`VideoCard` 有条件渲染 `<video>`（`{playing ? <video> : <thumbnail>}`），但 `handlePlay` 同步检查 `videoRef.current` —— 此时 re-render 尚未发生，ref 为 `null` → 直接 return。即使 ref 可用，`play()` 也在 `hls.attachMedia()` 后立即调用，早于 `MANIFEST_PARSED` 事件 → `play()` reject。且 `hls.on(ERROR)` 捕获所有错误（含可恢复的），一次错误永久停播。
 **修复**：始终渲染 `<video>`（`hidden` when idle）确保 ref 永不为 null；HLS 初始化移至 `useEffect`（`playing=true` 时触发）；`play()` 在 `MANIFEST_PARSED` 回调中调用；仅 `data.fatal` 设置 error；出错显示 retry 按钮；`useEffect` cleanup 中销毁 hls 实例。
 
+### 30. DM 私信实现
+**架构**：`@bsky/core` 加 `chatAuth()` + 6 个 `chat.bsky.convo.*` 方法（listConvos, getConvoForMembers, getMessages, sendMessage, addReaction, removeReaction, updateRead）。鉴权通过 `com.atproto.server.getServiceAuth` 获取 `aud: did:web:api.bsky.chat` 的服务 JWT，缓存到过期。
+**关键决策**：emoji 反应使用固定常用列表（👍❤️😂😮😢😡🔥🎉），PWA 点击切换/添加，TUI 无反应快速操作（简化版）。引用帖通过粘贴 `at://` 或 `bsky.app` URL 自动检测解析 `getRecord()` 获取 cid 后嵌入。
+**教训**：聊天服务鉴权与普通 API 不同，需独立 JWT；`t('time.justNow')` 需加入 i18n 否则编译报错。
+
 ---
 
 ## 🔑 关键架构模式
@@ -266,6 +271,12 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/widgets/SuggestedFeedsWidget.tsx` | 推荐动态源（全部视图） |
 | `packages/pwa/src/components/widgets/TrendsWidget.tsx` | 趋势（全部视图） |
 | `packages/pwa/src/components/VideoCard.tsx` | HLS 视频播放器 |
+| `packages/pwa/src/components/ConvoListPage.tsx` | DM 会话列表 |
+| `packages/pwa/src/components/DMChatPage.tsx` | DM 对话视图（气泡 + 反应 + 引用） |
+| `packages/tui/src/components/DMChatView.tsx` | TUI DM 对话 |
+| `packages/tui/src/components/DMListView.tsx` | TUI DM 会话列表 |
+| `packages/app/src/hooks/useConvoList.ts` | 会话列表 hook |
+| `packages/app/src/hooks/useChatMessages.ts` | 对话消息 hook + URI 解析 |
 | `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
 | `packages/pwa/src/services/indexeddb-draft-storage.ts` | IndexedDB draft 存储（PWA） |
 | `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/drafts`/`/components`） |
