@@ -341,6 +341,10 @@ const zh: LocaleMessages = {
   'dm.deletedMessage': '消息已删除',
   'dm.unknown': '未知用户',
   'dm.resolvingQuote': '正在解析引用帖子...',
+  'dm.confirmDelete': '确定删除这条消息吗？',
+  'dm.mute': '静音',
+  'dm.unmute': '取消静音',
+  'dm.muted': '已静音',
   'time.justNow': '刚刚',
 };
 

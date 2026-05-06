@@ -17,27 +17,40 @@ const COMMON_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F62E}'
 
 export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageProps) {
   const { t } = useI18n();
-  const { messages, convo, loading, sending, error, loadConvo, sendMessage, toggleReaction, refresh } = useChatMessages(client);
+  const { messages, convo, loading, sending, error, loadConvo, loadOlder, sendMessage, toggleReaction, refresh, deleteMessage, markRead, muteConvo, unmuteConvo } = useChatMessages(client);
   const [input, setInput] = useState('');
   const [quotePreview, setQuotePreview] = useState<{ uri: string; resolved?: { cid: string; text: string; author: string } } | null>(null);
   const [activeReactionMsgId, setActiveReactionMsgId] = useState<string | null>(null);
   const [showQuoteLoading, setShowQuoteLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const did = client.getDID();
 
   useEffect(() => {
-    loadConvo(conversationId, true);
+    loadConvo(conversationId, true).then(() => markRead());
   }, [conversationId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Scroll-to-top → load older messages
+  const loadingOlderRef = useRef(false);
+  const handleScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el || loading || loadingOlderRef.current) return;
+    if (el.scrollTop < 60) {
+      loadingOlderRef.current = true;
+      loadOlder().finally(() => { loadingOlderRef.current = false; });
+    }
+  }, [loadOlder, loading]);
+
   const handleSend = async () => {
     const text = input.trim();
     if (!text) return;
     setInput('');
-    
+
     let embed: { $type: 'app.bsky.embed.record'; record: { uri: string; cid: string } } | undefined;
     if (quotePreview?.resolved) {
       embed = { $type: 'app.bsky.embed.record', record: { uri: quotePreview.uri, cid: quotePreview.resolved.cid } };
@@ -46,29 +59,51 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
     await sendMessage(text, embed);
   };
 
+  const resolveQuoteRecord = useCallback(async (parsed: { uri: string; did?: string; rkey?: string; handle?: string }) => {
+    setShowQuoteLoading(true);
+    try {
+      let did = parsed.did;
+      let rkey = parsed.rkey!;
+      if (!did && parsed.handle) {
+        const resolved = await client.resolveHandle(parsed.handle);
+        did = resolved.did;
+      }
+      if (did) {
+        const rec = await client.getRecord(did, 'app.bsky.feed.post', rkey);
+        setQuotePreview({
+          uri: parsed.uri,
+          resolved: {
+            cid: rec.cid ?? '',
+            text: (rec.value as any)?.text ?? '',
+            author: '',
+          },
+        });
+      }
+    } catch {
+      setQuotePreview(null);
+    } finally {
+      setShowQuoteLoading(false);
+    }
+  }, [client]);
+
   const handleInputChange = useCallback(async (value: string) => {
     setInput(value);
-    const uri = parsePostUri(value);
-    if (uri && !quotePreview) {
-      setQuotePreview({ uri: uri.uri });
-      setShowQuoteLoading(true);
-      try {
-        const parts = uri.uri.match(/^at:\/\/(did:plc:[^\/]+)\/app\.bsky\.feed\.post\/([^\s]+)$/);
-        if (parts) {
-          const [, did_, rkey] = parts;
-          const rec = await client.getRecord(did_!, 'app.bsky.feed.post', rkey!);
-          setQuotePreview({ uri: uri.uri, resolved: { cid: rec.cid ?? '', text: (rec.value as any)?.text ?? '', author: '' } });
-        }
-      } catch {
-        setQuotePreview(null);
-      } finally {
-        setShowQuoteLoading(false);
-      }
+    const parsed = parsePostUri(value);
+    if (parsed && !quotePreview) {
+      setQuotePreview({ uri: parsed.uri });
+      await resolveQuoteRecord(parsed);
     }
-    if (!uri && quotePreview) {
+    if (!parsed && quotePreview) {
       setQuotePreview(null);
     }
-  }, [quotePreview, client]);
+  }, [quotePreview, resolveQuoteRecord]);
+
+  const handleDelete = async (msgId: string) => {
+    if (!confirm(t('dm.confirmDelete'))) return;
+    setDeleting(msgId);
+    await deleteMessage(msgId);
+    setDeleting(null);
+  };
 
   const isOwn = (msg: AnyMsg): boolean => !('data' in msg) && msg.sender.did === did;
   const isDeleted = (msg: AnyMsg): boolean => !('text' in msg) && !('data' in msg);
@@ -107,10 +142,27 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
           {getMemberAvatar() ? <img src={getMemberAvatar()} alt="" className="w-full h-full object-cover" /> : (getMemberName())[0]}
         </div>
         <span className="text-sm font-semibold text-text-primary flex-1">{getMemberName()}</span>
+        {convo && (
+          <button
+            onClick={() => convo.muted ? unmuteConvo() : muteConvo()}
+            className="text-text-secondary hover:text-text-primary transition-colors text-xs"
+            title={convo.muted ? t('dm.unmute') : t('dm.mute')}
+            aria-label={convo.muted ? t('dm.unmute') : t('dm.mute')}
+          >
+            <Icon name="bell" size={16} filled={!convo.muted} />
+          </button>
+        )}
+        <button onClick={() => refresh()} className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Refresh">
+          <Icon name="refresh-cw" size={16} />
+        </button>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-2"
+      >
         {loading && messages.length === 0 && (
           <div className="text-center text-text-secondary py-8 animate-pulse">{t('common.loading')}</div>
         )}
@@ -123,10 +175,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
               </div>
             );
           }
-          if (!('text' in msg)) {
-            // System message — skip for now
-            return null;
-          }
+          if (!('text' in msg)) return null;
           const msgView = msg as MessageView;
           const own = isOwn(msgView);
           const msgReactions = msgView.reactions || [];
@@ -153,16 +202,27 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                   </div>
                 )}
                 {/* Message bubble */}
-                <div className={`rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words ${
+                <div className={`rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap break-words relative ${
                   own ? 'bg-primary text-white rounded-br-md' : 'bg-surface border border-border rounded-bl-md text-text-primary'
                 }`}>
                   {msgView.text}
+                  {/* Delete button (own messages, on hover) */}
+                  {own && (
+                    <button
+                      onClick={() => handleDelete(msgView.id)}
+                      disabled={deleting === msgView.id}
+                      className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 rounded-full p-0.5 shadow text-red-500 hover:text-red-600"
+                      aria-label="Delete message"
+                    >
+                      <Icon name="trash-2" size={12} />
+                    </button>
+                  )}
                 </div>
                 {/* Timestamp */}
-                <span className={`text-xs text-text-secondary mt-0.5 px-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
+                <span className="text-xs text-text-secondary mt-0.5 px-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {formatTime(msgView.sentAt)}
                 </span>
-                {/* Reactions bar — always shows add button, badges only when reactions exist */}
+                {/* Reactions bar — always shows add button */}
                 <div className="flex flex-wrap items-center gap-1 mt-1">
                   {msgReactions.length > 0 && Object.entries(grouped).map(([value, reactions]) => {
                     const hasMy = reactions.some(r => r.sender.did === did);
@@ -186,7 +246,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                     <Icon name="smile" size={14} />
                   </button>
                 </div>
-                {/* Emoji picker (only for this message) */}
+                {/* Emoji picker */}
                 {activeReactionMsgId === msg.id && (
                   <div className="flex gap-1 mt-1 p-1 bg-surface border border-border rounded-lg shadow-lg animate-slideUp">
                     {COMMON_EMOJIS.map(emoji => {
@@ -215,6 +275,11 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                   </div>
                 )}
               </div>
+              {own && (
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs shrink-0">
+                  {getMemberName()[0]}
+                </div>
+              )}
             </div>
           );
         })}

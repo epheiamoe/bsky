@@ -126,6 +126,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
+                {convo.muted && <span className="text-text-secondary text-xs" title={t('dm.muted')}><Icon name="bell" size={12} /></span>}
                 <span className="text-sm font-semibold text-text-primary truncate">{getMemberName(convo)}</span>
                 <span className="text-xs text-text-secondary truncate">@{getMemberHandle(convo)}</span>
                 {getLastMessageTime(convo) && (

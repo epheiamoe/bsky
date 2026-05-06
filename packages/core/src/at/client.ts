@@ -536,4 +536,20 @@ export class BskyClient {
       ...(messageId ? { messageId } : {}),
     });
   }
+
+  async deleteMessageForSelf(convoId: string, messageId: string): Promise<void> {
+    await this.chatPost('chat.bsky.convo.deleteMessageForSelf', { convoId, messageId });
+  }
+
+  async muteConvo(convoId: string): Promise<{ convo: ConvoView }> {
+    return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.muteConvo', { convoId });
+  }
+
+  async unmuteConvo(convoId: string): Promise<{ convo: ConvoView }> {
+    return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.unmuteConvo', { convoId });
+  }
+
+  async leaveConvo(convoId: string): Promise<{ convo: ConvoView }> {
+    return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.leaveConvo', { convoId });
+  }
 }

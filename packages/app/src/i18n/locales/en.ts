@@ -319,6 +319,10 @@ const en: LocaleMessages = {
   'dm.deletedMessage': 'Message deleted',
   'dm.unknown': 'Unknown user',
   'dm.resolvingQuote': 'Resolving quoted post...',
+  'dm.confirmDelete': 'Delete this message?',
+  'dm.mute': 'Mute',
+  'dm.unmute': 'Unmute',
+  'dm.muted': 'Muted',
   'time.justNow': 'now',
 };
 

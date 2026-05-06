@@ -319,6 +319,10 @@ const ja: LocaleMessages = {
   'dm.deletedMessage': 'メッセージが削除されました',
   'dm.unknown': '不明なユーザー',
   'dm.resolvingQuote': '引用投稿を解析中...',
+  'dm.confirmDelete': 'このメッセージを削除しますか？',
+  'dm.mute': 'ミュート',
+  'dm.unmute': 'ミュート解除',
+  'dm.muted': 'ミュート中',
   'time.justNow': 'たった今',
 };
 
