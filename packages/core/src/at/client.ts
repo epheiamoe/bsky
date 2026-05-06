@@ -505,11 +505,10 @@ export class BskyClient {
   }
 
   async sendMessage(convoId: string, message: MessageInput): Promise<MessageView> {
-    const res = await this.chatPost<{ message: MessageView }>('chat.bsky.convo.sendMessage', {
+    return this.chatPost<MessageView>('chat.bsky.convo.sendMessage', {
       convoId,
       message,
     });
-    return res.message;
   }
 
   async addReaction(convoId: string, messageId: string, value: string): Promise<MessageView> {

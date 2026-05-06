@@ -40,7 +40,7 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
   // Flatten messages into display lines
   const allLines: Array<{ text: string; color?: string; isOwn: boolean }> = [];
   for (const msg of messages) {
-    if (!('text' in msg)) continue;
+    if (!msg || !('text' in msg)) continue;
     const msgView = msg as ChatMessage;
     const own = msgView.sender.did === did;
     const sender = own ? 'you' : getMemberName().slice(0, 12);

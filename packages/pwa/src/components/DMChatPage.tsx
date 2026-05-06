@@ -167,7 +167,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
           <div className="text-center text-text-secondary py-8 animate-pulse">{t('common.loading')}</div>
         )}
         {error && <div className="p-3 bg-red-100 dark:bg-red-900/20 text-red-600 text-sm rounded-lg">{error}</div>}
-        {messages.map((msg) => {
+        {messages.filter(Boolean).map((msg) => {
           if (isDeleted(msg)) {
             return (
               <div key={msg.id} className="flex justify-center">
