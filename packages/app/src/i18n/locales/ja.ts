@@ -5,7 +5,7 @@ const ja: LocaleMessages = {
   'nav.notifications': '通知',
   'nav.search': '検索',
   'nav.bookmarks': 'ブックマーク',
-  'nav.profile': '自分',
+  'nav.profile': 'プロフィール',
   'nav.aiChat': 'AI チャット',
   'nav.compose': '投稿',
   'nav.settings': '設定',

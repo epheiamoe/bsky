@@ -5,7 +5,7 @@ const en: LocaleMessages = {
   'nav.notifications': 'Notifications',
   'nav.search': 'Search',
   'nav.bookmarks': 'Bookmarks',
-  'nav.profile': 'Me',
+  'nav.profile': 'Profile',
   'nav.aiChat': 'AI Chat',
   'nav.compose': 'Compose',
   'nav.settings': 'Settings',
