@@ -10,9 +10,11 @@
 4. **`docs/PACKAGES.md`** — 各包职责与文件清单
 5. **`docs/HOOKS.md`** — 所有 hook 签名
 6. **`docs/KEYBOARD.md`** — TUI 快捷键
-7. **`CHANGELOG.md`** — 版本历史
-8. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-9. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
+7. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+8. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+9. **`CHANGELOG.md`** — 版本历史
+10. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+11. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
 
 ## 版本
 
@@ -275,6 +277,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 10. AI 搜索工具（search_posts）强制使用 authenticated endpoint — public API 返回 403
 11. FlatLine 图片数据从 `imageUrls: string[]` 改为 `imageDetails: Array<{url, alt}>` — 所有消费方需同步
 12. DraftStore 的 `saveDraft/syncDraft/refreshDrafts` 使用模块级 `_clientRef`，不可闭包捕获 client
+13. 滚动位置恢复必须使用**像素值**（`scrollTop`），不能用索引（`scrollToIndex`）——虚拟器在 ResizeObserver 触发前使用估算高度，造成系统性偏移。见 `docs/SCROLL.md`
+14. chat API 直连 `api.bsky.chat` + session JWT，不要走 PDS 代理（返回 501）。`chatKy` 也挂 `afterResponse` 钩子自动刷新 JWT
 
 ## 关键文件速查
 
