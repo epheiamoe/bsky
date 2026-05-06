@@ -162,32 +162,30 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                 <span className={`text-xs text-text-secondary mt-0.5 px-1 opacity-0 group-hover:opacity-100 transition-opacity`}>
                   {formatTime(msgView.sentAt)}
                 </span>
-                {/* Reactions bar */}
-                {msgReactions.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Object.entries(grouped).map(([value, reactions]) => {
-                      const hasMy = reactions.some(r => r.sender.did === did);
-                      return (
-                        <button
-                          key={value}
-                          onClick={() => toggleReaction(msgView.id, value, hasMy)}
-                          className={`text-xs px-1.5 py-0.5 rounded-full transition-colors ${
-                            hasMy ? 'bg-primary/20 text-primary font-bold' : 'bg-surface border border-border text-text-secondary hover:bg-primary/10'
-                          }`}
-                        >
-                          {value} {reactions.length > 1 ? <span className="opacity-70">{reactions.length}</span> : ''}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => handleReactionClick(msgView.id)}
-                      className="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-secondary hover:bg-primary/10 transition-colors"
-                      aria-label="Add reaction"
-                    >
-                      <Icon name="smile" size={14} />
-                    </button>
-                  </div>
-                )}
+                {/* Reactions bar — always shows add button, badges only when reactions exist */}
+                <div className="flex flex-wrap items-center gap-1 mt-1">
+                  {msgReactions.length > 0 && Object.entries(grouped).map(([value, reactions]) => {
+                    const hasMy = reactions.some(r => r.sender.did === did);
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => toggleReaction(msgView.id, value, hasMy)}
+                        className={`text-xs px-1.5 py-0.5 rounded-full transition-colors ${
+                          hasMy ? 'bg-primary/20 text-primary font-bold' : 'bg-surface border border-border text-text-secondary hover:bg-primary/10'
+                        }`}
+                      >
+                        {value} {reactions.length > 1 ? <span className="opacity-70">{reactions.length}</span> : ''}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => handleReactionClick(msgView.id)}
+                    className="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-secondary hover:bg-primary/10 transition-colors"
+                    aria-label="Add reaction"
+                  >
+                    <Icon name="smile" size={14} />
+                  </button>
+                </div>
                 {/* Emoji picker (only for this message) */}
                 {activeReactionMsgId === msg.id && (
                   <div className="flex gap-1 mt-1 p-1 bg-surface border border-border rounded-lg shadow-lg animate-slideUp">
