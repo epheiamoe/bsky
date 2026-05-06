@@ -45,7 +45,7 @@ export function App() {
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
-  const feedScrollIndexRef = useRef(0);
+  const feedScrollTopRef = useRef(0);
 
   // Resolve full AIConfig for a scenario model string ("provider/model" or just "model" or "")
   const resolveScenarioConfig = useCallback((scenarioModel: string): AIConfig => {
@@ -211,8 +211,8 @@ export function App() {
             error={timeline.error}
             loadMore={timeline.loadMore}
             refresh={timeline.refresh}
-            initialScrollIndex={feedScrollIndexRef.current}
-            onFirstVisibleIndexChange={(idx) => { feedScrollIndexRef.current = idx; }}
+            initialScrollTop={feedScrollTopRef.current}
+            onScrollTopChange={(top) => { feedScrollTopRef.current = top; }}
             feedUri={(currentView as { feedUri?: string }).feedUri}
             client={client}
             isLiked={postActions.isLiked}
@@ -313,7 +313,7 @@ export function App() {
       config={appConfig}
       onConfigChange={setAppConfig}
       onRelogin={handleRelogin}
-      draftCount={drafts.length}
+      draftCount={drafts.filter(d => d.syncStatus !== 'synced').length}
       dmCount={dmCount}
       polishConfig={scenarioModels.polish}
     >

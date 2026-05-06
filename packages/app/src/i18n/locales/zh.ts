@@ -6,7 +6,7 @@ const zh: LocaleMessages = {
   'nav.notifications': '通知',
   'nav.search': '搜索',
   'nav.bookmarks': '书签',
-  'nav.profile': '我',
+  'nav.profile': '资料',
   'nav.aiChat': 'AI 对话',
   'nav.compose': '发帖',
   'nav.settings': '设置',

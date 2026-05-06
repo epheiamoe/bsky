@@ -16,8 +16,8 @@ interface FeedTimelineProps {
   error: string | null;
   loadMore?: () => Promise<void>;
   refresh?: () => Promise<void>;
-  initialScrollIndex?: number;
-  onFirstVisibleIndexChange?: (index: number) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
   feedUri?: string;
   client?: BskyClient | null;
   isLiked?: (uri: string) => boolean;
@@ -43,11 +43,10 @@ function SkeletonCard() {
 
 const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollIndex, onFirstVisibleIndexChange, feedUri, client, isLiked, isReposted, likePost, repostPost }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost }: FeedTimelineProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const lastReportedRef = useRef(-1);
 
   // ── Virtual scroll ──
   const virtualizer = useVirtualizer({
@@ -57,40 +56,34 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     overscan: 5,
   });
 
-  // ── Scroll position restoration (on mount, after navigating back) ──
+  // ── Scroll position restoration (pixel-based) ──
   useEffect(() => {
-    if (initialScrollIndex !== undefined && initialScrollIndex > 0 && posts.length > 0) {
-      const target = Math.min(initialScrollIndex, posts.length - 1);
+    if (initialScrollTop !== undefined && initialScrollTop > 0 && posts.length > 0) {
+      const el = scrollRef.current;
+      if (!el) return;
       const raf = requestAnimationFrame(() => {
-        virtualizer.scrollToIndex(target, { align: 'start' });
+        el.scrollTop = initialScrollTop;
       });
       return () => cancelAnimationFrame(raf);
     }
-  }, []); // Only on mount
+  }, [posts.length > 0 ? initialScrollTop : undefined]);
 
-  // ── Report first visible index to parent ──
-  const reportVisibleIndex = useCallback(() => {
-    if (!onFirstVisibleIndexChange) return;
-    const items = virtualizer.getVirtualItems();
-    if (items.length === 0) return;
-    const idx = items[0]!.index;
-    if (idx !== lastReportedRef.current) {
-      lastReportedRef.current = idx;
-      onFirstVisibleIndexChange(idx);
-    }
-  }, [virtualizer, onFirstVisibleIndexChange]);
+  // ── Report scroll position to parent ──
+  const reportScrollTop = useCallback(() => {
+    if (!onScrollTopChange || !scrollRef.current) return;
+    onScrollTopChange(scrollRef.current.scrollTop);
+  }, [onScrollTopChange]);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    el.addEventListener('scroll', reportVisibleIndex, { passive: true });
-    // Report initial position after virtualizer has items
-    const raf = requestAnimationFrame(reportVisibleIndex);
+    el.addEventListener('scroll', reportScrollTop, { passive: true });
+    const raf = requestAnimationFrame(reportScrollTop);
     return () => {
-      el.removeEventListener('scroll', reportVisibleIndex);
+      el.removeEventListener('scroll', reportScrollTop);
       cancelAnimationFrame(raf);
     };
-  }, [reportVisibleIndex]);
+  }, [reportScrollTop]);
 
   // ── Auto-load-more sentinel ──
   useEffect(() => {
