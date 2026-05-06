@@ -38,7 +38,7 @@
 | **推荐关注** | ⬜ | ✅ | SuggestedFollowsWidget + AT API |
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ⬜ | ⬜ | 自定义 Feed |
-| **DM 私信** | ✅ | ✅ | chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 动画 |
+| **DM 私信** | ✅ | ✅ | chat.bsky.convo.* — Phase 1(文字+反应+引用帖) + Phase 2(删除消息+加载更早+静音+已读+引用帖修复+动画) |
 | **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
 | **页面动画** | ⬜ | ⬜ | 其他页面加微动效（DM 页面已有 fadeIn/slideUp/messageIn） |
 | **推送通知** | N/A | ⬜ | Web Push API |
