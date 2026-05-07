@@ -184,14 +184,15 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Notifications', body: truncate(content, 300) };
   }
 
-  // ── Feed/timeline tools (Category C) ──
+  // ── Feed/timeline tools (Category C) — response has feed[{post:{record:{text},author:{handle}}}]
   if (toolName === 'get_timeline') {
     const r = jsonTry(content, obj => {
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
       const posts = feed.map(f => {
         const p = f.post as Record<string, unknown> | undefined;
+        const rec = p?.record as Record<string, unknown> | undefined;
         const author = p?.author as Record<string, unknown> | undefined;
-        return { handle: String(author?.handle ?? ''), text: truncate(String(p?.text ?? ''), 120) };
+        return { handle: String(author?.handle ?? ''), text: truncate(String(rec?.text ?? ''), 120) };
       });
       return {
         total: posts.length,
@@ -207,7 +208,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
       const posts = feed.map(f => {
         const p = f.post as Record<string, unknown> | undefined;
-        return truncate(String(p?.text ?? ''), 120);
+        const rec = p?.record as Record<string, unknown> | undefined;
+        return truncate(String(rec?.text ?? ''), 120);
       });
       return { total: posts.length, first3: posts.slice(0, 3).map((t, i) => `${i + 1}. ${t}`).join('\n\n') };
     });
@@ -220,8 +222,9 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
       const posts = feed.map(f => {
         const p = f.post as Record<string, unknown> | undefined;
+        const rec = p?.record as Record<string, unknown> | undefined;
         const author = p?.author as Record<string, unknown> | undefined;
-        return { handle: String(author?.handle ?? ''), text: truncate(String(p?.text ?? ''), 120) };
+        return { handle: String(author?.handle ?? ''), text: truncate(String(rec?.text ?? ''), 120) };
       });
       return {
         total: posts.length,
