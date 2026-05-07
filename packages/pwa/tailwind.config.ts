@@ -22,7 +22,7 @@ export default {
       },
       spacing: {
         sidebar: '280px',
-        'right-panel': '300px',
+        'right-panel': '390px',
       },
     },
   },

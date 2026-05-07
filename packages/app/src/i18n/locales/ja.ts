@@ -208,6 +208,7 @@ const ja: LocaleMessages = {
   'ai.thinkingCard': '思考',
   'ai.toolCallCard': 'ツール呼び出し',
   'ai.widgetTitle': 'AI チャット',
+  'ai.viewHint': '対応ページで /view を使うと AI にコンテキストを提供できます',
 
   'login.title': 'Bluesky アカウントにログイン',
   'login.handle': 'ハンドル',

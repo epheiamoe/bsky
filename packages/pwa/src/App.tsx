@@ -4,7 +4,7 @@ import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
-import { getFeedConfig, setLastFeedUri, seedPostViewers } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId } from '@bsky/app';
 import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
@@ -136,6 +136,14 @@ export function App() {
     if (currentView.type === 'feed') {
       const uri = (currentView as { feedUri?: string }).feedUri;
       if (uri) setLastFeedUri(uri);
+    }
+  }, [currentView]);
+
+  // ── Track last non-AI view for /view context ──
+  const [viewContext, setViewContext] = useState<AppView | null>(null);
+  useEffect(() => {
+    if (currentView.type !== 'aiChat' && currentView.type !== 'components') {
+      setViewContext(currentView);
     }
   }, [currentView]);
 
@@ -282,12 +290,13 @@ export function App() {
             goTo={goTo}
           />
         );
-      case 'aiChat':
+      case 'aiChat': {
+        const sessionId = (currentView as { sessionId?: string }).sessionId || getAIChatSessionId() || undefined;
         return (
           <AIChatPage
             client={client}
             aiConfig={effectiveAiConfig}
-            sessionId={(currentView as { sessionId?: string }).sessionId}
+            sessionId={sessionId}
             contextPost={(currentView as { contextPost?: string }).contextPost}
             contextProfile={(currentView as { contextProfile?: string }).contextProfile}
             contextUri={(currentView as { contextUri?: string }).contextUri}
@@ -295,6 +304,7 @@ export function App() {
             goBack={goBack}
           />
         );
+      }
       case 'bookmarks':
         return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
       case 'drafts':

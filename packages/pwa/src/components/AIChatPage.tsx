@@ -131,18 +131,26 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;
+    let text = input.trim();
+    if (text.startsWith('/view')) {
+      const clean = text.replace(/^\/view\s*/i, '');
+      const ctx = contextPost ? `帖子: ${contextPost}` : contextProfile ? `用户: @${contextProfile}` : null;
+      if (ctx) {
+        text = `<currently_viewing>用户当前正在浏览: ${ctx}。这个信息可能有帮助，但如果用户没有要求你使用，请不要提及。</currently_viewing>\n${clean}`;
+      }
+    }
     if (pendingFile) {
       const data = new Uint8Array(await pendingFile.file.arrayBuffer());
       const idx = addUserImage(data, pendingFile.file.type || 'image/jpeg', '');
       const ref = `[图片: index=${idx}]`;
-      void send(input.trim() + '\n\n' + ref);
+      void send(text + '\n\n' + ref);
       setInput('');
       setPendingFile(null);
     } else {
-      void send(input.trim());
+      void send(text);
       setInput('');
     }
-  }, [input, loading, send, pendingFile, addUserImage]);
+  }, [input, loading, send, pendingFile, addUserImage, contextPost, contextProfile]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -490,6 +498,15 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             </div>
           )}
 
+          {/* ── /view preview card ── */}
+          {input.trimStart().startsWith('/view') && (contextPost || contextProfile) && (
+            <div className="flex justify-center">
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs text-text-secondary/70 max-w-[85%]">
+                📋 {contextPost ? `帖子: ${contextPost}` : `用户: @${contextProfile}`}
+              </div>
+            </div>
+          )}
+
           {messageGroups.map((group, gi) => {
             if (group.type === 'thinking') {
               return (
@@ -517,16 +534,29 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             }
             if (group.type === 'user') {
               const userIdx = messages.slice(0, messages.indexOf(group.msg) + 1).filter(m => m.role === 'user').length - 1;
+              const viewingRegex = /<currently_viewing>([\s\S]*?)<\/currently_viewing>/;
+              const match = group.msg.content.match(viewingRegex);
+              const cleanContent = match ? group.msg.content.replace(match[0], '').trim() : group.msg.content;
               return (
-                <UserMessage
-                  key={`u${gi}`}
-                  content={group.msg.content}
-                  loading={loading}
-                  onEdit={() => {
-                    const text = editByIndex(userIdx);
-                    if (text) setInput(text);
-                  }}
-                />
+                <div key={`u${gi}`} className="flex flex-col items-end gap-1">
+                  {match && (
+                    <div className="flex justify-start w-full">
+                      <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs text-text-secondary/70 max-w-[85%]">
+                        📋 {match[1]!.split('\n')[0]}
+                      </div>
+                    </div>
+                  )}
+                  {cleanContent && (
+                    <UserMessage
+                      content={cleanContent}
+                      loading={loading}
+                      onEdit={() => {
+                        const text = editByIndex(userIdx);
+                        if (text) setInput(text);
+                      }}
+                    />
+                  )}
+                </div>
               );
             }
             return (

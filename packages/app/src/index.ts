@@ -71,4 +71,9 @@ export {
   replaceComposeDraft,
   setFocusedProfileActor,
   getFocusedProfileActor,
+  initAIChatSession,
+  getAIChatSessionId,
+  setAIChatSessionId,
+  resetAIChatSession,
+  setWidgetToggleCallback,
 } from './hooks/widgetStore.js';

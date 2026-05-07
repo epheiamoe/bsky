@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, getWidgetsForView } from '@bsky/app';
+import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, disableWidget, setWidgetToggleCallback, getWidgetsForView } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { saveAppConfig } from '../hooks/useAppConfig.js';
@@ -80,6 +80,24 @@ export function Layout({
     }
     setWidgetTick(t => t + 1);
   }, []);
+
+  // Register widget toggle persistence callback (for non-Layout toggleWidget calls)
+  useEffect(() => {
+    setWidgetToggleCallback((id: string) => {
+      const updated = { ...config, enabledWidgets: getEnabledWidgetIds() };
+      saveAppConfig(updated);
+      onConfigChange(updated);
+    });
+    return () => setWidgetToggleCallback(null);
+  }, [config, onConfigChange]);
+
+  // Disable aiChat widget when entering the full AI chat page
+  useEffect(() => {
+    if (currentView.type === 'aiChat') {
+      disableWidget('aiChat');
+      setWidgetTick(t => t + 1);
+    }
+  }, [currentView.type]);
 
   const handleToggleWidget = useCallback((id: string) => {
     toggleWidget(id);

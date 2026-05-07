@@ -208,6 +208,7 @@ const en: LocaleMessages = {
   'ai.thinkingCard': 'Thinking',
   'ai.toolCallCard': 'Tool Call',
   'ai.widgetTitle': 'AI Chat',
+  'ai.viewHint': 'Use /view on supported pages to give AI context',
 
   'login.title': 'Login to your Bluesky Account',
   'login.handle': 'Handle',

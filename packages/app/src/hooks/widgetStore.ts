@@ -24,12 +24,30 @@ export function disableWidget(id: string): void {
   _enabled.delete(id);
 }
 
+// ── AI Chat widget session bridge ──
+let _aiChatSessionId = '';
+
+export function initAIChatSession(): string {
+  if (!_aiChatSessionId) _aiChatSessionId = crypto.randomUUID();
+  return _aiChatSessionId;
+}
+export function getAIChatSessionId(): string { return _aiChatSessionId; }
+export function setAIChatSessionId(id: string) { _aiChatSessionId = id; }
+export function resetAIChatSession(): string { _aiChatSessionId = crypto.randomUUID(); return _aiChatSessionId; }
+
+// ── Widget toggle persistence callback ──
+let _onWidgetToggle: ((id: string) => void) | null = null;
+
+export function setWidgetToggleCallback(fn: ((id: string) => void) | null): void { _onWidgetToggle = fn; }
+
 export function toggleWidget(id: string): boolean {
   if (isWidgetEnabled(id)) {
     disableWidget(id);
+    _onWidgetToggle?.(id);
     return false;
   } else {
     enableWidget(id);
+    _onWidgetToggle?.(id);
     return true;
   }
 }

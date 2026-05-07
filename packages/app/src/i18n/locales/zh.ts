@@ -219,6 +219,7 @@ const zh: LocaleMessages = {
   'ai.thinkingCard': '思考',
   'ai.toolCallCard': '工具调用',
   'ai.widgetTitle': 'AI 对话',
+  'ai.viewHint': '在受支持的页面使用 /view 让 AI 了解上下文',
 
   // ── Login ──
   'login.title': '登录你的 Bluesky 账号',
