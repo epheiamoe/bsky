@@ -26,6 +26,7 @@ import { PolishWidget } from './components/widgets/PolishWidget.js';
 import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWidget.js';
 import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
+import { AIChatWidget } from './components/widgets/AIChatWidget.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
@@ -115,6 +116,13 @@ export function App() {
       views: [],
       defaultOpen: false,
     }, (props) => React.createElement(TrendsWidget, props));
+    registerWidget({
+      id: 'aiChat',
+      titleKey: 'ai.widgetTitle',
+      icon: 'astroid-as-AI-Button',
+      views: [],
+      defaultOpen: false,
+    }, (props) => React.createElement(AIChatWidget, props));
   }, []);
 
   // ── Sync dark mode on mount ──
@@ -316,6 +324,7 @@ export function App() {
       draftCount={drafts.filter(d => d.syncStatus !== 'synced').length}
       dmCount={dmCount}
       polishConfig={scenarioModels.polish}
+      aiConfig={effectiveAiConfig}
     >
       {renderView()}
     </Layout>

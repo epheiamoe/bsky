@@ -204,6 +204,9 @@ const ja: LocaleMessages = {
   'ai.summarizePost': 'この議論を要約',
   'ai.authorFeed': '投稿者のフィードを見る',
   'ai.sentiment': '投稿の感情を分析',
+  'ai.thinkingCard': '思考',
+  'ai.toolCallCard': 'ツール呼び出し',
+  'ai.widgetTitle': 'AI チャット',
 
   'login.title': 'Bluesky アカウントにログイン',
   'login.handle': 'ハンドル',

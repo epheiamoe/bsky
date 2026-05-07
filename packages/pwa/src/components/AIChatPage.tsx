@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useAIChat, useChatHistory, useI18n } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { IndexedDBChatStorage } from '../services/indexeddb-chat-storage.js';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
+import { ThinkingCard, ToolCard, UserMessage, AssistantMessage } from './ai/index.js';
 
 interface AIChatPageProps {
   client: BskyClient;
@@ -25,6 +24,16 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  const toggleCard = useCallback((idx: number) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }, []);
+
   const userHandle = useMemo(() => (client.isAuthenticated() ? client.getHandle() : undefined), [client]);
 
   const isProfile = contextUri && !contextUri?.startsWith('at://');
@@ -42,6 +51,34 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     contextPost,
     onChatSaved: refresh,
   });
+  // Group messages for card display: pair tool_call + tool_result
+  const messageGroups = useMemo(() => {
+    const groups: Array<{ type: 'thinking' | 'tool' | 'user' | 'assistant'; msg: AIChatMessage; result?: AIChatMessage }> = [];
+    let pendingTool: AIChatMessage | null = null;
+    for (const msg of messages) {
+      if (msg.role === 'thinking') {
+        groups.push({ type: 'thinking', msg });
+      } else if (msg.role === 'tool_call') {
+        pendingTool = msg;
+      } else if (msg.role === 'tool_result') {
+        if (pendingTool) {
+          groups.push({ type: 'tool', msg: pendingTool, result: msg });
+          pendingTool = null;
+        } else {
+          groups.push({ type: 'tool', msg: { ...msg, role: 'tool_call' as const, toolName: 'result' }, result: msg });
+        }
+      } else if (msg.role === 'user') {
+        if (pendingTool) { groups.push({ type: 'tool', msg: pendingTool }); pendingTool = null; }
+        groups.push({ type: 'user', msg });
+      } else if (msg.role === 'assistant') {
+        if (pendingTool) { groups.push({ type: 'tool', msg: pendingTool }); pendingTool = null; }
+        groups.push({ type: 'assistant', msg });
+      }
+    }
+    if (pendingTool) groups.push({ type: 'tool', msg: pendingTool });
+    return groups;
+  }, [messages]);
+
   const [exportOpen, setExportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
@@ -438,80 +475,51 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             </div>
           )}
 
-          {messages.map((msg, i) => {
-            if (msg.role === 'thinking') {
+          {messageGroups.map((group, gi) => {
+            if (group.type === 'thinking') {
               return (
-                <div key={i} className="flex justify-start mb-1">
-                  <div className="border-l-2 border-text-secondary/20 pl-3 py-1 text-xs text-text-secondary/60 italic max-w-[85%] whitespace-pre-wrap break-words">
-                    <span className="font-medium not-italic text-text-secondary/70">💭 Thinking:</span>{' '}{msg.content}
-                  </div>
+                <div key={`t${gi}`} className="mb-2">
+                  <ThinkingCard
+                    content={group.msg.content}
+                    expanded={expandedCards.has(gi)}
+                    onToggle={() => toggleCard(gi)}
+                  />
                 </div>
               );
             }
-            if (msg.role === 'tool_call') {
+            if (group.type === 'tool') {
               return (
-                <div key={i} className="flex justify-center">
-                  <div className="text-xs text-text-secondary/50 px-3 py-0.5">
-                    🔧 <span className="font-mono">{msg.toolName ?? ''}</span>
-                  </div>
+                <div key={`t${gi}`} className="mb-2">
+                  <ToolCard
+                    toolName={group.msg.toolName ?? ''}
+                    args={group.msg.content}
+                    resultContent={group.result?.content}
+                    expanded={expandedCards.has(gi)}
+                    onToggle={() => toggleCard(gi)}
+                  />
                 </div>
               );
             }
-            if (msg.role === 'tool_result') {
+            if (group.type === 'user') {
+              const userIdx = messages.slice(0, messages.indexOf(group.msg) + 1).filter(m => m.role === 'user').length - 1;
               return (
-                <div key={i} className="flex justify-center">
-                  <div className="text-xs text-text-secondary/50 px-3 py-0.5 max-w-lg text-center break-words overflow-hidden">
-                    ⮡ {msg.content}
-                  </div>
-                </div>
+                <UserMessage
+                  key={`u${gi}`}
+                  content={group.msg.content}
+                  loading={loading}
+                  onEdit={() => {
+                    const text = editByIndex(userIdx);
+                    if (text) setInput(text);
+                  }}
+                />
               );
             }
-            if (msg.role === 'user') {
-              const userIdx = messages.slice(0, i + 1).filter(m => m.role === 'user').length - 1;
-              const isLastUser = i === messages.length - 1 || messages.slice(i + 1).every(m => m.role !== 'user');
-              return (
-                <div key={i} className="flex justify-end items-start gap-2">
-                  <div className="flex flex-col gap-1 pt-1">
-                    {!loading && msg.content && (
-                      <button
-                        onClick={() => { const text = editByIndex(userIdx); if (text) { setInput(text); } }}
-                        title="Edit"
-                        className="text-xs text-text-secondary/60 hover:text-primary transition-colors px-1"
-                      ><Icon name="pencil-line" size={16} /></button>
-                    )}
-                  </div>
-                  <div className="bg-primary text-white rounded-lg px-3 py-2 max-w-[75%]">
-                    <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
-                  </div>
-                </div>
-              );
-            }
-            const isError = (msg as any).isError === true;
             return (
-              <div key={i} className="flex justify-start group">
-                <div className={`rounded-lg px-3 py-2 max-w-[85%] border relative ${
-                  isError
-                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
-                    : 'bg-surface border-border'
-                }`}>
-                  <div className="text-sm text-text-primary markdown-body">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
-                  </div>
-                  {!isError && msg.content && (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(msg.content).catch(() => {});
-                        setCopiedIdx(i);
-                        setTimeout(() => setCopiedIdx(null), 1500);
-                      }}
-                      className="absolute bottom-1 right-1 text-xs text-text-secondary/60 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity px-1.5 py-0.5 rounded bg-surface/80"
-                      title={t('ai.copyLast')}
-                    >
-                      {copiedIdx === i ? <><Icon name="badge-check" size={14} /> {t('ai.copied')}</> : <Icon name="copy" size={14} />}
-                    </button>
-                  )}
-                </div>
-              </div>
+              <AssistantMessage
+                key={`a${gi}`}
+                content={group.msg.content}
+                isError={(group.msg as any).isError === true}
+              />
             );
           })}
 

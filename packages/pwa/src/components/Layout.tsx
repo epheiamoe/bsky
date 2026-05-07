@@ -27,6 +27,7 @@ interface LayoutProps {
   polishConfig?: AIConfig;
   composeDraft?: string;
   onComposeDraftChange?: (text: string) => void;
+  aiConfig?: AIConfig;
 }
 
 export function Layout({
@@ -46,6 +47,7 @@ export function Layout({
   polishConfig,
   composeDraft,
   onComposeDraftChange,
+  aiConfig,
 }: LayoutProps) {
   const { t } = useI18n();
   const [dark, setDark] = useState(() => {
@@ -102,6 +104,7 @@ export function Layout({
     composeDraft,
     onComposeDraftChange,
     polishConfig,
+    aiConfig,
     viewType: currentView.type,
     client,
     goTo,

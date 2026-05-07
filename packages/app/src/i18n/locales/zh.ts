@@ -215,6 +215,9 @@ const zh: LocaleMessages = {
   'ai.summarizePost': '总结这个讨论',
   'ai.authorFeed': '查看作者动态',
   'ai.sentiment': '分析帖子情绪',
+  'ai.thinkingCard': '思考',
+  'ai.toolCallCard': '工具调用',
+  'ai.widgetTitle': 'AI 对话',
 
   // ── Login ──
   'login.title': '登录你的 Bluesky 账号',

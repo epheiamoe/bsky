@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore, isWidgetEnabled, toggleWidget } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -282,7 +282,13 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                 </button>
               ) : null}
               <button
-                onClick={() => goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile: actor })}
+                onClick={() => {
+                  if (isWidgetEnabled('aiChat')) {
+                    toggleWidget('aiChat');
+                  } else {
+                    goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile: actor });
+                  }
+                }}
                 className="hover:text-purple-500 transition-colors flex items-center gap-1 text-sm"
                 title={t('thread.aiAnalyze')}
               >

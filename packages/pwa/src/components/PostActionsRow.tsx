@@ -1,9 +1,21 @@
 import React, { useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost } from '@bsky/app';
+import { isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, isWidgetEnabled, toggleWidget } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
+
+function openAIAnalysis(goTo: (v: AppView) => void, client: BskyClient | null | undefined, contextPost?: string, contextProfile?: string) {
+  if (client && isWidgetEnabled('aiChat')) {
+    toggleWidget('aiChat');
+  } else if (contextPost) {
+    goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost });
+  } else if (contextProfile) {
+    goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextProfile });
+  } else {
+    goTo({ type: 'aiChat', sessionId: crypto.randomUUID() });
+  }
+}
 
 interface PostActionsRowProps {
   client?: BskyClient | null;
@@ -62,7 +74,7 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
         </button>
       )}
       {/* AI Analysis */}
-      <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: post.uri }); }} className="hover:text-purple-500 transition-colors btn-press" title="AI Analysis">
+      <button onClick={(e) => { e.stopPropagation(); openAIAnalysis(goTo, client, post.uri); }} className="hover:text-purple-500 transition-colors btn-press" title="AI Analysis">
         <Icon name="astroid-as-AI-Button" size={14} />
       </button>
     </div>

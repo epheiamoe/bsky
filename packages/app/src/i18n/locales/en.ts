@@ -204,6 +204,9 @@ const en: LocaleMessages = {
   'ai.summarizePost': 'Summarize this discussion',
   'ai.authorFeed': 'View author feed',
   'ai.sentiment': 'Analyze post sentiment',
+  'ai.thinkingCard': 'Thinking',
+  'ai.toolCallCard': 'Tool Call',
+  'ai.widgetTitle': 'AI Chat',
 
   'login.title': 'Login to your Bluesky Account',
   'login.handle': 'Handle',
