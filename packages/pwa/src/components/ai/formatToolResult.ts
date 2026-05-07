@@ -3,10 +3,6 @@ export interface ToolResultDisplay {
   body: string;
 }
 
-function fmt(template: TemplateStringsArray, ...args: (string | number)[]): string {
-  return template.reduce((acc, str, i) => acc + String(args[i - 1] ?? '') + str);
-}
-
 function truncate(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + '...';
 }
@@ -19,14 +15,6 @@ function toolLabel(name: string): string {
   return name.replace(/_/g, ' ');
 }
 
-/** Format a tool call's arguments from content string */
-export function formatToolArgs(toolName: string, _content: string): string {
-  if (toolName === 'resolve_handle') {
-    return jsonTry(_content, obj => String(obj.handle ?? obj.actor ?? '')) ?? _content;
-  }
-  return jsonTry(_content, obj => Object.values(obj).join(', ')) ?? '';
-}
-
 export function formatToolResult(toolName: string, content: string): ToolResultDisplay {
   // ── Write tools (Category A) ──
   if (toolName === 'create_post') {
@@ -34,23 +22,23 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       text: truncate(String(obj.text ?? ''), 200),
       uri: String(obj.uri ?? ''),
     }));
-    if (r) return { summary: `✅ ${truncate(r.text, 80)}`, body: `${r.text}\n${r.uri}` };
-    return { summary: '✅ Posted', body: truncate(content, 500) };
+    if (r) return { summary: truncate(r.text, 80), body: `${r.text}\n${r.uri}` };
+    return { summary: 'Posted', body: truncate(content, 500) };
   }
 
   if (toolName === 'like') {
     const r = jsonTry(content, obj => String(obj.liked ?? ''));
-    return { summary: '❤ Liked', body: r ? `Liked: ${r}` : truncate(content, 300) };
+    return { summary: 'Liked', body: r ? `Liked: ${r}` : truncate(content, 300) };
   }
 
   if (toolName === 'repost') {
     const r = jsonTry(content, obj => String(obj.reposted ?? ''));
-    return { summary: '🔁 Reposted', body: r ? `Reposted: ${r}` : truncate(content, 300) };
+    return { summary: 'Reposted', body: r ? `Reposted: ${r}` : truncate(content, 300) };
   }
 
   if (toolName === 'follow') {
     const r = jsonTry(content, obj => String(obj.followed ?? ''));
-    return { summary: '✅ Followed', body: r ? `Followed: ${r}` : truncate(content, 300) };
+    return { summary: 'Followed', body: r ? `Followed: ${r}` : truncate(content, 300) };
   }
 
   // ── Resolve/dereference tools (Category A) ──
@@ -59,8 +47,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       handle: String(obj.handle ?? ''),
       did: String(obj.did ?? ''),
     }));
-    if (r) return { summary: `🔍 ${r.handle}`, body: `at://${r.did}` };
-    return { summary: '🔍 Resolved', body: truncate(content, 200) };
+    if (r) return { summary: r.handle, body: `at://${r.did}` };
+    return { summary: 'Resolved', body: truncate(content, 200) };
   }
 
   if (toolName === 'get_profile') {
@@ -75,23 +63,23 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     if (r) {
       const name = r.displayName || r.handle;
       return {
-        summary: `👤 ${name}`,
+        summary: name,
         body: [
-          `👤 ${name}`,
-          `📝 ${truncate(r.description, 300)}`,
-          `👥 ${r.followersCount} followers · ${r.followsCount} following · 📄 ${r.postsCount} posts`,
-        ].join('\n'),
+          name,
+          `${r.followersCount} followers / ${r.followsCount} following / ${r.postsCount} posts`,
+          r.description ? truncate(r.description, 300) : '',
+        ].filter(Boolean).join('\n'),
       };
     }
-    return { summary: '👤 Profile', body: truncate(content, 500) };
+    return { summary: 'Profile', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_record') {
-    return { summary: '📄 Record', body: truncate(content, 500) };
+    return { summary: 'Record', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_feed_generator') {
-    return { summary: '📡 Feed generator', body: truncate(content, 500) };
+    return { summary: 'Feed generator', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_suggested_follows') {
@@ -99,8 +87,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const suggestions = obj.suggestions as Array<Record<string, unknown>> ?? [];
       return suggestions.map(s => `@${s.handle}${s.displayName ? ` (${s.displayName})` : ''}`).join(', ');
     });
-    if (r) return { summary: `💡 ${r.slice(0, 60)}`, body: r };
-    return { summary: '💡 Suggested follows', body: truncate(content, 300) };
+    if (r) return { summary: r.slice(0, 60), body: r };
+    return { summary: 'Suggested follows', body: truncate(content, 300) };
   }
 
   // ── Search/list tools (Category B) ──
@@ -111,8 +99,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const first3 = posts.slice(0, 3).map(p => `@${p.author}: ${truncate(String(p.text ?? ''), 120)}`);
       return { total, list: first3.join('\n') };
     });
-    if (r) return { summary: `🔍 Search — ${r.total} results`, body: r.list || '(empty)' };
-    return { summary: '🔍 Search results', body: truncate(content, 500) };
+    if (r) return { summary: `Search: ${r.total} results`, body: r.list || '(empty)' };
+    return { summary: 'Search results', body: truncate(content, 500) };
   }
 
   if (toolName === 'search_actors') {
@@ -123,8 +111,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
         list: actors.slice(0, 5).map(a => `@${a.handle}${a.displayName ? ` (${a.displayName})` : ''}`).join('\n'),
       };
     });
-    if (r) return { summary: `👥 ${r.total} users found`, body: r.list || '(empty)' };
-    return { summary: '👥 Users found', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} users found`, body: r.list || '(empty)' };
+    return { summary: 'Users found', body: truncate(content, 300) };
   }
 
   if (toolName === 'get_likes') {
@@ -134,8 +122,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const handles = likes.slice(0, 10).map(l => `@${l.handle}`).join(', ');
       return { total, handles };
     });
-    if (r) return { summary: `❤ ${r.total} likes`, body: r.handles || `(${r.total} total)` };
-    return { summary: '❤ Likes', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} likes`, body: r.handles || `(${r.total} total)` };
+    return { summary: 'Likes', body: truncate(content, 300) };
   }
 
   if (toolName === 'get_reposted_by') {
@@ -143,8 +131,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const list = obj.repostedBy as string[] ?? [];
       return { total: list.length, list: list.slice(0, 10).map(h => `@${h}`).join(', ') };
     });
-    if (r) return { summary: `🔁 ${r.total} reposts`, body: r.list || `(${r.total} total)` };
-    return { summary: '🔁 Reposts', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} reposts`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Reposts', body: truncate(content, 300) };
   }
 
   if (toolName === 'get_quotes') {
@@ -154,8 +142,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const first3 = quotes.slice(0, 3).map(q => `@${q.author}: ${truncate(String(q.text ?? ''), 120)}`);
       return { total, list: first3.join('\n') };
     });
-    if (r) return { summary: `💬 ${r.total} quotes`, body: r.list || `(${r.total} total)` };
-    return { summary: '💬 Quotes', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} quotes`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Quotes', body: truncate(content, 300) };
   }
 
   if (toolName === 'list_notifications') {
@@ -163,13 +151,13 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const notifs = obj.notifications as Array<Record<string, unknown>> ?? [];
       const total = notifs.length;
       const first5 = notifs.slice(0, 5).map(n => {
-        const emoji = n.reason === 'like' ? '❤' : n.reason === 'repost' ? '🔁' : n.reason === 'follow' ? '👤' : n.reason === 'reply' ? '💬' : '📢';
-        return `${emoji} @${(n.author as Record<string, unknown> | undefined)?.handle ?? '?'}: ${n.reason}`;
+        const icon = n.reason === 'like' ? 'Liked' : n.reason === 'repost' ? 'Reposted' : n.reason === 'follow' ? 'Followed' : n.reason === 'reply' ? 'Replied' : 'Notified';
+        return `${icon}: @${(n.author as Record<string, unknown> | undefined)?.handle ?? '?'}`;
       });
       return { total, list: first5.join('\n') };
     });
-    if (r) return { summary: `🔔 ${r.total} notifications`, body: r.list || `(${r.total} total)` };
-    return { summary: '🔔 Notifications', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} notifications`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Notifications', body: truncate(content, 300) };
   }
 
   // ── Feed/timeline tools (Category C) ──
@@ -186,8 +174,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
         first3: posts.slice(0, 3).map(p => `@${p.handle}: ${p.text}`).join('\n'),
       };
     });
-    if (r) return { summary: `📰 Timeline — ${r.total} posts`, body: r.first3 || '(empty)' };
-    return { summary: '📰 Timeline', body: truncate(content, 500) };
+    if (r) return { summary: `Timeline: ${r.total} posts`, body: r.first3 || '(empty)' };
+    return { summary: 'Timeline', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_author_feed') {
@@ -199,8 +187,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       });
       return { total: posts.length, first3: posts.slice(0, 3).map((t, i) => `${i + 1}. ${t}`).join('\n') };
     });
-    if (r) return { summary: `👤 Author feed — ${r.total} posts`, body: r.first3 || '(empty)' };
-    return { summary: '👤 Author feed', body: truncate(content, 500) };
+    if (r) return { summary: `Posts: ${r.total} items`, body: r.first3 || '(empty)' };
+    return { summary: 'Author feed', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_feed') {
@@ -216,8 +204,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
         first3: posts.slice(0, 3).map(p => `@${p.handle}: ${p.text}`).join('\n'),
       };
     });
-    if (r) return { summary: `📡 Feed — ${r.total} posts`, body: r.first3 || '(empty)' };
-    return { summary: '📡 Feed', body: truncate(content, 500) };
+    if (r) return { summary: `Feed: ${r.total} posts`, body: r.first3 || '(empty)' };
+    return { summary: 'Feed', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_popular_feed_generators') {
@@ -226,15 +214,15 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const names = feeds.map(f => f.displayName).filter(Boolean).slice(0, 10);
       return { total: feeds.length, list: names.join('\n') };
     });
-    if (r) return { summary: `🔥 ${r.total} popular feeds`, body: r.list || '(empty)' };
-    return { summary: '🔥 Popular feeds', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} popular feeds`, body: r.list || '(empty)' };
+    return { summary: 'Popular feeds', body: truncate(content, 300) };
   }
 
   // ── Thread tools ──
   if (toolName === 'get_post_thread_flat' || toolName === 'get_post_subtree') {
     const body = truncate(content, 2000);
     const lineCount = content.split('\n').length;
-    return { summary: `🧵 Thread (${lineCount} lines)`, body: lineCount > 1 ? body : content };
+    return { summary: `Thread: ${lineCount} lines`, body: lineCount > 1 ? body : content };
   }
 
   if (toolName === 'get_post_context') {
@@ -244,16 +232,16 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       thread: String(obj.thread ?? '').slice(0, 500),
     }));
     if (r) {
-      const parts = [`📝 ${r.text}`];
-      if (r.media) parts.push(`\n📎 ${r.media}`);
-      if (r.thread) parts.push(`\n🧵 ${r.thread}`);
-      return { summary: '📝 Post context', body: parts.join('\n') };
+      const parts = [r.text];
+      if (r.media) parts.push(`\n${r.media}`);
+      if (r.thread) parts.push(`\n${r.thread}`);
+      return { summary: 'Post context', body: parts.join('\n') };
     }
-    return { summary: '📝 Post context', body: truncate(content, 500) };
+    return { summary: 'Post context', body: truncate(content, 500) };
   }
 
   if (toolName === 'get_post_thread') {
-    return { summary: '🧵 Thread (raw)', body: truncate(content, 500) };
+    return { summary: 'Thread (raw)', body: truncate(content, 500) };
   }
 
   // ── Follows/followers (Category C) ──
@@ -264,8 +252,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const first5 = list.slice(0, 5).map(f => `@${f.handle}${f.displayName ? ` (${f.displayName})` : ''}`);
       return { total, list: first5.join('\n') };
     });
-    if (r) return { summary: `👥 Follows ${r.total} people`, body: r.list || `(${r.total} total)` };
-    return { summary: '👥 Follows', body: truncate(content, 300) };
+    if (r) return { summary: `Follows ${r.total} people`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Follows', body: truncate(content, 300) };
   }
 
   if (toolName === 'get_followers') {
@@ -275,8 +263,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const first5 = list.slice(0, 5).map(f => `@${f.handle}${f.displayName ? ` (${f.displayName})` : ''}`);
       return { total, list: first5.join('\n') };
     });
-    if (r) return { summary: `👥 ${r.total} followers`, body: r.list || `(${r.total} total)` };
-    return { summary: '👥 Followers', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} followers`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Followers', body: truncate(content, 300) };
   }
 
   // ── List records (Category C) ──
@@ -285,8 +273,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const records = obj.records as Array<Record<string, unknown>> ?? [];
       return { total: records.length, first3: records.slice(0, 3).map(r2 => String(r2.uri ?? '')).join('\n') };
     });
-    if (r) return { summary: `📋 ${r.total} records`, body: r.first3 || `(${r.total} total)` };
-    return { summary: '📋 Records', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} records`, body: r.first3 || `(${r.total} total)` };
+    return { summary: 'Records', body: truncate(content, 300) };
   }
 
   // ── Image tools (Category A) ──
@@ -297,8 +285,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       size: Number(obj.size ?? 0),
       note: String(obj.note ?? ''),
     }));
-    if (r) return { summary: `👁 ${truncate(r.alt, 50)} (${r.mime})`, body: `${r.alt}\n${r.mime} · ${(r.size / 1024).toFixed(1)}KB${r.note ? `\n${r.note}` : ''}` };
-    return { summary: '👁 Image', body: truncate(content, 300) };
+    if (r) return { summary: truncate(r.alt, 50) ? `${truncate(r.alt, 50)} (${r.mime})` : `Image (${r.mime})`, body: `${r.alt || '(no alt)'}\n${r.mime} / ${(r.size / 1024).toFixed(1)}KB${r.note ? `\n${r.note}` : ''}` };
+    return { summary: 'Image', body: truncate(content, 300) };
   }
 
   if (toolName === 'download_image') {
@@ -312,11 +300,11 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     }));
     if (r) {
       if (r.saved === false && r.note) {
-        return { summary: `🖼 ${r.filename} (${(r.size / 1024).toFixed(1)}KB)`, body: `${r.filename}\n${r.note}` };
+        return { summary: `${r.filename} (${(r.size / 1024).toFixed(1)}KB)`, body: `${r.filename}\n${r.note}` };
       }
-      return { summary: `✅ Saved: ${r.filename || r.path.split('\\').pop() || ''}`, body: `${r.mime} · ${(r.size / 1024).toFixed(1)}KB\n${r.path}` };
+      return { summary: `Saved: ${r.filename || r.path.split('\\').pop() || ''}`, body: `${r.mime} / ${(r.size / 1024).toFixed(1)}KB\n${r.path}` };
     }
-    return { summary: '🖼 Image download', body: truncate(content, 200) };
+    return { summary: 'Image download', body: truncate(content, 200) };
   }
 
   if (toolName === 'extract_images_from_post') {
@@ -324,8 +312,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       const images = obj.images as Array<Record<string, unknown>> ?? [];
       return { count: Number(obj.count ?? images.length), list: images.map((img, i) => `${i + 1}. ${img.alt || '(no alt)'} (${img.mimeType ?? '?'})`).join('\n') };
     });
-    if (r) return { summary: `🖼 ${r.count} images`, body: r.list || `(${r.count} total)` };
-    return { summary: '🖼 Images', body: truncate(content, 200) };
+    if (r) return { summary: `${r.count} images`, body: r.list || `(${r.count} total)` };
+    return { summary: 'Images', body: truncate(content, 200) };
   }
 
   // ── External link tool (Category A) ──
@@ -338,9 +326,9 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     }));
     if (r) {
       if (r.link === null) return { summary: 'No external link', body: r.title ? `No link found in "${r.title}"` : 'No external link found' };
-      return { summary: `🔗 ${truncate(r.title || r.uri, 60)}`, body: `${r.title}\n${r.uri}${r.description ? `\n${truncate(r.description, 300)}` : ''}` };
+      return { summary: truncate(r.title || r.uri, 60), body: `${r.title}\n${r.uri}${r.description ? `\n${truncate(r.description, 300)}` : ''}` };
     }
-    return { summary: '🔗 Link', body: truncate(content, 200) };
+    return { summary: 'Link', body: truncate(content, 200) };
   }
 
   // ── Web fetch tool (Category C) ──
@@ -352,12 +340,12 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       error: obj.error ? String(obj.error) : null,
     }));
     if (r) {
-      if (r.error) return { summary: `❌ Fetch error: ${truncate(r.error, 60)}`, body: r.error };
+      if (r.error) return { summary: `Fetch error: ${truncate(r.error, 60)}`, body: r.error };
       const contentPreview = truncate(r.content.replace(/\n+/g, '\n'), 300);
       const wordCount = r.content.length;
-      return { summary: `📄 ${truncate(r.title, 60)}`, body: `${r.title}\n${r.url}\n\n${contentPreview}\n... (${wordCount} chars total)` };
+      return { summary: truncate(r.title, 60), body: `${r.title}\n${r.url}\n\n${contentPreview}\n... (${wordCount} chars total)` };
     }
-    return { summary: '📄 Web page', body: truncate(content, 400) };
+    return { summary: 'Web page', body: truncate(content, 400) };
   }
 
   // ── Fallback ──

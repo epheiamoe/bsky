@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
-import { useAIChat, useI18n, getEnabledWidgetIds } from '@bsky/app';
+import { useAIChat, useI18n } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { WidgetProps } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
@@ -10,7 +10,7 @@ import { ThinkingCard, ToolCard, AssistantMessage } from '../ai/index.js';
 export function AIChatWidget({ onClose, context }: WidgetProps) {
   const { t } = useI18n();
   const client = context?.client;
-  const aiConfig = context?.aiConfig as AIConfig | undefined;
+  const aiConfig: AIConfig = (context?.aiConfig as AIConfig | undefined) ?? { apiKey: '', baseUrl: '', model: '' };
 
   const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [input, setInput] = useState('');
