@@ -247,17 +247,19 @@ const zh: LocaleMessages = {
   'ai.viewHint': '在受支持的页面使用 /view 让 AI 了解上下文',
 
   // ── Login ──
-  'login.title': '登录你的 Bluesky 账号',
-  'login.handle': 'Handle',
+  'login.title': '欢迎使用 Bluesky 客户端',
+  'login.handleLabel': 'Bluesky 账号',
+  'login.handlePlaceholder': '你的账号.bsky.social',
   'login.password': 'App Password',
   'login.submit': '登录',
-  'login.submitting': '登录中…',
+  'login.submitting': '连接中…',
   'login.error': '登录失败',
   'login.connecting': '正在连接 Bluesky…',
-  'login.passwordHint': '使用 App Password，在',
+  'login.passwordHint': '使用 App Password。在',
   'login.passwordHintLink': 'Bluesky 设置',
-  'login.passwordHintCreate': '中创建',
-  'login.privacyNote': '登录凭证仅保存在你的浏览器本地',
+  'login.passwordHintCreate': '中创建 → 粘贴到这里',
+  'login.privacyNote': '凭据仅保存在你的浏览器本地，不会发送到 Bluesky 以外的任何服务器',
+  'login.needHint': '这不是你的账号密码——请在 Bluesky 设置中创建一个独立的 App Password'
 
   // ── Settings ──
   'settings.title': '设置',

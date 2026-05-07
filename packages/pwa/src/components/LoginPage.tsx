@@ -34,33 +34,39 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <p className="text-5xl mb-3"><Icon name="astroid-as-AI-Button" size={20} /></p>
+          <p className="mb-3"><Icon name="astroid-as-AI-Button" size={32} className="text-primary" /></p>
           <h1 className="text-2xl font-bold text-text-primary">Bluesky</h1>
           <p className="text-text-secondary text-sm mt-1">{t('login.title')}</p>
         </div>
 
+        {/* Help hint */}
+        <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/10 text-text-secondary text-xs">
+          {t('login.needHint')}
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-          <input
-            type="text"
-            value={handle}
-            onChange={e => setHandle(e.target.value)}
-            placeholder={t('login.handle')}
-            autoComplete="username"
-            disabled={submitting}
-            className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-          />
+            <label className="block text-xs font-medium text-text-secondary mb-1">{t('login.handleLabel')}</label>
+            <input
+              type="text"
+              value={handle}
+              onChange={e => setHandle(e.target.value)}
+              placeholder={t('login.handlePlaceholder')}
+              autoComplete="username"
+              disabled={submitting}
+              className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
           </div>
           <div>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder={t('login.password')}
-            autoComplete="current-password"
-            disabled={submitting}
-            className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-          />
+            <label className="block text-xs font-medium text-text-secondary mb-1">{t('login.password')}</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
+              disabled={submitting}
+              className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+            />
             <p className="text-text-secondary text-xs mt-1">
               {t('login.passwordHint')}{' '}
               <a

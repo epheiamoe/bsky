@@ -207,8 +207,9 @@ export function App() {
   // ── Loading ──
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#0A0A0A]">
-        <p className="text-text-secondary text-lg animate-pulse">🦋 {t('login.connecting')}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white dark:bg-[#0A0A0A] gap-3">
+        <Icon name="astroid-as-AI-Button" size={32} className="text-primary" />
+        <p className="text-text-secondary text-sm animate-pulse">{t('login.connecting')}</p>
       </div>
     );
   }

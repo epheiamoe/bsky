@@ -2,6 +2,13 @@
 
 > Read this before working on the project. Reference `AGENTS.local.md` for machine-specific notes (gitignored, never pushed).
 
+## Context Recovery
+
+> **会话上下文被压缩后，从这里恢复状态**：
+> 1. `docs/CONTEXT.md` — 版本号、项目状态、关键教训、开发规则
+> 2. `docs/LESSONS.md` — 历次会话的详细教训（18 课）
+> 3. `docs/ARCHITECTURE.md` — 系统架构
+
 ## Project Overview
 
 Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Monorepo with 4 packages.
@@ -50,8 +57,11 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | 6 | `docs/PWA_GUIDE.md` | PWA architecture, component mapping, deployment |
 | 7 | `docs/AI_SYSTEM.md` | AI integration: tools, streaming, translation |
 | 8 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
-| 9 | `docs/TODO.md` | Feature status (TUI/PWA checkboxes) |
-| 10 | `docs/USER_ISSUSES.md` | Known & resolved user issues |
+| 9 | `docs/DM.md` | DM private messaging docs |
+| 10 | `docs/SCROLL.md` | Virtual scroll + scroll restoration spec |
+| 11 | `docs/LESSONS.md` | Key lessons from each session |
+| 12 | `docs/TODO.md` | Feature status (TUI/PWA checkboxes) |
+| 13 | `docs/USER_ISSUSES.md` | Known & resolved user issues |
 
 ## Commands Reference
 
@@ -89,17 +99,53 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
   4. Verify no conflicts by checking the key across ALL views (feed, thread, bookmarks, notifications, aiChat, compose, profile, search)
   Note: Ink fires ALL `useInput` callbacks on every keystroke; 5 handlers coexist. Guards must be view-specific.
 - **Quoted posts (embeds)**: ALWAYS read from `(post as any).embed` (API-resolved top-level embed with `#view` suffix `$type`) — NEVER from `post.record.embed` (stored format, only has `{uri,cid}`). The resolved format has `embed.record.author`, `embed.record.value.text` fully populated. For quoted post image embeds, use `img.fullsize` first (view format), fallback to `img.image.ref.$link` (stored format).
-- **PWA SVG icons**: Use `packages/pwa/src/components/Icon.tsx` — renders lucide-style inline SVG via `import.meta.glob('../icons/*.svg', { ?raw, eager })`. All SVG files in `packages/pwa/src/icons/`. Use `<Icon name="..." size={N} filled />`. Available names: heart, bookmark, repeat, corner-down-right, pen-line, arrow-big-left, trash-2, x, menu, settings, plus, copy, compass, bell, astroid-as-AI-Button, home, camera, file-text, pin, clock, chevron-down, sun, moon, languages, badge-check, badge-alert, triangle-alert, at-sign, etc.
+- **PWA SVG icons**: Use `packages/pwa/src/components/Icon.tsx` — renders lucide-style inline SVG via `import.meta.glob('../icons/*.svg', { ?raw, eager })`. All SVG files in `packages/pwa/src/icons/`. Use `<Icon name="..." size={N} filled />`. Available names: heart, bookmark, repeat, corner-down-right, pen-line, arrow-big-left, trash-2, x, menu, settings, plus, copy, compass, bell, astroid-as-AI-Button, home, camera, file-text, pin, clock, chevron-down, sun, moon, languages, badge-check, badge-alert, triangle-alert, at-sign, list, user-plus, users, etc.
 - **PostActionsRow**: Shared PWA component (`packages/pwa/src/components/PostActionsRow.tsx`) — renders reply+like+repost-quote-popup+bookmark for any post card. Used in ALL views (FeedTimeline, SearchPage, ProfilePage, BookmarkPage, ThreadView). Reads like/repost state from module-level `usePostActions`.
 - **Module-level shared state**: `usePostActions` in `@bsky/app` uses module-level `_liked`/`_reposted` Sets and `_likeCountAdj`/`_repostCountAdj` Maps — single source of truth for like/repost state across ALL views. Both `useThread` (TUI+PWA) and `PostActionsRow` (PWA) read from the same store. Plain functions `likePost(client, uri, cid)`, `isPostLiked(uri)`, `getLikeCount(uri, staticCount)` are importable anywhere without React.
 - **useActiveFeed**: Tracks last active feed URI module-level. `goTo({ type: 'feed' })` resolves to last active or default feed.
 - **AI sessions**: URL uses `#/ai?session=uuid` (not `contextUri`). Context stored in `ChatRecord.context` field, injected into system prompt via `PF_POST_CONTEXT`/`PF_PROFILE_CONTEXT`. Sessions created with `crypto.randomUUID()`.
-- **Scroll restoration**: `useScrollRestore` hook in `@bsky/app` persists scroll positions across view changes via module-level Map.
+- **Scroll restoration**: `useScrollRestore` hook in `@bsky/app` persists scroll positions across view changes via module-level Map. MUST use pixel values (`scrollTop`), never indices (`scrollToIndex`).
 - **Wiki docs**: `.wiki/` directory contains auto-generated project documentation. These are useful reference material — DO NOT remove them. Consult them as needed for architecture understanding.
 
-## Local Development Notes
+## Lists Feature (v0.6.0)
 
-See `AGENTS.local.md` for machine-specific configuration, local paths, and non-secret development info. This file is gitignored and never pushed.
+| Layer | Files | Notes |
+|-------|-------|-------|
+| Core | `client.ts` (15 methods), `types.ts` (10 types) | Full CRUD + mute/unmute/block |
+| Hooks | `useLists.ts`, `useListDetail.ts` | CRUD + pagination + membership |
+| PWA | `ListsPage.tsx`, `ListDetailPage.tsx` | Virtual scroll, inline edit, delete with confirm, add-to-list popup |
+| TUI | `App.tsx` (inline + listDetail view) | j/k/Enter/c/e/d/L keys |
+| AI | `tools.ts` (5 tools) | get_lists, get_list_feed, create_list, add_to_list, remove_from_list |
+| Icons | `list.svg`, `user-plus.svg`, `users.svg` | Lucide |
+
+**Key patterns**:
+- AppView `getList` deduplicates `(subject, list)` pairs → don't use it for duplicate detection
+- `remove_from_list` uses `listRecords` (PDS level) instead of `getList` (AppView level) to find ALL matching entries
+- Widget temp disable: save `_order` snapshot before `disableWidget('aiChat')`, restore via `initEnabledWidgets` on exit
+- Delete confirmation: shared modal pattern across ListsPage and ListDetailPage
+
+## Widget System (v0.5.3+)
+
+- **WidgetPanel**: Unified header bar (icon+title+headerButtons+↑+↓+×) for ALL widgets
+- **WidgetDefinition**: `headerButtons?: React.ComponentType<{ goTo, onClose }>` — optional header row buttons (e.g., AI widget's open-in-page/new-chat)
+- **AIChatWidget**: Uses module refs (`_widgetCallbacks`) to bridge runtime state to header buttons
+- **Temporary disable**: AI widget auto-disabled on `aiChat` view, restored on exit via `widgetOrderRef`
+- **`_order: string[]`** manages enabled widget order; `_onWidgetToggle` callback persists to localStorage
+
+## i18n
+
+- Use `t('key')` for ALL user-visible strings — NEVER hardcode
+- Template interpolation: `{n}` (single braces), NOT `{{n}}` (double braces render as literal `{1}`)
+- 3 locales: `en.ts`, `zh.ts`, `ja.ts` in `packages/app/src/i18n/locales/`
+- PWA: `<Icon name="..." />` for icons; TUI: emoji
+
+## Build & Deploy
+
+```bash
+# IMPORTANT: commit before build for correct __COMMIT_HASH__
+git add -A && git commit -m "..." && pnpm -r build
+cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true
+```
 
 ## Environment
 
