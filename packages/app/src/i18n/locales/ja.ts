@@ -13,6 +13,7 @@ const ja: LocaleMessages = {
   'nav.menu': 'メニュー',
   'nav.back': '戻る',
   'nav.drafts': '下書き',
+  'nav.about': 'について',
 
   'action.refresh': '更新',
   'action.loadMore': 'もっと読む',

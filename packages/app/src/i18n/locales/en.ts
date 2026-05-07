@@ -13,6 +13,7 @@ const en: LocaleMessages = {
   'nav.menu': 'Menu',
   'nav.back': 'Back',
   'nav.drafts': 'Drafts',
+  'nav.about': 'About',
 
   'action.refresh': 'Refresh',
   'action.loadMore': 'Load More',

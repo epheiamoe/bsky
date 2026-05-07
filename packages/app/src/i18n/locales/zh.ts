@@ -14,6 +14,7 @@ const zh: LocaleMessages = {
   'nav.menu': '菜单',
   'nav.back': '返回',
   'nav.drafts': '草稿',
+  'nav.about': '关于',
 
   // ── Actions ──
   'action.refresh': '刷新',

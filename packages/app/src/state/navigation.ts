@@ -11,7 +11,8 @@ export type AppView =
   | { type: 'drafts' }
   | { type: 'components' }
   | { type: 'dm' }
-  | { type: 'dmChat'; conversationId: string };
+  | { type: 'dmChat'; conversationId: string }
+  | { type: 'about' };
 
 export interface NavigationState {
   currentView: AppView;

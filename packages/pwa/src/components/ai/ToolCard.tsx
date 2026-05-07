@@ -40,7 +40,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
       <div className={`transition-all duration-200 ease-out ${
         compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'
       } text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis ${
-        expanded ? 'opacity-0 invisible' : 'opacity-100 visible'
+        expanded ? 'opacity-0 invisible max-h-0 py-0 my-0 overflow-hidden' : 'opacity-100 visible'
       }`}>
         {display.summary}
       </div>

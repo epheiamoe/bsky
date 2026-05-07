@@ -13,11 +13,11 @@ export interface SidebarProps {
 }
 
 const TAB_EMOJI: Record<string, string> = {
-  feed: '📋', notifications: '🔔', search: '🔍', profile: '👤', bookmarks: '🔖', aiChat: '🤖', compose: '✏️',
+  feed: '📋', notifications: '🔔', search: '🔍', profile: '👤', bookmarks: '🔖', aiChat: '🤖', compose: '✏️', about: 'ℹ️',
 };
 
 const TAB_NAV_KEY: Record<string, string> = {
-  feed: 'nav.feed', notifications: 'nav.notifications', search: 'nav.search', profile: 'nav.profile', bookmarks: 'nav.bookmarks', aiChat: 'nav.aiChat', compose: 'nav.compose',
+  feed: 'nav.feed', notifications: 'nav.notifications', search: 'nav.search', profile: 'nav.profile', bookmarks: 'nav.bookmarks', aiChat: 'nav.aiChat', compose: 'nav.compose', about: 'nav.about',
 };
 
 const TABS = [
@@ -28,14 +28,15 @@ const TABS = [
   { key: 'bookmarks', shortcut: 'b' },
   { key: 'aiChat', shortcut: 'a' },
   { key: 'compose', shortcut: 'c' },
+  { key: 'about', shortcut: '?' },
 ];
 
 const BREADCRUMB_EMOJI: Record<string, string> = {
-  detail: '📄', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖',
+  detail: '📄', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', about: 'ℹ️',
 };
 
 const BREADCRUMB_KEY: Record<string, string> = {
-  detail: 'breadcrumb.detail', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks',
+  detail: 'breadcrumb.detail', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', about: 'nav.about',
 };
 
 export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCount = 0 }: SidebarProps) {
@@ -64,7 +65,8 @@ export function Sidebar({ currentView, goBack, canGoBack, goHome, width, notifCo
             (tab.key === 'profile' && currentView.type === 'profile') ||
             (tab.key === 'bookmarks' && currentView.type === 'bookmarks') ||
             (tab.key === 'aiChat' && currentView.type === 'aiChat') ||
-            (tab.key === 'compose' && currentView.type === 'compose')
+            (tab.key === 'compose' && currentView.type === 'compose') ||
+            (tab.key === 'about' && currentView.type === 'about')
           );
           const badge = tab.key === 'notifications' && notifCount > 0 ? ` ${notifCount}` : '';
           const label = (TAB_EMOJI[tab.key] ?? '') + ' ' + t(TAB_NAV_KEY[tab.key] ?? tab.key);

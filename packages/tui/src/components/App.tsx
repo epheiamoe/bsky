@@ -479,6 +479,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
     if (k === 'm') { if (currentView.type !== 'feed') { goTo({ type: 'dm' }); } return; }
+    if (k === '?') { goTo({ type: 'about' }); return; }
 
     // ── Feed-specific ──
     if (currentView.type === 'feed') {
@@ -690,6 +691,18 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             goBack={goBack}
             cols={mainW}
           />
+        );
+      case 'about':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
+            <Box height={1}><Text bold>{t('nav.about')}</Text></Box>
+            <Text>Bluesky Client v0.5.2</Text>
+            <Text> </Text>
+            <Text>Repository:</Text>
+            <Text>  https://github.com/epheiamoe/bsky</Text>
+            <Text> </Text>
+            <Text>A dual-UI (TUI + PWA) Bluesky social client with AI integration.</Text>
+          </Box>
         );
       default:
         return <Text>{t('common.unknownPage')}</Text>;

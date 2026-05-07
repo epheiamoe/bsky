@@ -122,6 +122,8 @@ function parseHash(): AppView {
     }
     case '/components':
       return { type: 'components' };
+    case '/about':
+      return { type: 'about' };
     case '/compose': {
       const replyTo = params.get('replyTo');
       const quoteUri = params.get('quoteUri');
@@ -182,10 +184,8 @@ function encodeView(view: AppView): string {
       return '#/drafts';
     case 'components':
       return '#/components';
-    case 'dm':
-      return '#/dm';
-    case 'dmChat':
-      return `#/dm?conv=${encodeURIComponent(view.conversationId)}`;
+    case 'about':
+      return '#/about';
     case 'compose': {
       const params = new URLSearchParams();
       if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));

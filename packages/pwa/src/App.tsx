@@ -27,6 +27,7 @@ import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWid
 import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
 import { AIChatWidget } from './components/widgets/AIChatWidget.js';
+import { AboutPage } from './components/AboutPage.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
@@ -304,6 +305,8 @@ export function App() {
         return <DMChatPage client={client} conversationId={(currentView as { conversationId: string }).conversationId} goBack={goBack} goTo={goTo} />;
       case 'components':
         return <ComponentsPage goBack={goBack} goTo={goTo} client={client} />;
+      case 'about':
+        return <AboutPage goBack={goBack} />;
       default:
         return <div className="p-6 text-text-secondary">{t('common.unknownPage')}</div>;
     }

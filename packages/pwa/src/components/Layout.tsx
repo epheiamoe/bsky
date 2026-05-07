@@ -166,6 +166,12 @@ export function Layout({
             >
               {t('settings.logout')}
             </button>
+            <button
+              onClick={() => goTo({ type: 'about' })}
+              className="text-text-secondary hover:text-text-primary transition-colors text-xs px-2 py-1 rounded-lg hover:bg-surface hidden md:block"
+            >
+              {t('nav.about')}
+            </button>
           </div>
         </div>
       </header>

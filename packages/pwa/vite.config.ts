@@ -1,6 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { execSync } from 'child_process';
+
+const commitHash = execSync('git rev-parse HEAD').toString().trim();
+const buildTime = new Date().toISOString();
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +15,10 @@ export default defineConfig({
       fs: resolve(__dirname, 'src/stubs/fs.ts'),
       path: resolve(__dirname, 'src/stubs/path.ts'),
     },
+  },
+  define: {
+    __COMMIT_HASH__: JSON.stringify(commitHash),
+    __BUILD_TIME__: JSON.stringify(buildTime),
   },
   build: {
     outDir: 'dist',
