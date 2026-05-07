@@ -19,7 +19,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
   return (
     <div
       onClick={onToggle}
-      className={`rounded-xl border border-border overflow-hidden cursor-pointer transition-all duration-200 hover:border-white/10 ${
+      className={`relative rounded-xl border border-border overflow-hidden cursor-pointer transition-all duration-200 hover:border-white/10 ${
         compact ? 'mb-1.5' : ''
       } ${expanded ? 'border-amber-500/30' : ''}`}
     >
@@ -40,7 +40,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
       <div className={`transition-all duration-200 ease-out ${
         compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'
       } text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis ${
-        expanded ? 'opacity-0 invisible absolute inset-x-0 pointer-events-none' : 'opacity-100 visible'
+        expanded ? 'opacity-0 invisible' : 'opacity-100 visible'
       }`}>
         {display.summary}
       </div>

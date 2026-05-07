@@ -79,6 +79,16 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     return groups;
   }, [messages]);
 
+  // Auto-expand the last thinking/tool card during streaming
+  const lastStreamGroupIndex = useMemo(() => {
+    if (!loading) return -1;
+    for (let i = messageGroups.length - 1; i >= 0; i--) {
+      const g = messageGroups[i];
+      if (g.type === 'thinking' || g.type === 'tool') return i;
+    }
+    return -1;
+  }, [messageGroups, loading]);
+
   const [exportOpen, setExportOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
@@ -93,7 +103,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const [autoScroll, setAutoScroll] = useState(true);
 
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
+    if (autoScroll && !loading && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, loading, autoScroll]);
@@ -481,7 +491,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                 <div key={`t${gi}`} className="mb-2">
                   <ThinkingCard
                     content={group.msg.content}
-                    expanded={expandedCards.has(gi)}
+                    expanded={expandedCards.has(gi) || (loading && gi === lastStreamGroupIndex)}
                     onToggle={() => toggleCard(gi)}
                   />
                 </div>
@@ -494,7 +504,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                     toolName={group.msg.toolName ?? ''}
                     args={group.msg.content}
                     resultContent={group.result?.content}
-                    expanded={expandedCards.has(gi)}
+                    expanded={expandedCards.has(gi) || (loading && gi === lastStreamGroupIndex)}
                     onToggle={() => toggleCard(gi)}
                   />
                 </div>
