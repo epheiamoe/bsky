@@ -311,6 +311,74 @@ export interface CreateDraftResponse {
   id: string;
 }
 
+// ── List (app.bsky.graph.*) types ──
+
+export type ListPurpose = 'app.bsky.graph.defs#modlist' | 'app.bsky.graph.defs#curatelist' | 'app.bsky.graph.defs#referencelist';
+
+export interface ListViewerState {
+  muted?: boolean;
+  blocked?: string;
+}
+
+export interface ListViewBasic {
+  uri: string;
+  cid: string;
+  name: string;
+  purpose: ListPurpose;
+  avatar?: string;
+  listItemCount?: number;
+  labels?: Array<{ src: string; uri: string; cid?: string; val: string; cts: string }>;
+  viewer?: ListViewerState;
+  indexedAt?: string;
+}
+
+export interface ListView extends ListViewBasic {
+  creator: ProfileViewBasic;
+  description?: string;
+  descriptionFacets?: Facet[];
+}
+
+export interface ListItemView {
+  uri: string;
+  subject: ProfileViewBasic;
+}
+
+export interface GetListResponse {
+  cursor?: string;
+  list: ListView;
+  items: ListItemView[];
+}
+
+export interface GetListsResponse {
+  cursor?: string;
+  lists: ListView[];
+}
+
+export interface GetListBlocksResponse {
+  cursor?: string;
+  lists: ListView[];
+}
+
+export interface GetListMutesResponse {
+  cursor?: string;
+  lists: ListView[];
+}
+
+export interface ListWithMembership {
+  list: ListView;
+  listItem?: ListItemView;
+}
+
+export interface GetListsWithMembershipResponse {
+  cursor?: string;
+  listsWithMembership: ListWithMembership[];
+}
+
+export interface GetListFeedResponse {
+  cursor?: string;
+  feed: Array<{ post: PostView; reply?: { parent: PostView; root: PostView }; reason?: unknown }>;
+}
+
 // ── Chat (DM) types ──
 
 export interface ConvoView {

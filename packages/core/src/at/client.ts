@@ -34,6 +34,13 @@ import type {
   GetConvoResponse,
   MessageInput,
   MessageView,
+  GetListResponse,
+  GetListsResponse,
+  GetListFeedResponse,
+  GetListBlocksResponse,
+  GetListMutesResponse,
+  GetListsWithMembershipResponse,
+  ListPurpose,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -246,6 +253,161 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       searchParams: { actor },
     }).json<GetSuggestedFollowsResponse>();
+  }
+
+  // ── List methods (app.bsky.graph.*) ──
+
+  async getList(listUri: string, limit = 50, cursor?: string): Promise<GetListResponse> {
+    const params: Record<string, string | number> = { list: listUri, limit };
+    if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.graph.getList', {
+      searchParams: params,
+      ...headers,
+    }).json<GetListResponse>();
+  }
+
+  async getLists(actor: string, limit = 50, cursor?: string, purposes?: string[]): Promise<GetListsResponse> {
+    const params: Record<string, string | number | string[]> = { actor, limit };
+    if (cursor) params.cursor = cursor;
+    if (purposes && purposes.length > 0) params.purposes = purposes;
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.graph.getLists', {
+      searchParams: params,
+      ...headers,
+    }).json<GetListsResponse>();
+  }
+
+  async getListFeed(listUri: string, limit = 50, cursor?: string): Promise<GetListFeedResponse> {
+    const params: Record<string, string | number> = { list: listUri, limit };
+    if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.feed.getListFeed', {
+      searchParams: params,
+      ...headers,
+    }).json<GetListFeedResponse>();
+  }
+
+  async getListBlocks(limit = 50, cursor?: string): Promise<GetListBlocksResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.ky.get('app.bsky.graph.getListBlocks', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetListBlocksResponse>();
+  }
+
+  async getListMutes(limit = 50, cursor?: string): Promise<GetListMutesResponse> {
+    const params: Record<string, string | number> = { limit };
+    if (cursor) params.cursor = cursor;
+    return this.ky.get('app.bsky.graph.getListMutes', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetListMutesResponse>();
+  }
+
+  async getListsWithMembership(actor: string, limit = 50, cursor?: string, purposes?: string[]): Promise<GetListsWithMembershipResponse> {
+    const params: Record<string, string | number | string[]> = { actor, limit };
+    if (cursor) params.cursor = cursor;
+    if (purposes && purposes.length > 0) params.purposes = purposes;
+    return this.ky.get('app.bsky.graph.getListsWithMembership', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetListsWithMembershipResponse>();
+  }
+
+  async muteActorList(listUri: string): Promise<void> {
+    await this.ky.post('app.bsky.graph.muteActorList', {
+      headers: this.getAuthHeaders(),
+      json: { list: listUri },
+    });
+  }
+
+  async unmuteActorList(listUri: string): Promise<void> {
+    await this.ky.post('app.bsky.graph.unmuteActorList', {
+      headers: this.getAuthHeaders(),
+      json: { list: listUri },
+    });
+  }
+
+  async putRecord(
+    repo: string,
+    collection: string,
+    rkey: string,
+    record: Record<string, unknown>,
+    swapRecord?: string,
+  ): Promise<CreateRecordResponse> {
+    const body: Record<string, unknown> = { repo, collection, rkey, record };
+    if (swapRecord) body.swapRecord = swapRecord;
+    return this.ky.post('com.atproto.repo.putRecord', {
+      headers: this.getAuthHeaders(),
+      json: body,
+    }).json<CreateRecordResponse>();
+  }
+
+  async createList(name: string, purpose: ListPurpose, description?: string, avatar?: UploadBlobResponse['blob']): Promise<{ uri: string; cid: string }> {
+    const record: Record<string, unknown> = {
+      $type: 'app.bsky.graph.list',
+      purpose,
+      name,
+      createdAt: new Date().toISOString(),
+    };
+    if (description) record.description = description;
+    if (avatar) record.avatar = avatar;
+    const did = this.getDID();
+    return this.createRecord(did, 'app.bsky.graph.list', record);
+  }
+
+  async deleteList(listUri: string): Promise<void> {
+    const rkey = listUri.split('/').pop() ?? '';
+    await this.deleteRecord(this.getDID(), 'app.bsky.graph.list', rkey);
+  }
+
+  async updateList(listUri: string, params: { name?: string; description?: string; avatar?: UploadBlobResponse['blob'] }): Promise<{ uri: string; cid: string }> {
+    const rkey = listUri.split('/').pop() ?? '';
+    const parsed = parseAtUri(listUri);
+    const existing = await this.getList(listUri);
+    const record: Record<string, unknown> = {
+      $type: 'app.bsky.graph.list',
+      purpose: existing.list.purpose,
+      name: params.name ?? existing.list.name,
+      createdAt: existing.list.indexedAt ?? new Date().toISOString(),
+    };
+    if (params.description !== undefined) record.description = params.description;
+    if (params.avatar) record.avatar = params.avatar;
+    return this.putRecord(parsed.did, 'app.bsky.graph.list', rkey, record);
+  }
+
+  async addListItem(listUri: string, subjectDid: string): Promise<{ uri: string; cid: string }> {
+    const record = {
+      $type: 'app.bsky.graph.listitem',
+      subject: subjectDid,
+      list: listUri,
+      createdAt: new Date().toISOString(),
+    };
+    return this.createRecord(this.getDID(), 'app.bsky.graph.listitem', record);
+  }
+
+  async removeListItem(listItemUri: string): Promise<void> {
+    const parsed = parseAtUri(listItemUri);
+    await this.deleteRecord(parsed.did, 'app.bsky.graph.listitem', parsed.rkey);
+  }
+
+  async blockList(listUri: string): Promise<{ uri: string; cid: string }> {
+    const record = {
+      $type: 'app.bsky.graph.listblock',
+      subject: listUri,
+      createdAt: new Date().toISOString(),
+    };
+    return this.createRecord(this.getDID(), 'app.bsky.graph.listblock', record);
+  }
+
+  async unblockList(listBlockUri: string): Promise<void> {
+    const parsed = parseAtUri(listBlockUri);
+    await this.deleteRecord(parsed.did, 'app.bsky.graph.listblock', parsed.rkey);
   }
 
   async listNotifications(limit = 50, cursor?: string, priority?: boolean): Promise<ListNotificationsResponse> {
