@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useI18n, useDrafts, useConvoList } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
@@ -60,6 +60,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [bookmarkIdx, setBookmarkIdx] = useState(0);
   const lists = useLists(client);
   const [listIdx, setListIdx] = useState(0);
+  // listDetail — only active when view is 'listDetail'
+  const currentListUri = currentView.type === 'listDetail' ? (currentView as { uri: string }).uri : '';
+  const listDetail = useListDetail(client, currentListUri);
+  const [listDetailIdx, setListDetailIdx] = useState(0);
+  const [listDetailTab, setListDetailTab] = useState<'posts' | 'members'>('posts');
+  const [creatingList, setCreatingList] = useState(false);
+  const [editingListUri, setEditingListUri] = useState<string | null>(null);
+  const [listInput, setListInput] = useState('');
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts(client);
   const { convos, loading: dmLoading, error: dmError, refresh: refreshDMs } = useConvoList(client);
   const [dmIdx, setDmIdx] = useState(0);
@@ -216,6 +224,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       return;
     }
     if (key.escape) {
+      if (creatingList) { setCreatingList(false); setListInput(''); return; }
+      if (editingListUri) { setEditingListUri(null); setListInput(''); return; }
       if (showFeedConfig) { setShowFeedConfig(false); return; }
       if (currentView.type === 'search') { /* handled by SearchView */ return; }
       if (currentView.type === 'aiChat') {
@@ -234,8 +244,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     }
     if (currentView.type === 'aiChat' && focusedPanel === 'ai') return;
 
-    // Feed config overlay active — skip all other keys (handled by overlay)
+    // Feed config overlay active — skip all other keys
     if (showFeedConfig) return;
+
+    // Creating/editing list name — skip all other keys
+    if (creatingList || editingListUri) return;
 
     // Arrows — feed + bookmarks
     if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
@@ -532,6 +545,27 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const list = lists.lists[listIdx];
         if (list) lists.deleteList(list.uri);
       }
+      else if (k === 'c') {
+        // Create new list
+        setCreatingList(true);
+      }
+      else if (k === 'e') {
+        const list = lists.lists[listIdx];
+        if (list) { setListInput(list.name); setEditingListUri(list.uri); }
+      }
+      return;
+    }
+
+    // ── ListDetail-specific ──
+    if (currentView.type === 'listDetail') {
+      if (key.tab) setListDetailTab(t => t === 'posts' ? 'members' : 'posts');
+      else if (k === 'j') setListDetailIdx(i => Math.min(items.length - 1, i + 1));
+      else if (k === 'k') setListDetailIdx(i => Math.max(0, i - 1));
+      else if (k === 'r') listDetail.refresh();
+      else if (k === 'Enter') { /* handled in render */ }
+      else if (k === 'e') {
+        if (listDetail.list) { setListInput(listDetail.list.name); setEditingListUri(listDetail.list.uri); }
+      }
       return;
     }
 
@@ -668,6 +702,27 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="cyan" paddingX={1}>
             <Box height={1}><Text bold color="cyan">{'📃 '}{t('lists.title')}</Text><Text dimColor>{' '}{t('keys.lists')}</Text></Box>
+            {/* Create / Edit list name input */}
+            {(creatingList || editingListUri) && (
+              <Box height={1}>
+                <Text dimColor>{creatingList ? 'New list name: ' : 'Edit name: '}</Text>
+                <TextInput
+                  value={listInput}
+                  onChange={setListInput}
+                  onSubmit={() => {
+                    if (creatingList) {
+                      lists.createList(listInput.trim(), 'app.bsky.graph.defs#curatelist');
+                      setCreatingList(false);
+                      setListInput('');
+                    } else if (editingListUri) {
+                      lists.updateListInfo(editingListUri, { name: listInput.trim() });
+                      setEditingListUri(null);
+                      setListInput('');
+                    }
+                  }}
+                />
+              </Box>
+            )}
             {lists.loading && <Text dimColor>{t('status.loading')}</Text>}
             {!lists.loading && lists.lists.length === 0 && <Text dimColor>{t('lists.empty')}</Text>}
             {lists.lists.slice(0, rows - 5).map((list, i) => {
@@ -710,9 +765,59 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           </Box>
         );
       case 'listDetail':
+        const ldetail = listDetail;
+        const dtabItems = listDetailTab === 'posts' ? ldetail.feed : ldetail.members;
+        const dtabCount = listDetailTab === 'posts' ? ldetail.feed.length : ldetail.members.length;
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="cyan" paddingX={1}>
-            <Box height={1}><Text bold color="cyan">{'📃 '}{t('breadcrumb.listDetail')}</Text><Text dimColor>{' '}{t('keys.listDetail')}</Text></Box>
+            <Box height={1}>
+              <Text bold color="cyan">{'📃 '}{ldetail.list?.name ?? '\u2026'} ({ldetail.list?.listItemCount ?? 0})</Text>
+              <Text dimColor>{' '}{t('keys.listDetail')}</Text>
+            </Box>
+            {/* Tab bar */}
+            <Box height={1}>
+              <Text color={listDetailTab === 'posts' ? 'cyanBright' : undefined} bold={listDetailTab === 'posts'}>
+                {' ['}{t('lists.tabPosts')}{'] '}
+              </Text>
+              <Text color={listDetailTab === 'members' ? 'cyanBright' : undefined} bold={listDetailTab === 'members'}>
+                {' ['}{t('lists.tabMembers', { n: ldetail.members.length })}{']'}
+              </Text>
+            </Box>
+            {ldetail.loading && <Text dimColor>{t('status.loading')}</Text>}
+            {!ldetail.loading && dtabItems.length === 0 && (
+              <Text dimColor>{listDetailTab === 'posts' ? t('lists.noPosts') : t('lists.noMembers')}</Text>
+            )}
+            {dtabItems.slice(0, rows - 7).map((item, i) => {
+              const isSel = i === listDetailIdx;
+              if (listDetailTab === 'posts') {
+                const post = item as any;
+                const handle = post.author?.handle ?? '?';
+                const text = (post.record?.text || '').slice(0, cols - handle.length - 30);
+                return (
+                  <Box key={post.uri ?? i} height={1}>
+                    <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
+                      {isSel ? '▶' : ' '}{' '}
+                      <Text color={isSel ? 'cyanBright' : 'green'}>{handle}</Text>
+                      <Text>: </Text>
+                      <Text>{text}</Text>
+                    </Text>
+                  </Box>
+                );
+              }
+              // Members
+              const member = item as any;
+              const handle = member.subject?.handle ?? '?';
+              const name = member.subject?.displayName || '';
+              return (
+                <Box key={member.uri ?? i} height={1}>
+                  <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
+                    {isSel ? '▶' : ' '}{' '}
+                    <Text color={isSel ? 'cyanBright' : 'green'}>{handle}</Text>
+                    {name ? <Text dimColor> ({name.slice(0, 20)})</Text> : null}
+                  </Text>
+                </Box>
+              );
+            })}
           </Box>
         );
       case 'dm':

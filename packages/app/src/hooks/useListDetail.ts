@@ -89,6 +89,19 @@ export function useListDetail(client: BskyClient | null, listUri: string) {
     } catch (e) { console.error('Remove member error:', e); }
   }, [client]);
 
+  const updateListInfo = useCallback(async (params: { name?: string; description?: string }): Promise<void> => {
+    if (!client || !listUri) return;
+    try {
+      await client.updateList(listUri, params);
+      setList(prev => prev ? { ...prev, name: params.name ?? prev.name, description: params.description !== undefined ? params.description : prev.description } : prev);
+    } catch (e) { console.error('Update list error:', e); }
+  }, [client, listUri]);
+
+  const deleteList = useCallback(async (): Promise<void> => {
+    if (!client || !listUri) return;
+    try { await client.deleteList(listUri); } catch (e) { console.error('Delete list error:', e); }
+  }, [client, listUri]);
+
   return {
     list,
     loading,
@@ -103,6 +116,8 @@ export function useListDetail(client: BskyClient | null, listUri: string) {
     toggleMute,
     addMember,
     removeMember,
+    updateListInfo,
+    deleteList,
     refresh: load,
   };
 }

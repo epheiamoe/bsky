@@ -20,8 +20,14 @@ const ESTIMATED_MEMBER_HEIGHT = 52;
 
 export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: ListDetailPageProps) {
   const { t } = useI18n();
-  const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, refresh } = useListDetail(client, listUri);
+  const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
+  const [editingName, setEditingName] = useState(false);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const memberScrollRef = useRef<HTMLDivElement>(null);
@@ -75,9 +81,14 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isOwnList && (
-            <button onClick={toggleMute} className="text-text-secondary hover:text-text-primary transition-colors" title={isMuted ? t('lists.unmute') : t('lists.mute')} aria-label={isMuted ? t('lists.unmute') : t('lists.mute')}>
-              <Icon name="bell" size={16} filled={!isMuted} />
-            </button>
+            <>
+              <button onClick={toggleMute} className="text-text-secondary hover:text-text-primary transition-colors" title={isMuted ? t('lists.unmute') : t('lists.mute')} aria-label={isMuted ? t('lists.unmute') : t('lists.mute')}>
+                <Icon name="bell" size={16} filled={!isMuted} />
+              </button>
+              <button onClick={() => setShowDeleteConfirm(true)} className="text-text-secondary hover:text-red-500 transition-colors" title={t('lists.delete')} aria-label={t('lists.delete')}>
+                <Icon name="trash-2" size={16} />
+              </button>
+            </>
           )}
           <button onClick={() => refresh()} disabled={loading} className="text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50" aria-label={t('action.refresh')}>
             <Icon name="refresh-cw" size={16} />
@@ -95,7 +106,28 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
               <Icon name="list" size={24} />
             </div>
             <div className="min-w-0">
-              <h2 className="text-text-primary font-bold text-lg break-words">{list.name}</h2>
+              <div className="flex items-center gap-1">
+                {editingName && isOwnList ? (
+                  <input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    onBlur={() => { if (editName.trim() && editName.trim() !== list.name) updateListInfo({ name: editName.trim() }); setEditingName(false); }}
+                    onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') setEditingName(false); }}
+                    className="flex-1 px-2 py-1 text-lg font-bold bg-white dark:bg-[#1A1A1A] border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                    maxLength={64}
+                    autoFocus
+                  />
+                ) : (
+                  <h2 className="text-text-primary font-bold text-lg break-words">{list.name}</h2>
+                )}
+                {isOwnList && !editingName && (
+                  <button onClick={() => { setEditName(list.name); setEditingName(true); }}
+                    className="text-text-secondary/40 hover:text-primary transition-colors shrink-0"
+                    title="Edit name" aria-label="Edit name">
+                    <Icon name="pencil" size={14} />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1 text-sm text-text-secondary">
                 <span className={list.purpose === 'app.bsky.graph.defs#modlist' ? 'text-orange-500' : 'text-blue-500'}>
                   {list.purpose === 'app.bsky.graph.defs#modlist' ? t('lists.moderation') : t('lists.curated')}
@@ -106,9 +138,36 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
               <button onClick={() => goTo({ type: 'profile', actor: list.creator.handle })} className="text-sm text-text-secondary hover:text-primary mt-1 transition-colors">
                 {t('lists.createdBy')} @{list.creator.handle}
               </button>
-              {list.description && (
-                <p className="text-sm text-text-secondary mt-2 whitespace-pre-wrap break-words">{list.description}</p>
-              )}
+              <div className="flex items-start gap-1 mt-2">
+                {editingDesc && isOwnList ? (
+                  <textarea
+                    value={editDesc}
+                    onChange={e => setEditDesc(e.target.value)}
+                    onBlur={() => { if (editDesc.trim() !== (list.description || '')) updateListInfo({ description: editDesc.trim() || undefined }); setEditingDesc(false); }}
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) (e.target as HTMLTextAreaElement).blur(); if (e.key === 'Escape') setEditingDesc(false); }}
+                    className="flex-1 px-2 py-1 text-sm bg-white dark:bg-[#1A1A1A] border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    rows={2}
+                    maxLength={300}
+                    autoFocus
+                    placeholder={t('lists.descPlaceholder')}
+                  />
+                ) : (
+                  <div className="flex-1">
+                    {list.description ? (
+                      <p className="text-sm text-text-secondary whitespace-pre-wrap break-words">{list.description}</p>
+                    ) : isOwnList ? (
+                      <p className="text-sm text-text-secondary/40 italic">{t('lists.descPlaceholder')}</p>
+                    ) : null}
+                  </div>
+                )}
+                {isOwnList && !editingDesc && (
+                  <button onClick={() => { setEditDesc(list.description || ''); setEditingDesc(true); }}
+                    className="text-text-secondary/40 hover:text-primary transition-colors shrink-0 mt-0.5"
+                    title="Edit description" aria-label="Edit description">
+                    <Icon name="pencil" size={14} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -251,6 +310,25 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
             )}
           </div>
         </>
+      )}
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full shadow-xl p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
+            <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+              <button onClick={async () => { setDeleting(true); await deleteList(); setDeleting(false); setShowDeleteConfirm(false); goBack(); }}
+                disabled={deleting}
+                className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
+              >
+                {deleting ? t('action.loading') : t('action.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

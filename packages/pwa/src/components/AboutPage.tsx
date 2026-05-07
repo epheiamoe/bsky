@@ -11,7 +11,9 @@ export function AboutPage({ goBack }: AboutPageProps) {
 
   const commitHash = typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : '(dev)';
   const commitDesc = typeof __COMMIT_DESC__ !== 'undefined' ? __COMMIT_DESC__ : '(dev)';
-  const buildTime = typeof __BUILD_TIME__ !== 'undefined' ? new Date(__BUILD_TIME__).toLocaleString() : '(dev)';
+  const buildTime = typeof __BUILD_TIME__ !== 'undefined'
+    ? new Date(__BUILD_TIME__).toLocaleString() + ' (UTC)'
+    : '(dev)';
   const repoUrl = 'https://github.com/epheiamoe/bsky';
   const demoUrl = 'https://ai-bsky.pages.dev';
   const issuesUrl = 'https://github.com/epheiamoe/bsky/issues';

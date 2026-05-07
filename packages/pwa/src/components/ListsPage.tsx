@@ -21,6 +21,7 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
   const [newDesc, setNewDesc] = useState('');
   const [newPurpose, setNewPurpose] = useState<ListPurpose>('app.bsky.graph.defs#curatelist');
   const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // List add popup (when viewing another user's lists)
   const [showListAddPopup, setShowListAddPopup] = useState(false);
@@ -199,31 +200,41 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
                 >
                   <button
                     onClick={() => goTo({ type: 'listDetail', uri: list.uri })}
-                    className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-start gap-3"
-                  >
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                      isMod ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
-                    }`}>
-                      <Icon name="list" size={20} />
+                  className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-start gap-3"
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    isMod ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
+                  }`}>
+                    <Icon name="list" size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-text-primary font-medium text-sm truncate">{list.name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                        isMod ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                      }`}>
+                        {isMod ? t('lists.moderation') : t('lists.curated')}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-text-primary font-medium text-sm truncate">{list.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
-                          isMod ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                        }`}>
-                          {isMod ? t('lists.moderation') : t('lists.curated')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-text-secondary mt-0.5">
-                        <Icon name="users" size={12} />
-                        <span>{t('lists.memberCount', { n: list.listItemCount ?? 0 })}</span>
-                      </div>
-                      {list.description && (
-                        <p className="text-xs text-text-secondary mt-1 line-clamp-2">{list.description}</p>
-                      )}
+                    <div className="flex items-center gap-1 text-xs text-text-secondary mt-0.5">
+                      <Icon name="users" size={12} />
+                      <span>{t('lists.memberCount', { n: list.listItemCount ?? 0 })}</span>
                     </div>
-                  </button>
+                    {list.description && (
+                      <p className="text-xs text-text-secondary mt-1 line-clamp-2">{list.description}</p>
+                    )}
+                  </div>
+                  {isOwn && (
+                    <button
+                      onClick={e => { e.stopPropagation(); setDeleteTarget(list.uri); }}
+                      className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-text-secondary/40 hover:text-red-500 hover:bg-red-500/10 transition-colors self-center"
+                      title={t('lists.delete')}
+                      aria-label={t('lists.delete')}
+                    >
+                      <Icon name="x" size={14} />
+                    </button>
+                  )}
+                </button>
                 </div>
               );
             })}
@@ -298,6 +309,20 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
                   );
                 })
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full shadow-xl p-6" onClick={e => e.stopPropagation()}>
+            <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
+            <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+              <button onClick={() => { deleteList(deleteTarget); setDeleteTarget(null); }} className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium">{t('action.delete')}</button>
             </div>
           </div>
         </div>
