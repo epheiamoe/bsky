@@ -20,7 +20,7 @@ const ESTIMATED_MEMBER_HEIGHT = 52;
 
 export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: ListDetailPageProps) {
   const { t } = useI18n();
-  const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, refresh } = useListDetail(client, listUri);
+  const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, refresh } = useListDetail(client, listUri);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
 
   const feedScrollRef = useRef<HTMLDivElement>(null);
@@ -196,10 +196,11 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
                     return (
                       <div key={member.uri} data-index={vi.index} ref={memberVirtualizer.measureElement}
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
+                        className="flex items-center border-b border-border hover:bg-surface transition-colors"
                       >
                         <button
                           onClick={() => goTo({ type: 'profile', actor: member.subject.handle })}
-                          className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface flex items-center gap-3 transition-colors"
+                          className="flex-1 text-left px-4 py-3 flex items-center gap-3 min-w-0"
                         >
                           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
                             {member.subject.avatar ? (
@@ -208,7 +209,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
                               member.subject.handle?.[0]?.toUpperCase() ?? '?'
                             )}
                           </div>
-                          <div className="flex-1 min-w-0">
+                          <div className="min-w-0">
                             <p className="text-text-primary text-sm font-medium truncate">
                               {member.subject.displayName || member.subject.handle}
                             </p>
@@ -217,6 +218,16 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
                             )}
                           </div>
                         </button>
+                        {isOwnList && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeMember(member.uri); }}
+                            className="shrink-0 mr-3 w-7 h-7 rounded-full flex items-center justify-center text-text-secondary hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                            title={t('lists.removeMember')}
+                            aria-label={t('lists.removeMember')}
+                          >
+                            <Icon name="x" size={14} />
+                          </button>
+                        )}
                       </div>
                     );
                   })}

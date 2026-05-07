@@ -93,9 +93,11 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
           <h1 className="text-text-primary font-semibold text-lg">{t('lists.title')}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setShowCreate(true)} className="text-primary hover:text-primary-hover transition-colors text-sm font-medium" aria-label={t('lists.create')}>
-            <Icon name="plus" size={18} />
-          </button>
+          {isOwn && (
+            <button onClick={() => setShowCreate(true)} className="text-primary hover:text-primary-hover transition-colors text-sm font-medium" aria-label={t('lists.create')}>
+              <Icon name="plus" size={18} />
+            </button>
+          )}
           <button onClick={() => refresh()} disabled={loading} className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium" aria-label={t('action.refresh')}>
             <Icon name="refresh-cw" size={16} />
           </button>
@@ -233,9 +235,11 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
             <Icon name="list" size={24} className="text-primary" />
           </div>
           <p className="text-text-secondary text-sm">{t('lists.empty')}</p>
-          <button onClick={() => setShowCreate(true)} className="mt-4 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors btn-press">
-            {t('lists.create')}
-          </button>
+          {isOwn && (
+            <button onClick={() => setShowCreate(true)} className="mt-4 px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary-hover transition-colors btn-press">
+              {t('lists.create')}
+            </button>
+          )}
         </div>
       )}
       {/* List add popup overlay */}
