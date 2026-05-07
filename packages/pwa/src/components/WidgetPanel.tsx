@@ -42,23 +42,17 @@ export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onRe
   return (
     <div className="flex flex-col gap-3 p-3 overflow-y-auto">
       {enabledWidgets.map((w, idx) => (
-        <div key={w.id} className="border border-border rounded-xl bg-surface/50 relative">
-          {/* Reorder buttons pinned top-right */}
-          <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">
-            {idx > 0 && (
-              <button onClick={() => onReorderWidget?.(idx, idx - 1)} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Move up">
-                <Icon name="chevron-up" size={12} />
-              </button>
-            )}
-            {idx < enabledWidgets.length - 1 && (
-              <button onClick={() => onReorderWidget?.(idx, idx + 1)} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Move down">
-                <Icon name="chevron-down" size={12} />
-              </button>
-            )}
-          </div>
-          <div className="p-3 pt-6">
-            {w.render({ onClose: () => onCloseWidget(w.id), context })}
-          </div>
+        <div key={w.id} className="border border-border rounded-xl bg-surface/50">
+          {w.render({
+            onClose: () => onCloseWidget(w.id),
+            context: {
+              ...context,
+              widgetIndex: idx,
+              widgetCount: enabledWidgets.length,
+              onMoveUp: () => onReorderWidget?.(idx, idx - 1),
+              onMoveDown: () => onReorderWidget?.(idx, idx + 1),
+            } as any,
+          })}
         </div>
       ))}
     </div>
