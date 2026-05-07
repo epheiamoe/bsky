@@ -157,7 +157,11 @@ export function useAIChat(
               name: m.toolName,
             });
           } else if (m.role === 'user' || m.role === 'assistant') {
-            chatMsgs.push({ role: m.role, content: m.content });
+            chatMsgs.push({ 
+              role: m.role, 
+              content: m.content,
+              reasoning_content: (m as any).reasoning_content,
+            } as ChatMessage);
           }
         }
         assistant.loadMessages([...system, ...chatMsgs]);
@@ -385,14 +389,46 @@ export function useAIChat(
   }, [assistant]);
 
   const mapMessages = useCallback((msgs: ChatMessage[]): AIChatMessage[] => {
-    return msgs
-      .filter(m => m.role !== 'system')
-      .map(m => ({
-        role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
-        content: contentToString(m.content),
-        toolName: m.name,
-        toolCallId: m.tool_call_id,
-      }));
+    const result: AIChatMessage[] = [];
+    for (const m of msgs) {
+      if (m.role === 'system') continue;
+
+      if (m.role === 'assistant') {
+        if (m.reasoning_content) {
+          result.push({ role: 'thinking', content: m.reasoning_content as string });
+        }
+        if (m.tool_calls && m.tool_calls.length > 0) {
+          for (const tc of m.tool_calls) {
+            result.push({
+              role: 'tool_call',
+              content: tc.function.name,
+              toolName: tc.function.name,
+              toolCallId: tc.id,
+            });
+          }
+        }
+        result.push({
+          role: 'assistant',
+          content: contentToString(m.content),
+          reasoning_content: m.reasoning_content,
+          tool_calls: m.tool_calls as any,
+        });
+      } else if (m.role === 'tool') {
+        result.push({
+          role: 'tool_result',
+          content: contentToString(m.content),
+          toolName: m.name,
+          toolCallId: m.tool_call_id,
+        });
+      } else {
+        result.push({
+          role: m.role as AIChatMessage['role'],
+          content: contentToString(m.content),
+          reasoning_content: m.reasoning_content,
+        });
+      }
+    }
+    return result;
   }, []);
 
   /** Roll back to before the nth user message (0-indexed) and return that user's text. */

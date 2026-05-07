@@ -8,6 +8,8 @@ export interface AIChatMessage {
   toolName?: string;
   toolCallId?: string;
   isError?: boolean;
+  reasoning_content?: string;
+  tool_calls?: Array<{ id: string; type: string; function: { name: string; arguments: string } }>;
   /** Intentionally omitted: image data is not yet supported in export/import */
 }
 
