@@ -67,7 +67,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 
 | Key | Reason |
 |-----|--------|
-| `t`, `n`, `p`, `s`, `a`, `c`, `b`, `m` | Global navigation (`m` guarded: feeds use `m` for load more) |
+| `t`, `n`, `p`, `s`, `a`, `c`, `b`, `m`, `L` | Global navigation (`m` guarded: feeds use `m` for load more) |
 | `Esc` | Universal back |
 | `Tab` | AI focus toggle |
 | `Ctrl+G` | AI chat launcher |
@@ -147,6 +147,34 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `q` | Open quoted post in thread |
 
 **Footer hint**: `↑↓/jk:导航 Enter:查看 d:删除 r:刷新 q:引用`
+
+---
+
+## Lists View
+
+**Global shortcut**: `L` (uppercase, distinct from `l`=like in thread)
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | Open selected list (detail view) |
+| `d` | Delete selected list |
+| `r` | Refresh lists |
+
+**List Detail view**:
+
+| Key | Action |
+|-----|--------|
+| `Tab` | Switch Posts / Members tab |
+| `j` / `↓` | Move cursor down |
+| `k` / `↑` | Move cursor up |
+| `Enter` | View post or profile |
+| `r` | Refresh |
+
+**Footer hints**:
+- Lists: `j/k:Nav Enter:View c:Create d:Delete r:Refresh Esc:Back`
+- ListDetail: `Tab:Switch j/k:Nav Enter:View r:Refresh Esc:Back`
 
 ---
 

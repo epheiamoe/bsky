@@ -37,7 +37,7 @@
 | **关注/取关** | ✅ | ✅ | 资料页 + 帖子页 + 推荐关注 widget |
 | **推荐关注** | ⬜ | ✅ | SuggestedFollowsWidget + AT API |
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
-| **List/Feed 浏览** | ⬜ | ⬜ | 自定义 Feed |
+| **List/Feed 浏览** | ✅ | ✅ | PWA: ListsPage + ListDetailPage (Posts/Members tabs + 虚拟滚动) + ProfilePage Lists tab; TUI: 内联视图 + L 快捷键 + j/k/Enter/d/r; AI: 4 工具 |
 | **DM 私信** | ✅ | ✅ | Phase 1+2: send/get/list/delete/mute/read + emoji 反应(8 常用) + 引用帖(URI 粘贴) + 动画 + 加载更早 |
 | **资料页 DM 按钮** | N/A | ✅ | 互相关注者资料页，SVG-only 私信按钮 |
 | **编辑个人资料** | N/A | ✅ | 底部浮窗：头像/横幅/名称/描述 + putProfile API |
