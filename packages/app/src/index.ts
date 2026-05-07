@@ -32,6 +32,8 @@ export { useSearch } from './hooks/useSearch.js';
 export type { SearchTab, SearchState } from './hooks/useSearch.js';
 export { useNotifications } from './hooks/useNotifications.js';
 export { useBookmarks } from './hooks/useBookmarks.js';
+export { useLists } from './hooks/useLists.js';
+export { useListDetail } from './hooks/useListDetail.js';
 export { useConvoList } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';

@@ -12,6 +12,8 @@ export type AppView =
   | { type: 'components' }
   | { type: 'dm' }
   | { type: 'dmChat'; conversationId: string }
+  | { type: 'lists'; actor?: string }
+  | { type: 'listDetail'; uri: string; tab?: 'posts' | 'members' }
   | { type: 'about' };
 
 export interface NavigationState {
