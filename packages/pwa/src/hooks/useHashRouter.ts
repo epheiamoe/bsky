@@ -113,6 +113,16 @@ function parseHash(): AppView {
     }
     case '/bookmarks':
       return { type: 'bookmarks' };
+    case '/lists': {
+      const actor = params.get('actor');
+      return actor ? { type: 'lists', actor: decodeURIComponent(actor) } : { type: 'lists' };
+    }
+    case '/list': {
+      const uri = params.get('uri');
+      if (!uri) return { type: 'lists' };
+      const tab = params.get('tab') as 'posts' | 'members' | undefined;
+      return tab ? { type: 'listDetail', uri: decodeURIComponent(uri), tab } : { type: 'listDetail', uri: decodeURIComponent(uri) };
+    }
     case '/drafts':
       return { type: 'drafts' };
     case '/dm': {
@@ -180,8 +190,24 @@ function encodeView(view: AppView): string {
     }
     case 'bookmarks':
       return '#/bookmarks';
+    case 'lists': {
+      const actor = (view as { actor?: string }).actor;
+      return actor ? `#/lists?actor=${encodeURIComponent(actor)}` : '#/lists';
+    }
+    case 'listDetail': {
+      const tab = (view as { tab?: string }).tab;
+      let url = `#/list?uri=${encodeURIComponent(view.uri)}`;
+      if (tab) url += `&tab=${encodeURIComponent(tab)}`;
+      return url;
+    }
     case 'drafts':
       return '#/drafts';
+    case 'dm': {
+      const conv = (view as { conversationId?: string }).conversationId;
+      return conv ? `#/dm?conv=${encodeURIComponent(conv)}` : '#/dm';
+    }
+    case 'dmChat':
+      return `#/dm?conv=${encodeURIComponent(view.conversationId)}`;
     case 'components':
       return '#/components';
     case 'about':

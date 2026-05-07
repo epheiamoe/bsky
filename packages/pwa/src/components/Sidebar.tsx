@@ -20,6 +20,7 @@ const SIDEBAR_TABS = [
   { icon: 'message-square' as IconName, key: 'nav.dm', type: 'dm' as const, needsHandle: false },
   { icon: 'compass' as IconName, key: 'nav.search', type: 'search' as const, needsHandle: false },
   { icon: 'bookmark' as IconName, key: 'nav.bookmarks', type: 'bookmarks' as const, needsHandle: false },
+  { icon: 'list' as IconName, key: 'nav.lists', type: 'lists' as const, needsHandle: false },
   { icon: 'at-sign' as IconName, key: 'nav.profile', type: 'profile' as const, needsHandle: true },
   { icon: 'astroid-as-AI-Button' as IconName, key: 'nav.aiChat', type: 'aiChat' as const, needsHandle: false },
   { icon: 'pen-line' as IconName, key: 'nav.compose', type: 'compose' as const, needsHandle: false },

@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore, isWidgetEnabled, toggleWidget } from '@bsky/app';
+import { useProfile, useLists, useI18n, useTranslation, getCdnImageUrl, useScrollRestore, isWidgetEnabled, toggleWidget } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -51,6 +51,12 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
+
+  const { lists, loading: listsLoading, error: listsError } = useLists(client, actor);
+
+  // Local tab state that extends useProfile's tab with 'lists'
+  const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'lists'>(tab as 'posts' | 'replies');
+  useEffect(() => { if (tab !== 'lists') setActiveTab(tab as 'posts' | 'replies'); }, [tab]);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
@@ -370,7 +376,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           <button
             onClick={() => setTab('posts')}
             className={`flex-1 text-center py-3 text-sm font-medium transition-colors relative ${
-              tab === 'posts'
+              activeTab === 'posts'
                 ? 'text-primary'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
@@ -383,17 +389,83 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           <button
             onClick={() => setTab('replies')}
             className={`flex-1 text-center py-3 text-sm font-medium transition-colors relative ${
-              tab === 'replies'
+              activeTab === 'replies'
                 ? 'text-primary'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
             {t('profile.tabReplies')}
-            {tab === 'replies' && (
+            {activeTab === 'replies' && (
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-primary rounded-full" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('lists')}
+            className={`flex-1 text-center py-3 text-sm font-medium transition-colors relative ${
+              activeTab === 'lists'
+                ? 'text-primary'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
+          >
+            {t('profile.tabLists')}
+            {activeTab === 'lists' && (
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-primary rounded-full" />
+            )}
+          </button>
         </div>
+
+        {/* Lists tab content */}
+        {activeTab === 'lists' && (
+          <div className="flex-1 overflow-y-auto">
+            {listsLoading && lists.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : listsError ? (
+              <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+                {listsError}
+              </div>
+            ) : lists.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-text-secondary text-sm">
+                {t('lists.empty')}
+              </div>
+            ) : (
+              lists.map(list => {
+                const isMod = list.purpose === 'app.bsky.graph.defs#modlist';
+                return (
+                  <button
+                    key={list.uri}
+                    onClick={() => goTo({ type: 'listDetail', uri: list.uri })}
+                    className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-start gap-3"
+                  >
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                      isMod ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      <Icon name="list" size={18} />
+                    </div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-primary font-medium text-sm truncate">{list.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                          isMod ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {isMod ? t('lists.moderation') : t('lists.curated')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-text-secondary mt-0.5">
+                        <Icon name="users" size={12} />
+                        <span>{t('lists.memberCount', { n: list.listItemCount ?? 0 })}</span>
+                      </div>
+                      {list.description && (
+                        <p className="text-xs text-text-secondary mt-1 line-clamp-1">{list.description}</p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        )}
 
         {/* Loading skeleton for initial feed load */}
         {feedLoading && posts.length === 0 && (

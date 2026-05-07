@@ -17,6 +17,8 @@ import { ProfilePage } from './components/ProfilePage.js';
 import { SearchPage } from './components/SearchPage.js';
 import { NotifsPage } from './components/NotifsPage.js';
 import { BookmarkPage } from './components/BookmarkPage.js';
+import { ListsPage } from './components/ListsPage.js';
+import { ListDetailPage } from './components/ListDetailPage.js';
 import { DraftsPage } from './components/DraftsPage.js';
 import { ConvoListPage } from './components/ConvoListPage.js';
 import { DMChatPage } from './components/DMChatPage.js';
@@ -307,6 +309,10 @@ export function App() {
       }
       case 'bookmarks':
         return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
+      case 'lists':
+        return <ListsPage client={client} goBack={goBack} goTo={goTo} actor={(currentView as { actor?: string }).actor} />;
+      case 'listDetail':
+        return <ListDetailPage client={client} listUri={(currentView as { uri: string }).uri} goBack={goBack} goTo={goTo} initialTab={(currentView as { tab?: 'posts' | 'members' }).tab} />;
       case 'drafts':
         return <DraftsPage client={client} goBack={goBack} goTo={goTo} />;
       case 'dm':
