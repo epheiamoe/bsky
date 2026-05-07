@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useI18n, getWidgets, getEnabledWidgetIds, toggleWidget } from '@bsky/app';
+import { useI18n, getWidgets, getEnabledWidgetIds, toggleWidget, initEnabledWidgets } from '@bsky/app';
 import type { WidgetContext, AppView } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { getAppConfig, saveAppConfig } from '../hooks/useAppConfig.js';
@@ -18,6 +18,15 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
   const enabledIds = getEnabledWidgetIds();
 
   const context: WidgetContext = { viewType: 'components', goTo, client };
+
+  const moveWidget = (fromIdx: number, toIdx: number) => {
+    const ids = getEnabledWidgetIds();
+    const [moved] = ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, moved);
+    initEnabledWidgets(ids);
+    const cfg = getAppConfig();
+    saveAppConfig({ ...cfg, enabledWidgets: ids });
+  };
 
   if (allWidgets.length === 0) {
     return (
@@ -47,7 +56,7 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
       </header>
 
       <main className="max-w-content mx-auto p-4">
-        {allWidgets.filter(w => enabledIds.includes(w.id)).map(w => (
+        {allWidgets.filter(w => enabledIds.includes(w.id)).map((w, idx, arr) => (
           <div key={w.id} className="mb-4 border border-border rounded-xl p-4 bg-surface/50">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -59,21 +68,33 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
                   </span>
                 )}
               </div>
-              <button
-                onClick={() => {
-                  toggleWidget(w.id);
-                  setTick(t => t + 1);
-                  const config = getAppConfig();
-                  saveAppConfig({ ...config, enabledWidgets: getEnabledWidgetIds() });
-                }}
-                className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                  getEnabledWidgetIds().includes(w.id)
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : 'bg-primary text-white hover:bg-primary-hover'
-                }`}
-              >
-                {getEnabledWidgetIds().includes(w.id) ? t('action.disable') : t('action.enable')}
-              </button>
+              <div className="flex items-center gap-1">
+                {idx > 0 && (
+                  <button onClick={() => { moveWidget(idx, idx - 1); setTick(t => t + 1); }} className="text-text-secondary hover:text-primary transition-colors p-1" title="Move up">
+                    <Icon name="chevron-up" size={16} />
+                  </button>
+                )}
+                {idx < arr.length - 1 && (
+                  <button onClick={() => { moveWidget(idx, idx + 1); setTick(t => t + 1); }} className="text-text-secondary hover:text-primary transition-colors p-1" title="Move down">
+                    <Icon name="chevron-down" size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    toggleWidget(w.id);
+                    setTick(t => t + 1);
+                    const cfg = getAppConfig();
+                    saveAppConfig({ ...cfg, enabledWidgets: getEnabledWidgetIds() });
+                  }}
+                  className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                    getEnabledWidgetIds().includes(w.id)
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : 'bg-primary text-white hover:bg-primary-hover'
+                  }`}
+                >
+                  {getEnabledWidgetIds().includes(w.id) ? t('action.disable') : t('action.enable')}
+                </button>
+              </div>
             </div>
             {isViewLimited(w) ? (
               <p className="text-text-secondary/50 text-xs">
