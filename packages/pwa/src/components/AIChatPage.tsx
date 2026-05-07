@@ -114,8 +114,12 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   }, []);
 
   useEffect(() => {
-    if (autoScroll && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (autoScroll && scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const raf = requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+      return () => cancelAnimationFrame(raf);
     }
   }, [messages, loading, autoScroll]);
 

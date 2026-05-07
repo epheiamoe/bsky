@@ -51,7 +51,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
           expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>
+        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap break-all leading-relaxed`}>
           {args && <div className="mb-2 pb-2 border-b border-border/50 text-text-secondary/60 font-mono text-xs">参数: {args}</div>}
           {display.body}
         </div>

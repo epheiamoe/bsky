@@ -133,12 +133,15 @@ export function useAIChat(
         }
         // Sync assistant state with stored messages so editByIndex works
         const system = assistant.getMessages().filter(m => m.role === 'system');
-        const chatMsgs = record.messages.map(m => ({
-          role: m.role === 'tool_call' ? 'tool' as const : m.role === 'tool_result' ? 'tool' as const : m.role === 'thinking' ? 'tool' as const : m.role as 'user' | 'assistant' | 'system',
-          content: m.content,
-          name: m.toolName,
-          tool_call_id: m.toolCallId,
-        }));
+        const chatMsgs = record.messages
+          .filter(m => m.role !== 'thinking')
+          .filter(m => m.role !== 'tool_result' || m.toolCallId)
+          .map(m => ({
+            role: m.role === 'tool_call' || m.role === 'tool_result' ? 'tool' as const : m.role as 'user' | 'assistant' | 'system',
+            content: m.content,
+            name: m.toolName,
+            tool_call_id: m.toolCallId,
+          }));
         assistant.loadMessages([...system, ...chatMsgs]);
       } else {
         setMessages([]);
