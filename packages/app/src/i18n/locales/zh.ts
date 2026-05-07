@@ -259,7 +259,7 @@ const zh: LocaleMessages = {
   'login.passwordHintLink': 'Bluesky 设置',
   'login.passwordHintCreate': '中创建 → 粘贴到这里',
   'login.privacyNote': '凭据仅保存在你的浏览器本地，不会发送到 Bluesky 以外的任何服务器',
-  'login.needHint': '这不是你的账号密码——请在 Bluesky 设置中创建一个独立的 App Password'
+  'login.needHint': '这不是你的账号密码——请在 Bluesky 设置中创建一个独立的 App Password',
 
   // ── Settings ──
   'settings.title': '设置',

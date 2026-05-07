@@ -30,6 +30,7 @@ import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
 import { AIChatWidget, AIChatHeaderButtons } from './components/widgets/AIChatWidget.js';
 import { AboutPage } from './components/AboutPage.js';
+import { Icon } from './components/Icon.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {

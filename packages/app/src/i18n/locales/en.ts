@@ -247,7 +247,7 @@ const en: LocaleMessages = {
   'login.passwordHintLink': 'Bluesky Settings',
   'login.passwordHintCreate': '→ then paste it here.',
   'login.privacyNote': 'Credentials are stored only in your browser. Nothing is sent to any server other than Bluesky.',
-  'login.needHint': 'Not your account password — create a dedicated App Password in Bluesky Settings.'
+  'login.needHint': 'Not your account password — create a dedicated App Password in Bluesky Settings.',
 
   'settings.title': 'Settings',
   'settings.tabAccount': 'Account',

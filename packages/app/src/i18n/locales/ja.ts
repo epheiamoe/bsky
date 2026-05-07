@@ -247,7 +247,7 @@ const ja: LocaleMessages = {
   'login.passwordHintLink': 'Bluesky 設定',
   'login.passwordHintCreate': 'で作成 → ここに貼り付け',
   'login.privacyNote': '認証情報はブラウザ内にのみ保存され、Bluesky 以外のサーバーには送信されません',
-  'login.needHint': 'アカウントパスワードではありません — Bluesky 設定で専用の App パスワードを作成してください'
+  'login.needHint': 'アカウントパスワードではありません — Bluesky 設定で専用の App パスワードを作成してください',
 
   'settings.title': '設定',
   'settings.tabAccount': 'アカウント',
