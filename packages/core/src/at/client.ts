@@ -269,13 +269,13 @@ export class BskyClient {
   }
 
   async getLists(actor: string, limit = 50, cursor?: string, purposes?: string[]): Promise<GetListsResponse> {
-    const params: Record<string, string | number | string[]> = { actor, limit };
-    if (cursor) params.cursor = cursor;
-    if (purposes && purposes.length > 0) params.purposes = purposes;
+    const sp = new URLSearchParams({ actor, limit: String(limit) });
+    if (cursor) sp.set('cursor', cursor);
+    if (purposes) purposes.forEach(p => sp.append('purposes', p));
     const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
     return kyInstance.get('app.bsky.graph.getLists', {
-      searchParams: params,
+      searchParams: sp.toString(),
       ...headers,
     }).json<GetListsResponse>();
   }
@@ -310,12 +310,12 @@ export class BskyClient {
   }
 
   async getListsWithMembership(actor: string, limit = 50, cursor?: string, purposes?: string[]): Promise<GetListsWithMembershipResponse> {
-    const params: Record<string, string | number | string[]> = { actor, limit };
-    if (cursor) params.cursor = cursor;
-    if (purposes && purposes.length > 0) params.purposes = purposes;
+    const sp = new URLSearchParams({ actor, limit: String(limit) });
+    if (cursor) sp.set('cursor', cursor);
+    if (purposes) purposes.forEach(p => sp.append('purposes', p));
     return this.ky.get('app.bsky.graph.getListsWithMembership', {
       headers: this.getAuthHeaders(),
-      searchParams: params,
+      searchParams: sp.toString(),
     }).json<GetListsWithMembershipResponse>();
   }
 
