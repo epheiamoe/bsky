@@ -93,7 +93,7 @@ function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) =>
 
 export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
   const { t } = useI18n();
-  const { notifications, loading, refresh } = useNotifications(client);
+  const { notifications, loading, error, refresh } = useNotifications(client);
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
@@ -108,13 +108,19 @@ export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
           <h1 className="text-text-primary font-semibold text-lg"><Icon name="bell" size={20} /> {t('notifications.title')}</h1>
         </div>
         <button
-          onClick={refresh}
+          onClick={() => refresh()}
           disabled={loading}
           className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
         >
           {t('action.refresh')}
         </button>
       </div>
+
+      {error && (
+        <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       {loading && notifications.length === 0 ? (
         <div className="flex items-center justify-center py-12">

@@ -17,7 +17,7 @@ const ESTIMATED_POST_HEIGHT = 120;
 
 export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
   const { t } = useI18n();
-  const { bookmarks, loading, removeBookmark, refresh } = useBookmarks(client);
+  const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
@@ -42,13 +42,19 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
           <h1 className="text-text-primary font-semibold text-lg">{t('bookmarks.title')}</h1>
         </div>
         <button
-          onClick={refresh}
+          onClick={() => refresh()}
           disabled={loading}
           className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
         >
           {t('action.refresh')}
         </button>
       </div>
+
+      {error && (
+        <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
       {loading && bookmarks.length === 0 ? (
         <div className="flex items-center justify-center py-12">

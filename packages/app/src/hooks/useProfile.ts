@@ -39,7 +39,7 @@ export function useProfile(
 
   const loadedActor = useRef('');
 
-  const loadProfile = useCallback(async () => {
+  const loadProfile = useCallback(async (retried = false) => {
     if (!client || !actor) return;
     if (actor === loadedActor.current) return;
     loadedActor.current = actor;
@@ -57,6 +57,10 @@ export function useProfile(
       setIsFollowing(!!p.viewer?.following);
       setFollowUri(p.viewer?.following);
     } catch (e) {
+      if (!retried) {
+        await new Promise(r => setTimeout(r, 1500));
+        return loadProfile(true);
+      }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);

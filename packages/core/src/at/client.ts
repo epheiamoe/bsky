@@ -50,6 +50,8 @@ export class BskyClient {
   constructor() {
     const self = this;
 
+    let _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
+
     const withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void> = async (request, _options, response) => {
       if (!response.ok) {
         const body = await response.clone().text();
@@ -57,27 +59,38 @@ export class BskyClient {
           try {
             const err = JSON.parse(body);
             if (err.error === 'ExpiredToken' || err.error === 'InvalidToken') {
-              const session = self.session;
-              // Small delay avoids TLS connection contention with ky's keep-alive
-              await new Promise(r => setTimeout(r, 200));
-              try {
-                const refreshRes = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
-                  method: 'POST',
-                  headers: { Authorization: `Bearer ${session.refreshJwt}` },
-                });
-                if (refreshRes.ok) {
-                  self.session = await refreshRes.json() as CreateSessionResponse;
-                  const retryRes = await fetch(request.url, {
-                    method: request.method,
-                    headers: { Authorization: `Bearer ${self.session.accessJwt}` },
-                  });
-                  if (retryRes.ok) return retryRes;
-                }
-                // Refresh or retry failed — clear session
-                self.session = null;
-              } catch {
-                // Network error during refresh — keep session, let caller retry
+              // Shared refresh promise: concurrent 400s wait for the same refresh
+              if (!_refreshPromise) {
+                _refreshPromise = (async () => {
+                  const session = self.session!;
+                  await new Promise(r => setTimeout(r, 200));
+                  try {
+                    const r = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${session.refreshJwt}` },
+                    });
+                    if (r.ok) {
+                      self.session = await r.json() as CreateSessionResponse;
+                      return self.session;
+                    }
+                  } catch {
+                    // Network error during refresh — keep session
+                    return null;
+                  }
+                  self.session = null;
+                  return null;
+                })();
+                _refreshPromise.finally(() => { _refreshPromise = null; });
               }
+              const refreshed = await _refreshPromise;
+              if (refreshed && self.session) {
+                const retryRes = await fetch(request.url, {
+                  method: request.method,
+                  headers: { Authorization: `Bearer ${self.session.accessJwt}` },
+                });
+                if (retryRes.ok) return retryRes;
+              }
+              // Refresh or retry failed — will fall through to console.error below
             }
           } catch { /* non-JSON body */ }
         }

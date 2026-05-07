@@ -7,17 +7,23 @@ export function useBookmarks(client: BskyClient | null) {
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState<string | undefined>();
   const [bookmarkedUris, setBookmarkedUris] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (retried = false) => {
     if (!client) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await client.getBookmarks(50);
       setBookmarks(res.bookmarks.map(b => b.item));
       setCursor(res.cursor);
       setBookmarkedUris(new Set(res.bookmarks.map(b => b.subject.uri)));
     } catch (e) {
-      console.error('Bookmarks error:', e);
+      if (!retried) {
+        await new Promise(r => setTimeout(r, 1500));
+        return load(true);
+      }
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
@@ -49,5 +55,5 @@ export function useBookmarks(client: BskyClient | null) {
     else await addBookmark(uri, cid);
   }, [bookmarkedUris, addBookmark, removeBookmark]);
 
-  return { bookmarks, loading, isBookmarked, addBookmark, removeBookmark, toggleBookmark, refresh: load };
+  return { bookmarks, loading, error, isBookmarked, addBookmark, removeBookmark, toggleBookmark, refresh: load };
 }

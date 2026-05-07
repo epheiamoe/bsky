@@ -34,19 +34,28 @@ export function createTimelineStore(): TimelineStore {
     async load(client, feedUri) {
       store.loading = true;
       store._notify();
-      try {
-        const res = shouldUseTimeline(feedUri)
-          ? await client.getTimeline(20)
-          : await client.getFeed(feedUri!, 20);
-        store.posts = res.feed.map(f => f.post);
-        store.cursor = res.cursor;
-        store.error = null;
-      } catch (e) {
-        store.error = e instanceof Error ? e.message : String(e);
-      } finally {
-        store.loading = false;
-        store._notify();
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const res = shouldUseTimeline(feedUri)
+            ? await client.getTimeline(20)
+            : await client.getFeed(feedUri!, 20);
+          store.posts = res.feed.map(f => f.post);
+          store.cursor = res.cursor;
+          store.error = null;
+          store.loading = false;
+          store._notify();
+          return;
+        } catch (e) {
+          if (attempt === 0) {
+            // First load may race with JWT refresh; retry once after auth settles
+            await new Promise(r => setTimeout(r, 1500));
+            continue;
+          }
+          store.error = e instanceof Error ? e.message : String(e);
+        }
       }
+      store.loading = false;
+      store._notify();
     },
 
     async loadMore(client, feedUri) {
