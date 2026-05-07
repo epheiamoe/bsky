@@ -111,7 +111,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
   const onMoveDown = (context as any)?.onMoveDown as (() => void) | undefined;
 
   return (
-    <div className="flex flex-col max-h-[400px]">
+    <div className="flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-border">
         <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">

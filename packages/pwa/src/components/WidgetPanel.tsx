@@ -43,16 +43,18 @@ export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onRe
     <div className="flex flex-col gap-3 p-3 overflow-y-auto">
       {enabledWidgets.map((w, idx) => (
         <div key={w.id} className="border border-border rounded-xl bg-surface/50">
-          {w.render({
-            onClose: () => onCloseWidget(w.id),
-            context: {
-              ...context,
-              widgetIndex: idx,
-              widgetCount: enabledWidgets.length,
-              onMoveUp: () => onReorderWidget?.(idx, idx - 1),
-              onMoveDown: () => onReorderWidget?.(idx, idx + 1),
-            } as any,
-          })}
+          <div className="p-3">
+            {w.render({
+              onClose: () => onCloseWidget(w.id),
+              context: {
+                ...context,
+                widgetIndex: idx,
+                widgetCount: enabledWidgets.length,
+                onMoveUp: () => onReorderWidget?.(idx, idx - 1),
+                onMoveDown: () => onReorderWidget?.(idx, idx + 1),
+              } as any,
+            })}
+          </div>
         </div>
       ))}
     </div>
