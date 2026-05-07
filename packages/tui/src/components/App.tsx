@@ -558,8 +558,9 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
     // ── ListDetail-specific ──
     if (currentView.type === 'listDetail') {
+      const dItems = listDetailTab === 'posts' ? listDetail.feed : listDetail.members;
       if (key.tab) setListDetailTab(t => t === 'posts' ? 'members' : 'posts');
-      else if (k === 'j') setListDetailIdx(i => Math.min(items.length - 1, i + 1));
+      else if (k === 'j') setListDetailIdx(i => Math.min(dItems.length - 1, i + 1));
       else if (k === 'k') setListDetailIdx(i => Math.max(0, i - 1));
       else if (k === 'r') listDetail.refresh();
       else if (k === 'Enter') { /* handled in render */ }
