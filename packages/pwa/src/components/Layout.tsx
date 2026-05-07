@@ -109,7 +109,6 @@ export function Layout({
   }, [config, onConfigChange]);
 
   const handleReorderWidget = useCallback((fromIdx: number, toIdx: number) => {
-    console.log('[layout] reorder', fromIdx, '->', toIdx, 'ids before:', getEnabledWidgetIds());
     const ids = getEnabledWidgetIds();
     const [moved] = ids.splice(fromIdx, 1);
     ids.splice(toIdx, 0, moved);
@@ -118,7 +117,6 @@ export function Layout({
     saveAppConfig(updated);
     onConfigChange(updated);
     setWidgetTick(t => t + 1);
-    console.log('[layout] reorder done, ids after:', getEnabledWidgetIds());
   }, [config, onConfigChange]);
 
   const authenticated = client.isAuthenticated();

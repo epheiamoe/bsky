@@ -104,12 +104,6 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
 
   const viewingTagRegex = /<currently_viewing>([\s\S]*?)<\/currently_viewing>/;
 
-  // Reorder arrows from WidgetPanel context
-  const widgetIdx = (context as any)?.widgetIndex as number | undefined;
-  const widgetCount = (context as any)?.widgetCount as number | undefined;
-  const onMoveUp = (context as any)?.onMoveUp as (() => void) | undefined;
-  const onMoveDown = (context as any)?.onMoveDown as (() => void) | undefined;
-
   return (
     <div className="flex flex-col">
       {/* Header */}
@@ -125,19 +119,6 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
           )}
           <button onClick={handleNewChat} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="New chat">
             <Icon name="plus" size={14} />
-          </button>
-          {widgetIdx !== undefined && widgetIdx > 0 && onMoveUp && (
-            <button onClick={() => { console.log('[widget] move up', widgetIdx); onMoveUp(); }} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move up">
-              <Icon name="chevron-up" size={14} />
-            </button>
-          )}
-          {widgetIdx !== undefined && widgetIdx < (widgetCount ?? 1) - 1 && onMoveDown && (
-            <button onClick={() => { console.log('[widget] move down', widgetIdx); onMoveDown(); }} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move down">
-              <Icon name="chevron-down" size={14} />
-            </button>
-          )}
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5">
-            <Icon name="x" size={14} />
           </button>
         </div>
       </div>
