@@ -1,27 +1,27 @@
 import { getWidgetsForView, getWidget } from './widgetRegistry.js';
 import type { WidgetDefinition } from './widgetRegistry.js';
 
-const _enabled: Set<string> = new Set();
+// Use array instead of Set to preserve order reliably
+let _order: string[] = [];
 
 export function initEnabledWidgets(ids: string[]): void {
-  _enabled.clear();
-  for (const id of ids) _enabled.add(id);
+  _order = [...ids];
 }
 
 export function getEnabledWidgetIds(): string[] {
-  return [..._enabled];
+  return [..._order];
 }
 
 export function isWidgetEnabled(id: string): boolean {
-  return _enabled.has(id);
+  return _order.includes(id);
 }
 
 export function enableWidget(id: string): void {
-  if (getWidget(id)) _enabled.add(id);
+  if (getWidget(id) && !_order.includes(id)) _order.push(id);
 }
 
 export function disableWidget(id: string): void {
-  _enabled.delete(id);
+  _order = _order.filter(x => x !== id);
 }
 
 // ── AI Chat widget session bridge ──
@@ -54,7 +54,7 @@ export function toggleWidget(id: string): boolean {
 
 export function getEnabledWidgetsForView(viewType: string): (WidgetDefinition & { enabled: boolean })[] {
   const all = getWidgetsForView(viewType);
-  return all.map(w => ({ ...w, enabled: _enabled.has(w.id) }));
+  return all.map(w => ({ ...w, enabled: _order.includes(w.id) }));
 }
 
 // ── Compose draft bridge (so widgets in right sidebar can read/replace draft) ──
