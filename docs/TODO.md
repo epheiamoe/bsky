@@ -42,9 +42,15 @@
 | **资料页 DM 按钮** | N/A | ✅ | 互相关注者资料页，SVG-only 私信按钮 |
 | **编辑个人资料** | N/A | ✅ | 底部浮窗：头像/横幅/名称/描述 + putProfile API |
 | **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
-| **页面动画** | ⬜ | ⬜ | 其他页面加微动效（DM 页面已有 fadeIn/slideUp/messageIn） |
+| **页面动画** | ⬜ | ✅ | 11 页面 fadeIn + PostCard hover + PostActionsRow 按压 + NotifsPage/DraftsPage 交错入场 |
 | **虚拟滚动** | N/A | ✅ | FeedTimeline / ProfilePage / BookmarkPage |
-| **滚动位置恢复** | ✅ | ✅ | TUI: idx state; PWA: 像素值模式 |
+| **滚动位置恢复** | ✅ | ✅ | TUI: idx state; PWA: 像素值模式 + requestAnimationFrame |
+| **组件持久化** | ⬜ | ✅ | widgetStore.ts _onWidgetToggle 统一回调 + saveAppConfig |
+| **组件排序** | ⬜ | ✅ | 侧边栏 + 组件页 chevron-up/down 排序 |
+| **AI Chat 卡片** | ⬜ | ✅ | 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 31 工具格式化) |
+| **AI Chat /view** | ⬜ | ✅ | /view 命令注入当前页面上下文给 AI |
+| **AI Chat Widget** | ⬜ | ✅ | 侧边栏 AI 对话（持久化会话 + 折叠卡片 + 新对话/打开按钮） |
+| **关于页面** | ✅ | ✅ | PWA(`#/about`) + TUI(`?` 键)，显示 commit hash 构建时注入 |
 | **推送通知** | N/A | ⬜ | Web Push API |
 | **资料页预览 (组件)** | ⬜ | ✅ | ProfilePreviewWidget — thread 视图置顶显示作者资料 |
 | **资料页 AI 按钮** | ✅ | ✅ | TUI: a 键, PWA: 🤖 AI 按钮 |

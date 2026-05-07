@@ -6,19 +6,20 @@
 
 1. **`AGENTS.md`** — 架构原则、安全红线、命令参考
 2. **`docs/CONTEXT.md`** — 本文（上下文恢复 + 关键结论 + 教训）
-3. **`docs/ARCHITECTURE.md`** — 系统架构
-4. **`docs/PACKAGES.md`** — 各包职责与文件清单
-5. **`docs/HOOKS.md`** — 所有 hook 签名
-6. **`docs/KEYBOARD.md`** — TUI 快捷键
-7. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
-8. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
-9. **`CHANGELOG.md`** — 版本历史
-10. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-11. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
+3. **`docs/LESSONS.md`** — 本次会话详细教训（widget 索引、tool_call_id、双重格式化等）
+4. **`docs/ARCHITECTURE.md`** — 系统架构
+5. **`docs/PACKAGES.md`** — 各包职责与文件清单
+6. **`docs/HOOKS.md`** — 所有 hook 签名
+7. **`docs/KEYBOARD.md`** — TUI 快捷键
+8. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+9. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+10. **`CHANGELOG.md`** — 版本历史
+11. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+12. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
 
 ## 版本
 
-**v0.5.2** — DM Phase 2 + 滚动修复 + 资料页 EditProfile + 虚拟滚动 + 组件持久化
+**v0.5.3** — AI Chat 页面重构 + 侧边栏 Widget 系统 + 关于页面 + 大量 bug 修复
 
 ## 项目状态
 
@@ -28,22 +29,18 @@
 - **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
 - **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
-- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / 我 / AI 对话 / 发帖 / **组件**
-- **右侧组件栏** (lg+) : 当前视图启用的 widgets，页面限定组件置顶
-- **组件页** `#/components` : 大屏小屏统一入口，启用/禁用所有 widget
-- **JSON 导出/导入**: `bsky-chat-v1` 格式，含完整 tool_call_id 等元数据（暂不含图片）
-- **AT Protocol 草稿**: `app.bsky.draft.*` 通过 PDS 私有存储，本地 IndexedDB(TUI: JSON 文件) 回退
-- **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应(8 常用) + 引用帖 (URI 粘贴自动检测) + 删除 + 静音 + 加载更早 + PWA 动画
-- **DM 鉴权**: `api.bsky.chat` 直连 + session JWT + auto-refresh（与主 API 共用 `afterResponse` 钩子）
-- **资料页 DM 按钮**: 互相关注者的资料页 AI 按钮左边显示 SVG-only 私信按钮
-- **编辑个人资料**: 自己的资料页底部浮窗编辑头像/横幅/名称/描述
-- **滚动位置恢复**: 时间线改为像素值恢复（解决 5-6 帖偏移）；书签页添加虚拟滚动
-- **草稿黄点**: 仅显示未保存成功的草稿数量（syncStatus !== 'synced'）
-- **帖子串发布**: 多帖 compose，顺序 createRecord + reply 链
-- **ALT 文本**: 上传时输入 + 提交前缺失警告 + PWA SVG 徽章 + TUI 完整显示
-- **PWA 润色修复**: 目标不再是 hardcoded post[0]，改为第一个有文字帖子
-- **TUI 润色**: `f` 键 → 输入要求 → AI 润色 → [R]替换/[C]复制/[Esc]取消
-- **组件状态持久化**: Layout.tsx 调用 `saveAppConfig()` 写入 localStorage
+- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / 资料 / AI 对话 / 发帖 / 组件
+- **右侧组件栏** (lg+ 390px) : 6 widgets — 推荐关注、推荐动态源、趋势、润色(compose)、资料页预览(thread)、AI对话。统一 header bar（icon+title+↑+↓+×），widget 纯内容。
+- **组件页** `#/components` : ↑↓ 箭头排序 + 启用/禁用
+- **关于页面** `#/about` : PWA+TUI，显示 repo URL / commit hash（Vite 构建时注入 `__COMMIT_HASH__`）/ build time / 描述 / 反馈 / 联系
+- **AI Chat**: 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 人类可读结果), 31 工具格式化, `/view` 命令给 AI 注入当前页面上下文
+- **AI Chat 侧边栏 Widget**: 持久化会话（`_aiChatSessionId`）、折叠卡片、新对话/全页打开按钮
+- **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 删除 + 静音 + 加载更早
+- **页面动画**: 11 页面 fadeIn 入场、PostCard hover、PostActionsRow 按压反馈、NotifsPage/DraftsPage 交错入场
+- **滚动**: 像素值恢复（非索引）、AIChatPage requestAnimationFrame 精准滚动、visualViewport 移动键盘适应
+- **JWT 刷新**: `withRefresh` 并发锁（`_refreshPromise` 缓存）、时间线首次加载自动重试
+- **API 重试**: ky 实例显式 `retry: { statusCodes: [408,413,429,500,502,503,504] }`
+- **tool_call_id 修复**: 3 个死亡路径全修复（assistant.ts yield、useAIChat 恢复、mapMessages）
 
 ## 🔴 关键教训
 
@@ -214,6 +211,36 @@ import { Icon } from './Icon.js';
 | `usePostActions.ts` | 赞/转状态+计数，所有视图共享 | `likePost()`, `isPostLiked()`, `getLikeCount()`, `seedPostViewers()` |
 | `useActiveFeed.ts` | 上次活跃 feed URI | `getLastFeedUri()`, `setLastFeedUri()` |
 | `useScrollRestore.ts` | 跨视图滚动位置缓存 | `useScrollRestore(key, ref, ready)` |
+| `widgetStore.ts` | Widget 状态管理 (v0.5.3) | `initEnabledWidgets`, `getEnabledWidgetIds`, `toggleWidget`, `initAIChatSession`, `setWidgetToggleCallback` |
+
+### AI 共享组件（`packages/pwa/src/components/ai/`）
+```tsx
+import { ThinkingCard, ToolCard, UserMessage, AssistantMessage, formatToolResult } from './ai/index.js';
+```
+- **ThinkingCard**: 可折叠推理卡片，brain SVG，紫色主题
+- **ToolCard**: 可折叠工具结果卡片，wrench SVG，琥珀主题，`formatToolResult` 格式化 31 种工具输出
+- **UserMessage/AssistantMessage**: Markdown 渲染用户/AI 消息
+- AIChatPage 和 AIChatWidget 共同引用，`compact` prop 控制大小
+
+### Widget 系统 (v0.5.3 重构)
+```
+WidgetPanel 统一 header:
+  [icon] [title]              [↑] [↓] [×]
+Widget 纯内容（无标题、无关闭按钮）
+```
+- 6 widgets: SuggestedFollows, SuggestedFeeds, Trends, Polish(compose), ProfilePreview(thread), AIChat(all)
+- 组件页 `#/components` 提供 ↑↓ 排序
+- Widget 持久化回调：`toggleWidget()` → `_onWidgetToggle(id)` → `saveAppConfig()`
+- AI Chat Widget: `_aiChatSessionId` 持久化会话，`/view` 命令支持
+- AIChatPage 进入时自动 `disableWidget('aiChat')`
+
+### /view 命令（注入上下文给 AI）
+```
+输入 /view → 自动检测当前页面 → 替换为 <currently_viewing> 标签
+历史消息中 <currently_viewing> 渲染为独立信息卡片
+支持的页面：帖子(uri)、用户(@handle)、搜索(query)
+私人页面(书签/草稿/DM)不支持
+```
 
 ### 统一帖子操作栏（PWA）
 ```tsx
@@ -279,6 +306,14 @@ cd packages/core && npx vitest run --config vitest.config.ts
 12. DraftStore 的 `saveDraft/syncDraft/refreshDrafts` 使用模块级 `_clientRef`，不可闭包捕获 client
 13. 滚动位置恢复必须使用**像素值**（`scrollTop`），不能用索引（`scrollToIndex`）——虚拟器在 ResizeObserver 触发前使用估算高度，造成系统性偏移。见 `docs/SCROLL.md`
 14. chat API 直连 `api.bsky.chat` + session JWT，不要走 PDS 代理（返回 501）。`chatKy` 也挂 `afterResponse` 钩子自动刷新 JWT
+15. Widget 排序索引必须用完整 `enabledIds.indexOf(w.id)`，不能用过滤后的视觉索引 —— view-limited widget 排除后索引偏移。见 `docs/LESSONS.md` 第 1 课
+16. SVG 图标在共享组件（`ai/` 目录）中必须硬编码为 inline SVG 常量，不可依赖 `Icon.tsx` 的 glob loader
+17. Widget 职责边界：WidgetPanel 统一提供 header（icon+title+^+v+x），widget 只负责内容区域
+18. Widget 持久化：所有 module-level `toggleWidget()` 调用通过 `_onWidgetToggle` 回调自动 `saveAppConfig()`
+19. AI 卡片动画：不可条件渲染，必须用 CSS `max-h` + `opacity` transition，外层容器加 `relative`
+20. 流式输出 scroll：用 `requestAnimationFrame(() => container.scrollTop = container.scrollHeight)`，放在 effect 中延迟到 paint 后执行
+21. 移动键盘避免空白：用 `window.visualViewport.height` 而非 `100dvh` 设容器高度
+22. ky retry：显式 `retry: { limit: 1, statusCodes: [408,413,429,500,502,503,504] }`，不依赖默认值
 
 ## 关键文件速查
 
@@ -321,6 +356,13 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/icons/plus-circle.svg` | 添加图标 |
 | `docs/DM.md` | DM 公开文档（API/鉴权/模型/教训） |
 | `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范 |
+| `docs/LESSONS.md` | 本期会话详细教训（上下文压缩快速恢复） |
+| `packages/pwa/src/components/ai/` | AI 共享组件（ThinkingCard, ToolCard, UserMessage, AssistantMessage, formatToolResult） |
+| `packages/pwa/src/components/ai/formatToolResult.ts` | 31 工具结果人类可读格式化 |
+| `packages/pwa/src/components/widgets/AIChatWidget.tsx` | 侧边栏 AI 对话 Widget（持久化, /view） |
+| `packages/pwa/src/components/AboutPage.tsx` | PWA 关于页面 |
+| `packages/pwa/vite.config.ts` | +`define.__COMMIT_HASH__/__COMMIT_DESC__/__BUILD_TIME__` |
+| `packages/app/src/hooks/widgetStore.ts` | Widget 状态 (v0.5.3: _order 数组 + _onWidgetToggle 回调 + _aiChatSessionId) |
 | `packages/pwa/src/utils/compressImage.ts` | PWA 图片自动压缩 |
 | `packages/pwa/src/services/indexeddb-draft-storage.ts` | IndexedDB draft 存储（PWA） |
 | `packages/pwa/src/hooks/useHashRouter.ts` | 哈希路由（含 `/drafts`/`/components`） |
