@@ -97,11 +97,6 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const importFileRef = useRef<HTMLInputElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
 
-  // Scroll
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [autoScroll, setAutoScroll] = useState(true);
-
   // Visual Viewport height — updates when keyboard opens/closes
   const [visualHeight, setVisualHeight] = useState<number | null>(null);
   useEffect(() => {
@@ -113,15 +108,10 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     return () => vv.removeEventListener('resize', update);
   }, []);
 
-  useEffect(() => {
-    if (autoScroll && scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      const raf = requestAnimationFrame(() => {
-        container.scrollTop = container.scrollHeight;
-      });
-      return () => cancelAnimationFrame(raf);
-    }
-  }, [messages, loading, autoScroll]);
+  // Scroll refs — user-controlled
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [autoScroll, setAutoScroll] = useState(true);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
