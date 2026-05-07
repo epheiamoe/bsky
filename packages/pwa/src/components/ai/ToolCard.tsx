@@ -35,17 +35,27 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
           ▸
         </span>
       </div>
-      {!expanded && (
-        <div className={`${compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'} text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis`}>
-          {display.summary}
-        </div>
-      )}
-      {expanded && (
+
+      {/* Preview line — fades out on expand */}
+      <div className={`transition-all duration-200 ease-out ${
+        compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'
+      } text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis ${
+        expanded ? 'opacity-0 invisible absolute inset-x-0 pointer-events-none' : 'opacity-100 visible'
+      }`}>
+        {display.summary}
+      </div>
+
+      {/* Expanded content — animated max-height + opacity */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
         <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>
           {args && <div className="mb-2 pb-2 border-b border-border/50 text-text-secondary/60 font-mono text-xs">参数: {args}</div>}
           {display.body}
         </div>
-      )}
+      </div>
     </div>
   );
 }

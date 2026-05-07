@@ -26,16 +26,26 @@ export function ThinkingCard({ content, expanded, onToggle, compact }: ThinkingC
           {t('ai.thinkingCard')}
         </span>
       </div>
-      {!expanded && (
-        <div className={`${compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'} text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis`}>
-          {firstLine}
-        </div>
-      )}
-      {expanded && (
+
+      {/* Preview line — fades out on expand */}
+      <div className={`transition-all duration-200 ease-out ${
+        compact ? 'px-3 py-1.5 text-[12px]' : 'px-3.5 py-2.5 text-[14px]'
+      } text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis ${
+        expanded ? 'opacity-0 invisible absolute inset-x-0 pointer-events-none' : 'opacity-100 visible'
+      }`}>
+        {firstLine}
+      </div>
+
+      {/* Expanded content — animated max-height + opacity */}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
         <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>
           {content}
         </div>
-      )}
+      </div>
     </div>
   );
 }
