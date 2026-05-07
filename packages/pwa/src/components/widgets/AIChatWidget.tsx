@@ -151,7 +151,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
               <div key={gi} className="flex flex-col items-end gap-0.5">
                 {match && (
                   <div className="flex justify-start w-full">
-                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-2.5 py-1.5 text-[11px] text-text-secondary/70 max-w-[90%]">
+                    <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-2.5 py-1.5 text-[11px] text-text-secondary/70 max-w-[90%] break-all">
                       📋 {match[1]!.split('\n')[0]}
                     </div>
                   </div>
@@ -179,7 +179,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
       {/* /view preview card */}
       {inputStartsWithView && (
         <div className="px-2 pt-1">
-          <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-2.5 py-1.5 text-[11px] text-text-secondary/70">
+          <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-2.5 py-1.5 text-[11px] text-text-secondary/70 break-all">
             📋 {viewContext}
           </div>
         </div>

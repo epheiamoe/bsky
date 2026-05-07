@@ -501,7 +501,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
           {/* ── /view preview card ── */}
           {input.trimStart().startsWith('/view') && (contextPost || contextProfile) && (
             <div className="flex justify-center">
-              <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs text-text-secondary/70 max-w-[85%]">
+              <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-1.5 text-xs text-text-secondary/70 max-w-[85%] break-all">
                 📋 {contextPost ? `帖子: ${contextPost}` : `用户: @${contextProfile}`}
               </div>
             </div>

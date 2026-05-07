@@ -108,6 +108,17 @@ export function Layout({
     onConfigChange(updated);
   }, [config, onConfigChange]);
 
+  const handleReorderWidget = useCallback((fromIdx: number, toIdx: number) => {
+    const ids = getEnabledWidgetIds();
+    const [moved] = ids.splice(fromIdx, 1);
+    ids.splice(toIdx, 0, moved);
+    initEnabledWidgets(ids);
+    const updated = { ...config, enabledWidgets: ids };
+    saveAppConfig(updated);
+    onConfigChange(updated);
+    setWidgetTick(t => t + 1);
+  }, [config, onConfigChange]);
+
   const authenticated = client.isAuthenticated();
   const handle = authenticated ? client.getHandle() : null;
 
@@ -241,6 +252,7 @@ export function Layout({
             enabledIds={enabledIds}
             context={widgetContext}
             onCloseWidget={handleToggleWidget}
+            onReorderWidget={handleReorderWidget}
           />
         </aside>
       </div>
