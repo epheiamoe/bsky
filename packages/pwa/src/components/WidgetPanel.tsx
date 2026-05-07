@@ -15,11 +15,11 @@ export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onRe
   const { t } = useI18n();
 
   const availableWidgets = useMemo(() => getWidgetsForView(viewType), [viewType]);
+  // Filter to visible widgets, keeping enabledIds order
+  const widgetMap = useMemo(() => new Map(availableWidgets.map(w => [w.id, w])), [availableWidgets]);
   const enabledWidgets = useMemo(() => {
-    // Respect enabledIds order (not registration order)
-    const widgetMap = new Map(availableWidgets.map(w => [w.id, w]));
     return enabledIds.map(id => widgetMap.get(id)).filter((w): w is NonNullable<typeof w> => !!w);
-  }, [availableWidgets, enabledIds]);
+  }, [widgetMap, enabledIds]);
   const showArrows = enabledWidgets.length > 1;
 
   if (availableWidgets.length === 0) {
@@ -44,29 +44,39 @@ export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onRe
 
   return (
     <div className="flex flex-col gap-3 p-3 overflow-y-auto">
-      {enabledWidgets.map((w, idx) => (
-        <div key={w.id} className="border border-border rounded-xl bg-surface/50 relative">
-          {/* Reorder + close controls pinned top-right */}
-          <div className="absolute top-1 right-1 z-20 flex items-center gap-0.5">
-            {showArrows && idx > 0 && (
-              <button onClick={(e) => { e.stopPropagation(); onReorderWidget?.(idx, idx - 1); }} className="text-text-secondary/60 hover:text-primary transition-colors p-0.5" title="Move up">
-                <Icon name="chevron-up" size={12} />
-              </button>
-            )}
-            {showArrows && idx < enabledWidgets.length - 1 && (
-              <button onClick={(e) => { e.stopPropagation(); onReorderWidget?.(idx, idx + 1); }} className="text-text-secondary/60 hover:text-primary transition-colors p-0.5" title="Move down">
-                <Icon name="chevron-down" size={12} />
-              </button>
-            )}
-            <button onClick={(e) => { e.stopPropagation(); onCloseWidget(w.id); }} className="text-text-secondary/60 hover:text-red-500 transition-colors p-0.5 ml-0.5" title="Close">
-              <Icon name="x" size={12} />
-            </button>
+      {enabledWidgets.map((w, visualIdx) => {
+        // Find the real index in the full enabledIds array (for reorder accuracy)
+        const realIdx = enabledIds.indexOf(w.id);
+        return (
+          <div key={w.id} className="border border-border rounded-xl bg-surface/50">
+            {/* Unified header: icon + title + arrows + close */}
+            <div className="flex items-center justify-between px-3 pt-3 pb-0">
+              <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                <Icon name={w.icon as any} size={14} />
+                {t(w.titleKey)}
+              </span>
+              <div className="flex items-center gap-0.5">
+                {showArrows && realIdx > 0 && (
+                  <button onClick={() => onReorderWidget?.(realIdx, realIdx - 1)} className="text-text-secondary/60 hover:text-primary transition-colors p-0.5" title="Move up">
+                    <Icon name="chevron-up" size={12} />
+                  </button>
+                )}
+                {showArrows && realIdx >= 0 && realIdx < enabledIds.length - 1 && (
+                  <button onClick={() => onReorderWidget?.(realIdx, realIdx + 1)} className="text-text-secondary/60 hover:text-primary transition-colors p-0.5" title="Move down">
+                    <Icon name="chevron-down" size={12} />
+                  </button>
+                )}
+                <button onClick={() => onCloseWidget(w.id)} className="text-text-secondary/60 hover:text-red-500 transition-colors p-0.5 ml-0.5" title="Close">
+                  <Icon name="x" size={12} />
+                </button>
+              </div>
+            </div>
+            <div className="p-3">
+              {w.render({ onClose: () => onCloseWidget(w.id), context })}
+            </div>
           </div>
-          <div className="p-3 pt-5">
-            {w.render({ onClose: () => onCloseWidget(w.id), context })}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -55,12 +55,6 @@ export function PolishWidget({ onClose, context }: WidgetProps) {
 
   return (
     <div className="flex flex-col gap-3 text-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-text-primary">{t('action.polish')}</h3>
-        <button onClick={onClose} className="text-text-secondary hover:text-text-primary p-0.5">
-          <Icon name="x" size={14} />
-        </button>
-      </div>
 
       <div className="text-xs text-text-secondary">
         {draft ? draft.slice(0, 120) + (draft.length > 120 ? '…' : '') : t('action.polish') + ' (no draft)'}

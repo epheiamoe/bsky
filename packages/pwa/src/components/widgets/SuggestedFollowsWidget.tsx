@@ -41,12 +41,6 @@ export function SuggestedFollowsWidget({ onClose, context }: WidgetProps) {
 
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-text-primary">{t('widget.suggestedFollows')}</h3>
-        <button onClick={onClose} className="text-text-secondary hover:text-text-primary p-0.5">
-          <Icon name="x" size={14} />
-        </button>
-      </div>
       {loading && <p className="text-text-secondary text-xs">{t('status.loading')}</p>}
       {error && <p className="text-red-500 text-xs">{error}</p>}
       {!loading && suggestions.length === 0 && (
