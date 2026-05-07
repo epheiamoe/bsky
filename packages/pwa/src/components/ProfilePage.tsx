@@ -258,7 +258,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
               </div>
             )}
 
-            <div className="flex gap-2 items-end">
+            <div className="flex gap-2 items-center">
               {isOwn ? (
                 <button
                   onClick={() => setShowEditProfile(true)}

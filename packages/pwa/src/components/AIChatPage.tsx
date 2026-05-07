@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAIChat, useChatHistory, useI18n } from '@bsky/app';
+import { useAIChat, useChatHistory, useI18n, enableWidget } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { IndexedDBChatStorage } from '../services/indexeddb-chat-storage.js';
@@ -595,6 +595,14 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
           )}
           <div className="flex items-end gap-2 max-w-3xl mx-auto">
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+            <button
+              onClick={() => { enableWidget('aiChat'); goTo({ type: 'feed' }); }}
+              className="shrink-0 w-10 h-10 rounded-lg border border-border text-text-secondary hover:text-primary hover:border-primary transition-colors flex items-center justify-center"
+              title="Open in Widgets"
+              aria-label="Open in Widgets"
+            >
+              <Icon name="arrow-big-right" size={18} />
+            </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}

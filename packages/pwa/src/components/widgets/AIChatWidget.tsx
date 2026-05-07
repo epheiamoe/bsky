@@ -106,19 +106,19 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
 
   return (
     <div className="flex flex-col">
+      {/* Toolbar: open in page + new chat (outside scrollable area) */}
+      <div className="flex items-center justify-end gap-1 px-3 pt-0.5 pb-1">
+        {goTo && (
+          <button onClick={handleOpenInPage} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Open in full page">
+            <Icon name="arrow-big-right" size={12} />
+          </button>
+        )}
+        <button onClick={handleNewChat} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="New chat">
+          <Icon name="plus" size={12} />
+        </button>
+      </div>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-        {/* Toolbar: open in page + new chat */}
-        <div className="flex items-center justify-end gap-1 px-1 pb-1">
-          {goTo && (
-            <button onClick={handleOpenInPage} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Open in full page">
-              <Icon name="arrow-big-right" size={12} />
-            </button>
-          )}
-          <button onClick={handleNewChat} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="New chat">
-            <Icon name="plus" size={12} />
-          </button>
-        </div>
         {messageGroups.length === 0 && !loading && (
           <div className="text-[12px] text-text-secondary/60 text-center mt-6 px-2">
             <p>{t('ai.emptyPrompt')}</p>

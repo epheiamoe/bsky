@@ -118,7 +118,8 @@ export const P_CONCISE = '回答简练。';
  */
 export function PF_CURRENT_TIME(): string {
   const now = new Date();
-  return `当前时间: ${now.toISOString().slice(0, 19).replace('T', ' ')} (UTC+0)，星期${['日','一','二','三','四','五','六'][now.getUTCDay()]}。`;
+  const local = now.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
+  return `当前时间: ${local}，星期${['日','一','二','三','四','五','六'][now.getDay()]}。`;
 }
 
 /**

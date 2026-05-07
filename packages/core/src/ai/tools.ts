@@ -430,7 +430,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_profile',
-        description: 'Get a user\'s profile',
+        description: "Get a user's profile by DID or handle. Returns full profile (handle, displayName, description, counts). Use this to resolve a DID to a handle and vice versa.",
         inputSchema: {
           type: 'object',
           properties: { actor: { type: 'string', description: 'The DID or handle of the user' } },

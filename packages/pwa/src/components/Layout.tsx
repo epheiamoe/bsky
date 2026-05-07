@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, disableWidget, setWidgetToggleCallback, getWidgetsForView } from '@bsky/app';
@@ -91,10 +91,19 @@ export function Layout({
     return () => setWidgetToggleCallback(null);
   }, [config, onConfigChange]);
 
-  // Disable aiChat widget when entering the full AI chat page
+  // Disable aiChat widget when entering the full AI chat page; restore on exit
+  const widgetOrderRef = useRef<string[]>([]);
   useEffect(() => {
     if (currentView.type === 'aiChat') {
-      disableWidget('aiChat');
+      const current = getEnabledWidgetIds();
+      if (current.includes('aiChat')) {
+        widgetOrderRef.current = current;
+        disableWidget('aiChat');
+        setWidgetTick(t => t + 1);
+      }
+    } else if (widgetOrderRef.current.length > 0) {
+      initEnabledWidgets(widgetOrderRef.current);
+      widgetOrderRef.current = [];
       setWidgetTick(t => t + 1);
     }
   }, [currentView.type]);
@@ -197,10 +206,11 @@ export function Layout({
             </button>
             <button
               onClick={() => goTo({ type: 'about' })}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 hidden md:block"
+              className="text-text-secondary hover:text-text-primary transition-colors p-1 hidden md:flex items-center gap-1 text-xs"
               aria-label={t('nav.about')}
             >
               <Icon name="badge-question-mark" size={16} />
+              <span>{t('nav.about')}</span>
             </button>
           </div>
         </div>
