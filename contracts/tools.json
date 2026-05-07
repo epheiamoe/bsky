@@ -409,6 +409,89 @@
     "readonly": false
   },
   {
+    "name": "view_image",
+    "description": "View an image from a post by downloading the blob and sending to the vision model for analysis. Only works when vision mode is enabled.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "uri": { "type": "string", "description": "The AT URI of the post containing the image" }
+      },
+      "required": ["uri"]
+    },
+    "endpoint": "Composite tool (downloadBlob + vision API)",
+    "readonly": true
+  },
+  {
+    "name": "get_lists",
+    "description": "Get all lists created by a user. Lists can be curatelist (curated for feeds) or modlist (moderation for mute/block).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "actor": { "type": "string", "description": "Handle or DID of the user whose lists to fetch. Defaults to current user." }
+      },
+      "required": []
+    },
+    "endpoint": "app.bsky.graph.getLists",
+    "readonly": true
+  },
+  {
+    "name": "get_list_feed",
+    "description": "Get recent posts from members of a specific list.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "list": { "type": "string", "description": "AT-URI of the list" },
+        "limit": { "type": "number", "description": "Number of posts to fetch (default 30)" }
+      },
+      "required": ["list"]
+    },
+    "endpoint": "app.bsky.feed.getListFeed",
+    "readonly": true
+  },
+  {
+    "name": "create_list",
+    "description": "Create a new user list. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "List name (1-64 characters)" },
+        "purpose": { "type": "string", "description": "List purpose: curated or moderation", "enum": ["curated", "moderation"] },
+        "description": { "type": "string", "description": "Optional list description (up to 300 characters)" }
+      },
+      "required": ["name", "purpose"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.list)",
+    "readonly": false
+  },
+  {
+    "name": "add_to_list",
+    "description": "Add a user to a list. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "list": { "type": "string", "description": "AT-URI of the list to add to" },
+        "subject": { "type": "string", "description": "DID of the user to add" }
+      },
+      "required": ["list", "subject"]
+    },
+    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.listitem)",
+    "readonly": false
+  },
+  {
+    "name": "remove_from_list",
+    "description": "Remove a user from a list. Removes ALL matching entries if the user was added multiple times. Requires user confirmation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "list": { "type": "string", "description": "AT-URI of the list to remove from" },
+        "subject": { "type": "string", "description": "DID of the user to remove" }
+      },
+      "required": ["list", "subject"]
+    },
+    "endpoint": "com.atproto.repo.deleteRecord (collection: app.bsky.graph.listitem)",
+    "readonly": false
+  },
+  {
     "name": "fetch_web_markdown",
     "description": "Fetch an external web page as clean markdown via r.jina.ai proxy. Use to read articles, links shared in posts.",
     "inputSchema": {
