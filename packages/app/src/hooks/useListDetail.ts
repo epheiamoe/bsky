@@ -85,6 +85,7 @@ export function useListDetail(client: BskyClient | null, listUri: string) {
     try {
       await client.removeListItem(itemUri);
       setMembers(prev => prev.filter(m => m.uri !== itemUri));
+      setList(prev => prev ? { ...prev, listItemCount: Math.max(0, (prev.listItemCount ?? 1) - 1) } : prev);
     } catch (e) { console.error('Remove member error:', e); }
   }, [client]);
 

@@ -245,6 +245,32 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Popular feeds', body: truncate(content, 300) };
   }
 
+  // ── List tools ──
+  if (toolName === 'get_lists') {
+    const r = jsonTry(content, obj => {
+      const items = Array.isArray(obj) ? obj : [];
+      const lines = items.map((l: Record<string, unknown>) => {
+        const purpose = l.purpose === 'moderation' ? '[管理]' : '[精选]';
+        const count = l.memberCount ?? 0;
+        return `${purpose} ${l.name} (${count}人)${l.description ? ': ' + String(l.description).slice(0, 60) : ''}`;
+      });
+      return { total: items.length, list: lines.join('\n') };
+    });
+    if (r) return { summary: `${r.total} 个列表`, body: r.list || '(empty)' };
+    return { summary: 'Lists', body: truncate(content, 500) };
+  }
+
+  if (toolName === 'get_list_feed') {
+    const r = jsonTry(content, obj => {
+      const items = Array.isArray(obj) ? obj : [];
+      const lines = items.map((p: Record<string, unknown>) =>
+        `@${p.author || '?'}: ${String(p.text || '').slice(0, 100)}`);
+      return { total: items.length, list: lines.join('\n') };
+    });
+    if (r) return { summary: `${r.total} 条列表帖文`, body: r.list || '(empty)' };
+    return { summary: 'List feed', body: truncate(content, 500) };
+  }
+
   // ── Thread tools ──
   if (toolName === 'get_post_thread_flat' || toolName === 'get_post_subtree') {
     const body = truncate(content, 2000);
