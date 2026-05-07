@@ -13,7 +13,7 @@ import {
   PF_VISION_HINT,
   PF_CURRENT_TIME,
 } from '@bsky/core';
-import type { AIConfig, BskyClient, ChatMessage } from '@bsky/core';
+import type { AIConfig, BskyClient, ChatMessage, ToolCall } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
 import type { ChatStorage } from '../services/chatStorage.js';
 import { v4 as uuidv4 } from './uuid.js';
@@ -133,15 +133,33 @@ export function useAIChat(
         }
         // Sync assistant state with stored messages so editByIndex works
         const system = assistant.getMessages().filter(m => m.role === 'system');
-        const chatMsgs = record.messages
-          .filter(m => m.role !== 'thinking')
-          .filter(m => m.role !== 'tool_result' || m.toolCallId)
-          .map(m => ({
-            role: m.role === 'tool_call' || m.role === 'tool_result' ? 'tool' as const : m.role as 'user' | 'assistant' | 'system',
-            content: m.content,
-            name: m.toolName,
-            tool_call_id: m.toolCallId,
-          }));
+        const chatMsgs: ChatMessage[] = [];
+        for (const m of record.messages) {
+          if (m.role === 'thinking') continue;
+          if (m.role === 'tool_call' && m.toolCallId && m.toolName) {
+            // Reconstruct assistant with tool_calls for API compatibility
+            const argsMatch = m.content.match(/\{.*\}/s);
+            const toolArgs = argsMatch?.[0] ?? '{}';
+            chatMsgs.push({
+              role: 'assistant',
+              content: '',
+              tool_calls: [{
+                id: m.toolCallId,
+                type: 'function',
+                function: { name: m.toolName, arguments: toolArgs },
+              }],
+            });
+          } else if ((m.role === 'tool_result' || m.role === 'tool_call') && m.toolCallId) {
+            chatMsgs.push({
+              role: 'tool',
+              content: m.content,
+              tool_call_id: m.toolCallId,
+              name: m.toolName,
+            });
+          } else if (m.role === 'user' || m.role === 'assistant') {
+            chatMsgs.push({ role: m.role, content: m.content });
+          }
+        }
         assistant.loadMessages([...system, ...chatMsgs]);
       } else {
         setMessages([]);
@@ -249,11 +267,10 @@ export function useAIChat(
               return newMsgs;
             });
           } else if (event.type === 'tool_result') {
-            const summary = tryJsonSummary(event.content);
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
-                { role: 'tool_result', content: summary, toolName: event.toolName, toolCallId: (event as any).toolCallId },
+                { role: 'tool_result', content: event.content, toolName: event.toolName, toolCallId: (event as any).toolCallId },
               ];
               return newMsgs;
             });
@@ -319,9 +336,8 @@ export function useAIChat(
           if (step.type === 'tool_call') {
             newMsgs.push({ role: 'tool_call', content: step.content, toolName: extractToolName(step.content) });
           } else if (step.type === 'tool_result') {
-            const summary = truncateToolResult(step.content);
             const s = step as any;
-            newMsgs.push({ role: 'tool_result', content: summary, toolName: s.toolName, toolCallId: s.toolCallId });
+            newMsgs.push({ role: 'tool_result', content: step.content, toolName: s.toolName, toolCallId: s.toolCallId });
           }
         }
         newMsgs.push({ role: 'assistant', content: result.content });

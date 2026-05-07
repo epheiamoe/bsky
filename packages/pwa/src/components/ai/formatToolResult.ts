@@ -16,12 +16,6 @@ function toolLabel(name: string): string {
 }
 
 export function formatToolResult(toolName: string, content: string): ToolResultDisplay {
-  // Already pre-summarized by tryJsonSummary — show directly
-  if (content && !content.startsWith('{') && !content.startsWith('[')) {
-    const preview = content.split('\n')[0] || content;
-    return { summary: truncate(preview, 80), body: content };
-  }
-
   // ── Write tools (Category A) ──
   if (toolName === 'create_post') {
     const r = jsonTry(content, obj => ({
@@ -380,6 +374,7 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Web page', body: truncate(content, 400) };
   }
 
-  // ── Fallback ──
-  return { summary: toolLabel(toolName), body: truncate(content, 500) };
+  // ── Fallback: show content directly ──
+  const previewLine = content.split('\n')[0] || content;
+  return { summary: truncate(previewLine, 80), body: truncate(content, 2000) };
 }
