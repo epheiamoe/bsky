@@ -614,7 +614,7 @@ export class AIAssistant {
             toolResult = `Unknown tool: ${toolName}`;
           }
 
-          yield { type: 'tool_result', content: toolResult, toolName };
+          yield { type: 'tool_result', content: toolResult, toolName, toolCallId: tc.id };
 
           this.messages.push({
             role: 'tool',

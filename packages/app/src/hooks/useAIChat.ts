@@ -317,7 +317,8 @@ export function useAIChat(
             newMsgs.push({ role: 'tool_call', content: step.content, toolName: extractToolName(step.content) });
           } else if (step.type === 'tool_result') {
             const summary = truncateToolResult(step.content);
-            newMsgs.push({ role: 'tool_result', content: summary });
+            const s = step as any;
+            newMsgs.push({ role: 'tool_result', content: summary, toolName: s.toolName, toolCallId: s.toolCallId });
           }
         }
         newMsgs.push({ role: 'assistant', content: result.content });
@@ -370,6 +371,8 @@ export function useAIChat(
       .map(m => ({
         role: (m.role === 'tool' ? 'tool_result' : m.role) as AIChatMessage['role'],
         content: contentToString(m.content),
+        toolName: m.name,
+        toolCallId: m.tool_call_id,
       }));
   }, []);
 
