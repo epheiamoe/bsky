@@ -8,6 +8,7 @@ import type {
   RecordEmbed,
   RecordWithMediaEmbed,
   PostRecord,
+  ListPurpose,
 } from '../at/types.js';
 import { parseAtUri } from '../at/types.js';
 
@@ -880,6 +881,101 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           createdAt: new Date().toISOString(),
         });
         return JSON.stringify({ uri: res.uri, cid: res.cid, followed: p.subject });
+      },
+      requiresWrite: true,
+    },
+    {
+      definition: {
+        name: 'get_lists',
+        description: 'Get all lists created by a user. Lists can be curatelist (curated for feeds) or modlist (moderation for mute/block).',
+        inputSchema: {
+          type: 'object',
+          properties: { actor: { type: 'string', description: 'Handle or DID of the user whose lists to fetch. Defaults to current user.' } },
+          required: [],
+        },
+      },
+      handler: async (p) => {
+        const handle = (p.actor as string) || client.getHandle();
+        const res = await client.getLists(handle);
+        const summary = res.lists.map(l => ({
+          uri: l.uri,
+          name: l.name,
+          purpose: l.purpose === 'app.bsky.graph.defs#modlist' ? 'moderation' : 'curated',
+          memberCount: l.listItemCount ?? 0,
+          description: l.description,
+        }));
+        return JSON.stringify(summary);
+      },
+      requiresWrite: false,
+    },
+    {
+      definition: {
+        name: 'get_list_feed',
+        description: 'Get recent posts from members of a specific list.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            list: { type: 'string', description: 'AT-URI of the list (format: at://did:plc:.../app.bsky.graph.list/...)' },
+            limit: { type: 'number', description: 'Number of posts to fetch (default: 30)' },
+          },
+          required: ['list'],
+        },
+      },
+      handler: async (p) => {
+        const limit = (p.limit as number) ?? 30;
+        const res = await client.getListFeed(p.list as string, limit);
+        const posts = res.feed.map(f => {
+          const post = (f as any).post ?? f;
+          return {
+            uri: post?.uri,
+            author: post?.author?.handle,
+            text: (post?.record?.text || '').slice(0, 140),
+            indexedAt: post?.indexedAt,
+          };
+        });
+        return JSON.stringify(posts);
+      },
+      requiresWrite: false,
+    },
+    {
+      definition: {
+        name: 'create_list',
+        description: 'Create a new user list. Requires user confirmation.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'List name (1-64 characters)' },
+            purpose: { type: 'string', description: 'List purpose: "curated" or "moderation"', enum: ['curated', 'moderation'] },
+            description: { type: 'string', description: 'Optional list description (up to 300 characters)' },
+          },
+          required: ['name', 'purpose'],
+        },
+      },
+      handler: async (p) => {
+        const purpose: ListPurpose = (p.purpose as string) === 'moderation'
+          ? 'app.bsky.graph.defs#modlist'
+          : 'app.bsky.graph.defs#curatelist';
+        const res = await client.createList(p.name as string, purpose, p.description as string | undefined);
+        return JSON.stringify({ uri: res.uri, cid: res.cid, name: p.name, purpose: p.purpose });
+      },
+      requiresWrite: true,
+    },
+    {
+      definition: {
+        name: 'add_to_list',
+        description: 'Add a user to a list. Requires user confirmation.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            list: { type: 'string', description: 'AT-URI of the list to add to' },
+            subject: { type: 'string', description: 'DID of the user to add' },
+          },
+          required: ['list', 'subject'],
+        },
+      },
+      handler: async (p) => {
+        const res = await client.addListItem(p.list as string, p.subject as string);
+        return JSON.stringify({ uri: res.uri, added: p.subject });
       },
       requiresWrite: true,
     },
