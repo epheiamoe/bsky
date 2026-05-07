@@ -127,12 +127,12 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
             <Icon name="plus" size={14} />
           </button>
           {widgetIdx !== undefined && widgetIdx > 0 && onMoveUp && (
-            <button onClick={onMoveUp} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move up">
+            <button onClick={() => { console.log('[widget] move up', widgetIdx); onMoveUp(); }} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move up">
               <Icon name="chevron-up" size={14} />
             </button>
           )}
           {widgetIdx !== undefined && widgetIdx < (widgetCount ?? 1) - 1 && onMoveDown && (
-            <button onClick={onMoveDown} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move down">
+            <button onClick={() => { console.log('[widget] move down', widgetIdx); onMoveDown(); }} className="text-text-secondary hover:text-primary transition-colors p-0.5" title="Move down">
               <Icon name="chevron-down" size={14} />
             </button>
           )}

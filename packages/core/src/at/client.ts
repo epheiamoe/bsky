@@ -101,15 +101,18 @@ export class BskyClient {
     this.ky = ky.create({
       prefixUrl: BSKY_SERVICE + '/xrpc',
       timeout: 30000,
+      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
       hooks: { afterResponse: [withRefresh] },
     });
     this.publicKy = ky.create({
       prefixUrl: PUBLIC_API + '/xrpc',
       timeout: 30000,
+      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
     });
     this.chatKy = ky.create({
       prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
+      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
       hooks: { afterResponse: [withRefresh] },
     });
   }
