@@ -166,6 +166,13 @@ export function Layout({
             >
               {t('settings.logout')}
             </button>
+            <button
+              onClick={() => goTo({ type: 'about' })}
+              className="text-text-secondary hover:text-text-primary transition-colors p-1 hidden md:block"
+              aria-label={t('nav.about')}
+            >
+              <Icon name="badge-question-mark" size={16} />
+            </button>
           </div>
         </div>
       </header>
