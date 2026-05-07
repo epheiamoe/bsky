@@ -4,6 +4,7 @@ import { resolve } from 'path';
 import { execSync } from 'child_process';
 
 const commitHash = execSync('git rev-parse HEAD').toString().trim();
+const commitDesc = execSync('git log --format=%s -1').toString().trim();
 const buildTime = new Date().toISOString();
 
 export default defineConfig({
@@ -18,6 +19,7 @@ export default defineConfig({
   },
   define: {
     __COMMIT_HASH__: JSON.stringify(commitHash),
+    __COMMIT_DESC__: JSON.stringify(commitDesc),
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   build: {

@@ -166,12 +166,6 @@ export function Layout({
             >
               {t('settings.logout')}
             </button>
-            <button
-              onClick={() => goTo({ type: 'about' })}
-              className="text-text-secondary hover:text-text-primary transition-colors text-xs px-2 py-1 rounded-lg hover:bg-surface hidden md:block"
-            >
-              {t('nav.about')}
-            </button>
           </div>
         </div>
       </header>
@@ -188,7 +182,13 @@ export function Layout({
               draftCount={draftCount}
               dmCount={dmCount}
             />
-            <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3">
+            <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3 space-y-1">
+              <button
+                onClick={() => { goTo({ type: 'about' }); setSidebarOpen(false); }}
+                className="w-full text-left text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-surface"
+              >
+                {t('nav.about')}
+              </button>
               <button
                 onClick={() => { onLogout(); setSidebarOpen(false); }}
                 className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"

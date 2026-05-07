@@ -334,6 +334,14 @@ const ja: LocaleMessages = {
   'dm.unmute': 'ミュート解除',
   'dm.muted': 'ミュート中',
   'time.justNow': 'たった今',
+  'about.repository': 'ソースコード',
+  'about.description': '説明',
+  'about.demo': 'ライブデモ',
+  'about.commit': 'コミット',
+  'about.commitDesc': 'コミット説明',
+  'about.buildTime': 'ビルド時間',
+  'about.feedback': 'フィードバック',
+  'about.contact': '連絡先',
 };
 
 export default ja;

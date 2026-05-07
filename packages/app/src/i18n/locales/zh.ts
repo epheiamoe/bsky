@@ -356,6 +356,14 @@ const zh: LocaleMessages = {
   'dm.unmute': '取消静音',
   'dm.muted': '已静音',
   'time.justNow': '刚刚',
+  'about.repository': '源码仓库',
+  'about.description': '描述',
+  'about.demo': '在线演示',
+  'about.commit': '提交',
+  'about.commitDesc': '提交描述',
+  'about.buildTime': '构建时间',
+  'about.feedback': '反馈问题',
+  'about.contact': '联系',
 };
 
 export default zh;

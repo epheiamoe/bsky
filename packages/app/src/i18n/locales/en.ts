@@ -334,6 +334,14 @@ const en: LocaleMessages = {
   'dm.unmute': 'Unmute',
   'dm.muted': 'Muted',
   'time.justNow': 'now',
+  'about.repository': 'Repository',
+  'about.description': 'Description',
+  'about.demo': 'Live Demo',
+  'about.commit': 'Commit',
+  'about.commitDesc': 'Commit description',
+  'about.buildTime': 'Build time',
+  'about.feedback': 'Feedback',
+  'about.contact': 'Contact',
 };
 
 export default en;
