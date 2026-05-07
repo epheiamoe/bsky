@@ -271,6 +271,10 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'List feed', body: truncate(content, 500) };
   }
 
+  if (toolName === 'remove_from_list') {
+    return { summary: '已从列表移除', body: truncate(content, 300) };
+  }
+
   // ── Thread tools ──
   if (toolName === 'get_post_thread_flat' || toolName === 'get_post_subtree') {
     const body = truncate(content, 2000);

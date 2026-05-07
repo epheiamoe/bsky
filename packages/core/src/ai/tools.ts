@@ -979,6 +979,28 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       },
       requiresWrite: true,
     },
+    {
+      definition: {
+        name: 'remove_from_list',
+        description: 'Remove a user from a list. Requires user confirmation. Only removes the first matching item if the user was added multiple times.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            list: { type: 'string', description: 'AT-URI of the list to remove from' },
+            subject: { type: 'string', description: 'DID of the user to remove' },
+          },
+          required: ['list', 'subject'],
+        },
+      },
+      handler: async (p) => {
+        const res = await client.getList(p.list as string, 100);
+        const item = res.items.find(i => i.subject.did === p.subject);
+        if (!item) return 'User is not in this list.';
+        await client.removeListItem(item.uri);
+        return `Removed user ${p.subject} from list.`;
+      },
+      requiresWrite: true,
+    },
   ];
 
   return tools;

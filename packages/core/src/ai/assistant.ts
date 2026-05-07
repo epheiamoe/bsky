@@ -650,6 +650,7 @@ function buildToolDescription(toolName: string, args: Record<string, unknown>): 
     case 'upload_blob': return '上传图片';
     case 'create_list': return `创建列表: "${String(args.name || '')}" (${String(args.purpose || '') === 'moderation' ? '管理' : '精选'})`;
     case 'add_to_list': return `添加用户 ${String(args.subject || '')} 到列表`;
+    case 'remove_from_list': return `从列表移除用户 ${String(args.subject || '')}`;
     default: return `${toolName}: ${JSON.stringify(args).slice(0, 100)}`;
   }
 }
