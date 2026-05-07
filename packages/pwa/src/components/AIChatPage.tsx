@@ -102,8 +102,19 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // Visual Viewport height — updates when keyboard opens/closes
+  const [visualHeight, setVisualHeight] = useState<number | null>(null);
   useEffect(() => {
-    if (autoScroll && !loading && messagesEndRef.current) {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setVisualHeight(vv.height);
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
+
+  useEffect(() => {
+    if (autoScroll && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, loading, autoScroll]);
@@ -299,7 +310,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div className="flex h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
+    <div className="flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn" style={visualHeight ? { height: visualHeight - 48 } : { height: 'calc(100dvh - 3rem)' }}>
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
