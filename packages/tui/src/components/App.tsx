@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useI18n, useDrafts, useConvoList } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useI18n, useDrafts, useConvoList } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
@@ -58,6 +58,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { unreadCount } = useNotifications(client);
   const bookmarks = useBookmarks(client);
   const [bookmarkIdx, setBookmarkIdx] = useState(0);
+  const lists = useLists(client);
+  const [listIdx, setListIdx] = useState(0);
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts(client);
   const { convos, loading: dmLoading, error: dmError, refresh: refreshDMs } = useConvoList(client);
   const [dmIdx, setDmIdx] = useState(0);
@@ -478,6 +480,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'a') { if (currentView.type !== 'aiChat') goTo({ type: 'aiChat', sessionId: crypto.randomUUID(), contextPost: threadUri ?? undefined }); return; }
     if (k === 'c') { if (currentView.type !== 'thread') goTo({ type: 'compose' }); return; }
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
+    if (k === 'L') { goTo({ type: 'lists' }); return; }
     if (k === 'm') { if (currentView.type !== 'feed') { goTo({ type: 'dm' }); } return; }
     if (k === '?') { goTo({ type: 'about' }); return; }
 
@@ -512,6 +515,22 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const bm = bookmarks.bookmarks[bookmarkIdx] as any;
         const quoteUri = bm?.embed?.record?.uri as string | undefined;
         if (quoteUri) goTo({ type: 'thread', uri: quoteUri });
+      }
+      return;
+    }
+
+    // ── Lists-specific ──
+    if (currentView.type === 'lists') {
+      if (k === 'j') setListIdx(i => Math.min(lists.lists.length - 1, i + 1));
+      else if (k === 'k') setListIdx(i => Math.max(0, i - 1));
+      else if (k === 'Enter') {
+        const list = lists.lists[listIdx];
+        if (list) goTo({ type: 'listDetail', uri: list.uri });
+      }
+      else if (k === 'r') lists.refresh();
+      else if (k === 'd') {
+        const list = lists.lists[listIdx];
+        if (list) lists.deleteList(list.uri);
       }
       return;
     }
@@ -645,6 +664,29 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return <SearchView client={client} query={(currentView as { query?: string }).query} goBack={goBack} cols={mainW} rows={rows} goTo={goTo} />;
       case 'aiChat':
         return <AIChatView client={client} aiConfig={config.aiConfig} sessionId={(currentView as { sessionId?: string }).sessionId} contextPost={(currentView as { contextPost?: string }).contextPost} contextProfile={(currentView as { contextProfile?: string }).contextProfile} contextUri={(currentView as { contextUri?: string }).contextUri} goTo={goTo} goBack={goBack} cols={mainW} rows={rows} focused={focusedPanel === 'ai'} userHandle={config.blueskyHandle} locale={locale} />;
+      case 'lists':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="cyan" paddingX={1}>
+            <Box height={1}><Text bold color="cyan">{'📃 '}{t('lists.title')}</Text><Text dimColor>{' '}{t('keys.lists')}</Text></Box>
+            {lists.loading && <Text dimColor>{t('status.loading')}</Text>}
+            {!lists.loading && lists.lists.length === 0 && <Text dimColor>{t('lists.empty')}</Text>}
+            {lists.lists.slice(0, rows - 5).map((list, i) => {
+              const isSel = i === listIdx;
+              const purposeLabel = list.purpose.includes('modlist') ? '🛡' : '📋';
+              const memberCount = list.listItemCount ?? 0;
+              return (
+                <Box key={list.uri} height={1}>
+                  <Text backgroundColor={isSel ? '#1e40af' : undefined} color={isSel ? 'cyanBright' : undefined}>
+                    {isSel ? '▶' : ' '}{' '}
+                    <Text>{purposeLabel}</Text>
+                    <Text> {list.name.slice(0, 30)}</Text>
+                    <Text dimColor> ({memberCount})</Text>
+                  </Text>
+                </Box>
+              );
+            })}
+          </Box>
+        );
       case 'bookmarks':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="yellow" paddingX={1}>
@@ -665,6 +707,12 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                 </Box>
               );
             })}
+          </Box>
+        );
+      case 'listDetail':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="cyan" paddingX={1}>
+            <Box height={1}><Text bold color="cyan">{'📃 '}{t('breadcrumb.listDetail')}</Text><Text dimColor>{' '}{t('keys.listDetail')}</Text></Box>
           </Box>
         );
       case 'dm':
@@ -833,8 +881,8 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
   );
 }
 
-const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', dm: '💬', dmChat: '💬' };
-const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', dm: 'nav.dm', dmChat: 'nav.dm' };
+const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', lists: '📃', listDetail: '📃', dm: '💬', dmChat: '💬' };
+const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', lists: 'breadcrumb.lists', listDetail: 'breadcrumb.listDetail', dm: 'nav.dm', dmChat: 'nav.dm' };
 
 function viewLabel(v: { type: string }, t: (key: string) => string): string {
   const emoji = VIEW_EMOJI[v.type] ?? '';
@@ -846,6 +894,7 @@ const KEY_MAP: Record<string, string> = {
   feed: 'keys.feed', thread: 'keys.thread', compose: 'keys.compose',
   profile: 'keys.profile', notifications: 'keys.notifications', search: 'keys.search',
   aiChat: 'keys.aiChat', bookmarks: 'keys.bookmarks',
+  lists: 'keys.lists', listDetail: 'keys.listDetail',
   dm: 'keys.dm', dmChat: 'keys.dmChat',
 };
 
