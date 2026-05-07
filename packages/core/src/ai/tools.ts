@@ -982,7 +982,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'remove_from_list',
-        description: 'Remove a user from a list. Requires user confirmation. Only removes the first matching item if the user was added multiple times.',
+        description: 'Remove a user from a list. Requires user confirmation. Removes ALL matching entries if the user was added multiple times.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -993,11 +993,18 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         },
       },
       handler: async (p) => {
-        const res = await client.getList(p.list as string, 100);
-        const item = res.items.find(i => i.subject.did === p.subject);
-        if (!item) return 'User is not in this list.';
-        await client.removeListItem(item.uri);
-        return `Removed user ${p.subject} from list.`;
+        const listUri = p.list as string;
+        const parsed = parseAtUri(listUri);
+        const allItems = await client.listRecords(parsed.did, 'app.bsky.graph.listitem', 100);
+        const matches = allItems.records.filter(r => {
+          const v = r.value as Record<string, unknown>;
+          return v.subject === p.subject && v.list === listUri;
+        });
+        if (matches.length === 0) return 'User is not in this list.';
+        for (const m of matches) {
+          await client.removeListItem(m.uri);
+        }
+        return `Removed user ${p.subject} from list (${matches.length} entries).`;
       },
       requiresWrite: true,
     },
