@@ -263,6 +263,7 @@ export function Layout({
             context={widgetContext}
             onCloseWidget={handleToggleWidget}
             onReorderWidget={handleReorderWidget}
+            goTo={goTo}
           />
         </aside>
       </div>

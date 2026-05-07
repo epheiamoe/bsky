@@ -9,9 +9,10 @@ interface WidgetPanelProps {
   context?: WidgetContext;
   onCloseWidget: (id: string) => void;
   onReorderWidget?: (fromIdx: number, toIdx: number) => void;
+  goTo?: (v: any) => void;
 }
 
-export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onReorderWidget }: WidgetPanelProps) {
+export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onReorderWidget, goTo }: WidgetPanelProps) {
   const { t } = useI18n();
 
   const availableWidgets = useMemo(() => getWidgetsForView(viewType), [viewType]);
@@ -56,6 +57,7 @@ export function WidgetPanel({ viewType, enabledIds, context, onCloseWidget, onRe
                 {t(w.titleKey)}
               </span>
               <div className="flex items-center gap-0.5">
+                {w.headerButtons && goTo && <w.headerButtons goTo={goTo} onClose={() => onCloseWidget(w.id)} />}
                 {showArrows && realIdx > 0 && (
                   <button onClick={() => onReorderWidget?.(realIdx, realIdx - 1)} className="text-text-secondary/60 hover:text-primary transition-colors p-0.5" title="Move up">
                     <Icon name="chevron-up" size={12} />

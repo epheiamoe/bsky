@@ -7,6 +7,24 @@ import { IndexedDBChatStorage } from '../../services/indexeddb-chat-storage.js';
 import { Icon } from '../Icon.js';
 import { ThinkingCard, ToolCard, AssistantMessage } from '../ai/index.js';
 
+// Module-level refs for header buttons (WidgetPanel renders them outside AIChatWidget's body)
+let _widgetCallbacks: { onNewChat?: () => void; chatId?: string } = {};
+
+export function AIChatHeaderButtons({ goTo, onClose }: { goTo: (v: unknown) => void; onClose: () => void }) {
+  return (
+    <>
+      <button onClick={() => { goTo({ type: 'aiChat', sessionId: _widgetCallbacks.chatId }); onClose(); }}
+        className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Open in full page">
+        <Icon name="arrow-big-right" size={12} />
+      </button>
+      <button onClick={() => _widgetCallbacks.onNewChat?.()}
+        className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="New chat">
+        <Icon name="plus" size={12} />
+      </button>
+    </>
+  );
+}
+
 export function AIChatWidget({ onClose, context }: WidgetProps) {
   const { t } = useI18n();
   const client = context?.client;
@@ -74,6 +92,12 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
     onClose();
   }, [goTo, chatId, onClose]);
 
+  // Write callbacks to module ref so header buttons can access them
+  useEffect(() => {
+    _widgetCallbacks = { onNewChat: handleNewChat, chatId };
+    return () => { _widgetCallbacks = {}; };
+  }, [handleNewChat, chatId]);
+
   // Compact message groups
   const messageGroups = useMemo(() => {
     const groups: Array<{ type: 'thinking' | 'tool' | 'user' | 'assistant'; msg: AIChatMessage; result?: AIChatMessage }> = [];
@@ -106,17 +130,6 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
 
   return (
     <div className="flex flex-col">
-      {/* Toolbar: open in page + new chat (outside scrollable area) */}
-      <div className="flex items-center justify-end gap-1 px-3 pt-0.5 pb-1">
-        {goTo && (
-          <button onClick={handleOpenInPage} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="Open in full page">
-            <Icon name="arrow-big-right" size={12} />
-          </button>
-        )}
-        <button onClick={handleNewChat} className="text-text-secondary/50 hover:text-primary transition-colors p-0.5" title="New chat">
-          <Icon name="plus" size={12} />
-        </button>
-      </div>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         {messageGroups.length === 0 && !loading && (

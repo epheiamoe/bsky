@@ -28,7 +28,7 @@ import { PolishWidget } from './components/widgets/PolishWidget.js';
 import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWidget.js';
 import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
-import { AIChatWidget } from './components/widgets/AIChatWidget.js';
+import { AIChatWidget, AIChatHeaderButtons } from './components/widgets/AIChatWidget.js';
 import { AboutPage } from './components/AboutPage.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
@@ -125,6 +125,7 @@ export function App() {
       icon: 'astroid-as-AI-Button',
       views: [],
       defaultOpen: false,
+      headerButtons: AIChatHeaderButtons,
     }, (props) => React.createElement(AIChatWidget, props));
   }, []);
 

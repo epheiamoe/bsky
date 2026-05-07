@@ -26,6 +26,8 @@ export interface WidgetDefinition {
   views: string[];
   /** Whether this widget is on by default when first loaded */
   defaultOpen: boolean;
+  /** Optional header buttons component (rendered left of up/down arrows) */
+  headerButtons?: React.ComponentType<{ goTo: (v: unknown) => void; onClose: () => void }>;
 }
 
 interface WidgetEntry extends WidgetDefinition {
