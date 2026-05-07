@@ -54,7 +54,7 @@ cd packages/pwa && pnpm dev    # http://localhost:5173
 
 DeepSeek V4 Flash powers AI features not found in the official Bluesky client:
 
-- **AI 对话** — Full multi-turn chat with 31 Bluesky API tools (read posts/profiles, write likes/reposts, analyze images with vision models)
+- **AI 对话** — Full multi-turn chat with 36 Bluesky API tools (read posts/profiles, write likes/reposts/lists, analyze images with vision models)
 - **流式输出** — TUI + PWA both use SSE streaming, real-time thinking display
 - **思考模式** — Configurable reasoning content (DeepSeek V4), visible as 💭 thinking blocks
 - **视觉模式** — Optional image analysis via `view_image` tool (for GPT-4V / Claude Vision / DeepSeek VL)
@@ -85,7 +85,8 @@ DeepSeek V4 Flash powers AI features not found in the official Bluesky client:
 | Search (4 tabs) | ✅ | ✅ | Hot / Latest / Users / Feeds |
 | Profile view | ✅ | ✅ | Follow/unfollow, tabs, follow lists |
 | Bookmarks (built-in API) | ✅ | ✅ | |
-| AI Chat (31 tools + streaming) | ✅ | ✅ | Thinking display, copy/edit by index |
+| **Lists** (15 API methods) | ✅ | ✅ | Create/delete/edit, members/posts, mute, add-to-list popup |
+| AI Chat (36 tools + streaming) | ✅ | ✅ | Thinking display, copy/edit by index |
 | AI Session URL | N/A | ✅ | `#/ai?session=uuid` (context persisted) |
 | Thinking mode | ✅ | ✅ | Configurable |
 | Vision mode | ✅ | ✅ | Configurable |
@@ -182,7 +183,10 @@ TUI and PWA are pure render layers consuming the same React hooks.
 | `docs/HOOKS.md` | All hook signatures and return types |
 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
 | `docs/TODO.md` | Feature roadmap |
+| `docs/LESSONS.md` | Key lessons from each session |
 | `docs/AI_SYSTEM.md` | AI integration: tools, streaming, translation |
+| `docs/DM.md` | DM private messaging docs |
+| `docs/SCROLL.md` | Virtual scroll + scroll restoration spec |
 | `CHANGELOG.md` | Version history |
 | `AGENTS.md` | AI agent / contributor guide |
 
@@ -190,4 +194,4 @@ TUI and PWA are pure render layers consuming the same React hooks.
 ## License
 [MIT](LICENSE) — Free to use, modify, and distribute.
 
-**Version**: 0.3.0 — [Changelog](CHANGELOG.md)
+**Version**: 0.6.0 — [Changelog](CHANGELOG.md)

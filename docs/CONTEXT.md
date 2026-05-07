@@ -19,7 +19,7 @@
 
 ## 版本
 
-**v0.5.3** — AI Chat 页面重构 + 侧边栏 Widget 系统 + 关于页面 + 大量 bug 修复
+**v0.6.0** — 列表功能全栈实现 + 删除/编辑 + TUI 完善 + AI 工具 + 8 处细节修复
 
 ## 项目状态
 
@@ -29,8 +29,8 @@
 - **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
 - **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
-- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / 资料 / AI 对话 / 发帖 / 组件
-- **右侧组件栏** (lg+ 390px) : 6 widgets — 推荐关注、推荐动态源、趋势、润色(compose)、资料页预览(thread)、AI对话。统一 header bar（icon+title+↑+↓+×），widget 纯内容。
+- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / **列表** / 资料 / AI 对话 / 发帖 / 组件
+- **右侧组件栏** (lg+ 390px) : 6 widgets — header bar（icon+title+headerButtons+↑+↓+×），widget 纯内容。AI Widget 进入 AI 页面时临时禁用（离开时恢复），headerButtons 支持 open-in-page / new-chat。可通过 AIChatPage 的「Open in Widgets」按钮返回时间线并重新启用
 - **组件页** `#/components` : ↑↓ 箭头排序 + 启用/禁用
 - **关于页面** `#/about` : PWA+TUI，显示 repo URL / commit hash（Vite 构建时注入 `__COMMIT_HASH__`）/ build time / 描述 / 反馈 / 联系
 - **AI Chat**: 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 人类可读结果), 31 工具格式化, `/view` 命令给 AI 注入当前页面上下文
@@ -41,6 +41,8 @@
 - **JWT 刷新**: `withRefresh` 并发锁（`_refreshPromise` 缓存）、时间线首次加载自动重试
 - **API 重试**: ky 实例显式 `retry: { statusCodes: [408,413,429,500,502,503,504] }`
 - **tool_call_id 修复**: 3 个死亡路径全修复（assistant.ts yield、useAIChat 恢复、mapMessages）
+- **列表功能** (v0.6.0): 15 个 BskyClient 方法 + useLists/useListDetail hooks + ListsPage + ListDetailPage (Posts/Members Tab + 虚拟滚动) + ProfilePage 列表导航 + TUI 列表视图 + 5 个 AI 工具。支持创建/删除/编辑名称描述/添加移除成员/静音/列表帖文流。AppView 去重 vs PDS 不去重（Lesson 13）。Widget 临时禁用与恢复（Lesson 14）。编辑消息正确保留思考内容和工具调用（Lesson 17）。
+- **AI 工具**: 36 个（+5 列表工具：get_lists, get_list_feed, create_list, add_to_list, remove_from_list）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。
 
 ## 🔴 关键教训
 
@@ -314,6 +316,10 @@ cd packages/core && npx vitest run --config vitest.config.ts
 20. 流式输出 scroll：用 `requestAnimationFrame(() => container.scrollTop = container.scrollHeight)`，放在 effect 中延迟到 paint 后执行
 21. 移动键盘避免空白：用 `window.visualViewport.height` 而非 `100dvh` 设容器高度
 22. ky retry：显式 `retry: { limit: 1, statusCodes: [408,413,429,500,502,503,504] }`，不依赖默认值
+23. i18n 插值必须使用单大括号 `{n}`，正则 `/\{(\w+)\}/g` 只匹配 `{n}`。`{{n}}` 会渲染为 `{1}`（外括号残瘤）。见 LESSONS.md Lesson 12
+24. 涉及重复数据时使用 PDS 层 API（`listRecords`）而非 AppView（`getList`），因为 AppView 会去重。见 LESSONS.md Lesson 13
+25. 构建时注入的元数据（commit hash）必须在 commit 之后构建，否则 About 页面显示旧 hash。流程：commit → build → deploy
+26. 新增 `requiresWrite` AI 工具时必须同步添加 `buildToolDescription` case，否则确认弹窗显示原始 JSON
 
 ## 关键文件速查
 
@@ -376,3 +382,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/core/src/ai/providers.ts` | 多提供商注册表 |
 | `packages/core/src/ai/providers.json` | 提供商配置文件 |
 | `packages/app/src/services/chatStorage.ts` | ChatRecord.context 字段 |
+| `packages/pwa/src/components/ListsPage.tsx` | PWA 列表索引页（浏览/创建/删除/加他人到列表） |
+| `packages/pwa/src/components/ListDetailPage.tsx` | PWA 列表详情页（Posts/Members 双 Tab + 内联编辑） |
+| `packages/app/src/hooks/useLists.ts` | 列表集合 CRUD hook |
+| `packages/app/src/hooks/useListDetail.ts` | 列表详情 hook（成员/feed/mute/CRUD） |
+| `packages/pwa/src/icons/list.svg, user-plus.svg, users.svg` | 列表 SVG 图标 |

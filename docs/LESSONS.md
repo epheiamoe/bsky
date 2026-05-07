@@ -252,6 +252,166 @@ export function disableWidget(id: string): void {
 | `packages/pwa/src/icons/brain.svg, wrench.svg, chevron-up.svg, grip-vertical.svg` | 新增 SVG | Lucide 官方图标 |
 | Widget 系统重构 | WidgetPanel + 5 个 widget | 统一 header bar（icon+title+^+v+x），widget 纯内容 |
 
+---
+
+# Lessons Learned — Session 2026-05-08
+
+> ⚠️ 本次会话主题：列表功能全栈实现 + 大量细节修复。
+
+## 本期重点教训
+
+### Lesson 12: `{{n}}` vs `{n}` — i18n 模板插值陷阱
+
+**问题**：列表人数显示为 `{1}` 而非 `1`（花括号留在屏幕上）。
+
+**根因**：i18n 的 `interpolate()` 使用正则 `/\{(\w+)\}/g`，匹配单大括号。`'{{n}}'` 在模板中 —— 外括号不匹配 `\{` 和 `\}`（因为正则期待 `\{` 后紧跟 `\w+`），内括号被匹配 → 替换为 `1`，外括号残留 → `{1}`。
+
+**修复**：所有 i18n 模板字符串改为单大括号 `{n}`。
+```json
+// ❌ "{{n}} members"  → 显示为 "{5} members"
+// ✅ "{n} members"     → 显示为 "5 members"
+```
+
+**教训**：i18n 插值格式必须一致。项目中所有其他插值（`ai.messageCount`、`thread.replyCount`）都使用单大括号，新增键必须遵循同一约定。
+
+---
+
+### Lesson 13: AppView 去重 vs PDS 不去重 — `getList` vs `listRecords`
+
+**问题**：用户被添加到列表两次（重复 listitem），`remove_from_list` 只删了第一条 → 残留记录在 PDS 但 AppView 返回「不在列表中」。
+
+**根因**：`app.bsky.graph.getList` 是 AppView 水合视图，Lexicon 规格明确规定会**去重 `(subject, list)` 对**。PDS 有两条记录，但 `getList` 只返回一条。`remove_from_list` 使用 `getList` + `find()` → 删除一条后，AppView 可能已标记为"不在列表" → 第二条残留无法删除。
+
+**修复**：改用 `com.atproto.repo.listRecords`（PDS 层，不去重）查找所有匹配记录：
+```typescript
+// ❌ AppView 去重 → 只找到一条
+const res = await client.getList(listUri);
+const item = res.items.find(i => i.subject.did === subject);
+
+// ✅ PDS 层不去重 → 找到全部重复
+const all = await client.listRecords(did, 'app.bsky.graph.listitem');
+const matches = all.records.filter(r => r.value.subject === subject && r.value.list === listUri);
+for (const m of matches) await client.removeListItem(m.uri);
+```
+
+**教训**：AppView（`app.bsky.graph.*`）提供水合视图（有去重、排序等），PDS（`com.atproto.repo.*`）提供原始数据。需要完整数据（特别是处理重复/脏数据）时，必须使用 PDS 层 API。
+
+---
+
+### Lesson 14: Widget 临时禁用与恢复 — 保存 _order 快照
+
+**问题**：进入 AI 对话页面后，AI Widget 被 `disableWidget('aiChat')` 永久移除，离开后不恢复。
+
+**根因**：`disableWidget` 直接修改 `_order` 数组（内存），无恢复机制。只有页面刷新时从 localStorage 重新初始化才会恢复。
+
+**修复**：`useRef` 保存进入 AI 页面前的 `_order` 快照，离开时 `initEnabledWidgets` 恢复：
+```typescript
+const widgetOrderRef = useRef<string[]>([]);
+useEffect(() => {
+  if (currentView.type === 'aiChat') {
+    const current = getEnabledWidgetIds();
+    if (current.includes('aiChat')) {
+      widgetOrderRef.current = current;  // save
+      disableWidget('aiChat');
+    }
+  } else if (widgetOrderRef.current.length > 0) {
+    initEnabledWidgets(widgetOrderRef.current);  // restore
+    widgetOrderRef.current = [];
+  }
+}, [currentView.type]);
+```
+
+**教训**：临时状态变更必须有「保存-恢复」配对，不能仅做单向操作。使用 `useRef` 存储快照是轻量方案（不触发重渲染），适合模块级状态的临时读写。
+
+---
+
+### Lesson 15: 构建顺序 — 先 commit 再 build 才能拿到正确 hash
+
+**问题**：About 页面显示的 commit hash 是旧版本的，代码改动已经生效但 hash 不对。
+
+**根因**：Vite `define: { __COMMIT_HASH__: execSync('git rev-parse HEAD') }` 在 build 时执行。如果先 `git add` + `git commit` 但用之前的 build artifact 部署，hash 就是上次 commit 的。
+
+**修复**：流程改为 `git commit` → `pnpm build` → `wrangler deploy`。确保 build 时 HEAD 就是目标 commit。
+
+**教训**：构建时注入的元数据（commit hash、build time）必须在 commit 之后产生，否则与代码不同步。
+
+---
+
+### Lesson 16: Widget 按钮移到 header 行内 — `headerButtons` + module refs
+
+**问题**：AIChatWidget 的「open in page」和「new chat」按钮在消息区内（随内容滚动），不在 header 行内。
+
+**根因**：WidgetPanel header 只渲染箭头和关闭按钮，widget 自己的按钮在 `render()` 返回的 body 内。
+
+**修复**：
+1. `WidgetDefinition` 新增 `headerButtons?: React.ComponentType<{ goTo, onClose }>` 字段
+2. `WidgetPanel` header 行渲染 `headerButtons`（位于箭头左侧）
+3. `AIChatWidget` 通过 module ref 传递运行时回调（`onNewChat`、`chatId`）给 `headerButtons`
+4. `Layout` 传递 `goTo` 给 `WidgetPanel`
+
+```typescript
+// Module-level refs for header buttons
+let _widgetCallbacks = {};
+function AIChatHeaderButtons({ goTo, onClose }) {
+  return <>
+    <button onClick={() => { goTo({ type: 'aiChat', sessionId: _widgetCallbacks.chatId }); onClose(); }} />
+    <button onClick={() => _widgetCallbacks.onNewChat?.()} />
+  </>;
+}
+// In component:
+useEffect(() => { _widgetCallbacks = { onNewChat, chatId }; return () => _widgetCallbacks = {}; });
+```
+
+**教训**：Widget 的 header 按钮需要运行时 context（`goTo`、`onNewChat`），但 widget registration 是 module-level 的静态过程。Module ref 是桥梁——组件 mount 时写入，header buttons 读取。
+
+---
+
+### Lesson 17: AI 卡片数据留存 — `mapMessages` 需重建 thinking/tool 序列
+
+**问题**：编辑消息后，之前的思考内容丢失，工具调用显示异常（无工具名）。
+
+**根因**：`AIChatMessage`（存储格式）缺少 `reasoning_content` 和 `tool_calls` 字段。`mapMessages`（`ChatMessage[]` → `AIChatMessage[]`）丢弃了这些字段。编辑/恢复后 UI 显示空白。
+
+**修复**：
+1. `AIChatMessage` 加 `reasoning_content?: string` + `tool_calls?: any[]`
+2. `mapMessages` 重写为遍历循环：assistant 消息有 `reasoning_content` → 先 emit thinking card；有 `tool_calls` → emit tool_call entries；然后 emit assistant 消息本身
+3. 存储恢复路径保留 `reasoning_content`
+
+**教训**：存储格式与 API 格式的字段映射必须是双向完整的。`ChatMessage`（API 格式）的每个重要字段都应在 `AIChatMessage`（存储格式）有对应字段，并且在 `mapMessages` 双向转换中保留。
+
+---
+
+### Lesson 18: `buildToolDescription` — 新增 write 工具必须加确认描述
+
+**问题**：新增的 `create_list` / `add_to_list` 在确认弹窗中显示原始 JSON `{"name":"...","purpose":"..."}`，不可读。
+
+**根因**：`buildToolDescription` 只有 `create_post`、`like`、`repost`、`follow`、`upload_blob` 的 switch case。新增工具 fall through 到 default 的 `JSON.stringify(args)` 截断。
+
+**修复**：每个 `requiresWrite: true` 的工具必须在 `buildToolDescription` 添加 human-readable case：
+```typescript
+case 'create_list': return `创建列表: "${args.name}" (${args.purpose === 'moderation' ? '管理' : '精选'})`;
+case 'add_to_list': return `添加用户 ${args.subject} 到列表`;
+case 'remove_from_list': return `从列表移除用户 ${args.subject}`;
+```
+
+**教训**：确认门的三层（`requiresWrite` → `buildToolDescription` → UI 弹窗）必须完整覆盖。添加新 write 工具时，这三层都要检查。
+
+---
+
+## 架构升级（本次会话新增）
+
+| 组件 | 位置 | 说明 |
+|------|------|------|
+| Lists 全栈 | core + app + pwa + tui | 列表 CRUD + 详情（帖文/成员）+ TUI 视图 + 5 AI 工具 |
+| `packages/pwa/src/components/ListsPage.tsx` | 列表索引页 | 浏览/创建/删除/添加他人到列表 |
+| `packages/pwa/src/components/ListDetailPage.tsx` | 列表详情页 | Posts/Members 双 Tab + 虚拟滚动 + 编辑名称/描述 |
+| `packages/app/src/hooks/useLists.ts` | 列表集合 hook | CRUD + auto-retry |
+| `packages/app/src/hooks/useListDetail.ts` | 列表详情 hook | 成员+feed 分页 + mute + add/remove/update/delete |
+| `packages/pwa/src/icons/list.svg, user-plus.svg, users.svg` | 新增 SVG | Lucide 图标 |
+| AI 工具扩展 | tools.ts: 985-1038 | `create_list`, `add_to_list`, `remove_from_list`, `get_lists`, `get_list_feed` |
+| Widget header buttons | WidgetPanel + widgetRegistry + AIChatWidget | `headerButtons` 字段 + module ref 桥接 |
+| `widgetRegistry.ts:29` | `headerButtons` field | WidgetDefinition 扩展 |
+
 ## 版本
 
-**v0.5.3** — AI Chat 页面重构 + 侧边栏 Widget 系统 + 关于页面 + 大量 bug 修复
+**v0.6.0** — 列表功能全栈实现 + 删除/编辑 + TUI 完善 + AI 工具 + 7 个细节修复
