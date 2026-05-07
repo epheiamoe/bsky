@@ -56,7 +56,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   // Local tab state that extends useProfile's tab with 'lists'
   const [activeTab, setActiveTab] = useState<'posts' | 'replies' | 'lists'>(tab as 'posts' | 'replies');
-  useEffect(() => { if (tab !== 'lists') setActiveTab(tab as 'posts' | 'replies'); }, [tab]);
+  useEffect(() => { setActiveTab(prev => prev === 'lists' ? prev : tab as 'posts' | 'replies'); }, [tab]);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
