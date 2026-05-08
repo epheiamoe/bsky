@@ -20,7 +20,7 @@
 
 ## 版本
 
-**v0.7.0** — AT Play + Social Circle analysis + compose pre-fill API + adjustable post count
+**v0.7.0** — AT Play + Social Circle analysis + compose pre-fill API + AI auto-naming
 
 ## 项目状态
 
@@ -48,6 +48,7 @@
 - **DM 轮询刷新**: 对话列表 30s 静默轮询 + 聊天消息 10s 静默轮询。markConvoRead 模块级函数乐观清除未读标记。
 - **AT Play 实验性功能** (v0.7.0): 侧边栏 🧪 AT Play 入口 → `#/atplay` 实验列表 → `#/atplay/social-circle` 社交圈分析。分析用户互动数据：权重图构建 + 核心/扩展/潜在分层 + Mermaid 可视化图表。默认分析 50 篇帖文（30-100 可调），Handle 预填充当前用户。结果底部「分享到 Bluesky」按钮。纯计算（无 AI 依赖），纯函数导出供未来 AI 工具复用。PWA only。
 - **Compose 预填充 API** (v0.7.0): `AppView` compose 类型新增 `initialText?: string` — 任意页面可通过 `goTo({ type: 'compose', initialText: '...' })` 跳转到发帖页并预填充文本。
+- **AI 自动标题命名** (v0.7.0): 使用 `singleTurnAI` 在首次助手回复后自动生成对话标题。`P_AUTO_TITLE_SYSTEM` + `PF_AUTO_TITLE_USER`。跳过 `<currently_viewing>` 上下文消息。`onTitleChanged` 回调刷新列表。
 
 ## 🔴 关键教训
 
@@ -197,6 +198,21 @@
 3. 同上但用用户 PDS host → 501（同样不支持）
 **正确路径（最终）**：`chatKy = ky.create({ prefixUrl: 'https://api.bsky.chat/xrpc', hooks: { afterResponse: [withRefresh] } })` + `this.getAuthHeaders()`（session JWT）。
 **陷阱**：`sendMessage` 返回 `MessageView` 直接（不是 `{ message: MessageView }`），但 `addReaction`/`removeReaction` 返回 `{ message: MessageView }` — 需逐个确认 Lexicon schema。
+
+### 36. AI auto-naming chat titles: maxTokens + thinking mode
+**根因**：`generateChatTitle` 传了 `maxTokens: 50` 给 `singleTurnAI`，用户开启了 thinking 模式。DeepSeek 的 thinking 链消耗了所有 token 预算，导致 `content` 为空 → 回退到用户消息原文。
+**修复**：移除 `maxTokens` 覆盖（使用 `singleTurnAI` 默认 2000）。
+**教训**：`singleTurnAI` 继承主 AI 的 thinking 配置。对于简单任务（标题生成），thinking 模式会消耗大量 token 导致响应为空。可用 `config.thinkingEnabled = false` 禁用。
+
+### 37. AI title generated but UI not updated
+**根因**：`autoSave` 直接用 `storage.saveChat()` 保存标题，但没有触发 `useChatHistory` 的 `refresh()` 来刷新对话列表。
+**修复**：新增 `UseAIChatOptions.onTitleChanged` 回调，`autoSave` 保存标题后调用。`AIChatPage` 传入 `refresh`。
+**教训**：直接操作 storage 绕过 hook 状态管理时需要显式同步。
+
+### 38. /view 上下文干扰标题生成
+**根因**：`msgs.find(m => m.role === 'user')` 取到的是 `/view` 注入的 `<currently_viewing>` 消息，而非用户真实输入。标题变成了复读上下文。
+**修复**：过滤掉以 `<currently_viewing>` 开头的消息，只对真实用户消息触发标题生成。
+**教训**：注入的系统消息和用户消息在 messages 数组中不可区分，需要字符串前缀过滤。
 
 ---
 
@@ -398,3 +414,4 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/AtPlaySocialCircle.tsx` | 社交圈分析 UI（表单/进度/结果/分享） |
 | `packages/pwa/src/icons/flask-conical.svg` | AT Play 侧边栏图标 |
 | `packages/core/src/at/client.ts` (getRelationships, getActorLikes) | 社交圈分析 API 方法 |
+| `generateChatTitle`, `P_AUTO_TITLE_SYSTEM`, `PF_AUTO_TITLE_USER` (assistant.ts, prompts.ts) | AI 自动对话标题命名 |
