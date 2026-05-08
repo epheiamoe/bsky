@@ -12,49 +12,66 @@
 
 ---
 
-## 📸 一览
+## ✨ 功能一览
 
-<div align="center">
+### 📰 时间线 & 讨论串
 
-| ![时间线](assets/illustration/timeline.png) | ![列表](assets/illustration/lists.png) | ![AI对话](assets/illustration/AI-chat-1.png) |
-|:---:|:---:|:---:|
-| 时间线 | 列表 | AI 对话 |
+![时间线](assets/illustration/timeline.png)
 
-| ![私信](assets/illustration/dm-chat.png) | ![翻译](assets/illustration/translate-a-post.png) | ![欢迎引导](assets/illustration/welcome-page.png) |
-|:---:|:---:|:---:|
-| 私信 | 翻译 | 欢迎引导 |
-
-</div>
+浏览 Following、Discover 和自定义 Feed。查看嵌套讨论串、引用帖和富媒体嵌入。虚拟滚动保证无论刷多远都流畅。
 
 ---
 
-## ✨ 功能一览
+### 📋 列表
 
-**📰 时间线 & 讨论串**
-浏览 Following、Discover 和自定义 Feed。查看嵌套讨论串、引用帖和富媒体嵌入。虚拟滚动保证无论刷多远都流畅。
+![列表](assets/illustration/lists.png)
 
-**📋 列表**
-创建精选列表用于定制信息流，创建管理列表用于批量静音。管理成员，浏览列表帖文流。`#/lists` 查看你的收藏。
+创建精选列表用于定制信息流，创建管理列表用于批量静音。随时管理成员、浏览列表帖文流。`#/lists` 查看你的收藏。
 
-**🤖 AI 对话**
-流式输出，思考过程可见。36 个工具桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需确认。
+---
 
-**💬 私信**
-私人对话 + emoji 反应 + 引用帖嵌入。后台静默轮询——新消息自动出现，无需刷新。
+### 🤖 AI 对话
 
-**🌐 更多功能**
+![AI 对话](assets/illustration/AI-chat-1.png)
+
+流式输出，思考过程可见。36 个工具桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需点击确认。自带 API Key，数据不经过我们的服务器。
+
+---
+
+### 💬 私信
+
+![私信](assets/illustration/dm-chat.png)
+
+私人对话 + emoji 反应 + 引用帖嵌入。后台静默轮询，新消息自动出现。静音对话、删除消息、搜索用户。
+
+---
+
+### 🌐 翻译
+
+![翻译](assets/illustration/translate-a-post.png)
+
+一键翻译任意帖子或讨论串。双模式：简易纯文本或带源语言检测的结构化 JSON。支持 7 种语言。
+
+---
+
+### 🎨 欢迎引导
+
+![欢迎引导](assets/illustration/welcome-page.png)
+
+第一次使用？欢迎引导卡片带你几步配置 AI Key——每个提供商都有详细步骤。直接跳过也能用全部核心功能。你的凭据不会离开浏览器。
+
+---
+
+**还有更多：**
 - **书签** — 收藏任意帖子，稍后查看
 - **搜索** — 帖子、用户、动态源 4 标签搜索
 - **资料页** — 编辑头像、横幅、显示名称
 - **发帖** — 多帖串 + 图片 + ALT 文本
 - **草稿** — 自动保存到 Bluesky PDS + 本地回退
 - **通知** — 实时刷新
-
-**🎨 细节**
-- PWA 可安装 — 离线使用
-- 深色模式 — 跟随系统
-- 国际化 — 中文 · English · 日本語
-- 全 SVG 图标 — 任意尺寸清晰锐利
+- **PWA** — 可安装，离线使用
+- **深色模式** — 跟随系统
+- **国际化** — 中文 · English · 日本語
 
 ---
 

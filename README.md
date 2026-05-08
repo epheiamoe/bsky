@@ -12,49 +12,66 @@ Pure front-end. Zero servers. AI-powered, privacy-first.
 
 ---
 
-## 📸 At a Glance
+## ✨ Features
 
-<div align="center">
+### 📰 Timeline & Threads
 
-| ![Timeline](assets/illustration/timeline.png) | ![Lists](assets/illustration/lists.png) | ![AI Chat](assets/illustration/AI-chat-1.png) |
-|:---:|:---:|:---:|
-| Timeline | Lists | AI Chat |
+![Timeline](assets/illustration/timeline.png)
 
-| ![DMs](assets/illustration/dm-chat.png) | ![Translate](assets/illustration/translate-a-post.png) | ![Welcome](assets/illustration/welcome-page.png) |
-|:---:|:---:|:---:|
-| Messages | Translate | Welcome |
-
-</div>
+Browse Following, Discover, and custom feeds. Dive into threaded conversations with quoted posts and rich embeds. Virtual scroll keeps things fast no matter how far you go.
 
 ---
 
-## ✨ What You Can Do
+### 📋 Lists
 
-**📰 Feed & Threads**
-Browse Following, Discover, and custom feeds. Dive into threaded conversations with quoted posts and rich embeds. Virtual scroll keeps things fast no matter how far you go.
+![Lists](assets/illustration/lists.png)
 
-**📋 Lists**
-Create curated lists for custom feeds, or moderation lists to mute in bulk. Manage members, browse list timelines. `#/lists` for your collections.
+Create curated lists for custom feeds, or moderation lists to mute in bulk. Manage members, browse list timelines, remove and add on the fly. Visit `#/lists` for your collections.
 
-**🤖 AI Chat**
-Streaming responses with visible thinking. 36 tools bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All with confirmation gates on write actions.
+---
 
-**💬 Direct Messages**
-Private conversations with reactions and quote post embeds. Polls silently in the background — new messages appear without refreshing.
+### 🤖 AI Chat
 
-**🌐 Everything Else**
+![AI Chat](assets/illustration/AI-chat-1.png)
+
+Streaming responses with visible thinking. 36 tools bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
+
+---
+
+### 💬 Direct Messages
+
+![Direct Messages](assets/illustration/dm-chat.png)
+
+Private conversations with reactions and quote post embeds. New messages appear automatically via background polling. Mute conversations, delete messages, search by user.
+
+---
+
+### 🌐 Translate
+
+![Translate](assets/illustration/translate-a-post.png)
+
+One tap to translate any post or thread into your language. Dual-mode: simple plain text or structured JSON with source language detection. 7 languages supported.
+
+---
+
+### 🎨 Welcome & Setup
+
+![Welcome](assets/illustration/welcome-page.png)
+
+First time here? A guided welcome card walks you through AI key setup — with step-by-step instructions for each provider. Skip it and all the core features work out of the box. Your credentials never leave your browser.
+
+---
+
+**And also:**
 - **Bookmarks** — bookmark anything, browse later
 - **Search** — posts, users, feeds across 4 tabs
 - **Profile** — edit avatar, banner, display name
 - **Compose** — multi-post threads with images and ALT text
 - **Drafts** — auto-save to Bluesky PDS + local fallback
 - **Notifications** — real-time refresh
-
-**🎨 Polish**
-- Installable PWA — works offline
-- Dark mode — follows your system
-- i18n — 中文 · English · 日本語
-- Every icon is SVG — crisp at any size
+- **PWA** — installable, works offline
+- **Dark mode** — follows your system
+- **i18n** — 中文 · English · 日本語
 
 ---
 
@@ -85,7 +102,7 @@ Everything runs in your browser. Your Bluesky credentials, API keys, and convers
 
 ---
 
-## 🏗 Under the Hood
+## 🏗 Architecture
 
 ```
 @bsky/core ──→ @bsky/app ──→ @bsky/tui  (Ink · terminal)
