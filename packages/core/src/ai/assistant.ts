@@ -856,7 +856,6 @@ export async function generateChatTitle(
       P_AUTO_TITLE_SYSTEM,
       PF_AUTO_TITLE_USER(firstUserMsg.slice(0, 150), firstAiReply.slice(0, 300)),
       0.3,
-      50,
     );
     const cleaned = raw.trim().replace(/^["「『\s]+|["」』\s]+$/g, '').slice(0, 50);
     return cleaned || firstUserMsg.slice(0, 50);
