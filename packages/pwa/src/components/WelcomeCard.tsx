@@ -57,6 +57,11 @@ export function WelcomeCard({ onGoToSettings, onSkip }: WelcomeCardProps) {
           <p className="text-text-secondary text-sm mt-1">{t('welcome.subtitle')}</p>
         </div>
 
+        {/* Privacy note */}
+        <div className="mx-6 mb-4 p-3 rounded-lg bg-primary/5 border border-primary/10">
+          <p className="text-xs text-text-secondary">{t('welcome.privacyNote')}</p>
+        </div>
+
         {/* What works without AI */}
         <div className="mx-6 mb-4 p-3 rounded-lg bg-green-500/5 border border-green-500/10">
           <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">{t('welcome.readyNow')}</p>

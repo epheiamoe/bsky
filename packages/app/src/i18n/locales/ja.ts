@@ -251,6 +251,7 @@ const ja: LocaleMessages = {
 
   'welcome.title': 'ようこそ！Bluesky アカウントが接続されました。',
   'welcome.subtitle': '基本機能はすぐに使えます。AI 機能を使うには API キーを設定してください。',
+  'welcome.privacyNote': 'このアプリは完全にブラウザ内で動作します。API キーや会話内容が当方のサーバーに送信されることはありません。すべての AI リクエストはお使いの端末から選択したプロバイダーに直接送信されます。当方がデータを閲覧・保存することはできません。',
   'welcome.readyNow': 'すぐに使える機能',
   'welcome.readyNowDesc': 'タイムライン · 検索 · プロフィール · ブックマーク · リスト · DM · PWA インストール',
   'welcome.aiProviders': 'AI プロバイダー（1つ選択）',

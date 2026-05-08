@@ -263,6 +263,7 @@ const zh: LocaleMessages = {
 
   'welcome.title': '欢迎！你的 Bluesky 账号已连接。',
   'welcome.subtitle': '核心功能立即可用。配置 AI API Key 即可启用智能功能。',
+  'welcome.privacyNote': '本应用完全在你的浏览器中运行。你的 API Key 和对话内容不会发送到我们的服务器——所有 AI 请求直接从你的设备发送到你选择的提供商。我们无法查看或存储你的数据。',
   'welcome.readyNow': '开箱即用',
   'welcome.readyNowDesc': '时间线 · 搜索 · 资料 · 书签 · 列表 · 私信 · PWA 安装',
   'welcome.aiProviders': 'AI 提供商（任选一个）',

@@ -251,6 +251,7 @@ const en: LocaleMessages = {
 
   'welcome.title': 'Welcome! Your Bluesky account is connected.',
   'welcome.subtitle': 'Core features work immediately. Enable AI by adding an API key.',
+  'welcome.privacyNote': 'This app runs entirely in your browser. Your API key and conversations are never sent to our servers — all AI requests go directly from your device to the provider you choose. We cannot see or store your data.',
   'welcome.readyNow': 'Works out of the box',
   'welcome.readyNowDesc': 'Timeline · Search · Profile · Bookmarks · Lists · DMs · PWA install',
   'welcome.aiProviders': 'AI Providers (pick one)',

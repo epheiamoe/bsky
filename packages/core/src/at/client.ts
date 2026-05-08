@@ -218,11 +218,8 @@ export class BskyClient {
   async searchActors(params: { q: string; limit?: number; cursor?: string }): Promise<SearchActorsResponse> {
     const searchParams: Record<string, string | number> = { q: params.q, limit: params.limit ?? 25 };
     if (params.cursor) searchParams.cursor = params.cursor;
-    const kyInstance = this.session ? this.ky : this.publicKy;
-    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
-    return kyInstance.get('app.bsky.actor.searchActors', {
+    return this.publicKy.get('app.bsky.actor.searchActors', {
       searchParams,
-      ...headers,
     }).json<SearchActorsResponse>();
   }
 
