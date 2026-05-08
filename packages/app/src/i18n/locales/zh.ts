@@ -217,6 +217,7 @@ const zh: LocaleMessages = {
   'ai.historyPath': '历史在 ~/.bsky-tui/chats/',
   'ai.newChat': '新对话',
   'ai.deleteChat': '删除对话',
+  'ai.renameChat': '重命名',
   'ai.emptyHistory': '暂无对话历史',
   'ai.emptyPrompt': '开始与 AI 对话，分析帖子内容',
   'ai.thinking': 'AI 思考中…',

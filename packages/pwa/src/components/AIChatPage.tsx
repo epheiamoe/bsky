@@ -38,7 +38,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const isProfile = contextUri && !contextUri?.startsWith('at://');
 
-  const { conversations, deleteConversation, refresh } = useChatHistory(storage);
+  const { conversations, deleteConversation, saveConversation, loadConversation, refresh } = useChatHistory(storage);
 
   const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId: sessionId,
@@ -304,6 +304,20 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     [sessionId, deleteConversation, goTo],
   );
 
+  const [renameTarget, setRenameTarget] = useState<{ id: string; title: string } | null>(null);
+  const [renameInput, setRenameInput] = useState('');
+
+  const handleRenameChat = useCallback(async () => {
+    if (!renameTarget || !renameInput.trim()) return;
+    const existing = await loadConversation(renameTarget.id);
+    if (existing) {
+      existing.title = renameInput.trim();
+      await saveConversation(existing);
+    }
+    setRenameTarget(null);
+    setRenameInput('');
+  }, [renameTarget, renameInput, loadConversation, saveConversation]);
+
   const handleGuidingQuestion = useCallback(
     (q: string) => {
       void send(q);
@@ -371,13 +385,22 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={(e) => handleDeleteChat(e, c.id)}
-                  className="opacity-0 group-hover:opacity-100 text-text-secondary hover:text-red-500 p-0.5 transition-all shrink-0"
-                  title={t('ai.deleteChat')}
-                >
-                  <Icon name="trash-2" size={16} />
-                </button>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRenameTarget({ id: c.id, title: c.title }); setRenameInput(c.title); }}
+                    className="text-text-secondary hover:text-primary p-0.5 transition-colors"
+                    title={t('ai.renameChat')}
+                  >
+                    <Icon name="pencil" size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteChat(e, c.id)}
+                    className="text-text-secondary hover:text-red-500 p-0.5 transition-colors"
+                    title={t('ai.deleteChat')}
+                  >
+                    <Icon name="trash-2" size={16} />
+                  </button>
+                </div>
               </div>
             ))
           )}
@@ -474,6 +497,27 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
               <div className="flex gap-3 justify-end">
                 <button onClick={rejectAction} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-surface transition-colors">{t('action.cancel')}</button>
                 <button onClick={confirmAction} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors">{t('action.confirm')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Rename chat modal ── */}
+        {renameTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setRenameTarget(null)}>
+            <div className="bg-white dark:bg-[#1a1a2e] rounded-xl p-6 max-w-sm mx-4 border border-border shadow-xl" onClick={e => e.stopPropagation()}>
+              <h3 className="text-text-primary font-semibold text-sm mb-3">{t('ai.renameChat')}</h3>
+              <input
+                type="text"
+                value={renameInput}
+                onChange={e => setRenameInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRenameChat(); }}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:border-primary mb-4"
+                autoFocus
+              />
+              <div className="flex gap-3 justify-end">
+                <button onClick={() => setRenameTarget(null)} className="px-4 py-2 rounded-lg border border-border text-text-secondary hover:bg-surface transition-colors text-sm">{t('action.cancel')}</button>
+                <button onClick={handleRenameChat} className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors text-sm">{t('action.save')}</button>
               </div>
             </div>
           </div>

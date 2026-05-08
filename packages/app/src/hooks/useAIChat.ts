@@ -239,17 +239,23 @@ export function useAIChat(
       // Auto-generate title once after first assistant reply
       if (!titleGeneratedRef.current && firstUser) {
         const firstAssistant = msgs.find(m => m.role === 'assistant');
+        console.log('[useAIChat] titleGen check:', { titleGenerated: titleGeneratedRef.current, hasFirstUser: !!firstUser, hasFirstAssistant: !!firstAssistant, userContent: firstUser?.content.slice(0, 40) });
         if (firstAssistant) {
           titleGeneratedRef.current = true;
+          console.log('[useAIChat] triggering title generation...');
           (async () => {
             try {
+              console.log('[useAIChat] dynamic importing generateChatTitle...');
               const { generateChatTitle } = await import('@bsky/core');
+              console.log('[useAIChat] calling generateChatTitle...');
               const newTitle = await generateChatTitle(
                 aiConfig,
                 firstUser.content.slice(0, 100),
                 firstAssistant.content.slice(0, 300),
               );
+              console.log('[useAIChat] titleGen result:', { newTitle });
               if (newTitle) {
+                console.log('[useAIChat] saving new title:', newTitle);
                 await storage.saveChat({
                   id: chatIdRef.current,
                   title: newTitle,
@@ -259,8 +265,9 @@ export function useAIChat(
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
                 });
+                console.log('[useAIChat] title saved successfully');
               }
-            } catch { /* silently fail */ }
+            } catch (e) { console.error('[useAIChat] titleGen error:', e); }
           })();
         }
       }

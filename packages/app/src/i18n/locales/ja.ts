@@ -206,6 +206,7 @@ const ja: LocaleMessages = {
   'ai.historyPath': '履歴: ~/.bsky-tui/chats/',
   'ai.newChat': '新しいチャット',
   'ai.deleteChat': 'チャットを削除',
+  'ai.renameChat': '名前を変更',
   'ai.emptyHistory': 'チャット履歴がありません',
   'ai.emptyPrompt': 'AI と会話を始めて、投稿を分析しましょう',
   'ai.thinking': 'AI 思考中…',
