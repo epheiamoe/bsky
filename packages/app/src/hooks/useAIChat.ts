@@ -32,6 +32,8 @@ interface UseAIChatOptions {
   contextPost?: string;
   /** Called after a new chat is saved — used to refresh conversation list */
   onChatSaved?: () => void;
+  /** Called when the AI auto-generates a chat title — used to refresh conversation list */
+  onTitleChanged?: () => void;
 }
 
 export function useAIChat(
@@ -268,13 +270,14 @@ export function useAIChat(
                   updatedAt: new Date().toISOString(),
                 });
                 console.log('[useAIChat] title saved successfully');
+                options?.onTitleChanged?.();
               }
             } catch (e) { console.error('[useAIChat] titleGen ERROR:', e); }
           })();
         }
       }
     } catch { /* silently fail */ }
-  }, [storage, contextUri, options?.onChatSaved, aiConfig]);
+  }, [storage, contextUri, options?.onChatSaved, options?.onTitleChanged, aiConfig]);
 
   const send = useCallback(async (text: string) => {
     const newUserMsg: AIChatMessage = { role: 'user', content: text };

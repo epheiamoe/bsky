@@ -50,6 +50,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     contextProfile: contextProfile ?? (isProfile ? contextUri : undefined),
     contextPost,
     onChatSaved: refresh,
+    onTitleChanged: refresh,
   });
   // Group messages for card display: pair tool_call + tool_result
   const messageGroups = useMemo(() => {
