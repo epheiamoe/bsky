@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { BskyClient, ConvoView, ConvoListResponse } from '@bsky/core';
+
+const POLL_INTERVAL = 30000; // 30s — refresh convo list silently
 
 export function useConvoList(client: BskyClient | null) {
   const [convos, setConvos] = useState<ConvoView[]>([]);
@@ -36,6 +38,22 @@ export function useConvoList(client: BskyClient | null) {
       setLoading(false);
     }
   }, [client]);
+
+  // Silent poll — no loading indicator
+  const silentPoll = useCallback(async () => {
+    if (!client) return;
+    try {
+      const res: ConvoListResponse = await client.listConvos(30);
+      setConvos(res.convos);
+      setCursor(res.cursor);
+    } catch { /* silent poll — ignore errors */ }
+  }, [client]);
+
+  useEffect(() => {
+    if (!client) return;
+    const iv = setInterval(silentPoll, POLL_INTERVAL);
+    return () => clearInterval(iv);
+  }, [silentPoll, client]);
 
   return { convos, cursor, loading, error, load, refresh };
 }

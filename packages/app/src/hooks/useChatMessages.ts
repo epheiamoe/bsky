@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { BskyClient, MessageView, DeletedMessageView, SystemMessageView, MessageInput, ConvoView, GetConvoResponse, GetMessagesResponse } from '@bsky/core';
 
 export type ChatMessage = MessageView;
@@ -13,6 +13,16 @@ export function useChatMessages(client: BskyClient | null) {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [convo, setConvo] = useState<ConvoView | null>(null);
+
+  // Track last known message ID for silent polling
+  const lastMsgIdRef = useRef<string | null>(null);
+
+  // Update ref whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      lastMsgIdRef.current = messages[messages.length - 1]!.id;
+    }
+  }, [messages]);
 
   const loadConvo = useCallback(async (conversationId: string, reset = false) => {
     if (!client) return;
@@ -122,6 +132,27 @@ export function useChatMessages(client: BskyClient | null) {
       setConvo(res.convo);
     } catch { /* silent */ }
   }, [client, convo]);
+
+  // Silent poll — check for new messages every 10s without loading indicator
+  const silentPoll = useCallback(async () => {
+    if (!client || !convo) return;
+    try {
+      const mr: GetMessagesResponse = await client.getMessages(convo.id, 30);
+      const newMsgs = mr.messages.reverse();
+      const lastNewId = newMsgs.length > 0 ? newMsgs[newMsgs.length - 1]?.id : null;
+      // Only update if there are new messages (last ID differs from what we've shown)
+      if (lastNewId && lastNewId !== lastMsgIdRef.current) {
+        setMessages(newMsgs);
+        setCursor(mr.cursor);
+      }
+    } catch { /* silent poll — ignore errors */ }
+  }, [client, convo]);
+
+  useEffect(() => {
+    if (!client || !convo) return;
+    const iv = setInterval(silentPoll, 10000); // 10s poll
+    return () => clearInterval(iv);
+  }, [silentPoll, client, convo]);
 
   return {
     messages, convo, loading, sending, error,
