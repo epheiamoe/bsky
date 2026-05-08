@@ -112,18 +112,26 @@ export function AtPlaySocialCircle({ client, goBack }: AtPlaySocialCircleProps) 
   const { t } = useI18n();
   const { state, analyze, reset } = useSocialCircle(client);
   const [handle, setHandle] = useState('');
+  const [postCount, setPostCount] = useState(50);
   const [showOptions, setShowOptions] = useState(false);
+
+  useEffect(() => {
+    if (!handle && client.isAuthenticated()) {
+      setHandle(client.getHandle());
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAnalyze = useCallback(() => {
     const trimmed = handle.trim();
     if (!trimmed) return;
-    analyze({ handle: trimmed, maxPosts: 30 });
-  }, [handle, analyze]);
+    analyze({ handle: trimmed, maxPosts: postCount });
+  }, [handle, postCount, analyze]);
 
   const handleReset = useCallback(() => {
     reset();
-    setHandle('');
-  }, [reset]);
+    setHandle(client.isAuthenticated() ? client.getHandle() : '');
+    setPostCount(50);
+  }, [reset, client]);
 
   const phaseLabel = (() => {
     switch (state.progress.phase) {
@@ -182,8 +190,23 @@ export function AtPlaySocialCircle({ client, goBack }: AtPlaySocialCircleProps) 
             Options
           </button>
           {showOptions && (
-            <div className="mt-2 p-3 bg-surface rounded-lg border border-border text-xs text-text-muted space-y-1">
-              <p>Posts to analyze: 30 (most recent, excluding replies & reposts)</p>
+            <div className="mt-2 p-3 bg-surface rounded-lg border border-border text-xs text-text-muted space-y-3">
+              <div>
+                <label className="flex items-center justify-between">
+                  <span>Posts to analyze: <strong className="text-text-primary">{postCount}</strong></span>
+                  <span className="text-[10px]">30 – 100</span>
+                </label>
+                <input
+                  type="range"
+                  min={30}
+                  max={100}
+                  step={10}
+                  value={postCount}
+                  onChange={e => setPostCount(Number(e.target.value))}
+                  className="w-full mt-1 accent-primary"
+                />
+                <p className="text-[10px] mt-0.5">Most recent posts, excluding reposts</p>
+              </div>
               <p>Interaction weights: Like x1.5 · Repost x2.0 · Reply x3.0</p>
               <p>Core circle: top 5 · Extended: next 10 · Potential: mutual follows</p>
             </div>

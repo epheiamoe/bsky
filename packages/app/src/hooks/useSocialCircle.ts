@@ -190,7 +190,7 @@ export function useSocialCircle(client: BskyClient | null) {
 
   const analyze = useCallback(async (options: SocialCircleOptions) => {
     if (!client) return;
-    const maxPosts = options.maxPosts ?? 30;
+    const maxPosts = options.maxPosts ?? 50;
 
     setState(s => ({ ...s, status: 'loading', error: null, result: null }));
 
