@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { BskyClient, MessageView, DeletedMessageView, SystemMessageView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useChatMessages, parsePostUri, useI18n } from '@bsky/app';
+import { useChatMessages, parsePostUri, useI18n, markConvoRead } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 type AnyMsg = MessageView | DeletedMessageView | SystemMessageView;
@@ -28,7 +28,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   const did = client.getDID();
 
   useEffect(() => {
-    loadConvo(conversationId, true).then(() => markRead());
+    loadConvo(conversationId, true).then(() => { markRead(); markConvoRead(conversationId); });
   }, [conversationId]);
 
   useEffect(() => {
