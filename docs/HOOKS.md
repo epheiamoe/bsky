@@ -23,6 +23,7 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useBookmarks` | (inline state) | `{ bookmarks, loading, isBookmarked, addBookmark, removeBookmark, toggleBookmark, refresh }` |
 | `useConvoList` | (inline state) | `{ convos, cursor, loading, error, load, refresh }` |
 | `useChatMessages` | (inline state) | `{ messages, convo, loading, sending, error, loadConvo, loadOlder, sendMessage, toggleReaction, refresh, deleteMessage, markRead, muteConvo, unmuteConvo }` |
+| `useSocialCircle` | (inline state) | `{ state: SocialCircleState, analyze: (options) => Promise<void>, reset: () => void }` — analyzes Bluesky social interactions from public data, builds weighted interaction graph, classifies layers (core/extended/potential), generates Mermaid diagram |
 | `useActiveFeed` | Module-level ref | `{ getLastFeedUri, setLastFeedUri }` — tracks last active feed URI across views |
 | `usePostActions` | Module-level Sets/Maps | `{ isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers }` — shared like/repost state |
 | `useScrollRestore` | Module-level Map | `{ saveScrollTop, getScrollTop }` — preserves scroll position across view changes |

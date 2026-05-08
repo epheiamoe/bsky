@@ -53,7 +53,9 @@
 | **关于页面** | ✅ | ✅ | PWA(`#/about`) + TUI(`?` 键)，显示 commit hash 构建时注入 |
 | **推送通知** | N/A | ⬜ | Web Push API |
 | **资料页预览 (组件)** | ⬜ | ✅ | ProfilePreviewWidget — thread 视图置顶显示作者资料 |
-| **资料页 AI 按钮** | ✅ | ✅ | TUI: a 键, PWA: 🤖 AI 按钮 |
+| **AT Play 实验性功能** | ⬜ | ✅ | Social Circle analysis (PWA only): incoming interaction graph, Mermaid visualization, core/extended/potential layers, share to Bluesky |
+| **AI 社交圈分析工具** | ⬜ | ⬜ | Future: AI tool using exported pure functions (generateSocialGraphMermaid, buildSocialCircleShareText) |
+| **AT Play 热门灵感** | ⬜ | ⬜ | Future: trending posts + user's top posts + AI content strategy |
 | **资料页简介翻译** | ✅ | ✅ | TUI: f 键, PWA: 🌐 翻译按钮 |
 | **资料页头像/横幅放大** | N/A | ✅ | 点击头像/横幅 → 全屏灯箱 + 下载按钮 |
 | **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral, per-provider API keys, per-scenario model config |

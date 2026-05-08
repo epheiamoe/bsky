@@ -6,7 +6,7 @@
 
 > **会话上下文被压缩后，从这里恢复状态**：
 > 1. `docs/CONTEXT.md` — 版本号、项目状态、关键教训、开发规则
-> 2. `docs/LESSONS.md` — 历次会话的详细教训（18 课）
+> 2. `docs/LESSONS.md` — 历次会话的详细教训（20 课）
 > 3. `docs/ARCHITECTURE.md` — 系统架构
 
 ## Project Overview
@@ -131,6 +131,19 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - **AIChatWidget**: Uses module refs (`_widgetCallbacks`) to bridge runtime state to header buttons
 - **Temporary disable**: AI widget auto-disabled on `aiChat` view, restored on exit via `widgetOrderRef`
 - **`_order: string[]`** manages enabled widget order; `_onWidgetToggle` callback persists to localStorage
+
+## AT Play (v0.7.0+)
+
+- **Entry**: Sidebar 🧪 → `#/atplay` (experiment list) → `#/atplay/social-circle`
+- **Architecture**: `@bsky/core` (getRelationships/getActorLikes API) → `@bsky/app` (useSocialCircle hook + pure functions) → `@bsky/pwa` (AtPlayPage + AtPlaySocialCircle)
+- **Social Circle Analysis**: Builds weighted interaction graph from public Bluesky data. Likes=1.5, Reposts=2.0, Replies=3.0. Classifies into core(top5)/extended(next10)/potential layers. Renders Mermaid diagram via dynamic import.
+- **Pure functions** (exported for AI tool reuse): `generateSocialGraphMermaid()`, `buildSocialCircleShareText()`, `INTERACTION_WEIGHTS`
+- **No AI dependency for MVP**: Pure computation only. AI integration planned for v0.8.x.
+- **PWA only**: No TUI implementation yet.
+- **Compose pre-fill API**: Any page can call `goTo({ type: 'compose', initialText: '...' })` to navigate to compose with pre-filled text. Reusable across all features.
+- **Data limitations**: Only incoming interactions analyzed. Reply authors not resolved. Default 50-post window (adjustable 30-100).
+- **Share to Bluesky**: Button at results bottom → locale-aware text (3 languages) → compose pre-fill.
+- **Key files**: `packages/app/src/hooks/useSocialCircle.ts`, `packages/pwa/src/components/AtPlaySocialCircle.tsx`, `packages/pwa/src/components/AtPlayPage.tsx`, `docs/ATPLAY.md`
 
 ## i18n
 

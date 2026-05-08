@@ -10,7 +10,8 @@
 4. **`docs/ARCHITECTURE.md`** — 系统架构
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
-7. **`docs/KEYBOARD.md`** — TUI 快捷键
+7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
+8. **`docs/KEYBOARD.md`** — TUI 快捷键
 8. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
 9. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
 10. **`CHANGELOG.md`** — 版本历史
@@ -19,7 +20,7 @@
 
 ## 版本
 
-**v0.6.0** — 列表功能全栈实现 + 删除/编辑 + TUI 完善 + AI 工具 + 8 处细节修复
+**v0.7.0** — AT Play + Social Circle analysis + compose pre-fill API + adjustable post count
 
 ## 项目状态
 
@@ -29,7 +30,7 @@
 - **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
 - **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
-- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / **列表** / 资料 / AI 对话 / 发帖 / 组件
+- **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / **列表** / 资料 / AI 对话 / 发帖 / **AT Play** / 组件
 - **右侧组件栏** (lg+ 390px) : 6 widgets — header bar（icon+title+headerButtons+↑+↓+×），widget 纯内容。AI Widget 进入 AI 页面时临时禁用（离开时恢复），headerButtons 支持 open-in-page / new-chat。可通过 AIChatPage 的「Open in Widgets」按钮返回时间线并重新启用
 - **组件页** `#/components` : ↑↓ 箭头排序 + 启用/禁用
 - **关于页面** `#/about` : PWA+TUI，显示 repo URL / commit hash（Vite 构建时注入 `__COMMIT_HASH__`）/ build time / 描述 / 反馈 / 联系
@@ -45,6 +46,8 @@
 - **AI 工具**: 36 个（+5 列表工具：get_lists, get_list_feed, create_list, add_to_list, remove_from_list）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。searchActors 统一使用 publicKy（bsky.social 返回 503/400）。
 - **欢迎引导**: 登录后一次性 WelcomeCard — 引导新用户配置 AI（DeepSeek/Mistral 分步教程 + 隐私说明）。存储 `bsky_welcomed` 到 localStorage，跳过后永不再显。
 - **DM 轮询刷新**: 对话列表 30s 静默轮询 + 聊天消息 10s 静默轮询。markConvoRead 模块级函数乐观清除未读标记。
+- **AT Play 实验性功能** (v0.7.0): 侧边栏 🧪 AT Play 入口 → `#/atplay` 实验列表 → `#/atplay/social-circle` 社交圈分析。分析用户互动数据：权重图构建 + 核心/扩展/潜在分层 + Mermaid 可视化图表。默认分析 50 篇帖文（30-100 可调），Handle 预填充当前用户。结果底部「分享到 Bluesky」按钮。纯计算（无 AI 依赖），纯函数导出供未来 AI 工具复用。PWA only。
+- **Compose 预填充 API** (v0.7.0): `AppView` compose 类型新增 `initialText?: string` — 任意页面可通过 `goTo({ type: 'compose', initialText: '...' })` 跳转到发帖页并预填充文本。
 
 ## 🔴 关键教训
 
@@ -389,3 +392,9 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/hooks/useLists.ts` | 列表集合 CRUD hook |
 | `packages/app/src/hooks/useListDetail.ts` | 列表详情 hook（成员/feed/mute/CRUD） |
 | `packages/pwa/src/icons/list.svg, user-plus.svg, users.svg` | 列表 SVG 图标 |
+| `docs/ATPLAY.md` | AT Play 实验功能参考 |
+| `packages/app/src/hooks/useSocialCircle.ts` | 社交圈分析 hook + 纯函数（generateSocialGraphMermaid, buildSocialCircleShareText） |
+| `packages/pwa/src/components/AtPlayPage.tsx` | AT Play 实验列表页 |
+| `packages/pwa/src/components/AtPlaySocialCircle.tsx` | 社交圈分析 UI（表单/进度/结果/分享） |
+| `packages/pwa/src/icons/flask-conical.svg` | AT Play 侧边栏图标 |
+| `packages/core/src/at/client.ts` (getRelationships, getActorLikes) | 社交圈分析 API 方法 |
