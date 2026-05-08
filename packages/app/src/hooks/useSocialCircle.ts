@@ -5,7 +5,7 @@ import type { BskyClient } from '@bsky/core';
 
 export interface SocialCircleOptions {
   handle: string;
-  /** Default 30 */
+  /** Default 50 */
   maxPosts?: number;
 }
 
@@ -15,9 +15,14 @@ export interface InteractorInfo {
   displayName?: string;
   avatar?: string;
   totalWeight: number;
+  incomingWeight: number;
+  outgoingWeight: number;
   likeCount: number;
   repostCount: number;
   replyCount: number;
+  outgoingLikeCount: number;
+  outgoingRepostCount: number;
+  outgoingReplyCount: number;
   isMutual: boolean;
 }
 
@@ -39,7 +44,7 @@ export interface SocialCircleResult {
 }
 
 export interface SocialCircleProgress {
-  phase: 'identity' | 'posts' | 'interactions' | 'graph' | 'done';
+  phase: 'identity' | 'posts' | 'interactions' | 'outgoing' | 'graph' | 'done';
   current: number;
   total: number;
 }
@@ -61,6 +66,7 @@ export const INTERACTION_WEIGHTS = {
 
 const CORE_CIRCLE_SIZE = 5;
 const EXTENDED_CIRCLE_SIZE = 10;
+const MAX_REPLY_RESOLVE = 5;
 
 // ── Pure functions ──
 
@@ -72,19 +78,25 @@ interface RawInteraction {
   likes: number;
   reposts: number;
   replies: number;
+  outgoingLikes: number;
+  outgoingReposts: number;
+  outgoingReplies: number;
 }
 
 function aggregateInteractions(
   actors: Map<string, RawInteraction>,
   items: Array<{ did: string; handle: string; displayName?: string; avatar?: string }>,
-  type: 'like' | 'repost' | 'reply',
+  type: 'like' | 'repost' | 'reply' | 'outgoingLike' | 'outgoingRepost' | 'outgoingReply',
 ): void {
   for (const item of items) {
     const existing = actors.get(item.did);
     if (existing) {
       if (type === 'like') existing.likes++;
       else if (type === 'repost') existing.reposts++;
-      else existing.replies++;
+      else if (type === 'reply') existing.replies++;
+      else if (type === 'outgoingLike') existing.outgoingLikes++;
+      else if (type === 'outgoingRepost') existing.outgoingReposts++;
+      else if (type === 'outgoingReply') existing.outgoingReplies++;
     } else {
       actors.set(item.did, {
         did: item.did,
@@ -94,17 +106,32 @@ function aggregateInteractions(
         likes: type === 'like' ? 1 : 0,
         reposts: type === 'repost' ? 1 : 0,
         replies: type === 'reply' ? 1 : 0,
+        outgoingLikes: type === 'outgoingLike' ? 1 : 0,
+        outgoingReposts: type === 'outgoingRepost' ? 1 : 0,
+        outgoingReplies: type === 'outgoingReply' ? 1 : 0,
       });
     }
   }
 }
 
-function computeWeight(raw: RawInteraction): number {
+function computeIncomingWeight(raw: RawInteraction): number {
   return (
     raw.likes * INTERACTION_WEIGHTS.like +
     raw.reposts * INTERACTION_WEIGHTS.repost +
     raw.replies * INTERACTION_WEIGHTS.reply
   );
+}
+
+function computeOutgoingWeight(raw: RawInteraction): number {
+  return (
+    raw.outgoingLikes * INTERACTION_WEIGHTS.like +
+    raw.outgoingReposts * INTERACTION_WEIGHTS.repost +
+    raw.outgoingReplies * INTERACTION_WEIGHTS.reply
+  );
+}
+
+function computeWeight(raw: RawInteraction): number {
+  return computeIncomingWeight(raw) + computeOutgoingWeight(raw);
 }
 
 function toInteractorInfo(raw: RawInteraction, isMutual: boolean): InteractorInfo {
@@ -114,9 +141,14 @@ function toInteractorInfo(raw: RawInteraction, isMutual: boolean): InteractorInf
     displayName: raw.displayName,
     avatar: raw.avatar,
     totalWeight: computeWeight(raw),
+    incomingWeight: computeIncomingWeight(raw),
+    outgoingWeight: computeOutgoingWeight(raw),
     likeCount: raw.likes,
     repostCount: raw.reposts,
     replyCount: raw.replies,
+    outgoingLikeCount: raw.outgoingLikes,
+    outgoingRepostCount: raw.outgoingReposts,
+    outgoingReplyCount: raw.outgoingReplies,
     isMutual,
   };
 }
@@ -160,7 +192,6 @@ export function generateSocialGraphMermaid(
   for (const info of core) {
     const thickness = Math.max(1, Math.round((info.totalWeight / maxWeight) * 4));
     const id = nodeIds.get(info.did)!;
-    const style = thickness >= 3 ? `,stroke-width:${thickness}px` : '';
     lines.push(`  ${safeHandle} <-->|"${info.totalWeight.toFixed(0)}"| ${id}`);
   }
 
@@ -186,7 +217,7 @@ export function buildSocialCircleShareText(result: SocialCircleResult, locale: s
   };
 
   return [
-    i('我在 ai-bsky.pages.dev 分析了我的社交圈', 'I analyzed my social circle on ai-bsky.pages.dev', 'ai-bsky.pages.dev でソーシャルサークルを分析しました'),
+    i('我在 ai-bsky.pages.dev 分析了我的双向社交圈', 'I analyzed my social circle on ai-bsky.pages.dev', 'ai-bsky.pages.dev でソーシャルサークルを分析しました'),
     '',
     i(
       `📊 分析了 ${result.summary.postsAnalyzed} 篇帖文`,
@@ -202,6 +233,12 @@ export function buildSocialCircleShareText(result: SocialCircleResult, locale: s
       `💜 核心圈 ${result.summary.coreCircleCount} 人`,
       `💜 Core circle: ${result.summary.coreCircleCount}`,
       `💜 コアサークル: ${result.summary.coreCircleCount} 人`,
+    ),
+    '',
+    i(
+      '双向分析：别人对我的赞/转发/回复 + 我对别人的赞',
+      'Bidirectional: likes/reposts/replies I received + likes I gave',
+      '双方向分析：他者からのいいね/リポスト/返信 + 私からのいいね',
     ),
     '',
     'ai-bsky.pages.dev',
@@ -251,12 +288,12 @@ export function useSocialCircle(client: BskyClient | null) {
       const actualCount = Math.min(posts.length, maxPosts);
       updateProgress({ current: 1 });
 
-      // ── Phase 4: Fetch interactions ──
+      // ── Phase 4: Fetch incoming interactions (likes + reposts) ──
       const postsToAnalyze = posts.slice(0, actualCount).filter(
         p => (p.post.likeCount ?? 0) > 0 || (p.post.repostCount ?? 0) > 0,
       );
       const totalPosts = postsToAnalyze.length;
-      updateProgress({ phase: 'interactions', current: 0, total: totalPosts });
+      updateProgress({ phase: 'interactions', current: 0, total: totalPosts + (MAX_REPLY_RESOLVE > 0 ? 1 : 0) });
 
       const actorsMap = new Map<string, RawInteraction>();
 
@@ -272,7 +309,7 @@ export function useSocialCircle(client: BskyClient | null) {
               'like',
             );
           }
-        } catch { /* skip failed likes fetch */ }
+        } catch { /* skip */ }
 
         try {
           if ((post.post.repostCount ?? 0) > 0) {
@@ -282,27 +319,59 @@ export function useSocialCircle(client: BskyClient | null) {
               'repost',
             );
           }
-        } catch { /* skip failed reposts fetch */ }
-
-        try {
-          // Use replyCount from post record (not fetching actual reply authors to keep API calls manageable)
-          // Each reply is counted once as a single interaction "event" from a unique actor
-          const replyCount = post.post.replyCount ?? 0;
-          if (replyCount > 0) {
-            // [Debt: AtPlay] Reply author identities not resolved — using count only.
-            // Future: fetch getPostThread(depth=1) to get reply actors.
-            // For MVP, add anonymous reply weight as aggregated metric.
-          }
-        } catch { /* skip failed reply fetch */ }
+        } catch { /* skip */ }
 
         updateProgress({ current: i + 1 });
       }
 
-      // ── Phase 5: Build graph & classify layers ──
+      // ── Phase 4b: Resolve reply authors (top N by replyCount) ──
+      const postsByReplies = [...posts.slice(0, actualCount)]
+        .sort((a, b) => (b.post.replyCount ?? 0) - (a.post.replyCount ?? 0))
+        .filter(p => (p.post.replyCount ?? 0) > 0)
+        .slice(0, MAX_REPLY_RESOLVE);
+
+      if (postsByReplies.length > 0) {
+        updateProgress({ current: totalPosts + 1, total: totalPosts + 1 });
+        const threadCalls = postsByReplies.map(p =>
+          client.getPostThread(p.post.uri, 1).catch(() => null)
+        );
+        const threads = await Promise.all(threadCalls);
+        for (const threadRes of threads) {
+          if (!threadRes) continue;
+          const thread = threadRes.thread as any;
+          if (!thread || thread.$type === 'app.bsky.feed.defs#notFoundPost') continue;
+          const replies: any[] = thread.replies || [];
+          for (const reply of replies) {
+            if (reply.$type === 'app.bsky.feed.defs#notFoundPost') continue;
+            const author = reply.post?.author;
+            if (author) {
+              aggregateInteractions(actorsMap,
+                [{ did: author.did, handle: author.handle, displayName: author.displayName, avatar: author.avatar }],
+                'reply',
+              );
+            }
+          }
+        }
+      }
+
+      // ── Phase 5: Fetch outgoing likes ──
+      updateProgress({ phase: 'outgoing', current: 0, total: 1 });
+      try {
+        const actorLikes = await client.getActorLikes(actorDid, 50);
+        for (const item of (actorLikes.feed || [])) {
+          const author = item.post.author;
+          aggregateInteractions(actorsMap,
+            [{ did: author.did, handle: author.handle, displayName: author.displayName, avatar: author.avatar }],
+            'outgoingLike',
+          );
+        }
+      } catch { /* skip outgoing likes */ }
+      updateProgress({ current: 1 });
+
+      // ── Phase 6: Build graph & classify layers ──
       updateProgress({ phase: 'graph', current: 0, total: actorsMap.size });
 
       const allInteractors: InteractorInfo[] = [];
-      // Batch check mutual relationships for top interactors
       const sortedRaw = [...actorsMap.entries()]
         .sort((a, b) => computeWeight(b[1]) - computeWeight(a[1]));
 
@@ -316,14 +385,13 @@ export function useSocialCircle(client: BskyClient | null) {
             relationshipMap.set(rel.did, !!(rel.following && rel.followedBy));
           }
         }
-      } catch { /* skip failed relationships check */ }
+      } catch { /* skip */ }
 
       for (const [, raw] of sortedRaw) {
         const isMutual = relationshipMap.get(raw.did) ?? mutualSet.has(raw.did);
         allInteractors.push(toInteractorInfo(raw, isMutual));
       }
 
-      // Layer classification
       const sorted = [...allInteractors].sort((a, b) => b.totalWeight - a.totalWeight);
       const core = sorted.slice(0, CORE_CIRCLE_SIZE);
       const extended = sorted.slice(CORE_CIRCLE_SIZE, CORE_CIRCLE_SIZE + EXTENDED_CIRCLE_SIZE);
@@ -331,14 +399,15 @@ export function useSocialCircle(client: BskyClient | null) {
         .filter(info => !core.includes(info) && !extended.includes(info) && info.isMutual && info.totalWeight > 0)
         .slice(0, 5);
 
-      // Mermaid generation
       const userProfile = await client.getProfile(actorDid).catch(() => null);
       const userHandle = userProfile?.handle ?? options.handle;
 
       const mermaidCode = generateSocialGraphMermaid(userHandle, core, extended, potential);
 
-      // Summary
-      const totalInteractions = allInteractors.reduce((sum, i) => sum + i.likeCount + i.repostCount + i.replyCount, 0);
+      const totalInteractions = allInteractors.reduce(
+        (sum, i) => sum + i.likeCount + i.repostCount + i.replyCount + i.outgoingLikeCount + i.outgoingRepostCount + i.outgoingReplyCount,
+        0,
+      );
 
       const result: SocialCircleResult = {
         summary: {

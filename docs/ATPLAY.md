@@ -59,7 +59,13 @@ Filter to posts with likeCount>0 || repostCount>0
   ↓
 For each: getLikes + getRepostedBy (limit 100)
   ↓
-Aggregate actors → weighted graph (like=1.5, repost=2.0, reply=3.0)
+Resolve reply authors: top 5 by replyCount via getPostThread(depth=1)
+  ↓
+Aggregate incoming actors → weighted graph
+  ↓
+Fetch outgoing likes via getActorLikes(DID, 50)
+  ↓
+Merge outgoing into graph
   ↓
 getRelationships(DID, [top 30 interactor DIDs]) → mutual detection
   ↓
@@ -82,7 +88,8 @@ Render: summary cards + layer tables + Mermaid diagram
 | `getLikes` | `app.bsky.feed.getLikes` | Who liked each post |
 | `getRepostedBy` | `app.bsky.feed.getRepostedBy` | Who reposted each post |
 | `getRelationships` | `app.bsky.graph.getRelationships` | Batch mutual check |
-| `getActorLikes` | `app.bsky.feed.getActorLikes` | (Future) outgoing likes |
+| `getActorLikes` | `app.bsky.feed.getActorLikes` | Outgoing likes (who user liked) |
+| `getPostThread` | `app.bsky.feed.getPostThread` | Resolve reply authors (depth=1) |
 
 ### hooks/useSocialCircle.ts
 
@@ -131,7 +138,9 @@ interface SocialCircleResult {
 
 interface InteractorInfo {
   did: string; handle: string; displayName?: string; avatar?: string;
-  totalWeight: number; likeCount: number; repostCount: number; replyCount: number;
+  totalWeight: number; incomingWeight: number; outgoingWeight: number;
+  likeCount: number; repostCount: number; replyCount: number;
+  outgoingLikeCount: number; outgoingRepostCount: number; outgoingReplyCount: number;
   isMutual: boolean;
 }
 
@@ -190,9 +199,8 @@ Works by:
 
 ### Current Limitations
 
-- **Only incoming interactions analyzed**: likes/reposts ON the user's posts. Outgoing (user's likes/resposts/replies) is NOT included.
-- **Reply authors not resolved**: replyCount is counted but individual reply actors are not identified. See `[Debt: AtPlay]` in code.
-- **30-post default window**: Set to 50 now, adjustable via slider (30-100). Higher values take longer but find more interactors.
+- **Outgoing tracking is likes-only**: Outgoing reposts and replies are not yet tracked. Only outgoing likes via `getActorLikes()`.
+- **50-post default window**: Adjustable via slider (30-100). Higher values take longer but find more interactors.
 - **No AI tools yet**: Pure computation only. `generateSocialGraphMermaid()` and `INTERACTION_WEIGHTS` are exported for future AI tool use.
 - **PWA only**: No TUI implementation yet. AtPlay is a PWA-only feature.
 - **Rendered Mermaid graph not included in share**: Currently text-only share. SVG image sharing pending.
@@ -234,8 +242,8 @@ Clicking navigates to `{ type: 'compose', initialText: shareText }`.
 - AI content strategy analysis
 
 ### v1.x — Enhanced Analysis
-- Outgoing interaction tracking (`getActorLikes`)
-- Reply author resolution (`getPostThread`)
+- Outgoing reposts + replies tracking (currently likes-only)
 - Interactive graph (clickable nodes → profile)
 - Export social circle as image/PDF
+- SVG image in share post
 - TUI support

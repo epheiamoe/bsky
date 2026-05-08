@@ -60,14 +60,19 @@ function MermaidGraph({ code }: { code: string }) {
   );
 }
 
-function InteractorRow({ info, rank, isCurrentUser }: { info: InteractorInfo; rank: number; isCurrentUser?: boolean }) {
+function InteractorRow({ info, rank }: { info: InteractorInfo; rank: number }) {
   const { t } = useI18n();
-  const maxWeight = 100; // Relative scale placeholder
-  const barWidth = Math.min(100, Math.round((info.totalWeight / 20) * 100)) / 100 * 100;
+  const scale = Math.max(1, [...document.querySelectorAll('[data-weight-scale]')].length > 0 ? 20 : 20);
+  const totalPct = Math.min(100, Math.round((info.totalWeight / 20) * 100));
+  const incomingPct = Math.min(totalPct, Math.round((info.incomingWeight / 20) * 100));
+  const outgoingPct = totalPct - incomingPct;
+
+  const hasIncoming = info.likeCount > 0 || info.repostCount > 0 || info.replyCount > 0;
+  const hasOutgoing = info.outgoingLikeCount > 0 || info.outgoingRepostCount > 0 || info.outgoingReplyCount > 0;
 
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-      <span className="text-text-muted text-xs w-5 text-right">{rank}</span>
+      <span className="text-text-muted text-xs w-5 text-right flex-shrink-0">{rank}</span>
       {info.avatar ? (
         <img src={info.avatar} alt="" className="w-8 h-8 rounded-full flex-shrink-0" aria-hidden="true" />
       ) : (
@@ -87,21 +92,30 @@ function InteractorRow({ info, rank, isCurrentUser }: { info: InteractorInfo; ra
           )}
         </div>
         <span className="text-text-muted text-xs">@{info.handle}</span>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${barWidth}%` }}
-            />
+        <div className="flex items-center gap-2 mt-1" data-weight-scale>
+          <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden flex">
+            {incomingPct > 0 && (
+              <div className="h-full bg-primary rounded-l-full transition-all duration-500" style={{ width: `${(incomingPct / totalPct) * 100}%` }} />
+            )}
+            {outgoingPct > 0 && (
+              <div className="h-full bg-yellow-500 rounded-r-full transition-all duration-500" style={{ width: `${(outgoingPct / totalPct) * 100}%` }} />
+            )}
           </div>
-          <span className="text-text-primary text-xs font-mono w-8 text-right">
+          <span className="text-text-primary text-xs font-mono w-8 text-right flex-shrink-0">
             {info.totalWeight.toFixed(0)}
           </span>
         </div>
-        <div className="flex gap-3 mt-0.5 text-[10px] text-text-muted">
-          <span>{t('atplay.likes')}: {info.likeCount}</span>
-          <span>{t('atplay.reposts')}: {info.repostCount}</span>
-          <span>{t('atplay.replies')}: {info.replyCount}</span>
+        <div className="flex gap-3 mt-0.5 text-[10px] leading-tight">
+          {hasIncoming && (
+            <span className="text-primary/80">
+              ↓ {t('atplay.likes')}:{info.likeCount} {t('atplay.reposts')}:{info.repostCount} {t('atplay.replies')}:{info.replyCount}
+            </span>
+          )}
+          {hasOutgoing && (
+            <span className="text-yellow-600 dark:text-yellow-400">
+              ↑ {t('atplay.likes')}:{info.outgoingLikeCount}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -138,6 +152,7 @@ export function AtPlaySocialCircle({ client, goBack, goTo }: AtPlaySocialCircleP
       case 'identity': return t('atplay.phase.identity');
       case 'posts': return t('atplay.phase.posts');
       case 'interactions': return t('atplay.phase.interactions', { current: String(state.progress.current), total: String(state.progress.total) });
+      case 'outgoing': return t('atplay.phase.outgoing');
       case 'graph': return t('atplay.phase.graph');
       case 'done': return t('atplay.phase.done');
     }
