@@ -10,18 +10,23 @@ interface AtPlaySocialCircleProps {
   goTo: (v: AppView) => void;
 }
 
+let _graphIdCounter = 0;
+
 function MermaidGraph({ code }: { code: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const idRef = useRef<string>(`sg-${++_graphIdCounter}`);
   const [svg, setSvg] = useState<string | null>(null);
   const [mermaidError, setMermaidError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setSvg(null);
+    setMermaidError(null);
     (async () => {
       try {
         const mermaid = (await import('mermaid')).default;
         mermaid.initialize({ startOnLoad: false, theme: 'base', securityLevel: 'loose' });
-        const { svg: rendered } = await mermaid.render('social-circle-graph', code);
+        const { svg: rendered } = await mermaid.render(idRef.current, code);
         if (!cancelled) setSvg(rendered);
       } catch (err) {
         if (!cancelled) setMermaidError(err instanceof Error ? err.message : String(err));
@@ -38,16 +43,20 @@ function MermaidGraph({ code }: { code: string }) {
     );
   }
 
+  if (!svg) {
+    return (
+      <div className="flex items-center justify-center p-2 bg-white dark:bg-[#1a1a1a] rounded-lg border border-border overflow-auto min-h-[100px]">
+        <div className="text-text-muted text-sm py-8">{'Loading graph...'}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={containerRef}
       className="flex items-center justify-center p-2 bg-white dark:bg-[#1a1a1a] rounded-lg border border-border overflow-auto"
-      dangerouslySetInnerHTML={svg ? { __html: svg } : undefined}
-    >
-      {!svg && (
-        <div className="text-text-muted text-sm py-8">{'Loading graph...'}</div>
-      )}
-    </div>
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
   );
 }
 
