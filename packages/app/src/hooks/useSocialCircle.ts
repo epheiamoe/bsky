@@ -375,7 +375,7 @@ export function useSocialCircle(client: BskyClient | null) {
       const sortedRaw = [...actorsMap.entries()]
         .sort((a, b) => computeWeight(b[1]) - computeWeight(a[1]));
 
-      const topDids = sortedRaw.slice(0, 30).map(([did]) => did);
+      const topDids = sortedRaw.slice(0, 30).map(([did]) => did).filter(d => d !== actorDid);
       const relationshipMap = new Map<string, boolean>();
 
       try {
@@ -388,6 +388,7 @@ export function useSocialCircle(client: BskyClient | null) {
       } catch { /* skip */ }
 
       for (const [, raw] of sortedRaw) {
+        if (raw.did === actorDid) continue;
         const isMutual = relationshipMap.get(raw.did) ?? mutualSet.has(raw.did);
         allInteractors.push(toInteractorInfo(raw, isMutual));
       }
