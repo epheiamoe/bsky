@@ -31,6 +31,7 @@ import { TrendsWidget } from './components/widgets/TrendsWidget.js';
 import { AIChatWidget, AIChatHeaderButtons } from './components/widgets/AIChatWidget.js';
 import { AboutPage } from './components/AboutPage.js';
 import { Icon } from './components/Icon.js';
+import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
@@ -49,6 +50,7 @@ export function App() {
   const dmCount = convos.reduce((sum, c) => sum + c.unreadCount, 0);
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed'));
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollTopRef = useRef(0);
 
@@ -218,6 +220,21 @@ export function App() {
   // ── Not logged in ──
   if (!isLoggedIn || !client) {
     return <LoginPage onLogin={handleLogin} error={authError} />;
+  }
+
+  if (showWelcome) {
+    return (
+      <WelcomeCard
+        onGoToSettings={() => {
+          localStorage.setItem('bsky_welcomed', '1');
+          setShowWelcome(false);
+        }}
+        onSkip={() => {
+          localStorage.setItem('bsky_welcomed', '1');
+          setShowWelcome(false);
+        }}
+      />
+    );
   }
 
   // ── Render current view ──
