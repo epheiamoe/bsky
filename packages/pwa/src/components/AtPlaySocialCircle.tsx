@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, InteractorInfo, SocialCircleResult, SocialCircleState } from '@bsky/app';
-import { useI18n, useSocialCircle } from '@bsky/app';
+import { useI18n, useSocialCircle, buildSocialCircleShareText } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 interface AtPlaySocialCircleProps {
@@ -108,8 +108,8 @@ function InteractorRow({ info, rank, isCurrentUser }: { info: InteractorInfo; ra
   );
 }
 
-export function AtPlaySocialCircle({ client, goBack }: AtPlaySocialCircleProps) {
-  const { t } = useI18n();
+export function AtPlaySocialCircle({ client, goBack, goTo }: AtPlaySocialCircleProps) {
+  const { t, locale } = useI18n();
   const { state, analyze, reset } = useSocialCircle(client);
   const [handle, setHandle] = useState('');
   const [postCount, setPostCount] = useState(50);
@@ -310,6 +310,20 @@ export function AtPlaySocialCircle({ client, goBack }: AtPlaySocialCircleProps) 
             <div className="p-3 rounded-lg bg-surface border border-border">
               <h3 className="text-text-primary text-xs font-semibold mb-1">{t('atplay.dataSource')}</h3>
               <p className="text-text-muted text-xs leading-relaxed">{t('atplay.dataSourceDesc')}</p>
+            </div>
+
+            {/* Share to Bluesky */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  const text = buildSocialCircleShareText(result, locale);
+                  goTo({ type: 'compose', initialText: text });
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
+              >
+                <Icon name="at-sign" size={16} />
+                {t('atplay.shareToBluesky')}
+              </button>
             </div>
           </div>
         )}

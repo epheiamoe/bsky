@@ -36,7 +36,7 @@ export { useLists } from './hooks/useLists.js';
 export { useListDetail } from './hooks/useListDetail.js';
 export { useSocialCircle } from './hooks/useSocialCircle.js';
 export type { SocialCircleOptions, SocialCircleResult, SocialCircleState, SocialCircleProgress, InteractorInfo, SocialCircleSummary } from './hooks/useSocialCircle.js';
-export { generateSocialGraphMermaid, INTERACTION_WEIGHTS } from './hooks/useSocialCircle.js';
+export { generateSocialGraphMermaid, buildSocialCircleShareText, INTERACTION_WEIGHTS } from './hooks/useSocialCircle.js';
 export { useConvoList, markConvoRead } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';

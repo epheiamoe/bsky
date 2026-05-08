@@ -15,6 +15,7 @@ interface ComposePageProps {
   replyTo?: string;
   quoteUri?: string;
   draftId?: string;
+  initialText?: string;
   goBack: () => void;
   goHome: () => void;
   goTo: (v: AppView) => void;
@@ -67,11 +68,20 @@ function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string 
   return images;
 }
 
-export function ComposePage({ client, replyTo, quoteUri, draftId, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
+export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
   const { t } = useI18n();
   const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, goHome);
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
+
+  // Pre-fill initial text if provided (from "Share" actions in other pages)
+  const initialTextAppliedRef = useRef(false);
+  useEffect(() => {
+    if (initialText && !initialTextAppliedRef.current && !draftId) {
+      loadFromDraft([{ text: initialText }]);
+      initialTextAppliedRef.current = true;
+    }
+  }, [initialText, draftId, loadFromDraft]);
   const [perPostImages, setPerPostImages] = useState<Map<string, LocalImage[]>>(new Map());
   const [perPostVideos, setPerPostVideos] = useState<Map<string, LocalVideo | null>>(new Map());
   const [compressInfo, setCompressInfo] = useState<string | null>(null);

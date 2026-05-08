@@ -404,6 +404,7 @@ const ja: LocaleMessages = {
   'atplay.phase.done': '分析完了',
   'atplay.mutual': '相互',
   'atplay.comingSoon': '近日公開',
+  'atplay.shareToBluesky': 'Bluesky に共有',
 
   'time.justNow': 'たった今',
   'about.repository': 'ソースコード',

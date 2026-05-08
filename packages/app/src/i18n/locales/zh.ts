@@ -426,6 +426,7 @@ const zh: LocaleMessages = {
   'atplay.phase.done': '分析完成',
   'atplay.mutual': '互关',
   'atplay.comingSoon': '敬请期待',
+  'atplay.shareToBluesky': '分享到 Bluesky',
 
   'time.justNow': '刚刚',
   'about.repository': '源码仓库',

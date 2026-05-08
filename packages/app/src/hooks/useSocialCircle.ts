@@ -174,6 +174,40 @@ export function generateSocialGraphMermaid(
   return lines.join('\n');
 }
 
+/**
+ * Build shareable text for Bluesky post from social circle results.
+ * Pure function — reusable by AI tools and UI components.
+ */
+export function buildSocialCircleShareText(result: SocialCircleResult, locale: string): string {
+  const i = (zh: string, en: string, ja: string) => {
+    if (locale.startsWith('zh')) return zh;
+    if (locale.startsWith('ja')) return ja;
+    return en;
+  };
+
+  return [
+    i('我在 ai-bsky.pages.dev 分析了我的社交圈', 'I analyzed my social circle on ai-bsky.pages.dev', 'ai-bsky.pages.dev でソーシャルサークルを分析しました'),
+    '',
+    i(
+      `📊 分析了 ${result.summary.postsAnalyzed} 篇帖文`,
+      `📊 Analyzed ${result.summary.postsAnalyzed} posts`,
+      `📊 ${result.summary.postsAnalyzed} 件の投稿を分析`,
+    ),
+    i(
+      `👥 发现 ${result.summary.uniqueInteractors} 位互动者，${result.summary.mutualFollows} 位互关`,
+      `👥 Found ${result.summary.uniqueInteractors} interactors, ${result.summary.mutualFollows} mutual`,
+      `👥 ${result.summary.uniqueInteractors} 人のインタラクター、${result.summary.mutualFollows} 人が相互`,
+    ),
+    i(
+      `💜 核心圈 ${result.summary.coreCircleCount} 人`,
+      `💜 Core circle: ${result.summary.coreCircleCount}`,
+      `💜 コアサークル: ${result.summary.coreCircleCount} 人`,
+    ),
+    '',
+    'ai-bsky.pages.dev',
+  ].join('\n');
+}
+
 // ── Hook ──
 
 export function useSocialCircle(client: BskyClient | null) {

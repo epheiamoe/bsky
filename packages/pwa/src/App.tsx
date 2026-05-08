@@ -282,6 +282,7 @@ export function App() {
             replyTo={(currentView as { replyTo?: string }).replyTo}
             quoteUri={(currentView as { quoteUri?: string }).quoteUri}
             draftId={(currentView as { draftId?: string }).draftId}
+            initialText={(currentView as { initialText?: string }).initialText}
             goBack={goBack}
             goHome={goHome}
             goTo={goTo}

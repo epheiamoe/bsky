@@ -404,6 +404,7 @@ const en: LocaleMessages = {
   'atplay.phase.done': 'Analysis complete',
   'atplay.mutual': 'mutual',
   'atplay.comingSoon': 'Coming soon',
+  'atplay.shareToBluesky': 'Share to Bluesky',
 
   'time.justNow': 'now',
   'about.repository': 'Repository',
