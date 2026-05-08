@@ -1,115 +1,98 @@
 # 🦋 Bluesky 客户端
 
-**双界面 AI 驱动 Bluesky 客户端。**终端 + 浏览器，一套代码，零后端。
+**你的 Bluesky，AI 加持。**  
+双界面社交客户端——终端给键盘党，浏览器给所有人。  
+纯前端，零服务器，隐私优先。
 
 <div align="center">
 
-[**在线体验**](https://ai-bsky.pages.dev) · [功能一览](#-功能一览) · [快速开始](#-快速开始) · [文档](#-文档)
+[**打开网页版**](https://ai-bsky.pages.dev) · [**源代码**](https://github.com/epheiamoe/bsky)
 
 </div>
 
 ---
 
-## 为什么选择它？
+## 📸 一览
 
-### 📱 双界面，同一核心
+<div align="center">
 
-终端（TUI）给键盘党。浏览器（PWA）给所有人。同一套 hooks，同一套业务逻辑，零重复。随意切换——数据跟着你走。
+| ![时间线](assets/illustration/timeline.png) | ![列表](assets/illustration/lists.png) | ![AI对话](assets/illustration/AI-chat-1.png) |
+|:---:|:---:|:---:|
+| 时间线 | 列表 | AI 对话 |
 
-### 🤖 AI 不只是聊天
+| ![私信](assets/illustration/dm-chat.png) | ![翻译](assets/illustration/translate-a-post.png) | ![欢迎引导](assets/illustration/welcome-page.png) |
+|:---:|:---:|:---:|
+| 私信 | 翻译 | 欢迎引导 |
 
-36 个工具桥接 AI 与 AT Protocol。分析讨论串、管理列表、润色草稿、翻译帖子。流式输出 + 实时思考展示。所有写操作需用户确认。
-
-### 🔒 隐私优先，零后端
-
-纯静态 HTML。无需服务器。你的 Bluesky 凭据永不离开浏览器。PWA 可安装，支持离线。TUI 完全在你本地运行。
+</div>
 
 ---
 
 ## ✨ 功能一览
 
-| 分类 | 功能 |
-|------|------|
-| **时间线** | Following / Discover / 自定义 Feed 生成器，虚拟滚动，滚动位置恢复 |
-| **讨论串** | 完整回复树，引用帖卡片，展开/折叠 |
-| **发帖** | 多帖串，图片 + ALT 文本，草稿自动保存（PDS + 本地） |
-| **列表** | 创建、编辑、删除、添加/移除成员、静音、列表帖文流。15 个 API 方法。`#/lists` |
-| **书签** | 内置 Bluesky API，任意帖子弹窗切换，虚拟滚动 |
-| **私信** | 文字消息、emoji 反应、引用帖、静音对话 |
-| **资料页** | 关注/取关、帖文/回复/列表分页、编辑头像/横幅/名称/描述 |
-| **搜索** | 4 标签：热门 / 最新 / 用户 / 动态源 |
-| **通知** | 实时刷新，已读标记 |
-| **AI 对话** | 36 工具（读/写/列表），流式输出，思考模式，视觉模式，JSON 导出/导入 |
-| **智能翻译** | 7 语言，双模式（简易 / JSON 带源语言检测） |
-| **AI 润色** | 按风格要求重写草稿 |
-| **国际化** | 中文 / English / 日本語 — 即时切换 |
-| **深色模式** | CSS 变量，跟随系统 |
-| **PWA** | 可安装，manifest.json，Service Worker |
+**📰 时间线 & 讨论串**
+浏览 Following、Discover 和自定义 Feed。查看嵌套讨论串、引用帖和富媒体嵌入。虚拟滚动保证无论刷多远都流畅。
+
+**📋 列表**
+创建精选列表用于定制信息流，创建管理列表用于批量静音。管理成员，浏览列表帖文流。`#/lists` 查看你的收藏。
+
+**🤖 AI 对话**
+流式输出，思考过程可见。36 个工具桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需确认。
+
+**💬 私信**
+私人对话 + emoji 反应 + 引用帖嵌入。后台静默轮询——新消息自动出现，无需刷新。
+
+**🌐 更多功能**
+- **书签** — 收藏任意帖子，稍后查看
+- **搜索** — 帖子、用户、动态源 4 标签搜索
+- **资料页** — 编辑头像、横幅、显示名称
+- **发帖** — 多帖串 + 图片 + ALT 文本
+- **草稿** — 自动保存到 Bluesky PDS + 本地回退
+- **通知** — 实时刷新
+
+**🎨 细节**
+- PWA 可安装 — 离线使用
+- 深色模式 — 跟随系统
+- 国际化 — 中文 · English · 日本語
+- 全 SVG 图标 — 任意尺寸清晰锐利
 
 ---
 
 ## 🚀 快速开始
 
-### TUI（终端）
+### 终端（TUI）
 
 ```bash
-git clone https://github.com/epheiamoe/bsky.git
-cd bsky
+git clone https://github.com/epheiamoe/bsky.git && cd bsky
 pnpm install && pnpm -r build
-cp .env.example .env   # 填入你的 Bluesky 账号 + App Password + AI Key
+cp .env.example .env   # 填入你的 Bluesky 账号 + App Password
 cd packages/tui && npx tsx src/cli.ts
 ```
 
-### PWA（浏览器）
+### 浏览器（PWA）
 
 ```bash
-cd packages/pwa && pnpm dev     # http://localhost:5173
-# 或者构建生产版本：
-pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true
+cd packages/pwa && pnpm dev     # → http://localhost:5173
 ```
 
-**无需 `.env`** — PWA 的登录和 AI 配置全在浏览器内完成。
+或直接访问 **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** —— 在浏览器内登录，无需 `.env`。
+
+---
+
+## 🔒 隐私
+
+一切在你的浏览器中运行。你的 Bluesky 凭据、API Key 和对话内容不会接触任何外部服务器。所有请求直接从你的设备发往 Bluesky 或你选择的 AI 提供商。无需信任，无从泄露。
 
 ---
 
 ## 🏗 架构
 
 ```
-@bsky/core ──→ @bsky/app ──→ @bsky/tui (Ink/React 终端)
-                          └─→ @bsky/pwa (React DOM + Tailwind, PWA)
+@bsky/core ──→ @bsky/app ──→ @bsky/tui  (Ink · 终端)
+                          └─→ @bsky/pwa  (React · 浏览器)
 ```
 
-| 包 | 职责 | 关键文件 |
-|----|------|----------|
-| `@bsky/core` | AT Protocol 客户端，AI 引擎，36 工具，提示词，类型 | `client.ts`, `assistant.ts`, `tools.ts`, `prompts.ts` |
-| `@bsky/app` | React hooks, stores, i18n, widget 系统 | `useAIChat.ts`, `useLists.ts`, `widgetStore.ts`, `navigation.ts` |
-| `@bsky/tui` | 终端 UI（Ink） | `App.tsx`, `ComposeView.tsx`, `DMListView.tsx` |
-| `@bsky/pwa` | 网页 UI（React DOM），可安装 PWA | `App.tsx`, `ListsPage.tsx`, `ListDetailPage.tsx`, `Icon.tsx` |
-
----
-
-## 📚 文档
-
-| 文档 | 用途 |
-|------|------|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 系统架构，依赖流 |
-| [`docs/LESSONS.md`](docs/LESSONS.md) | 每次开发会话的关键教训 |
-| [`docs/KEYBOARD.md`](docs/KEYBOARD.md) | TUI 快捷键完整参考 |
-| [`docs/HOOKS.md`](docs/HOOKS.md) | 所有 hook 签名 |
-| [`docs/SCROLL.md`](docs/SCROLL.md) | 虚拟滚动 + 滚动位置恢复规范 |
-| [`docs/DM.md`](docs/DM.md) | 私信实现文档 |
-| [`AGENTS.md`](AGENTS.md) | 贡献者指南 |
-
-[English Docs](README.md)
-
----
-
-## 🧪 测试
-
-```bash
-cd packages/core && npx vitest run --config vitest.config.ts
-# 12+ 集成测试，使用真实 Bluesky API
-```
+业务逻辑只写一次。TUI 和 PWA 共享同一套 hooks。4 个包，一份代码，零重复。
 
 ---
 
@@ -117,4 +100,4 @@ cd packages/core && npx vitest run --config vitest.config.ts
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.6.0** · [更新日志](CHANGELOG.md) · [反馈](https://github.com/epheiamoe/bsky/issues)
+**v0.6.0** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

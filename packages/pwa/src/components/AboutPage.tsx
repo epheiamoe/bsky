@@ -33,7 +33,7 @@ export function AboutPage({ goBack }: AboutPageProps) {
           <div className="text-center">
             <Icon name="astroid-as-AI-Button" size={32} />
             <h2 className="text-lg font-semibold text-text-primary mt-2">Bluesky Client</h2>
-            <p className="text-sm text-text-secondary">v0.5.2</p>
+            <p className="text-sm text-text-secondary">v0.6.0</p>
           </div>
 
           <div className="space-y-3 text-sm">
