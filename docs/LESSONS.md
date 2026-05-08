@@ -398,6 +398,54 @@ case 'remove_from_list': return `从列表移除用户 ${args.subject}`;
 
 ---
 
+### Lesson 19: `markConvoRead` — 乐观清除未读标记，避免 30s 轮询延迟
+
+**问题**：进入 DM 对话阅读消息后，侧边栏未读标记不消失，持续显示直到 30s 后轮询刷新。
+
+**根因**：`markRead()`（`chat.bsky.convo.updateRead`）只更新服务端状态。客户端 `useConvoList.convos` 数组中的 `unreadCount` 保持旧值，直到 `silentPoll`（30s 间隔）拉回最新数据。`App.tsx` 的 `dmCount` 和 `Sidebar` 的标记均依赖此数据。
+
+**修复**：`useConvoList` 中新增 `markConvoRead(convoId)` 模块级函数：
+```typescript
+// Module-level setter — called by DMChatPage after markRead
+let _clearUnread: ((convoId: string) => void) | null = null;
+export function markConvoRead(convoId: string): void {
+  _clearUnread?.(convoId);
+}
+
+// 在 hook 内部注册
+useEffect(() => {
+  _clearUnread = (id: string) => {
+    setConvos(prev => prev.map(c =>
+      c.id === id ? { ...c, unreadCount: 0 } : c
+    ));
+  };
+  return () => { _clearUnread = null; };
+}, []);
+```
+
+`DMChatPage` mount 时：`loadConvo().then(() => { markRead(); markConvoRead(convoId); })`。
+
+**教训**：服务端状态变更必须同步反映到客户端——乐观更新是必需的，不能等到下一轮轮询。模块级函数（而非 prop drilling）适合在不同组件树分支间传递状态变更。
+
+---
+
+### Lesson 20: `searchActors` — 鉴权请求 503，公共端点 200
+
+**问题**：搜索用户时 `bsky.social` 返回 503/400，但 `public.api.bsky.app` 正常返回 200。
+
+**根因**：`searchActors` 使用 `this.session ? this.ky : this.publicKy` 模式。当已登录时走 authenticated endpoint → 503。其他公共读端点（`getLikes`、`getList` 等）使用同一模式但可行——唯独 `searchActors` 在 bsky.social 上不可用。
+
+**修复**：`searchActors` 统一使用 `this.publicKy`（不需要鉴权）：
+```typescript
+// ❌ session ? ky : publicKy — ky fails with 503
+// ✅ always use publicKy — works on public.api.bsky.app
+return this.publicKy.get('app.bsky.actor.searchActors', { searchParams });
+```
+
+**教训**：不是所有公共端点都能通过 PDS 代理（`bsky.social`）正常访问。遇到 503 时先测试 `public.api.bsky.app` 是否可用——如果可用，说明端点是纯公共读，不需要走 PDS 代理。
+
+---
+
 ## 架构升级（本次会话新增）
 
 | 组件 | 位置 | 说明 |
@@ -414,4 +462,4 @@ case 'remove_from_list': return `从列表移除用户 ${args.subject}`;
 
 ## 版本
 
-**v0.6.0** — 列表功能全栈实现 + 删除/编辑 + TUI 完善 + AI 工具 + 7 个细节修复
+**v0.6.0** — 列表功能全栈实现 + DM 轮询刷新 + 欢迎引导卡片 + 搜索修复 + 未读标记修复

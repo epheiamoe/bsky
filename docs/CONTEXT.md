@@ -42,7 +42,9 @@
 - **API 重试**: ky 实例显式 `retry: { statusCodes: [408,413,429,500,502,503,504] }`
 - **tool_call_id 修复**: 3 个死亡路径全修复（assistant.ts yield、useAIChat 恢复、mapMessages）
 - **列表功能** (v0.6.0): 15 个 BskyClient 方法 + useLists/useListDetail hooks + ListsPage + ListDetailPage (Posts/Members Tab + 虚拟滚动) + ProfilePage 列表导航 + TUI 列表视图 + 5 个 AI 工具。支持创建/删除/编辑名称描述/添加移除成员/静音/列表帖文流。AppView 去重 vs PDS 不去重（Lesson 13）。Widget 临时禁用与恢复（Lesson 14）。编辑消息正确保留思考内容和工具调用（Lesson 17）。
-- **AI 工具**: 36 个（+5 列表工具：get_lists, get_list_feed, create_list, add_to_list, remove_from_list）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。
+- **AI 工具**: 36 个（+5 列表工具：get_lists, get_list_feed, create_list, add_to_list, remove_from_list）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。searchActors 统一使用 publicKy（bsky.social 返回 503/400）。
+- **欢迎引导**: 登录后一次性 WelcomeCard — 引导新用户配置 AI（DeepSeek/Mistral 分步教程 + 隐私说明）。存储 `bsky_welcomed` 到 localStorage，跳过后永不再显。
+- **DM 轮询刷新**: 对话列表 30s 静默轮询 + 聊天消息 10s 静默轮询。markConvoRead 模块级函数乐观清除未读标记。
 
 ## 🔴 关键教训
 
