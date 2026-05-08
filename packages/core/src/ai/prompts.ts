@@ -193,3 +193,27 @@ export const P_GUIDING_QUESTIONS: string[] = [
   '解释这个讨论',
   '分析帖子情绪',
 ];
+
+// ══════════════════════════════════════════════════════════════════
+// AI chat auto-naming
+// ══════════════════════════════════════════════════════════════════
+
+/**
+ * System prompt for auto-generating chat conversation titles.
+ * Uses the same language as the user's message.
+ */
+export const P_AUTO_TITLE_SYSTEM = [
+  '你是一个对话标题生成助手。根据用户的首条消息和你的回复，为对话生成一个简洁的标题。',
+  '规则：',
+  '- 使用用户消息的语言生成标题',
+  '- 2-15 个字（中文/日文）或 3-8 个词（英文）',
+  '- 提取对话的核心主题',
+  '- 只返回标题文本本身，不要引号、换行或任何额外文字',
+].join('\n');
+
+/**
+ * User message for auto-naming: provides the first user message and first AI reply context.
+ */
+export function PF_AUTO_TITLE_USER(firstUserMsg: string, firstAiReply: string): string {
+  return `用户：${firstUserMsg}\n\nAI回复：${firstAiReply}`;
+}

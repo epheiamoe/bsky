@@ -59,7 +59,7 @@ export type {
 } from './at/types.js';
 
 // AI exports
-export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft } from './ai/assistant.js';
+export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft, generateChatTitle } from './ai/assistant.js';
 export type { TranslationResult } from './ai/assistant.js';
 export type { AIConfig, ChatMessage, ToolCall } from './ai/assistant.js';
 
@@ -81,6 +81,8 @@ export {
   PF_POLISH_USER,
   PF_AUTO_ANALYSIS,
   P_GUIDING_QUESTIONS,
+  P_AUTO_TITLE_SYSTEM,
+  PF_AUTO_TITLE_USER,
 } from './ai/prompts.js';
 
 // Multi-provider support

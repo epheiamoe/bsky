@@ -62,6 +62,7 @@ export function useAIChat(
   const storage = options?.storage;
   const autoStartedRef = useRef(false);
   const chatNotifiedRef = useRef(false);
+  const titleGeneratedRef = useRef(false);
   // Track current context for auto-save persistence
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
@@ -100,6 +101,7 @@ export function useAIChat(
     setGuidingQuestions([]);
     autoStartedRef.current = false;
     chatNotifiedRef.current = false;
+    titleGeneratedRef.current = false;
 
     // Add initial system message based on context from options (in-memory from navigation)
     if (options?.contextPost) {
@@ -217,7 +219,8 @@ export function useAIChat(
   }, [client, contextUri, assistant, options?.contextProfile, options?.contextPost, buildSystemPrompt]);
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
-    const title = msgs.find(m => m.role === 'user')?.content.slice(0, 80) ?? '新对话';
+    const firstUser = msgs.find(m => m.role === 'user');
+    const title = firstUser?.content.slice(0, 80) ?? '新对话';
     try {
       await storage.saveChat({
         id: chatIdRef.current,
@@ -232,8 +235,37 @@ export function useAIChat(
         chatNotifiedRef.current = true;
         options?.onChatSaved?.();
       }
+
+      // Auto-generate title once after first assistant reply
+      if (!titleGeneratedRef.current && firstUser) {
+        const firstAssistant = msgs.find(m => m.role === 'assistant');
+        if (firstAssistant) {
+          titleGeneratedRef.current = true;
+          (async () => {
+            try {
+              const { generateChatTitle } = await import('@bsky/core');
+              const newTitle = await generateChatTitle(
+                aiConfig,
+                firstUser.content.slice(0, 100),
+                firstAssistant.content.slice(0, 300),
+              );
+              if (newTitle) {
+                await storage.saveChat({
+                  id: chatIdRef.current,
+                  title: newTitle,
+                  contextUri,
+                  context: contextRef.current,
+                  messages: msgs,
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+            } catch { /* silently fail */ }
+          })();
+        }
+      }
     } catch { /* silently fail */ }
-  }, [storage, contextUri, options?.onChatSaved]);
+  }, [storage, contextUri, options?.onChatSaved, aiConfig]);
 
   const send = useCallback(async (text: string) => {
     const newUserMsg: AIChatMessage = { role: 'user', content: text };

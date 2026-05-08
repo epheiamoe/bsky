@@ -5,6 +5,8 @@ import {
   PF_TRANSLATE_JSON,
   P_POLISH_SYSTEM,
   PF_POLISH_USER,
+  P_AUTO_TITLE_SYSTEM,
+  PF_AUTO_TITLE_USER,
 } from './prompts.js';
 import { cleanBaseUrl, shouldSendThinkingParam } from './providers.js';
 
@@ -837,4 +839,28 @@ export async function polishDraft(config: AIConfig, draft: string, requirement: 
     2000,
     modelOverride,
   );
+}
+
+/**
+ * Generate a concise conversation title from the first user message + first AI reply.
+ * Uses singleTurnAI for a lightweight one-shot call. Returns a fallback on failure.
+ */
+export async function generateChatTitle(
+  config: AIConfig,
+  firstUserMsg: string,
+  firstAiReply: string,
+): Promise<string> {
+  try {
+    const raw = await singleTurnAI(
+      config,
+      P_AUTO_TITLE_SYSTEM,
+      PF_AUTO_TITLE_USER(firstUserMsg.slice(0, 150), firstAiReply.slice(0, 300)),
+      0.3,
+      50,
+    );
+    const cleaned = raw.trim().replace(/^["「『\s]+|["」』\s]+$/g, '').slice(0, 50);
+    return cleaned || firstUserMsg.slice(0, 50);
+  } catch {
+    return firstUserMsg.slice(0, 50);
+  }
 }
