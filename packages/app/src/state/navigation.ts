@@ -14,7 +14,9 @@ export type AppView =
   | { type: 'dmChat'; conversationId: string }
   | { type: 'lists'; actor?: string }
   | { type: 'listDetail'; uri: string; tab?: 'posts' | 'members' }
-  | { type: 'about' };
+  | { type: 'about' }
+  | { type: 'atplay' }
+  | { type: 'atplaySocialCircle' };
 
 export interface NavigationState {
   currentView: AppView;

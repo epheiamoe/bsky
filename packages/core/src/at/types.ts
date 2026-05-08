@@ -457,3 +457,23 @@ export interface SendMessageResponse {
 export interface GetConvoResponse {
   convo: ConvoView;
 }
+
+// ── Actor Likes (app.bsky.feed.getActorLikes) ──
+
+export interface GetActorLikesResponse {
+  cursor?: string;
+  feed: Array<{ post: PostView }>;
+}
+
+// ── Relationships (app.bsky.graph.getRelationships) ──
+
+export interface RelationshipInfo {
+  did: string;
+  following?: string;
+  followedBy?: string;
+}
+
+export interface GetRelationshipsResponse {
+  actor?: string;
+  relationships: RelationshipInfo[];
+}

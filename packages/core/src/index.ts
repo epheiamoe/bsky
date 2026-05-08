@@ -53,6 +53,9 @@ export type {
   GetListBlocksResponse,
   GetListMutesResponse,
   GetListsWithMembershipResponse,
+  GetActorLikesResponse,
+  GetRelationshipsResponse,
+  RelationshipInfo,
 } from './at/types.js';
 
 // AI exports

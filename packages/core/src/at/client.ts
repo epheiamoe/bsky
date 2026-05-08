@@ -41,6 +41,8 @@ import type {
   GetListMutesResponse,
   GetListsWithMembershipResponse,
   ListPurpose,
+  GetActorLikesResponse,
+  GetRelationshipsResponse,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -741,5 +743,39 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       json: { repo: did, collection: 'app.bsky.actor.profile', rkey: 'self', record },
     });
+  }
+
+  // ── AtPlay: Social Circle API methods ──
+
+  async getActorLikes(actor: string, limit = 50, cursor?: string): Promise<GetActorLikesResponse> {
+    const params: Record<string, string | number> = { actor, limit };
+    if (cursor) params.cursor = cursor;
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.feed.getActorLikes', {
+      searchParams: params,
+      ...headers,
+    }).json<GetActorLikesResponse>();
+  }
+
+  async getRelationships(actor: string, others: string[]): Promise<GetRelationshipsResponse> {
+    const chunks = [];
+    for (let i = 0; i < others.length; i += 30) {
+      chunks.push(others.slice(i, i + 30));
+    }
+    const allRelationships: GetRelationshipsResponse['relationships'] = [];
+    for (const chunk of chunks) {
+      const sp = new URLSearchParams();
+      sp.set('actor', actor);
+      chunk.forEach(d => sp.append('others', d));
+      const kyInstance = this.session ? this.ky : this.publicKy;
+      const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+      const res = await kyInstance.get('app.bsky.graph.getRelationships', {
+        searchParams: sp.toString(),
+        ...headers,
+      }).json<GetRelationshipsResponse>();
+      allRelationships.push(...(res.relationships || []));
+    }
+    return { actor, relationships: allRelationships };
   }
 }

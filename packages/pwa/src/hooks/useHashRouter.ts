@@ -134,6 +134,10 @@ function parseHash(): AppView {
       return { type: 'components' };
     case '/about':
       return { type: 'about' };
+    case '/atplay':
+      return { type: 'atplay' };
+    case '/atplay/social-circle':
+      return { type: 'atplaySocialCircle' };
     case '/compose': {
       const replyTo = params.get('replyTo');
       const quoteUri = params.get('quoteUri');
@@ -212,6 +216,10 @@ function encodeView(view: AppView): string {
       return '#/components';
     case 'about':
       return '#/about';
+    case 'atplay':
+      return '#/atplay';
+    case 'atplaySocialCircle':
+      return '#/atplay/social-circle';
     case 'compose': {
       const params = new URLSearchParams();
       if (view.replyTo) params.set('replyTo', encodeURIComponent(view.replyTo));

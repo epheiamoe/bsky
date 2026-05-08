@@ -24,6 +24,7 @@ const SIDEBAR_TABS = [
   { icon: 'at-sign' as IconName, key: 'nav.profile', type: 'profile' as const, needsHandle: true },
   { icon: 'astroid-as-AI-Button' as IconName, key: 'nav.aiChat', type: 'aiChat' as const, needsHandle: false },
   { icon: 'pen-line' as IconName, key: 'nav.compose', type: 'compose' as const, needsHandle: false },
+  { icon: 'flask-conical' as IconName, key: 'nav.atplay', type: 'atplay' as const, needsHandle: false },
 ] as const;
 
 export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmCount }: SidebarProps) {

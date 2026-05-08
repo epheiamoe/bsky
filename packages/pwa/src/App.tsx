@@ -30,6 +30,8 @@ import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
 import { AIChatWidget, AIChatHeaderButtons } from './components/widgets/AIChatWidget.js';
 import { AboutPage } from './components/AboutPage.js';
+import { AtPlayPage } from './components/AtPlayPage.js';
+import { AtPlaySocialCircle } from './components/AtPlaySocialCircle.js';
 import { Icon } from './components/Icon.js';
 import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
@@ -343,6 +345,10 @@ export function App() {
         return <ComponentsPage goBack={goBack} goTo={goTo} client={client} />;
       case 'about':
         return <AboutPage goBack={goBack} />;
+      case 'atplay':
+        return <AtPlayPage client={client} goBack={goBack} goTo={goTo} />;
+      case 'atplaySocialCircle':
+        return <AtPlaySocialCircle client={client} goBack={goBack} goTo={goTo} />;
       default:
         return <div className="p-6 text-text-secondary">{t('common.unknownPage')}</div>;
     }
