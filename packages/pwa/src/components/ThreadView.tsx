@@ -140,11 +140,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {parentLines.length > 0 && (
           <section className="px-4 space-y-1">
             <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.discussionSource')} ──</p>
-            {parentLines.map((line, idx) => (
+            {parentLines.map((line) => (
               <div key={line.uri || line.rkey}>
                 <div
                   onClick={() => goTo({ type: 'thread', uri: line.uri })}
-                  className={`mx-2 px-3 py-2 rounded-xl border border-border bg-surface/20 border-l-2 opacity-60 hover:opacity-100 transition-all cursor-pointer ${idx === parentLines.length - 1 ? 'border-l-primary' : 'border-l-border'}`}
+                  className="mx-2 px-3 py-2 rounded-xl border border-border bg-surface/20 opacity-60 hover:opacity-100 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-medium text-text-primary">
@@ -304,7 +304,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 <div
                   key={line.uri || line.rkey}
                   style={{ marginLeft: Math.min((line.depth - 1) * 20, 60) }}
-                  className="border-l-2 border-border/50 pl-3 pb-1"
                 >
                     <PostCard
                       line={line}
