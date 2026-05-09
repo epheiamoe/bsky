@@ -16,6 +16,7 @@ export interface TuiConfig {
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
     thinkingEnabled?: boolean;
     visionEnabled?: boolean;
+    customSystemPrompt?: string;
   };
   /** Per-provider API keys. Key = provider ID (e.g., 'deepseek', 'mistral') */
   apiKeys: Record<string, string>;

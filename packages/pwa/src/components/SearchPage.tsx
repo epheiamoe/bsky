@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearch, useI18n, addFeed, useScrollRestore } from '@bsky/app';
+import { useSearch, useI18n, addFeed, useScrollRestore, useSearchHistory, addToHistory } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -33,6 +33,9 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
+  const [inputFocused, setInputFocused] = useState(false);
+  const { history, add, remove, clear } = useSearchHistory(tab);
+  const hasHistory = history.length > 0;
 
   // Restore scroll position on back navigation (window-level scroll)
   useScrollRestore(searched ? `search-${input}` : undefined, null, searched && !loading);
@@ -47,6 +50,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
   const handleSearch = () => {
     if (!input.trim()) return;
     setSearched(true);
+    add(input.trim());
     search(input.trim(), tab);
     goTo({ type: 'search', query: input.trim(), searchTab: tab });
   };
@@ -79,8 +83,35 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown} placeholder={t('search.placeholder')} autoFocus
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setTimeout(() => setInputFocused(false), 200)}
             className="w-full px-4 py-2 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
+          {inputFocused && !input && hasHistory && !searched && (
+            <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-border bg-surface shadow-lg z-20 max-h-48 overflow-y-auto">
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
+                <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">{t('search.history')}</span>
+                <button onClick={() => clear()}
+                  className="text-[10px] text-red-500 hover:text-red-400 transition-colors"
+                >
+                  {t('search.clearAll')}
+                </button>
+              </div>
+              {history.map((q, i) => (
+                <div key={`${q}-${i}`} className="flex items-center gap-2 px-3 py-2 hover:bg-surface/80 cursor-pointer group"
+                  onMouseDown={(e) => { e.preventDefault(); setInput(q); addToHistory(tab, q); search(q, tab); setSearched(true); goTo({ type: 'search', query: q, searchTab: tab }); }}
+                >
+                  <Icon name="clock" size={14} className="text-text-secondary/50 shrink-0" />
+                  <span className="flex-1 text-sm text-text-primary truncate">{q}</span>
+                  <button onClick={(e) => { e.stopPropagation(); remove(q); }}
+                    className="text-text-secondary/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <button onClick={handleSearch} disabled={!input.trim() || loading}
           className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-sm disabled:opacity-50 transition-colors shrink-0"

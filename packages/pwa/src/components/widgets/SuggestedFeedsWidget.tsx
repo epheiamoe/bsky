@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useI18n } from '@bsky/app';
+import { useI18n, getFeedConfig, addFeed, removeFeed } from '@bsky/app';
 import type { WidgetProps, WidgetContext } from '@bsky/app';
 import type { FeedGeneratorView } from '@bsky/core';
 import { Icon } from '../Icon.js';
@@ -9,8 +9,13 @@ export function SuggestedFeedsWidget({ onClose, context }: WidgetProps) {
   const client = (context as WidgetContext)?.client;
   const [feeds, setFeeds] = useState<FeedGeneratorView[]>([]);
   const [loading, setLoading] = useState(true);
-  const [joining, setJoining] = useState<Set<string>>(new Set());
-  const [joined, setJoined] = useState<Set<string>>(new Set());
+  const [subscribedUris, setSubscribedUris] = useState<Set<string>>(new Set());
+  const [toggling, setToggling] = useState<Set<string>>(new Set());
+
+  const refreshSubscribed = () => {
+    const cfg = getFeedConfig();
+    setSubscribedUris(new Set(cfg.feeds.map(f => f.uri)));
+  };
 
   useEffect(() => {
     if (!client) { setLoading(false); return; }
@@ -21,17 +26,21 @@ export function SuggestedFeedsWidget({ onClose, context }: WidgetProps) {
       } catch { /* ignore */ }
       setLoading(false);
     })();
+    refreshSubscribed();
   }, [client]);
 
-  const handleSubscribe = async (f: FeedGeneratorView) => {
+  const handleToggle = async (f: FeedGeneratorView) => {
     if (!client) return;
-    setJoining(prev => new Set(prev).add(f.uri));
+    setToggling(prev => new Set(prev).add(f.uri));
     try {
-      const { addFeed } = await import('@bsky/app');
-      addFeed(f.uri, f.displayName);
-      setJoined(prev => new Set(prev).add(f.uri));
+      if (subscribedUris.has(f.uri)) {
+        removeFeed(f.uri);
+      } else {
+        addFeed(f.uri, f.displayName);
+      }
+      refreshSubscribed();
     } catch { /* ignore */ }
-    setJoining(prev => { const s = new Set(prev); s.delete(f.uri); return s; });
+    setToggling(prev => { const s = new Set(prev); s.delete(f.uri); return s; });
   };
 
   return (
@@ -42,8 +51,8 @@ export function SuggestedFeedsWidget({ onClose, context }: WidgetProps) {
       )}
       <div className="space-y-1 max-h-64 overflow-y-auto">
         {feeds.map(f => {
-          const isJoined = joined.has(f.uri) || f.viewer?.like;
-          const isJoining = joining.has(f.uri);
+          const isSubscribed = subscribedUris.has(f.uri);
+          const isToggling = toggling.has(f.uri);
           return (
             <div key={f.uri} className="flex items-center gap-2 py-1">
               <div className="w-8 h-8 rounded-lg bg-surface flex-shrink-0 overflow-hidden">
@@ -57,15 +66,21 @@ export function SuggestedFeedsWidget({ onClose, context }: WidgetProps) {
                 <p className="text-text-primary text-xs truncate">{f.displayName}</p>
                 <p className="text-text-secondary text-[10px] truncate">{f.likeCount != null ? `${f.likeCount} likes` : ''}</p>
               </div>
-              {isJoined ? (
-                <span className="text-green-500 text-[10px] whitespace-nowrap">Subscribed</span>
+              {isSubscribed ? (
+                <button
+                  onClick={() => handleToggle(f)}
+                  disabled={isToggling}
+                  className="text-[10px] px-2 py-0.5 rounded-full border border-green-500 text-green-500 hover:bg-green-500/10 transition-colors whitespace-nowrap disabled:opacity-50"
+                >
+                  {isToggling ? '...' : t('feed.unsubscribe')}
+                </button>
               ) : (
                 <button
-                  onClick={() => handleSubscribe(f)}
-                  disabled={isJoining}
+                  onClick={() => handleToggle(f)}
+                  disabled={isToggling}
                   className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors whitespace-nowrap disabled:opacity-50"
                 >
-                  {isJoining ? '...' : 'Subscribe'}
+                  {isToggling ? '...' : t('feed.subscribe')}
                 </button>
               )}
             </div>

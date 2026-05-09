@@ -1,0 +1,146 @@
+{
+  "pwa-架构与组件映射": {
+    "packages/core/src/at/client.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/at/types.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    ".wiki/2026-05-08T02-30-51/私信-dm-与聊天.md": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/hooks/useConvoList.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/hooks/useChatMessages.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/state/navigation.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/App.tsx": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/hooks/useHashRouter.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/Layout.tsx": [
+      [
+        1,
+        220
+      ]
+    ],
+    "packages/pwa/src/components/WelcomeCard.tsx": [
+      [
+        1,
+        50
+      ]
+    ],
+    "packages/pwa/src/components/AIChatPage.tsx": [
+      [
+        1,
+        30
+      ],
+      [
+        140,
+        180
+      ]
+    ],
+    "docs/PWA_GUIDE.md": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/DMChatPage.tsx": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/ConvoListPage.tsx": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "docs/AI_CONTEXT.md": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/Sidebar.tsx": [
+      [
+        1,
+        50
+      ]
+    ],
+    "packages/pwa/src/components/SettingsModal.tsx": [
+      [
+        1,
+        30
+      ]
+    ],
+    "packages/pwa/src/hooks/useAppConfig.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/ai/index.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/pwa/src/components/WidgetPanel.tsx": [
+      [
+        1,
+        40
+      ]
+    ],
+    "packages/pwa/src/components/EditProfileModal.tsx": [
+      [
+        1,
+        30
+      ]
+    ],
+    "packages/pwa/src/components/ProfilePage.tsx": [
+      [
+        270,
+        280
+      ]
+    ],
+    ".wiki/2026-05-08T02-30-51/bskyclient-at-protocol-客户端实现.md": [
+      [
+        1,
+        999999
+      ]
+    ]
+  }
+}

@@ -84,6 +84,7 @@ export type AIConfig = {
   visionEnabled?: boolean;
   provider?: string;       // 'deepseek' | 'mistral' | etc
   reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
+  customSystemPrompt?: string;
 };
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {

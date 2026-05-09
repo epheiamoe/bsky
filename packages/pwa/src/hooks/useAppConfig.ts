@@ -19,6 +19,8 @@ export interface AppConfig {
   };
   /** Enabled widget IDs (right panel) */
   enabledWidgets: string[];
+  /** Custom AI system prompt appended to every AI chat */
+  customSystemPrompt?: string;
 }
 
 const DEFAULT_CONFIG: AppConfig = {

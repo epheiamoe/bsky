@@ -41,6 +41,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [model, setModel] = useState(config.aiConfig.model);
   const [thinkingEnabled, setThinkingEnabled] = useState(config.thinkingEnabled ?? true);
   const [visionEnabled, setVisionEnabled] = useState(config.visionEnabled ?? false);
+  const [customSystemPrompt, setCustomSystemPrompt] = useState(config.customSystemPrompt ?? config.aiConfig.customSystemPrompt ?? '');
   const [scenarioModels, setScenarioModels] = useState({
     aiChat: config.scenarioModels?.aiChat || '',
     translate: config.scenarioModels?.translate || '',
@@ -106,6 +107,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       ...config,
       thinkingEnabled,
       visionEnabled,
+      customSystemPrompt,
       apiKeys: newApiKeys,
       scenarioModels,
       aiConfig: {
@@ -116,6 +118,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
         reasoningStyle: currentProvider?.reasoningStyle,
         thinkingEnabled: thinkingEnabled,
         visionEnabled: visionEnabled,
+        customSystemPrompt,
       },
     };
     updateAppConfig(updated);
@@ -335,6 +338,16 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   </div>
                 );
               })}
+              <div className="border-t border-border pt-3 mt-2">
+                <label className="text-xs text-text-secondary mb-1 block">{t('settings.customPrompt')}</label>
+                <textarea
+                  value={customSystemPrompt}
+                  onChange={e => setCustomSystemPrompt(e.target.value)}
+                  placeholder={t('settings.customPromptPlaceholder')}
+                  rows={4}
+                  className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                />
+              </div>
               <button
                 onClick={saveAi}
                 className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"

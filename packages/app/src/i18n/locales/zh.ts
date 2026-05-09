@@ -165,6 +165,8 @@ const zh: LocaleMessages = {
   'search.tabLatest': '最新',
   'search.tabUsers': '用户',
   'search.tabFeeds': '动态源',
+  'search.history': '搜索历史',
+  'search.clearAll': '全部删除',
 
   // ── Profile ──
   'profile.title': '资料',
@@ -305,6 +307,8 @@ const zh: LocaleMessages = {
   'settings.saveGeneral': '保存通用设置',
   'settings.updated': '已更新凭证',
   'settings.updateFailed': '更新失败',
+  'settings.customPrompt': '自定义 AI 提示词',
+  'settings.customPromptPlaceholder': '输入自定义指令，将附加到 AI 系统提示词末尾…',
 
   // ── Theme ──
   'theme.dark': '深色模式',
@@ -388,6 +392,7 @@ const zh: LocaleMessages = {
   'feed.noCustomFeeds': '暂未添加自定义 Feed',
   'feed.addCustomFeed': '添加自定义 Feed',
   'feed.subscribe': '订阅',
+  'feed.unsubscribe': '取消订阅',
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',

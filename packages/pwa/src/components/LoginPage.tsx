@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { AboutPage } from './AboutPage.js';
 
 interface LoginPageProps {
   onLogin: (handle: string, password: string) => Promise<void>;
@@ -13,6 +14,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showAbout, setShowAbout] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,9 +32,20 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
 
   const displayError = localError ?? error;
 
+  if (showAbout) {
+    return <AboutPage goBack={() => setShowAbout(false)} />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
-      <div className="w-full max-w-sm">
+      <div className="relative w-full max-w-sm">
+        <button
+          onClick={() => setShowAbout(true)}
+          className="absolute -top-2 right-0 text-text-secondary hover:text-primary transition-colors"
+          title={t('nav.about')}
+        >
+          <Icon name="astroid-as-AI-Button" size={18} />
+        </button>
         <div className="text-center mb-8">
           <p className="mb-3"><Icon name="astroid-as-AI-Button" size={32} className="text-primary" /></p>
           <h1 className="text-2xl font-bold text-text-primary">Bluesky</h1>

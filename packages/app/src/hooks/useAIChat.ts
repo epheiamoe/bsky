@@ -85,8 +85,11 @@ export function useAIChat(
     parts.push(PF_CURRENT_TIME());
     parts.push(PF_VISION_HINT(aiConfig.visionEnabled ?? false));
     parts.push(P_CONCISE);
+    if (aiConfig.customSystemPrompt?.trim()) {
+      parts.push(aiConfig.customSystemPrompt.trim());
+    }
     return parts.join('');
-  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment, aiConfig.visionEnabled]);
+  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment, aiConfig.visionEnabled, aiConfig.customSystemPrompt]);
 
   // Keep chatIdRef in sync
   useEffect(() => {

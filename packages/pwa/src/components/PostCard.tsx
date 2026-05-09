@@ -364,8 +364,8 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   return (
     <div
       onClick={onClick}
-      className={`px-4 py-3 border-b border-border transition-colors transition-shadow duration-150 hover:shadow-sm ${
-        onClick ? 'cursor-pointer hover:bg-surface' : ''
+      className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl border border-border bg-surface/20 transition-colors transition-shadow duration-150 hover:shadow-sm ${
+        onClick ? 'cursor-pointer hover:bg-surface/40' : ''
       } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
       {repostBy && (

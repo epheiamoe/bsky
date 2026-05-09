@@ -30,6 +30,7 @@ export { useProfile } from './hooks/useProfile.js';
 export type { FollowListItem } from './hooks/useProfile.js';
 export { useSearch } from './hooks/useSearch.js';
 export type { SearchTab, SearchState } from './hooks/useSearch.js';
+export { useSearchHistory, addToHistory, removeFromHistory, clearHistory, getHistory } from './hooks/useSearchHistory.js';
 export { useNotifications } from './hooks/useNotifications.js';
 export { useBookmarks } from './hooks/useBookmarks.js';
 export { useLists } from './hooks/useLists.js';
