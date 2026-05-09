@@ -15,12 +15,11 @@ import {
 } from '@bsky/core';
 import type { AIConfig, BskyClient, ChatMessage, ToolCall } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
-import type { ChatStorage } from '../services/chatStorage.js';
+import { getDefaultChatStorage } from '../services/chatStorage.js';
 import { v4 as uuidv4 } from './uuid.js';
 
 interface UseAIChatOptions {
   chatId?: string;
-  storage?: ChatStorage;
   stream?: boolean;
   userHandle?: string;
   userDisplayName?: string;
@@ -61,7 +60,7 @@ export function useAIChat(
   const abortRef = useRef<AbortController | null>(null);
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
-  const storage = options?.storage;
+  const storage = getDefaultChatStorage();
   const autoStartedRef = useRef(false);
   const chatNotifiedRef = useRef(false);
   const titleGeneratedRef = useRef(false);

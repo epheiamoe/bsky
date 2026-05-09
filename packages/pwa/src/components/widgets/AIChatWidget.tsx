@@ -3,7 +3,6 @@ import { useAIChat, useI18n, getAIChatSessionId, resetAIChatSession } from '@bsk
 import type { AIChatMessage } from '@bsky/app';
 import type { WidgetProps } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
-import { IndexedDBChatStorage } from '../../services/indexeddb-chat-storage.js';
 import { Icon } from '../Icon.js';
 import { ThinkingCard, ToolCard, AssistantMessage } from '../ai/index.js';
 
@@ -33,13 +32,11 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
 
   const [widgetKey, setWidgetKey] = useState(0);
   const chatId = useMemo(() => getAIChatSessionId() || resetAIChatSession(), [widgetKey]);
-  const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, loading, send, stop } = useAIChat(client ?? null, aiConfig!, undefined, {
     chatId,
-    storage,
     stream: true,
     environment: 'pwa',
     locale: context?.locale as string | undefined,

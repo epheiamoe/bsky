@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useAIChat, useChatHistory, getDefaultStorage, useI18n } from '@bsky/app';
+import { useAIChat, useChatHistory, useI18n } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { wrapLines } from '../utils/text.js';
 import { renderMarkdown } from '../utils/markdown.js';
@@ -29,13 +29,12 @@ type PickMode = { type: 'copy' | 'edit' | 'export'; buffer: string } | null;
 type ImageInput = { path: string } | null;
 
 export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
-  const storage = getDefaultStorage();
   const [showHistory, setShowHistory] = useState(!contextUri && !sessionId);
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
   const postContext = contextPost ?? (isProfile ? undefined : contextUri);
-  const { conversations, deleteConversation, refresh } = useChatHistory(storage);
-  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, storage, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
+  const { conversations, deleteConversation, refresh } = useChatHistory();
+  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);

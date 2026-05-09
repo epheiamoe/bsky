@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAIChat, useChatHistory, useI18n, enableWidget } from '@bsky/app';
+import { useAIChat, useChatHistory, useI18n, enableWidget, getDefaultChatStorage } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
-import { IndexedDBChatStorage } from '../services/indexeddb-chat-storage.js';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 import { ThinkingCard, ToolCard, UserMessage, AssistantMessage } from './ai/index.js';
@@ -20,7 +19,6 @@ interface AIChatPageProps {
 
 export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack }: AIChatPageProps) {
   const { t, locale } = useI18n();
-  const storage = useMemo(() => new IndexedDBChatStorage(), []);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -38,11 +36,10 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const isProfile = contextUri && !contextUri?.startsWith('at://');
 
-  const { conversations, deleteConversation, saveConversation, loadConversation, refresh } = useChatHistory(storage);
+  const { conversations, deleteConversation, saveConversation, loadConversation, refresh } = useChatHistory();
 
   const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId: sessionId,
-    storage,
     stream: true,
     userHandle,
     environment: 'pwa',
@@ -254,8 +251,8 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
       // Create a new session with imported messages
       const newId = crypto.randomUUID();
-      if (storage) {
-        await storage.saveChat({
+      if (getDefaultChatStorage()) {
+        await getDefaultChatStorage().saveChat({
           id: newId,
           title: file.name.replace(/\.json$/i, '') || 'Imported Chat',
           messages: imported,
@@ -270,7 +267,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     } finally {
       if (importFileRef.current) importFileRef.current.value = '';
     }
-  }, [storage, goTo]);
+  }, [goTo]);
 
   const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime });

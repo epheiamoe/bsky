@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, useConvoList } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, setChatStorageFactory, useConvoList } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
@@ -24,6 +24,7 @@ import { ConvoListPage } from './components/ConvoListPage.js';
 import { DMChatPage } from './components/DMChatPage.js';
 import { ComponentsPage } from './components/ComponentsPage.js';
 import { IndexedDBDraftStorage } from './services/indexeddb-draft-storage.js';
+import { IndexedDBChatStorage } from './services/indexeddb-chat-storage.js';
 import { PolishWidget } from './components/widgets/PolishWidget.js';
 import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWidget.js';
 import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
@@ -37,8 +38,9 @@ import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
-  // Register draft storage factory (browser: IndexedDB)
+  // Register storage factories (browser: IndexedDB)
   setDraftStorageFactory(() => new IndexedDBDraftStorage());
+  setChatStorageFactory(() => new IndexedDBChatStorage());
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();

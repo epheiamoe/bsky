@@ -91,3 +91,42 @@ export class FileChatStorage implements ChatStorage {
     try { fs.unlinkSync(filePath); } catch { /* skip */ }
   }
 }
+
+// ── Factory pattern (same as DraftStorage) ──
+
+let _defaultChatStorage: ChatStorage | null = null;
+let _chatStorageFactory: (() => ChatStorage) | null = null;
+
+/**
+ * Register a platform-specific ChatStorage factory.
+ * Call once at app startup (e.g., App.tsx or cli.ts).
+ */
+export function setChatStorageFactory(factory: () => ChatStorage): void {
+  _chatStorageFactory = factory;
+  _defaultChatStorage = null;
+}
+
+/**
+ * Get the default ChatStorage instance.
+ * Uses registered factory if available; falls back to auto-detect
+ * (Node.js → FileChatStorage, browser → throws if no factory registered).
+ */
+export function getDefaultChatStorage(): ChatStorage {
+  if (!_defaultChatStorage) {
+    if (_chatStorageFactory) {
+      _defaultChatStorage = _chatStorageFactory();
+    } else {
+      try {
+        const g = globalThis as { window?: unknown; process?: { versions?: { node?: string } } };
+        if (g.process?.versions?.node) {
+          _defaultChatStorage = new FileChatStorage();
+        } else {
+          throw new Error('No chat storage factory set. Call setChatStorageFactory() with an IndexedDBChatStorage instance.');
+        }
+      } catch {
+        _defaultChatStorage = new FileChatStorage();
+      }
+    }
+  }
+  return _defaultChatStorage;
+}
