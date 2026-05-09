@@ -395,20 +395,6 @@
     "readonly": false
   },
   {
-    "name": "upload_blob",
-    "description": "Upload a binary blob (image). Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "base64": { "type": "string", "description": "Base64-encoded binary data" },
-        "mimeType": { "type": "string", "description": "MIME type (e.g., image/png)" }
-      },
-      "required": ["base64", "mimeType"]
-    },
-    "endpoint": "com.atproto.repo.uploadBlob",
-    "readonly": false
-  },
-  {
     "name": "view_image",
     "description": "View an image from a post by downloading the blob and sending to the vision model for analysis. Only works when vision mode is enabled.",
     "inputSchema": {
