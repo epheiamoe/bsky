@@ -22,6 +22,34 @@ export interface ToolDefinition {
   };
 }
 
+interface DDGIcon { Height: string; URL: string; Width: string; }
+interface DDGResult { FirstURL: string; Icon: DDGIcon; Result: string; Text: string; }
+interface DDGRelatedTopic { FirstURL: string; Icon: DDGIcon; Result: string; Text: string; Topics?: DDGRelatedTopic[]; Name?: string; }
+interface DDGInfoboxData { data_type: string; label: string; value: unknown; wiki_order: number | string; }
+interface DDGInfoboxMeta { data_type: string; label: string; value: string; }
+interface DDGInfobox { content: DDGInfoboxData[]; meta: DDGInfoboxMeta[]; }
+interface DDGResponse {
+  Abstract: string;
+  AbstractSource: string;
+  AbstractURL: string;
+  Answer: string;
+  AnswerType: string;
+  Definition: string;
+  DefinitionSource: string;
+  DefinitionURL: string;
+  Heading: string;
+  Image: string;
+  ImageHeight: number;
+  ImageIsLogo: number;
+  ImageWidth: number;
+  Infobox: DDGInfobox;
+  Redirect: string;
+  RelatedTopics: DDGRelatedTopic[];
+  Results: DDGResult[];
+  Type: '' | 'A' | 'D' | 'E' | 'N' | 'X';
+  meta: Record<string, unknown>;
+}
+
 export type ToolHandler = (params: Record<string, unknown>, assistant?: unknown) => Promise<string>;
 
 export interface ToolDescriptor {
@@ -709,6 +737,33 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       },
       requiresWrite: false,
     },
+    {
+      definition: {
+        name: 'instant_answer',
+        description: 'Quick knowledge lookup via DuckDuckGo Instant Answer (no API key needed). Returns Wikipedia summary, structured infobox, direct answers, and related links. Works best with English queries — for non-English topics, the AI can translate results.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query (English recommended for best results)' },
+            skipDisambig: { type: 'boolean', description: 'Skip disambiguation pages (default true)' },
+          },
+          required: ['query'],
+        },
+      },
+      handler: async (p) => {
+        const query = encodeURIComponent(p.query as string);
+        const skip = p.skipDisambig !== false ? '&skip_disambig=1' : '';
+        const res = await fetch(`https://api.duckduckgo.com/?q=${query}&format=json&no_html=1${skip}`, {
+          headers: { 'User-Agent': 'bsky-client/0.9.0' },
+        });
+        if (!res.ok) {
+          return JSON.stringify({ error: `DuckDuckGo API error: HTTP ${res.status}` });
+        }
+        const data = (await res.json()) as DDGResponse;
+        return formatDDGResponse(data);
+      },
+      requiresWrite: false,
+    },
 
     // ======================== WRITE TOOLS ========================
     {
@@ -1142,4 +1197,54 @@ function extractTitle(md: string): string {
   if (title) return title[1]!.trim();
   const firstLine = md.split('\n')[0];
   return firstLine ? firstLine.trim().slice(0, 120) : '(no title)';
+}
+
+function formatDDGResponse(d: DDGResponse): string {
+  const parts: string[] = [];
+
+  if (d.Heading) parts.push(`# ${d.Heading}`);
+
+  if (d.Answer) {
+    parts.push(`## Direct Answer\n${d.Answer}`);
+  }
+
+  if (d.Abstract) {
+    const src = d.AbstractSource ? ` (via ${d.AbstractSource})` : '';
+    parts.push(`## Summary${src}\n${d.Abstract}`);
+    if (d.AbstractURL) parts.push(`Source: ${d.AbstractURL}`);
+  }
+
+  if (d.Definition && d.Definition !== d.Heading) {
+    parts.push(`## Definition\n${d.Definition}`);
+    if (d.DefinitionURL) parts.push(`Source: ${d.DefinitionURL}`);
+  }
+
+  if (d.Infobox?.content?.length > 0) {
+    const rows = d.Infobox.content
+      .filter((item) => item.label && item.value && typeof item.value === 'string')
+      .map((item) => `- ${item.label}: ${item.value}`);
+    if (rows.length > 0) {
+      parts.push(`## Info\n${rows.join('\n')}`);
+    }
+  }
+
+  if (d.Results?.length > 0) {
+    parts.push(`## Results\n${d.Results.map((r) => `- [${r.Text}](${r.FirstURL})`).join('\n')}`);
+  }
+
+  if (d.RelatedTopics?.length > 0) {
+    const topics = d.RelatedTopics.slice(0, 8).flatMap((t) => {
+      if (t.Topics) return t.Topics.map((st) => `- ${st.Text} (${st.FirstURL})`);
+      return `- ${t.Text} (${t.FirstURL})`;
+    });
+    if (topics.length > 0) {
+      parts.push(`## Related\n${topics.join('\n')}`);
+    }
+  }
+
+  if (parts.length === 0) {
+    parts.push('No instant answer found for this query.');
+  }
+
+  return JSON.stringify({ heading: d.Heading || '', content: parts.join('\n\n') });
 }

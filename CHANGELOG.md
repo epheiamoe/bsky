@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] — 2026-05-09
+
+### Added
+
+- **DuckDuckGo Instant Answer 工具** (`instant_answer`): 第 37 个 AI 工具，零 API 密钥、零配置、零依赖。通过 DuckDuckGo Instant Answer API 获取 Wikipedia 摘要、Infobox 结构化数据、直接答案和相关链接。read-only，无需用户确认。建议使用英文关键词查询。
+
+### Changed
+
+- **Systeam prompt**: `P_ASSISTANT_BASE` 中提示 AI 优先使用 `instant_answer` 做快速知识查询，`fetch_web_markdown` 做深度页面阅读。
+- **AI 工具总数**: 36 → 37
+- **`contracts/tools.json`**: 新增 `instant_answer` 合约条目
+- **版本**: v0.9.0 → v0.10.0 (AboutPage, README, docs)
+
 ## [0.3.0] — 2026-05-03
 
 ### Added

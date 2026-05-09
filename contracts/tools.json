@@ -503,5 +503,19 @@
     },
     "endpoint": "Proxy: https://r.jina.ai/{url}",
     "readonly": true
+  },
+  {
+    "name": "instant_answer",
+    "description": "Quick knowledge lookup via DuckDuckGo Instant Answer (no API key needed). Returns Wikipedia summary, structured infobox, direct answers, and related links. Works best with English queries.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "Search query (English recommended for best results)" },
+        "skipDisambig": { "type": "boolean", "description": "Skip disambiguation pages (default true)" }
+      },
+      "required": ["query"]
+    },
+    "endpoint": "https://api.duckduckgo.com/?q={query}&format=json&no_html=1",
+    "readonly": true
   }
 ]

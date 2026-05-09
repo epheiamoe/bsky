@@ -17,11 +17,11 @@
  11. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
  12. **`CHANGELOG.md`** — 版本历史
  13. **`packages/core/src/ai/prompts.ts`** — AI 提示词
- 14. **`packages/core/src/ai/tools.ts`** — 36 个 AI 工具定义
+ 14. **`packages/core/src/ai/tools.ts`** — 37 个 AI 工具定义
 
 ## 版本
 
-**v0.9.0** — PDS 第三方服务支持 + i18n 全面补全
+**v0.10.0** — DuckDuckGo Instant Answer 工具 + i18n 全面补全
 
 ## 项目状态
 
@@ -44,7 +44,7 @@
 - **API 重试**: ky 实例显式 `retry: { statusCodes: [408,413,429,500,502,503,504] }`
 - **tool_call_id 修复**: 3 个死亡路径全修复（assistant.ts yield、useAIChat 恢复、mapMessages）
 - **列表功能** (v0.6.0): 15 个 BskyClient 方法 + useLists/useListDetail hooks + ListsPage + ListDetailPage (Posts/Members Tab + 虚拟滚动) + ProfilePage 列表导航 + TUI 列表视图 + 5 个 AI 工具。支持创建/删除/编辑名称描述/添加移除成员/静音/列表帖文流。AppView 去重 vs PDS 不去重（Lesson 13）。Widget 临时禁用与恢复（Lesson 14）。编辑消息正确保留思考内容和工具调用（Lesson 17）。
-- **AI 工具**: 36 个（+5 列表工具：get_lists, get_list_feed, create_list, add_to_list, remove_from_list）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。searchActors 统一使用 publicKy（bsky.social 返回 503/400）。
+- **AI 工具**: 37 个（+5 列表工具 + instant_answer 无密钥知识查询）。系统时间跟随浏览器时区（PF_CURRENT_TIME 改用 toLocaleString）。get_profile 描述增加 DID↔handle 反解。searchActors 统一使用 publicKy（bsky.social 返回 503/400）。
 - **欢迎引导**: 登录后一次性 WelcomeCard — 引导新用户配置 AI（DeepSeek/Mistral 分步教程 + 隐私说明）。存储 `bsky_welcomed` 到 localStorage，跳过后永不再显。
 - **DM 轮询刷新**: 对话列表 30s 静默轮询 + 聊天消息 10s 静默轮询。markConvoRead 模块级函数乐观清除未读标记。
 - **AT Play 实验性功能** (v0.7.0): 侧边栏 🧪 AT Play 入口 → `#/atplay` 实验列表 → `#/atplay/social-circle` 社交圈分析。分析用户互动数据：权重图构建 + 核心/扩展/潜在分层 + Mermaid 可视化图表。默认分析 50 篇帖文（30-100 可调），Handle 预填充当前用户。结果底部「分享到 Bluesky」按钮。纯计算（无 AI 依赖），纯函数导出供未来 AI 工具复用。PWA only。
@@ -68,6 +68,7 @@
 - **DidDocument 类型** (v0.9.0): 新增 `DidDocument`、`ResolveDidResponse` 类型导出。
 - **CORS 错误提示** (v0.9.0): 第三方 PDS 未配置 CORS 时，浏览器抛 `TypeError` → UI 显示连接错误，提示用户检查 PDS 配置或使用 TUI（无 CORS 限制）。
 - **i18n 补全** (v0.9.0): 向 en/zh/ja 三语言文件添加 19 个缺失的 UI 键（`dm.send`, `dm.placeholder`, `dm.confirmDelete`, `dm.deletedMessage`, `dm.empty`, `dm.mute`, `dm.unmute`, `dm.muted`, `dm.noMessages`, `dm.resolvingQuote`, `dm.systemMessage`, `dm.unknown`, `action.add`, `action.done`, `action.open`, `action.original`, `compose.uploadFailed`, `settings.provider`, `common.back`）。AGENTS.md 新增 i18n 提醒规则。
+- **instant_answer 工具** (v0.10.0): 新增第 37 个 AI 工具 `instant_answer`，基于 DuckDuckGo Instant Answer API（零 API 密钥，零配置）。支持查询实时知识（Wikipedia 摘要、Infobox、直接答案）。建议使用英文查询以获得最佳结果。read-only，无需用户确认。`P_ASSISTANT_BASE` 中提示 AI 优先使用 DDG 做快速知识查询，`fetch_web_markdown` 做深度页面阅读。
 
 ## 🔴 关键教训
 

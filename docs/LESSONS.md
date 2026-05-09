@@ -462,4 +462,4 @@ return this.publicKy.get('app.bsky.actor.searchActors', { searchParams });
 
 ## 版本
 
-**v0.6.0** — 列表功能全栈实现 + DM 轮询刷新 + 欢迎引导卡片 + 搜索修复 + 未读标记修复
+**v0.10.0** — DuckDuckGo Instant Answer 工具 + 37 个 AI 工具 + 零密钥知识查询
