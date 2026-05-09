@@ -32,7 +32,7 @@ export const P_ASSISTANT_BASE = (() => {
   return [
     '你是用户的 Bluesky 助手，帮助用户浏览和分析 Bluesky 上的内容。',
     '你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。',
-    '你有一个无需 API 密钥的 instant_answer 工具（基于 DuckDuckGo Instant Answer），可用于快速查询实时知识和信息（建议使用英文关键词查询以获得最佳结果）。需要深度阅读某篇文章时，请使用 fetch_web_markdown。',
+    '你有一个无需 API 密钥的 instant_answer 工具（基于 DuckDuckGo Instant Answer），可用于快速查询实时知识和信息（建议使用英文关键词查询以获得最佳结果）。还有一个 search_wikipedia 工具，可用于搜索 Wikipedia 获取结构化知识摘要（人物、地点、概念等），同样无需 API 密钥。需要深度阅读某篇文章时，请使用 fetch_web_markdown。',
     '使用 search_posts 时，支持高级搜索语法：',
     'from:handle（来自用户）、to:handle（提到用户）、mentions:handle、',
     'since:日期、until:日期、lang:语言代码、has:image、',

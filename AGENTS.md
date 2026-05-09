@@ -153,6 +153,16 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - 3 locales: `en.ts`, `zh.ts`, `ja.ts` in `packages/app/src/i18n/locales/`
 - PWA: `<Icon name="..." />` for icons; TUI: emoji
 
+## Pages Functions
+
+- **Functions directory**: `packages/pwa/functions/` — auto-discovered by Cloudflare Pages
+- **Current functions**: `/api/proxy` (DDG Instant Answer API CORS proxy)
+- **Adding a new function**: Create `packages/pwa/functions/{route}.js` with `export async function onRequest(context) { ... }`
+- **Documentation**: Every new Pages Function MUST be documented in:
+  1. `docs/PAGES_FUNCTION.md` — full specification (purpose, code, usage, conventions)
+  2. This section in `AGENTS.md` — brief summary of what exists
+- **Local testing**: Use `npx wrangler pages dev dist` (NOT `pnpm dev` — Vite doesn't serve Pages Functions)
+
 ## Build & Deploy
 
 ```bash

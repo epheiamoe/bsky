@@ -446,20 +446,71 @@ return this.publicKy.get('app.bsky.actor.searchActors', { searchParams });
 
 ---
 
+### Lesson 46: DuckDuckGo Sec-Fetch-* 检测 —— 浏览器与 CLI 的行为差异
+
+**问题**：`instant_answer` 工具在 Node.js/TUI 端正常工作，但在 PWA/浏览器端所有查询都返回空字段（HTTP 200，JSON 结构完整但值全空）。
+
+**根因**：DuckDuckGo Instant Answer API (`api.duckduckgo.com`) 使用 `Sec-Fetch-*` 系列请求头（`Sec-Fetch-Mode`, `Sec-Fetch-Site`, `Sec-Fetch-Dest`）做客户端指纹识别。当检测到这些浏览器专属头存在时，故意返回**字段值全空**的 JSON 响应（反爬/防前端直调）。这些头由浏览器自动附加且无法通过 JavaScript 删除或修改（forbidden headers）。
+
+```
+浏览器 fetch → 自动附加 Sec-Fetch-* → DDG API → HTTP 200, 全空字段
+curl/Node.js → 无 Sec-Fetch-*      → DDG API → 完整数据
+```
+
+**尝试过的方案**：
+- ❌ **JSONP**（`<script>` + callback）：仍携带 `Sec-Fetch-Dest: script`，DDG 同样返回空
+- ❌ **第三方 CORS 代理**（corsproxy.io）：从 CLI 测试正常，但在用户网络环境下浏览器仍返回空
+- ❌ **修改 User-Agent / Accept 头**：不是触发条件，从 CLI 无论设什么头都正常
+- ❌ **尝试 `html.duckduckgo.com/html/`**：无 CORS，浏览器 fetch 被跨域拦截
+- ✅ **Cloudflare Pages Function**：服务端 fetch 完全不带浏览器指纹头，DDG 返回完整数据
+
+**正确方案**：在 `packages/pwa/functions/api/proxy.js` 创建 Cloudflare Pages Function，在服务端执行 fetch，附加 CORS 响应头返回给浏览器。
+
+**教训**：遇到 curl 正常、浏览器异常的 API 调用，优先怀疑 `Sec-Fetch-*` 头。解决方案是服务端代理（Serverless Function > CORS proxy > JSONP）。
+
+---
+
+### Lesson 47: Wikipedia API —— 搜索端点会选择
+
+**问题**：`search_wikipedia` 工具使用 `rest_v1/search/title` 搜索 Wikipedia，返回 404。
+
+**根因**：Wikipedia REST API 的 `/api/rest_v1/search/title` 端点**不存在**（返回 404）。正确的搜索端点是 MediaWiki API 的 `w/api.php?action=opensearch`，但需要加 `&origin=*` 参数才能返回 CORS 头。
+
+**最终方案**：完全绕过搜索步骤，直接调 `page/summary/{query}` — Wikipedia 自动处理重定向和模糊匹配：
+- `page/summary/Bluesky%20social%20network` → 返回 "Bluesky" 的正确数据和 extract
+- 不存在的查询（如 "xyzxyzxyz"）返回 404
+
+**教训**：写 Wikipedia 集成时先查 REST API 文档确认端点是否存在。`page/summary` 是直接可用的知识摘要端点，自带 CORS。
+
+---
+
+### Lesson 48: `w/api.php` 的 CORS 要求
+
+**问题**：MediaWiki API (`w/api.php`) 从浏览器调用时不返回 CORS 头。
+
+**根因**：MediaWiki API 要求 URL 中显式包含 `&origin=*` 参数才会返回 `Access-Control-Allow-Origin: *`。仅靠 `Origin` 请求头是不够的。
+
+```
+https://en.wikipedia.org/w/api.php?action=opensearch&search=Bluesky&origin=*
+// ↑ origin=* 是必需的
+```
+
+**教训**：任何使用 MediaWiki API 的浏览器端调用都必须附带 `&origin=*` 参数。`page/summary` REST API 则原生支持 CORS，无需额外参数。
+
+---
+
 ## 架构升级（本次会话新增）
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| Lists 全栈 | core + app + pwa + tui | 列表 CRUD + 详情（帖文/成员）+ TUI 视图 + 5 AI 工具 |
-| `packages/pwa/src/components/ListsPage.tsx` | 列表索引页 | 浏览/创建/删除/添加他人到列表 |
-| `packages/pwa/src/components/ListDetailPage.tsx` | 列表详情页 | Posts/Members 双 Tab + 虚拟滚动 + 编辑名称/描述 |
-| `packages/app/src/hooks/useLists.ts` | 列表集合 hook | CRUD + auto-retry |
-| `packages/app/src/hooks/useListDetail.ts` | 列表详情 hook | 成员+feed 分页 + mute + add/remove/update/delete |
-| `packages/pwa/src/icons/list.svg, user-plus.svg, users.svg` | 新增 SVG | Lucide 图标 |
-| AI 工具扩展 | tools.ts: 985-1038 | `create_list`, `add_to_list`, `remove_from_list`, `get_lists`, `get_list_feed` |
-| Widget header buttons | WidgetPanel + widgetRegistry + AIChatWidget | `headerButtons` 字段 + module ref 桥接 |
-| `widgetRegistry.ts:29` | `headerButtons` field | WidgetDefinition 扩展 |
+| `instant_answer` 工具 | `tools.ts` | DuckDuckGo Instant Answer，浏览器路径走 Pages Function 代理 |
+| `search_wikipedia` 工具 | `tools.ts` | Wikipedia 知识摘要，直接调用 `page/summary`（原生 CORS） |
+| `/api/proxy` Pages Function | `packages/pwa/functions/api/proxy.js` | 服务端 fetch 代理，绕过 Sec-Fetch 检测 |
+| `packages/pwa/functions/api/proxy.js` | 新建 | Cloudflare Pages Function，DDG API 代理 |
+| `docs/PAGES_FUNCTION.md` | 新建 | Pages Function 架构文档 |
+| Wikipedia 类型 | `tools.ts` | `WikipediaSummary` 接口 + `formatWikipediaSummary` 函数 |
+| 工具总数 | `tools.ts` | 36 → **38**（instant_answer + search_wikipedia） |
 
 ## 版本
 
-**v0.10.0** — DuckDuckGo Instant Answer 工具 + 37 个 AI 工具 + 零密钥知识查询
+**v0.10.0** — 零密钥知识查询（instant_answer + search_wikipedia）+ Pages Function 代理 + 38 个 AI 工具

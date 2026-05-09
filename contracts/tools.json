@@ -517,5 +517,19 @@
     },
     "endpoint": "https://api.duckduckgo.com/?q={query}&format=json&no_html=1",
     "readonly": true
+  },
+  {
+    "name": "search_wikipedia",
+    "description": "Search Wikipedia and return a concise summary of the top matching article. No API key needed. Use for factual knowledge lookup (people, places, concepts, events).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string", "description": "Search query (e.g. \"Albert Einstein\", \"Python programming language\")" },
+        "lang": { "type": "string", "description": "Wikipedia language code (default \"en\")" }
+      },
+      "required": ["query"]
+    },
+    "endpoint": "https://{lang}.wikipedia.org/api/rest_v1/",
+    "readonly": true
   }
 ]

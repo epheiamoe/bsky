@@ -11,17 +11,18 @@
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
  7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
- 8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
- 9. **`docs/KEYBOARD.md`** — TUI 快捷键
- 10. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
- 11. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
- 12. **`CHANGELOG.md`** — 版本历史
- 13. **`packages/core/src/ai/prompts.ts`** — AI 提示词
- 14. **`packages/core/src/ai/tools.ts`** — 37 个 AI 工具定义
+  8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
+  9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
+  10. **`docs/KEYBOARD.md`** — TUI 快捷键
+  11. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+  12. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+ 13. **`CHANGELOG.md`** — 版本历史
+ 14. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+ 15. **`packages/core/src/ai/tools.ts`** — 38 个 AI 工具定义
 
 ## 版本
 
-**v0.10.0** — DuckDuckGo Instant Answer 工具 + i18n 全面补全
+**v0.10.0** — 零密钥知识查询（instant_answer + search_wikipedia）+ Pages Function 代理 + 38 个 AI 工具
 
 ## 项目状态
 
@@ -68,7 +69,10 @@
 - **DidDocument 类型** (v0.9.0): 新增 `DidDocument`、`ResolveDidResponse` 类型导出。
 - **CORS 错误提示** (v0.9.0): 第三方 PDS 未配置 CORS 时，浏览器抛 `TypeError` → UI 显示连接错误，提示用户检查 PDS 配置或使用 TUI（无 CORS 限制）。
 - **i18n 补全** (v0.9.0): 向 en/zh/ja 三语言文件添加 19 个缺失的 UI 键（`dm.send`, `dm.placeholder`, `dm.confirmDelete`, `dm.deletedMessage`, `dm.empty`, `dm.mute`, `dm.unmute`, `dm.muted`, `dm.noMessages`, `dm.resolvingQuote`, `dm.systemMessage`, `dm.unknown`, `action.add`, `action.done`, `action.open`, `action.original`, `compose.uploadFailed`, `settings.provider`, `common.back`）。AGENTS.md 新增 i18n 提醒规则。
-- **instant_answer 工具** (v0.10.0): 新增第 37 个 AI 工具 `instant_answer`，基于 DuckDuckGo Instant Answer API（零 API 密钥，零配置）。支持查询实时知识（Wikipedia 摘要、Infobox、直接答案）。建议使用英文查询以获得最佳结果。read-only，无需用户确认。`P_ASSISTANT_BASE` 中提示 AI 优先使用 DDG 做快速知识查询，`fetch_web_markdown` 做深度页面阅读。
+- **instant_answer 工具** (v0.10.0): 新增第 37 个 AI 工具 `instant_answer`，基于 DuckDuckGo Instant Answer API（零 API 密钥）。浏览器环境下通过 Pages Function `/api/proxy` 代理调用以绕过 Sec-Fetch-* 检测。Node.js 环境下直接 fetch。read-only，无需用户确认。
+- **search_wikipedia 工具** (v0.10.0): 新增第 38 个 AI 工具 `search_wikipedia`，基于 Wikipedia REST API `page/summary`（原生 CORS，零 API 密钥）。一步到位获取知识摘要，Wikipedia 自动处理重定向和模糊匹配。支持语言参数（`lang`，默认 en）。
+- **/api/proxy Pages Function** (v0.10.0): `packages/pwa/functions/api/proxy.js` — Cloudflare Pages Function，服务端 fetch DDG API + CORS 响应头。浏览器 `instant_answer` 的浏览器路径通过此代理调用，绕过 DDG 的 Sec-Fetch-* 浏览器检测。
+- **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
 
 ## 🔴 关键教训
 

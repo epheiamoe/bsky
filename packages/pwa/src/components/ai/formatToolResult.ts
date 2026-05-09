@@ -390,6 +390,22 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Link', body: truncate(content, 200) };
   }
 
+  // ── Wikipedia Search tool (Category C) ──
+  if (toolName === 'search_wikipedia') {
+    const r = jsonTry(content, obj => ({
+      heading: String(obj.heading ?? ''),
+      content: String(obj.content ?? ''),
+    }));
+    if (r) {
+      const preview = r.content.replace(/\n\n.*/s, '').slice(0, 120);
+      return {
+        summary: r.heading ? truncate(r.heading, 60) : 'Wikipedia',
+        body: truncate(r.content, 2000),
+      };
+    }
+    return { summary: 'Wikipedia', body: truncate(content, 500) };
+  }
+
   // ── DuckDuckGo Instant Answer tool (Category C) ──
   if (toolName === 'instant_answer') {
     const r = jsonTry(content, obj => ({

@@ -28,6 +28,22 @@ interface DDGRelatedTopic { FirstURL: string; Icon: DDGIcon; Result: string; Tex
 interface DDGInfoboxData { data_type: string; label: string; value: unknown; wiki_order: number | string; }
 interface DDGInfoboxMeta { data_type: string; label: string; value: string; }
 interface DDGInfobox { content: DDGInfoboxData[]; meta: DDGInfoboxMeta[]; }
+interface WikipediaSummary {
+  title: string;
+  displaytitle: string;
+  description: string;
+  extract: string;
+  extract_html: string;
+  thumbnail?: { source: string; width: number; height: number };
+  content_urls: { desktop: { page: string }; mobile: { page: string } };
+  pageid: number;
+  revision: string;
+  tid: string;
+  timestamp: string;
+  type: string;
+  lang: string;
+}
+
 interface DDGResponse {
   Abstract: string;
   AbstractSource: string;
@@ -751,16 +767,87 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         },
       },
       handler: async (p) => {
-        const query = encodeURIComponent(p.query as string);
+        const rawQuery = p.query as string;
         const skip = p.skipDisambig !== false ? '&skip_disambig=1' : '';
-        const res = await fetch(`https://api.duckduckgo.com/?q=${query}&format=json&no_html=1${skip}`, {
-          headers: { 'User-Agent': 'bsky-client/0.9.0' },
-        });
-        if (!res.ok) {
-          return JSON.stringify({ error: `DuckDuckGo API error: HTTP ${res.status}` });
+        const encoded = encodeURIComponent(rawQuery);
+        const url = `https://api.duckduckgo.com/?q=${encoded}&format=json&no_html=1${skip}`;
+        const g = globalThis as Record<string, unknown>;
+
+        // Browser: route via Cloudflare Pages Function (/api/proxy) to
+        // strip Sec-Fetch-* headers. DDG API returns empty fields when it
+        // detects browser-specific headers. The Pages Function runs server-side
+        // fetch (no browser fingerprint), so DDG returns full data.
+        if (typeof g.document !== 'undefined' && typeof g.window !== 'undefined') {
+          try {
+            const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
+            const res = await fetch(proxyUrl);
+            if (!res.ok) {
+              return JSON.stringify({ error: `instant_answer proxy error: HTTP ${res.status}` });
+            }
+            const data = (await res.json()) as DDGResponse;
+            return formatDDGResponse(data);
+          } catch (err) {
+            return JSON.stringify({
+              error: `instant_answer via /api/proxy failed: ${err instanceof Error ? err.message : String(err)}`,
+              hint: 'Try a different query or check your network connection.',
+            });
+          }
         }
-        const data = (await res.json()) as DDGResponse;
-        return formatDDGResponse(data);
+
+        // Node.js / non-browser: direct fetch (works fine without Sec-Fetch-*)
+        try {
+          const res = await fetch(url, {
+            headers: { 'User-Agent': 'bsky-client/0.9.0' },
+          });
+          if (!res.ok) {
+            return JSON.stringify({ error: `DuckDuckGo API error: HTTP ${res.status}` });
+          }
+          const data = (await res.json()) as DDGResponse;
+          return formatDDGResponse(data);
+        } catch (err) {
+          return JSON.stringify({
+            error: `instant_answer fetch failed: ${err instanceof Error ? err.message : String(err)}`,
+            hint: 'This tool requires network access to api.duckduckgo.com. Check your network connection.',
+          });
+        }
+      },
+      requiresWrite: false,
+    },
+    {
+      definition: {
+        name: 'search_wikipedia',
+        description: 'Search Wikipedia and return a concise summary of the top matching article. No API key needed — Wikipedia API supports CORS. Use this for factual knowledge lookup (people, places, concepts, events). Works with English and many other languages.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query (e.g., "Albert Einstein", "Python programming language")' },
+            lang: { type: 'string', description: 'Wikipedia language code (default "en"). Use "zh" for Chinese, "ja" for Japanese, etc.' },
+          },
+          required: ['query'],
+        },
+      },
+      handler: async (p) => {
+        const query = String(p.query ?? '').trim();
+        if (!query) return JSON.stringify({ error: 'Empty query.' });
+        const lang = String(p.lang ?? 'en').replace(/[^a-z]/g, '');
+        try {
+          // Wikipedia page/summary handles redirects and fuzzy matching.
+          // e.g. /page/summary/Bluesky%20social%20network redirects to "Bluesky".
+          const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`);
+          if (res.status === 404) {
+            return JSON.stringify({ error: 'No Wikipedia article found matching that query.' });
+          }
+          if (!res.ok) {
+            return JSON.stringify({ error: `Wikipedia API error: HTTP ${res.status}` });
+          }
+          const summary = (await res.json()) as WikipediaSummary;
+          return formatWikipediaSummary(summary);
+        } catch (err) {
+          return JSON.stringify({
+            error: `search_wikipedia failed: ${err instanceof Error ? err.message : String(err)}`,
+            hint: 'Wikipedia API might be unreachable from your network.',
+          });
+        }
       },
       requiresWrite: false,
     },
@@ -1247,4 +1334,16 @@ function formatDDGResponse(d: DDGResponse): string {
   }
 
   return JSON.stringify({ heading: d.Heading || '', content: parts.join('\n\n') });
+}
+
+/**
+ * Format Wikipedia API summary into the same {heading, content} format.
+ */
+function formatWikipediaSummary(s: WikipediaSummary): string {
+  const parts: string[] = [];
+  parts.push(`# ${s.displaytitle || s.title}`);
+  if (s.description) parts.push(`> ${s.description}`);
+  if (s.extract) parts.push(s.extract);
+  if (s.content_urls?.desktop?.page) parts.push(`Source: ${s.content_urls.desktop.page}`);
+  return JSON.stringify({ heading: s.displaytitle || s.title, content: parts.join('\n\n') });
 }

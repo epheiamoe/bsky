@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DDG Instant Answer Debug</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #0a0a0a; color: #e0e0e0; }
+  h1 { color: #fff; }
+  button { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+  button:hover { background: #1d4ed8; }
+  input { width: 100%; padding: 8px; border: 1px solid #333; border-radius: 6px; background: #1a1a1a; color: #e0e0e0; font-size: 14px; box-sizing: border-box; margin: 8px 0; }
+  .result { margin-top: 16px; }
+  .section { margin: 12px 0; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #141414; }
+  .section h3 { margin: 0 0 8px 0; font-size: 14px; color: #94a3b8; text-transform: uppercase; }
+  .section code { white-space: pre-wrap; word-break: break-all; font-size: 13px; line-height: 1.5; }
+  .pass { color: #4ade80; }
+  .fail { color: #f87171; }
+  .warn { color: #fbbf24; }
+  .summary { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+  .badge.ok { background: #166534; color: #bbf7d0; }
+  .badge.miss { background: #7f1d1d; color: #fecaca; }
+  .badge.info { background: #1e3a5f; color: #bfdbfe; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .field { display: flex; justify-content: space-between; padding: 4px 8px; background: #1a1a1a; border-radius: 4px; font-size: 13px; }
+  .field .label { color: #94a3b8; }
+</style>
+</head>
+<body>
+<h1>🔍 DDG Instant Answer — Browser Debug</h1>
+<p>Tests the DuckDuckGo Instant Answer API directly from the browser, using the exact same code path as the app's <code>instant_answer</code> tool.</p>
+
+<input type="text" id="queryInput" value="Bluesky social network" placeholder="Enter query..." />
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+  <button onclick="runTest()">▶ Direct DDG</button>
+  <button onclick="runAll()">▶▶ Direct All 4</button>
+  <button onclick="runProxyTest('allorigins')">🌐 Proxy: allorigins.win</button>
+  <button onclick="runProxyTest('jina')">🌐 Proxy: r.jina.ai</button>
+  <button onclick="runProxyTest('both')">🌐 Test Both Proxies</button>
+  <button onclick="testJSONP()">📡 Test JSONP</button>
+</div>
+
+<div id="output" class="result"></div>
+
+<script>
+const QUERIES = ['BlueSky AT Protocol', 'Bluesky social network', 'Python programming language', 'Tokyo'];
+
+async function fetchDDG(query) {
+  const q = encodeURIComponent(query);
+  const url = `https://api.duckduckgo.com/?q=${q}&format=json&no_html=1&skip_disambig=1`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'bsky-client/0.9.0' },
+  });
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { _parseError: text.slice(0, 200) }; }
+  return { res, text, data };
+}
+
+function formatDDGResponse(d) {
+  const parts = [];
+  if (d.Heading) parts.push(`Heading: ${d.Heading}`);
+  if (d.Answer) parts.push(`Answer: ${d.Answer}`);
+  if (d.Abstract) parts.push(`Abstract (${d.Abstract.length} chars)`);
+  if (d.Definition && d.Definition !== d.Heading) parts.push(`Definition: ${d.Definition}`);
+  if (d.Infobox?.content?.length > 0) {
+    const rows = d.Infobox.content.filter(i => i.label && i.value && typeof i.value === 'string');
+    if (rows.length > 0) parts.push(`Infobox: ${rows.length} rows`);
+  }
+  if (d.Results?.length > 0) parts.push(`Results: ${d.Results.length}`);
+  if (d.RelatedTopics?.length > 0) {
+    const topics = d.RelatedTopics.slice(0, 8).flatMap(t => t.Topics || [t]);
+    if (topics.length > 0) parts.push(`RelatedTopics: ${topics.length} items`);
+  }
+  return parts;
+}
+
+function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function renderResult({ query, ok, status, statusText, data, parts, elapsed, error }) {
+  const isEmpty = error || parts.length === 0;
+  const summary = error
+    ? `<span class="fail">✗ ERROR: ${esc(error)}</span>`
+    : isEmpty
+      ? `<span class="fail">✗ EMPTY — would show "No instant answer found"</span>`
+      : `<span class="pass">✓ ${parts.length} data fields found</span>`;
+
+  let fieldsHtml = '';
+  if (data && !error) {
+    const checks = [
+      { label: 'Heading', ok: !!data.Heading, val: data.Heading },
+      { label: 'Abstract', ok: !!data.Abstract, val: data.Abstract ? `${data.Abstract.length} chars` : '' },
+      { label: 'Answer', ok: !!data.Answer, val: data.Answer },
+      { label: 'Definition', ok: !!data.Definition && data.Definition !== data.Heading, val: data.Definition },
+      { label: 'Results[]', ok: data.Results?.length > 0, val: `${data.Results?.length ?? 0} items` },
+      { label: 'RelatedTopics[]', ok: data.RelatedTopics?.length > 0, val: `${data.RelatedTopics?.length ?? 0} items` },
+      { label: 'Infobox', ok: data.Infobox?.content?.length > 0, val: `${data.Infobox?.content?.length ?? 0} items` },
+    ];
+    fieldsHtml = '<div class="field-grid">' + checks.map(c =>
+      `<div class="field"><span class="label">${c.label}</span><span class="${c.ok ? 'pass' : 'fail'}">${c.ok ? '✓' : '✗'} ${esc(c.val)}</span></div>`
+    ).join('') + '</div>';
+  }
+
+  const partsHtml = parts.length > 0
+    ? parts.map(p => `<span class="badge ok">${esc(p)}</span>`).join('')
+    : error ? '' : `<span class="badge miss">No data fields — formatDDGResponse would be empty</span>`;
+
+  return `<div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>Query: "${esc(query)}"</h3>
+      <span style="font-size:12px;color:#64748b">${elapsed}ms | HTTP ${status} ${esc(statusText)}</span>
+    </div>
+    <div style="margin:8px 0">${summary}</div>
+    ${fieldsHtml}
+    <div class="summary" style="margin-top:8px">${partsHtml}</div>
+    ${data && !error ? `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:13px;color:#94a3b8">Raw Response (keys: ${Object.keys(data).join(', ')})</summary><code>${esc(JSON.stringify(data, null, 2).slice(0, 2000))}</code></details>` : ''}
+    ${error ? `<div style="margin-top:8px"><code style="color:#f87171">${esc(error)}</code></div>` : ''}
+  </div>`;
+}
+
+async function runTest() {
+  const query = document.getElementById('queryInput').value.trim() || 'Bluesky';
+  const out = document.getElementById('output');
+  out.innerHTML = '<p style="color:#94a3b8">⏳ Loading...</p>';
+
+  const start = performance.now();
+  let ok = false, status = 0, statusText = '', data = null, parts = [], error = '';
+  try {
+    const result = await fetchDDG(query);
+    ok = result.res.ok;
+    status = result.res.status;
+    statusText = result.res.statusText;
+    data = result.data;
+    if (data._parseError) {
+      error = `JSON parse error: ${data._parseError}`;
+    } else {
+      parts = formatDDGResponse(data);
+    }
+  } catch (e) {
+    error = `${e.name}: ${e.message}`;
+  }
+  const elapsed = Math.round(performance.now() - start);
+
+  out.innerHTML = renderResult({ query, ok, status, statusText, data, parts, elapsed, error });
+}
+
+async function runAll() {
+  const out = document.getElementById('output');
+  out.innerHTML = '<p style="color:#94a3b8">⏳ Testing all 4 queries...</p>';
+
+  let html = '';
+  for (const query of QUERIES) {
+    const start = performance.now();
+    let ok = false, status = 0, statusText = '', data = null, parts = [], error = '';
+    try {
+      const result = await fetchDDG(query);
+      ok = result.res.ok;
+      status = result.res.status;
+      statusText = result.res.statusText;
+      data = result.data;
+      if (data._parseError) {
+        error = `JSON parse error: ${data._parseError}`;
+      } else {
+        parts = formatDDGResponse(data);
+      }
+    } catch (e) {
+      error = `${e.name}: ${e.message}`;
+    }
+    const elapsed = Math.round(performance.now() - start);
+    html += renderResult({ query, ok, status, statusText, data, parts, elapsed, error });
+  }
+  out.innerHTML = html;
+}
+
+async function runFormatDDGTest() {
+  const out = document.getElementById('output');
+  out.innerHTML = '<p style="color:#94a3b8">⏳ Testing formatDDGResponse logic...</p>';
+
+  let html = '<div class="section"><h3>Simulating the EXACT formatDDGResponse function</h3><p style="font-size:13px;color:#94a3b8">The tool handler calls <code>formatDDGResponse(data)</code> which returns <code>JSON.stringify({ heading, content })</code>. This test shows exactly what the AI would receive.</p></div>';
+
+  for (const query of QUERIES) {
+    const start = performance.now();
+    let data = null, error = '';
+    try {
+      const result = await fetchDDG(query);
+      if (result.data._parseError) {
+        error = result.data._parseError;
+      } else {
+        data = result.data;
+      }
+    } catch (e) {
+      error = `${e.name}: ${e.message}`;
+    }
+    const elapsed = Math.round(performance.now() - start);
+
+    if (error || !data) {
+      html += `<div class="section"><h3>Query: "${esc(query)}"</h3><span class="fail">✗ ${esc(error)}</span></div>`;
+    } else {
+      // EXACT same logic as formatDDGResponse in tools.ts
+      const parts = [];
+      if (data.Heading) parts.push(`# ${data.Heading}`);
+      if (data.Answer) parts.push(`## Direct Answer\n${data.Answer}`);
+      if (data.Abstract) {
+        const src = data.AbstractSource ? ` (via ${data.AbstractSource})` : '';
+        parts.push(`## Summary${src}\n${data.Abstract}`);
+        if (data.AbstractURL) parts.push(`Source: ${data.AbstractURL}`);
+      }
+      if (data.Definition && data.Definition !== data.Heading) {
+        parts.push(`## Definition\n${data.Definition}`);
+        if (data.DefinitionURL) parts.push(`Source: ${data.DefinitionURL}`);
+      }
+      if (data.Infobox?.content?.length > 0) {
+        const rows = data.Infobox.content.filter(i => i.label && i.value && typeof i.value === 'string');
+        if (rows.length > 0) {
+          parts.push(`## Info\n${rows.slice(0, 10).map(i => `- ${i.label}: ${i.value}`).join('\n')}${rows.length > 10 ? `\n... (${rows.length - 10} more)` : ''}`);
+        }
+      }
+      if (data.Results?.length > 0) {
+        parts.push(`## Results\n${data.Results.map(r => `- ${r.Text} (${r.FirstURL})`).join('\n')}`);
+      }
+      if (data.RelatedTopics?.length > 0) {
+        const topics = data.RelatedTopics.slice(0, 8).flatMap(t => t.Topics || [t]);
+        if (topics.length > 0) {
+          parts.push(`## Related\n${topics.map(t => `- ${t.Text}`).join('\n')}`);
+        }
+      }
+      if (parts.length === 0) {
+        parts.push('No instant answer found for this query.');
+      }
+
+      const output = JSON.stringify({ heading: data.Heading || '', content: parts.join('\n\n') });
+      const aiSummary = parts.length > 0 && parts[0] !== 'No instant answer found for this query.' ? parts[0] : '⛔ No data';
+
+      html += `<div class="section">
+        <h3>Query: "${esc(query)}" <span class="${parts.length > 0 && parts[0] !== 'No instant answer found for this query.' ? 'pass' : 'fail'}">(${parts.length} parts, ${elapsed}ms)</span></h3>
+        <div style="margin:4px 0"><span class="badge ${parts.length > 0 && parts[0] !== 'No instant answer found for this query.' ? 'ok' : 'miss'}">${esc(aiSummary)}</span></div>
+        <details><summary style="cursor:pointer;font-size:13px;color:#94a3b8">View formatDDGResponse output</summary>
+        <code>${esc(output.slice(0, 2000))}${output.length > 2000 ? '\n... (truncated)' : ''}</code></details>
+      </div>`;
+    }
+  }
+  html += '<div class="section" style="border-color:#4ade80"><h3>Diagnosis</h3><p style="font-size:13px">If all queries return data here but the AI shows "No instant answer found", the issue is NOT with the DDG API or formatDDGResponse. It would be in how the AI processes the tool result.</p></div>';
+  out.innerHTML = html;
+}
+
+async function testViaAllOrigins(query) {
+  const q = encodeURIComponent(query);
+  const target = `https://api.duckduckgo.com/?q=${q}&format=json&no_html=1&skip_disambig=1`;
+  const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+  const res = await fetch(proxyUrl);
+  if (!res.ok) throw new Error(`allorigins.win HTTP ${res.status}`);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { data = { _parseError: text.slice(0, 200) }; }
+  return { res: { ok: res.ok, status: res.status, statusText: res.statusText }, text, data };
+}
+
+async function testViaJina(query) {
+  const target = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+  const proxyUrl = `https://r.jina.ai/${target}`;
+  const res = await fetch(proxyUrl, { headers: { 'Accept': 'text/markdown' } });
+  if (!res.ok) throw new Error(`r.jina.ai HTTP ${res.status}: ${res.statusText}`);
+  const text = await res.text();
+  // Jina returns markdown, try to extract JSON from it
+  let data = null;
+  try { data = JSON.parse(text); } catch {
+    // Jina wraps content in markdown; try to find JSON block
+    const jsonMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+    if (jsonMatch) { try { data = JSON.parse(jsonMatch[1]); } catch {} }
+  }
+  return { res: { ok: res.ok, status: res.status, statusText: res.statusText }, text, data, raw: text };
+}
+
+function renderError(query, proxy, error) {
+  return `<div class="section">
+    <div style="display:flex;justify-content:space-between;align-items-center">
+      <h3>${proxy}: "${esc(query)}"</h3>
+      <span class="fail">✗ ERROR</span>
+    </div>
+    <code style="color:#f87171">${esc(error)}</code>
+  </div>`;
+}
+
+function renderProxyResult({ query, proxy, ok, status, data, parts, elapsed, error, rawText }) {
+  if (error) return renderError(query, proxy, error);
+
+  const isEmpty = parts.length === 0;
+  const summary = isEmpty
+    ? `<span class="fail">✗ EMPTY — all fields null/empty</span>`
+    : `<span class="pass">✓ ${parts.length} data fields</span>`;
+
+  let fieldsHtml = '';
+  if (data && !error) {
+    const checks = [
+      { label: 'Heading', ok: !!data.Heading, val: data.Heading },
+      { label: 'Abstract', ok: !!data.Abstract, val: data.Abstract ? `${data.Abstract.length} chars` : '' },
+      { label: 'Answer', ok: !!data.Answer, val: data.Answer },
+      { label: 'Definition', ok: !!data.Definition && data.Definition !== data.Heading, val: data.Definition },
+      { label: 'Results[]', ok: data.Results?.length > 0, val: `${data.Results?.length ?? 0}` },
+      { label: 'RelatedTopics[]', ok: data.RelatedTopics?.length > 0, val: `${data.RelatedTopics?.length ?? 0}` },
+      { label: 'Infobox', ok: data.Infobox?.content?.length > 0, val: `${data.Infobox?.content?.length ?? 0}` },
+    ];
+    fieldsHtml = '<div class="field-grid">' + checks.map(c =>
+      `<div class="field"><span class="label">${c.label}</span><span class="${c.ok ? 'pass' : 'fail'}">${c.ok ? '✓' : '✗'} ${esc(c.val)}</span></div>`
+    ).join('') + '</div>';
+  }
+
+  return `<div class="section" style="border-left:3px solid ${ok && !isEmpty ? '#4ade80' : '#f87171'}">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3>${proxy}: "${esc(query)}"</h3>
+      <span style="font-size:12px;color:#64748b">${elapsed}ms | HTTP ${status}</span>
+    </div>
+    <div style="margin:8px 0">${summary}</div>
+    ${fieldsHtml}
+    ${rawText && !data ? `<details><summary style="cursor:pointer;font-size:13px;color:#94a3b8">Raw response</summary><code>${esc(rawText.slice(0, 1000))}</code></details>` : ''}
+    ${data && !error ? `<details><summary style="cursor:pointer;font-size:13px;color:#94a3b8">Raw JSON (keys: ${Object.keys(data).join(', ')})</summary><code>${esc(JSON.stringify(data, null, 2).slice(0, 1500))}</code></details>` : ''}
+  </div>`;
+}
+
+async function runProxyTest(mode) {
+  const query = document.getElementById('queryInput').value.trim() || 'Bluesky';
+  const out = document.getElementById('output');
+  const proxies = mode === 'both' ? ['allorigins', 'jina'] : [mode];
+  out.innerHTML = '<p style="color:#94a3b8">⏳ Testing via proxies...</p>';
+
+  let html = '<div class="section" style="border-color:#fbbf24"><h3>🌐 Proxy Comparison Test</h3><p style="font-size:13px;color:#94a3b8">Testing DuckDuckGo API via different proxies. Compare with "Direct DDG" results above.</p></div>';
+  for (const proxy of proxies) {
+    for (const q of [query]) {
+      const start = performance.now();
+      let ok = false, status = 0, data = null, parts = [], error = '', rawText = '';
+      try {
+        if (proxy === 'allorigins') {
+          const r = await testViaAllOrigins(q);
+          ok = r.res.ok; status = r.res.status; data = r.data; rawText = r.text;
+          if (r.data && !r.data._parseError) parts = formatDDGResponse(r.data);
+          else if (r.data?._parseError) error = `Parse error: ${r.data._parseError}`;
+        } else {
+          const r = await testViaJina(q);
+          ok = r.res.ok; status = r.res.status; data = r.data; rawText = r.raw;
+          if (r.data && !r.data._parseError) parts = formatDDGResponse(r.data);
+          else if (r.data?._parseError) error = `Parse error: ${r.data._parseError}`;
+        }
+      } catch (e) { error = `${e.name}: ${e.message}`; }
+      const elapsed = Math.round(performance.now() - start);
+      html += renderProxyResult({ query: q, proxy: proxy === 'allorigins' ? 'allorigins.win/raw' : 'r.jina.ai', ok, status, data, parts, elapsed, error, rawText });
+    }
+  }
+  html += '<div class="section" style="border-color:#2563eb"><h3>📋 Summary</h3><p style="font-size:13px;color:#94a3b8">If allorigins.win returns data → use it as primary. If r.jina.ai returns data → fallback. If both fail → network issue.</p></div>';
+  out.innerHTML = html;
+}
+
+// Auto-run on load
+runFormatDDGTest();
+</script>
+</body>
+</html>

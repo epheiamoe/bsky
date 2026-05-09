@@ -9,14 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **DuckDuckGo Instant Answer 工具** (`instant_answer`): 第 37 个 AI 工具，零 API 密钥、零配置、零依赖。通过 DuckDuckGo Instant Answer API 获取 Wikipedia 摘要、Infobox 结构化数据、直接答案和相关链接。read-only，无需用户确认。建议使用英文关键词查询。
+- **DuckDuckGo Instant Answer 工具** (`instant_answer`): 第 37 个 AI 工具，零 API 密钥。通过 DuckDuckGo Instant Answer API 获取 Wikipedia 摘要、Infobox、直接答案和相关链接。浏览器环境下通过 Pages Function `/api/proxy` 代理调用以绕过 `Sec-Fetch-*` 检测（DDG 反爬机制会向浏览器请求返回空字段）。Node.js 环境下直接 `fetch()`。read-only，无需用户确认。
+- **Wikipedia 知识摘要工具** (`search_wikipedia`): 第 38 个 AI 工具，零 API 密钥。基于 Wikipedia REST API `page/summary`（原生 CORS），直接获取文章摘要、描述和链接。支持 `lang` 参数（默认 `en`），Wikipedia 自动处理重定向和模糊匹配。一步到位，无需搜索步骤。
+- **`/api/proxy` Pages Function**: `packages/pwa/functions/api/proxy.js` — Cloudflare Pages 服务端代理。浏览器 `instant_answer` 通过此代理调用 DDG API，在 Cloudflare 边缘节点执行 server-side fetch（无 `Sec-Fetch-*` 头），返回完整 JSON + CORS 头给浏览器。
+- **`docs/PAGES_FUNCTION.md`**: Pages Function 架构文档（规范、代码、本地测试命令）
 
 ### Changed
 
-- **Systeam prompt**: `P_ASSISTANT_BASE` 中提示 AI 优先使用 `instant_answer` 做快速知识查询，`fetch_web_markdown` 做深度页面阅读。
-- **AI 工具总数**: 36 → 37
-- **`contracts/tools.json`**: 新增 `instant_answer` 合约条目
+- **系统提示词**: `P_ASSISTANT_BASE` 中告知 AI 有 `instant_answer` 和 `search_wikipedia` 两个零密钥知识查询工具
+- **AI 工具总数**: 36 → 38
+- **`contracts/tools.json`**: 新增 `instant_answer` + `search_wikipedia` 合约条目
+- **`AGENTS.md`**: 新增 Pages Function 文档规范（新增 Pages Function 必须更新 `docs/PAGES_FUNCTION.md` + `AGENTS.md`）
+- **`docs/CONTEXT.md`**: 更新至 v0.10.0，新增 PAGES_FUNCTION.md 引用，更新工具数
+- **`docs/LESSONS.md`**: 新增 3 个教训（Lesson 46: Sec-Fetch-* 检测，Lesson 47: Wikipedia 搜索端点选择，Lesson 48: w/api.php CORS 要求）
 - **版本**: v0.9.0 → v0.10.0 (AboutPage, README, docs)
+
+### Removed
+
+- **`fetchViaJSONP` 函数**: 废弃的 JSONP 实现（DDG 已检测 `<script>` 标签的 `Sec-Fetch-Dest: script` 头）
+- **`WikipediaSearchResult` / `WikipediaOpenSearch` 类型**: 改用 `page/summary` 后不再需要搜索类型
 
 ## [0.3.0] — 2026-05-03
 
