@@ -135,32 +135,33 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         </div>
       </header>
 
-      <main className="max-w-content mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-content mx-auto py-6 space-y-2">
         {/* ── 讨论源 (parent chain) ── */}
         {parentLines.length > 0 && (
-          <section className="space-y-2">
+          <section className="px-4 space-y-1">
             <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.discussionSource')} ──</p>
-            {parentLines.map((line) => (
-              <div
-                key={line.uri || line.rkey}
-                onClick={() => goTo({ type: 'thread', uri: line.uri })}
-                className="pl-4 border-l-2 border-border opacity-60 hover:opacity-100 transition-opacity rounded-r-lg py-3 cursor-pointer"
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-text-primary">
-                    {truncateName(line.displayName)}
-                  </span>
-                  <span className="text-xs text-text-secondary">
-                    @{line.handle}
-                  </span>
-                  <span className="text-xs text-text-secondary">·</span>
-                  <span className="text-xs text-text-secondary">
-                    {formatTime(line.indexedAt)}
-                  </span>
+            {parentLines.map((line, idx) => (
+              <div key={line.uri || line.rkey}>
+                <div
+                  onClick={() => goTo({ type: 'thread', uri: line.uri })}
+                  className={`mx-2 px-3 py-2 rounded-xl border border-border bg-surface/20 border-l-2 opacity-60 hover:opacity-100 transition-all cursor-pointer ${idx === parentLines.length - 1 ? 'border-l-primary' : 'border-l-border'}`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-medium text-text-primary">
+                      {truncateName(line.displayName)}
+                    </span>
+                    <span className="text-xs text-text-secondary">
+                      @{line.handle}
+                    </span>
+                    <span className="text-xs text-text-secondary">·</span>
+                    <span className="text-xs text-text-secondary">
+                      {formatTime(line.indexedAt)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap line-clamp-4">
+                    {line.text}
+                  </p>
                 </div>
-                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap line-clamp-4">
-                  {line.text}
-                </p>
               </div>
             ))}
           </section>
@@ -168,11 +169,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
         {/* ── 主题帖 / 当前帖子 ── */}
         {focused && (
-          <article className="border-l-4 border-primary pl-4 py-3 rounded-r-lg bg-surface/50">
+          <article className="mx-2 px-4 py-3 rounded-xl border border-primary/20 bg-surface/30 border-l-4 border-l-primary">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-start gap-3 mb-3">
               <div
-                className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mt-0.5"
                 onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
               >
                 {focused.authorAvatar ? (
@@ -183,26 +184,28 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </span>
                 )}
               </div>
-              <span className="text-base font-semibold text-text-primary">
-                {truncateName(focused.displayName)}
-              </span>
-              <span className="text-sm text-text-secondary">
-                @{focused.handle}
-              </span>
-              <span className="text-sm text-text-secondary">·</span>
-              <span className="text-sm text-text-secondary">
-                {formatTime(focused.indexedAt)}
-              </span>
-              <button
-                onClick={handleFollow}
-                className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors ${
-                  isFollowing
-                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
-                    : 'bg-primary text-white hover:bg-primary-hover'
-                }`}
-              >
-                {isFollowing ? t('profile.unfollow') : t('profile.follow')}
-              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-semibold text-text-primary truncate">
+                    {truncateName(focused.displayName)}
+                  </span>
+                  <button
+                    onClick={handleFollow}
+                    className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors shrink-0 ${
+                      isFollowing
+                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
+                        : 'bg-primary text-white hover:bg-primary-hover'
+                    }`}
+                  >
+                    {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                  </button>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                  <span>@{focused.handle}</span>
+                  <span>·</span>
+                  <span>{formatTime(focused.indexedAt)}</span>
+                </div>
+              </div>
             </div>
             <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-all">
               {linkifyText(focused.text)}
@@ -282,7 +285,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
         {/* ── 回复 ── */}
         {replyLines.length > 0 && (
-          <section className="space-y-3">
+          <section className="px-4 space-y-1">
             <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.replies')} ({replyLines.length}) ──</p>
             {replyLines.map((line) => {
               if (line.isTruncation) {
@@ -300,7 +303,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               return (
                 <div
                   key={line.uri || line.rkey}
-                  style={{ marginLeft: Math.min((line.depth - 1) * 16, 48) }}
+                  style={{ marginLeft: Math.min((line.depth - 1) * 20, 60) }}
+                  className="border-l-2 border-border/50 pl-3 pb-1"
                 >
                     <PostCard
                       line={line}

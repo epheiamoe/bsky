@@ -79,7 +79,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
       </div>
 
       <div className="px-4 py-3 flex gap-2">
-        <div className="flex-1 relative">
+        <div className="flex-1">
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown} placeholder={t('search.placeholder')} autoFocus
@@ -87,31 +87,6 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
             onBlur={() => setTimeout(() => setInputFocused(false), 200)}
             className="w-full px-4 py-2 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary text-sm"
           />
-          {inputFocused && !input && hasHistory && !searched && (
-            <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-border bg-surface shadow-lg z-20 max-h-48 overflow-y-auto">
-              <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
-                <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">{t('search.history')}</span>
-                <button onClick={() => clear()}
-                  className="text-[10px] text-red-500 hover:text-red-400 transition-colors"
-                >
-                  {t('search.clearAll')}
-                </button>
-              </div>
-              {history.map((q, i) => (
-                <div key={`${q}-${i}`} className="flex items-center gap-2 px-3 py-2 hover:bg-surface/80 cursor-pointer group"
-                  onMouseDown={(e) => { e.preventDefault(); setInput(q); addToHistory(tab, q); search(q, tab); setSearched(true); goTo({ type: 'search', query: q, searchTab: tab }); }}
-                >
-                  <Icon name="clock" size={14} className="text-text-secondary/50 shrink-0" />
-                  <span className="flex-1 text-sm text-text-primary truncate">{q}</span>
-                  <button onClick={(e) => { e.stopPropagation(); remove(q); }}
-                    className="text-text-secondary/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Icon name="x" size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
         <button onClick={handleSearch} disabled={!input.trim() || loading}
           className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-sm disabled:opacity-50 transition-colors shrink-0"
@@ -129,6 +104,32 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
           </button>
         ))}
       </div>
+
+      {inputFocused && !input && hasHistory && !searched && (
+        <div className="mx-4 my-2 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-y-auto">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
+            <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">{t('search.history')}</span>
+            <button onClick={() => clear()}
+              className="text-[10px] text-red-500 hover:text-red-400 transition-colors"
+            >
+              {t('search.clearAll')}
+            </button>
+          </div>
+          {history.map((q, i) => (
+            <div key={`${q}-${i}`} className="flex items-center gap-2 px-3 py-2 hover:bg-surface/80 cursor-pointer group"
+              onMouseDown={(e) => { e.preventDefault(); setInput(q); addToHistory(tab, q); search(q, tab); setSearched(true); goTo({ type: 'search', query: q, searchTab: tab }); }}
+            >
+              <Icon name="clock" size={14} className="text-text-secondary/50 shrink-0" />
+              <span className="flex-1 text-sm text-text-primary truncate">{q}</span>
+              <button onClick={(e) => { e.stopPropagation(); remove(q); }}
+                className="text-text-secondary/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Icon name="x" size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
