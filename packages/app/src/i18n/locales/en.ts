@@ -221,6 +221,11 @@ const en: LocaleMessages = {
   'about.buildTime': 'Build time',
   'about.feedback': 'Feedback',
   'about.contact': 'Contact',
+
+  // ── Login ──
+  'login.pdsLabel': 'PDS Host (optional)',
+  'login.pdsHint': 'bsky.social (leave empty for auto-detect)',
+  'login.pdsWarning': 'Custom PDS is for technical users only. If you don\'t understand this, leave it as bsky.social.',
 };
 
 export default en;

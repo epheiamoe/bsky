@@ -13,10 +13,11 @@ export function useAuth() {
   return {
     client: store.client,
     session: store.session,
+    pdsUrl: store.pdsUrl,
     profile: store.profile,
     loading: store.loading,
     error: store.error,
-    login: (h: string, p: string) => store.login(h, p),
-    restoreSession: (s: CreateSessionResponse) => store.restoreSession(s),
+    login: (h: string, p: string, pdsUrl?: string) => store.login(h, p, pdsUrl),
+    restoreSession: (s: CreateSessionResponse, pdsUrl: string) => store.restoreSession(s, pdsUrl),
   };
 }

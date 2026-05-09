@@ -164,7 +164,7 @@ export function App() {
         refreshJwt: saved.refreshJwt,
         handle: saved.handle,
         did: saved.did,
-      });
+      }, saved.pdsUrl ?? 'https://bsky.social');
       setIsLoggedIn(true);
     }
   }, []);
@@ -177,6 +177,7 @@ export function App() {
         refreshJwt: session.refreshJwt,
         handle: session.handle,
         did: session.did,
+        pdsUrl: client.pdsUrl,
       });
       setIsLoggedIn(true);
     }
@@ -190,8 +191,8 @@ export function App() {
     }
   }, [authError, isLoggedIn]);
 
-  const handleLogin = useCallback(async (handle: string, password: string) => {
-    await login(handle, password);
+  const handleLogin = useCallback(async (handle: string, password: string, pdsUrl?: string) => {
+    await login(handle, password, pdsUrl);
   }, [login]);
 
   const handleLogout = useCallback(() => {

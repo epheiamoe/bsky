@@ -7,7 +7,8 @@ export interface AtUri {
 
 export function parseAtUri(uri: string): AtUri {
   // at://did:plc:abc123/app.bsky.feed.post/3lk123
-  const match = uri.match(/^at:\/\/(did:plc:[^/]+)\/([^/]+)\/([^/]+)$/);
+  // at://did:web:example.com/app.bsky.feed.post/3lk123
+  const match = uri.match(/^at:\/\/(did:[^:]+:[^/]+)\/([^/]+)\/([^/]+)$/);
   if (!match) throw new Error(`Invalid AT URI: ${uri}`);
   return {
     uri,
@@ -251,6 +252,22 @@ export interface CreateSessionResponse {
   email?: string;
   emailConfirmed?: boolean;
   emailAuthFactor?: boolean;
+}
+
+export interface DidDocument {
+  id: string;
+  alsoKnownAs?: string[];
+  service?: Array<{
+    id: string;
+    type: string;
+    serviceEndpoint: string;
+  }>;
+}
+
+export interface ResolveDidResponse {
+  did: string;
+  didDoc: DidDocument;
+  handle?: string;
 }
 
 export interface ResolveHandleResponse {

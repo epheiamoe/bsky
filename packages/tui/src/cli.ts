@@ -30,6 +30,7 @@ for (const envPath of envPaths) {
 export interface AppConfig {
   blueskyHandle: string;
   blueskyPassword: string;
+  blueskyPds?: string;
   aiConfig: {
     apiKey: string;
     baseUrl: string;
@@ -65,6 +66,8 @@ function getConfigFromEnv(): AppConfig | null {
   const password = process.env.BLUESKY_APP_PASSWORD;
   if (!handle || !password) return null;
 
+  const pdsUrl = process.env.BLUESKY_PDS || undefined;
+
   const tuiConfig = getTuiConfig();
   const providerId = tuiConfig.aiConfig.provider;
   const apiKey = resolveAiApiKey(tuiConfig, providerId);
@@ -72,6 +75,7 @@ function getConfigFromEnv(): AppConfig | null {
   return {
     blueskyHandle: handle,
     blueskyPassword: password,
+    blueskyPds: pdsUrl,
     aiConfig: {
       apiKey,
       baseUrl: tuiConfig.aiConfig.baseUrl,

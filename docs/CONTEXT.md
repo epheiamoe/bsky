@@ -10,17 +10,18 @@
 4. **`docs/ARCHITECTURE.md`** — 系统架构
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
-7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
-8. **`docs/KEYBOARD.md`** — TUI 快捷键
-8. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
-9. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
-10. **`CHANGELOG.md`** — 版本历史
-11. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-12. **`packages/core/src/ai/tools.ts`** — 31 个 AI 工具定义
+ 7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
+ 8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
+ 9. **`docs/KEYBOARD.md`** — TUI 快捷键
+ 10. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+ 11. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+ 12. **`CHANGELOG.md`** — 版本历史
+ 13. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+ 14. **`packages/core/src/ai/tools.ts`** — 36 个 AI 工具定义
 
 ## 版本
 
-**v0.7.0** — AT Play + Social Circle + AI auto-naming + Search history + Emoji config panel + Thread view cards + DM avatar navigation
+**v0.8.0** — PDS 第三方服务支持（PDS 发现 + 多 PDS 登录 + did:web: + 架构重构）
 
 ## 项目状态
 
@@ -60,6 +61,12 @@
 - **时区修正** (v0.7.0): About 页动态计算 `getTimezoneOffset()` 显示正确时区标签。
 - **PostCard 卡片化** (v0.7.0): 圆角矩形 `rounded-xl border border-border bg-surface/20`。
 - **登录页关于入口** (v0.7.0): 右上角图标 → 内联 AboutPage（返回按钮只关闭 about，不导航到需登录页）。
+- **第三方 PDS 支持** (v0.8.0): 登录页新增可选 PDS 主机字段，默认 `bsky.social`，带技术用户警告。TUI 通过 `BLUESKY_PDS` 环境变量配置。PDS 自动发现管线：`createSession` 后从 `didDoc` 提取用户真实 PDS URL，若不存在则通过 `resolveDid` 获取。`this.ky` 在登录后重建指向用户 PDS。
+- **`parseAtUri` did:web: 支持** (v0.8.0): 正则从 `did:plc:` 单格式改为通用 `did:[^:]+:[^/]+`，兼容 `did:web:` DID。
+- **JWT 刷新指向用户 PDS** (v0.8.0): `withRefresh` 内 `refreshSession` URL 改用 `this.pdsUrl` 而非硬编码 `BSKY_SERVICE`。
+- **downloadBlob 指向用户 PDS** (v0.8.0): 从 `BSKY_SERVICE` 改为 `this.pdsUrl`。
+- **DidDocument 类型** (v0.8.0): 新增 `DidDocument`、`ResolveDidResponse` 类型导出。
+- **CORS 错误提示** (v0.8.0): 第三方 PDS 未配置 CORS 时，浏览器抛 `TypeError` → UI 显示连接错误，提示用户检查 PDS 配置或使用 TUI（无 CORS 限制）。
 
 ## 🔴 关键教训
 
@@ -244,6 +251,21 @@
 **根因**：emoji.txt 包含 3551 个 emoji，大量肤色变体（🏻🏼🏽🏾🏿）需要合理分组展示。
 **修复**：解析时检测 Unicode 肤色修饰符，自动分组为基础 emoji + variants。配置面板展示基础 emoji，仅点击时展开肤色选择。
 **教训**：处理含肤色的 Unicode 字符串时，用 `includes()` 检测特定 codepoint 比用正则更可靠。`replaceAll()` 剥离修饰符获得 base key。
+
+### 43. didDoc 返回的可选性
+**根因**：`com.atproto.server.createSession` 的响应中 `didDoc` 是**可选**字段——Bluesky PDS 可能包含也可能不包含。登录时假设它一定存在会导致 PDS 发现失败。
+**修复**：两阶段发现——先检查 response.didDoc，不存在时调用 `resolveDid` 补查。
+**教训**：AT Protocol 响应字段的可选性必须始终作为假设下限。
+
+### 44. login() 的 this.ky 鸡生蛋问题
+**根因**：`login()` 使用 `this.ky` 发送 `createSession`，但此时 `this.ky` 指向的是构造时确定的入口 PDS（可能硬编码 bsky.social）。登录后才知道用户真实 PDS，无法重新指向。
+**修复**：两阶段创建——`login()` 先用临时 entryKy（或传入的 PDS URL）认证，获取 session 和 didDoc 后重建 `this.ky` 指向用户真实 PDS。
+**教训**：认证流和目标操作流可以分离。入口 PDS（auth）和数据 PDS（operations）不必相同。
+
+### 45. withRefresh 闭包必须可复用
+**根因**：`withRefresh` 在构造函数中定义为局部 `const`，登录后重建 `this.ky` 时无法引用同一 hook，导致新 ky 实例没有刷新能力。
+**修复**：将 `withRefresh` 存储为 `this._withRefresh` 实例属性，重建 `this.ky` 时传入同一引用。
+**教训**：闭包引用在对象重建时必须作为实例属性保存，而非局部变量。
 
 ---
 
@@ -451,3 +473,10 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/DMChatPage.tsx` | 动态表情读取 + 配置面板 + 头像跳转 |
 | `packages/pwa/src/components/ConvoListPage.tsx` | 头像跳转资料页 |
 | `packages/tui/src/components/DMChatView.tsx` | TUI 表情反应（e 键 + 编号选择） |
+| `packages/core/src/at/client.ts` | PDS 发现管线 + this.ky 重建 + withRefresh 复用 |
+| `packages/core/src/at/types.ts` | DidDocument / ResolveDidResponse 类型 |
+| `packages/app/src/stores/auth.ts` | pdsUrl 字段 + login/restore pdsUrl 参数 |
+| `packages/app/src/hooks/useAuth.ts` | 透传 pdsUrl 参数 |
+| `packages/pwa/src/components/LoginPage.tsx` | PDS 主机输入 + 警告框 |
+| `packages/pwa/src/hooks/useSessionPersistence.ts` | pdsUrl 持久化 |
+| `docs/PDS.md` | PDS 支持完整文档 |

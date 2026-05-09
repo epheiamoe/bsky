@@ -4,7 +4,7 @@ import { Icon } from './Icon.js';
 import { AboutPage } from './AboutPage.js';
 
 interface LoginPageProps {
-  onLogin: (handle: string, password: string) => Promise<void>;
+  onLogin: (handle: string, password: string, pdsUrl?: string) => Promise<void>;
   error?: string | null;
 }
 
@@ -12,6 +12,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
   const { t } = useI18n();
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
+  const [pdsUrl, setPdsUrl] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
@@ -22,7 +23,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
     setSubmitting(true);
     setLocalError(null);
     try {
-      await onLogin(handle.trim(), password);
+      await onLogin(handle.trim(), password, pdsUrl.trim() || undefined);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : t('login.error'));
     } finally {
@@ -91,6 +92,22 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
                 {t('login.passwordHintLink')}
               </a>{' '}
               {t('login.passwordHintCreate')}
+            </p>
+          </div>
+
+          {/* PDS Host */}
+          <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+            <label className="block text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">{t('login.pdsLabel')}</label>
+            <input
+              type="text"
+              value={pdsUrl}
+              onChange={e => setPdsUrl(e.target.value)}
+              placeholder={`${t('login.pdsHint')}`}
+              disabled={submitting}
+              className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 placeholder:text-amber-400/50 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
+            />
+            <p className="text-amber-600 dark:text-amber-400 text-xs mt-1">
+              {t('login.pdsWarning')}
             </p>
           </div>
 

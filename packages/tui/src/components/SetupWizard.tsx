@@ -13,6 +13,7 @@ import type { TuiConfig } from '../config/configStore.js';
 export interface SetupConfig {
   blueskyHandle: string;
   blueskyPassword: string;
+  blueskyPds?: string;
   llmApiKey: string;
   llmBaseUrl: string;
   llmModel: string;
@@ -26,7 +27,7 @@ interface SetupWizardProps {
   onComplete: (config: SetupConfig) => void;
 }
 
-type Step = 'handle' | 'password' | 'provider' | 'model' | 'apikey' | 'scenario' | 'locale' | 'done';
+type Step = 'handle' | 'password' | 'pds' | 'provider' | 'model' | 'apikey' | 'scenario' | 'locale' | 'done';
 
 const LANG_OPTIONS: { value: Locale; label: string }[] = [
   { value: 'zh', label: '中文 (zh)' },
@@ -46,6 +47,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   const [step, setStep] = useState<Step>('handle');
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
+  const [pdsUrl, setPdsUrl] = useState('');
   const [providerIdx, setProviderIdx] = useState(0);
   const [modelIdx, setModelIdx] = useState(0);
   const [modelInput, setModelInput] = useState('');
@@ -66,6 +68,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
       `BLUESKY_HANDLE=${handle}`,
       `BLUESKY_APP_PASSWORD=${password}`,
     ];
+    if (pdsUrl) lines.push(`BLUESKY_PDS=${pdsUrl}`);
     writeFileSync(envPath, lines.join('\n') + '\n', 'utf-8');
 
     // Write structured config (non-credential)
@@ -91,6 +94,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
     onComplete({
       blueskyHandle: handle,
       blueskyPassword: password,
+      blueskyPds: pdsUrl || undefined,
       llmApiKey: apiKey,
       llmBaseUrl: selectedProvider.baseUrl,
       llmModel: model,
@@ -145,10 +149,12 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
 
   const handleTextSubmit = (value: string) => {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    // PDS is optional — allow empty
+    if (step !== 'pds' && !trimmed) return;
     switch (step) {
       case 'handle': setHandle(trimmed); setStep('password'); break;
-      case 'password': setPassword(trimmed); setStep('provider'); break;
+      case 'password': setPassword(trimmed); setStep('pds'); break;
+      case 'pds': setPdsUrl(trimmed); setStep('provider'); break;
       case 'apikey': setApiKey(trimmed); setStep('locale'); break;
     }
   };
@@ -187,6 +193,18 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
             <Text color="cyan">▸ </Text>
             <TextInput value={password} onChange={setPassword} onSubmit={handleTextSubmit} placeholder="App Password" />
           </Box>
+        </Box>
+      )}
+
+      {step === 'pds' && (
+        <Box flexDirection="column">
+          <Text color="green">✓ {t('setup.blueskyHandle')}: {handle}  密码: ****</Text>
+          <Text color="cyanBright">▸ PDS 主机 (可选, 留空=bsky.social)</Text>
+          <Box marginLeft={2} borderStyle="single" borderColor="cyan" paddingX={1}>
+            <Text color="cyan">▸ </Text>
+            <TextInput value={pdsUrl} onChange={setPdsUrl} onSubmit={handleTextSubmit} placeholder="https://bsky.social" />
+          </Box>
+          <Box marginLeft={2}><Text color="yellow">自定义 PDS 仅适用于技术用户</Text></Box>
         </Box>
       )}
 

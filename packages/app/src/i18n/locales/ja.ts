@@ -221,6 +221,11 @@ const ja: LocaleMessages = {
   'about.buildTime': 'ビルド時間',
   'about.feedback': 'フィードバック',
   'about.contact': '連絡先',
+
+  // ── Login ──
+  'login.pdsLabel': 'PDS ホスト（任意）',
+  'login.pdsHint': 'bsky.social（空欄で自動検出）',
+  'login.pdsWarning': 'カスタムPDSは技術者向けです。意味がわからない場合はデフォルトのままにしてください。',
 };
 
 export default ja;

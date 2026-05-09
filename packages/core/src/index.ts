@@ -13,6 +13,8 @@ export {
 } from './at/feeds.js';
 export type { FeedInfo } from './at/feeds.js';
 export type {
+  DidDocument,
+  ResolveDidResponse,
   PostView,
   ProfileView,
   ProfileViewBasic,

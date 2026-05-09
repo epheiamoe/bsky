@@ -1,7 +1,9 @@
 import ky, { type KyInstance } from 'ky';
 import type {
   CreateSessionResponse,
+  DidDocument,
   ResolveHandleResponse,
+  ResolveDidResponse,
   ProfileView,
   TimelineResponse,
   PostThreadResponse,
@@ -51,30 +53,32 @@ const PUBLIC_API = 'https://public.api.bsky.app';
 const CHAT_API = 'https://api.bsky.chat';
 
 export class BskyClient {
-  private session: CreateSessionResponse | null = null;
+  session: CreateSessionResponse | null = null;
+  pdsUrl: string;
   private ky: KyInstance;
   private publicKy: KyInstance;
   private chatKy: KyInstance;
+  private _withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void>;
+  private _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
 
-  constructor() {
+  constructor(options?: { pdsUrl?: string }) {
+    const entryPds = options?.pdsUrl ?? BSKY_SERVICE;
+    this.pdsUrl = entryPds;
     const self = this;
 
-    let _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
-
-    const withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void> = async (request, _options, response) => {
+    this._withRefresh = async (request, _options, response) => {
       if (!response.ok) {
         const body = await response.clone().text();
         if (response.status === 400 && self.session) {
           try {
             const err = JSON.parse(body);
             if (err.error === 'ExpiredToken' || err.error === 'InvalidToken') {
-              // Shared refresh promise: concurrent 400s wait for the same refresh
-              if (!_refreshPromise) {
-                _refreshPromise = (async () => {
+              if (!self._refreshPromise) {
+                self._refreshPromise = (async () => {
                   const session = self.session!;
                   await new Promise(r => setTimeout(r, 200));
                   try {
-                    const r = await fetch(`${BSKY_SERVICE}/xrpc/com.atproto.server.refreshSession`, {
+                    const r = await fetch(`${self.pdsUrl}/xrpc/com.atproto.server.refreshSession`, {
                       method: 'POST',
                       headers: { Authorization: `Bearer ${session.refreshJwt}` },
                     });
@@ -83,15 +87,14 @@ export class BskyClient {
                       return self.session;
                     }
                   } catch {
-                    // Network error during refresh — keep session
                     return null;
                   }
                   self.session = null;
                   return null;
                 })();
-                _refreshPromise.finally(() => { _refreshPromise = null; });
+                self._refreshPromise.finally(() => { self._refreshPromise = null; });
               }
-              const refreshed = await _refreshPromise;
+              const refreshed = await self._refreshPromise;
               if (refreshed && self.session) {
                 const retryRes = await fetch(request.url, {
                   method: request.method,
@@ -99,7 +102,6 @@ export class BskyClient {
                 });
                 if (retryRes.ok) return retryRes;
               }
-              // Refresh or retry failed — will fall through to console.error below
             }
           } catch { /* non-JSON body */ }
         }
@@ -108,10 +110,10 @@ export class BskyClient {
     };
 
     this.ky = ky.create({
-      prefixUrl: BSKY_SERVICE + '/xrpc',
+      prefixUrl: entryPds + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [withRefresh] },
+      hooks: { afterResponse: [this._withRefresh] },
     });
     this.publicKy = ky.create({
       prefixUrl: PUBLIC_API + '/xrpc',
@@ -122,7 +124,7 @@ export class BskyClient {
       prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [withRefresh] },
+      hooks: { afterResponse: [this._withRefresh] },
     });
   }
 
@@ -132,11 +134,56 @@ export class BskyClient {
   }
 
   async login(handle: string, password: string): Promise<CreateSessionResponse> {
-    const res = await this.ky.post('com.atproto.server.createSession', {
+    const entryUrl = this.pdsUrl;
+    const entryKy = entryUrl === BSKY_SERVICE || !this.ky
+      ? ky.create({
+          prefixUrl: entryUrl + '/xrpc',
+          timeout: 30000,
+          retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+        })
+      : this.ky;
+
+    const res = await entryKy.post('com.atproto.server.createSession', {
       json: { identifier: handle, password },
-    }).json<CreateSessionResponse>();
+    }).json<CreateSessionResponse & { didDoc?: DidDocument }>();
+
     this.session = res;
+
+    // Discover user's actual PDS from DID document
+    let userPdsUrl = entryUrl;
+    if (res.didDoc) {
+      const pdsService = res.didDoc.service?.find(
+        s => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+      );
+      if (pdsService?.serviceEndpoint) {
+        userPdsUrl = pdsService.serviceEndpoint.replace(/\/+$/, '');
+      }
+    } else {
+      try {
+        const discovered = await this._discoverPdsFromDid(res.did);
+        if (discovered) userPdsUrl = discovered;
+      } catch { /* stay with entryUrl */ }
+    }
+
+    this.pdsUrl = userPdsUrl;
+    this.ky = ky.create({
+      prefixUrl: this.pdsUrl + '/xrpc',
+      timeout: 30000,
+      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      hooks: { afterResponse: [this._withRefresh] },
+    });
+
     return res;
+  }
+
+  private async _discoverPdsFromDid(did: string): Promise<string | null> {
+    const didDoc = await this.publicKy.get('com.atproto.identity.resolveDid', {
+      searchParams: { did },
+    }).json<ResolveDidResponse>();
+    const pdsService = didDoc.didDoc?.service?.find(
+      s => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
+    );
+    return pdsService?.serviceEndpoint?.replace(/\/+$/, '') ?? null;
   }
 
   async resolveHandle(handle: string): Promise<ResolveHandleResponse> {
@@ -537,8 +584,7 @@ export class BskyClient {
   }
 
   async downloadBlob(did: string, cid: string): Promise<Uint8Array> {
-    // Use the PDS directly for blob download with a longer timeout
-    const blobUrl = `${BSKY_SERVICE}/xrpc/com.atproto.sync.getBlob`;
+    const blobUrl = `${this.pdsUrl}/xrpc/com.atproto.sync.getBlob`;
     const res = await ky.get(blobUrl, {
       searchParams: { did, cid },
       timeout: 30000,
@@ -566,8 +612,15 @@ export class BskyClient {
     return this.session !== null;
   }
 
-  restoreSession(session: CreateSessionResponse): void {
+  restoreSession(session: CreateSessionResponse, pdsUrl?: string): void {
     this.session = session;
+    if (pdsUrl) this.pdsUrl = pdsUrl;
+    this.ky = ky.create({
+      prefixUrl: this.pdsUrl + '/xrpc',
+      timeout: 30000,
+      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      hooks: { afterResponse: [this._withRefresh] },
+    });
   }
 
   async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {

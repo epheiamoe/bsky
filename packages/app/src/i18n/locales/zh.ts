@@ -263,6 +263,9 @@ const zh: LocaleMessages = {
   'login.passwordHintCreate': '中创建 → 粘贴到这里',
   'login.privacyNote': '凭据仅保存在你的浏览器本地，不会发送到 Bluesky 以外的任何服务器',
   'login.needHint': '这不是你的账号密码——请在 Bluesky 设置中创建一个独立的 App Password',
+  'login.pdsLabel': 'PDS 服务器（可选）',
+  'login.pdsHint': 'bsky.social（留空自动发现）',
+  'login.pdsWarning': '自定义 PDS 仅适用于技术用户。如果你不知道这是什么意思，请使用默认设置。',
 
   'welcome.title': '欢迎！你的 Bluesky 账号已连接。',
   'welcome.subtitle': '核心功能立即可用。配置 AI API Key 即可启用智能功能。',

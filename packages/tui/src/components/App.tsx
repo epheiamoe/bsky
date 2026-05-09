@@ -25,6 +25,7 @@ import { DMChatView } from './DMChatView.jsx';
 interface AppConfig {
   blueskyHandle: string;
   blueskyPassword: string;
+  blueskyPds?: string;
   aiConfig: AIConfig;
   targetLang?: string;
   translateMode?: 'simple' | 'json';
@@ -148,7 +149,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Auto-login
   const [wasAuthenticated, setWasAuthenticated] = useState(false);
   useEffect(() => {
-    if (!authLoading) login(config.blueskyHandle, config.blueskyPassword);
+    if (!authLoading) login(config.blueskyHandle, config.blueskyPassword, config.blueskyPds);
   }, []);
 
   // Re-login on expired session (e.g., after system sleep)
@@ -157,7 +158,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       setWasAuthenticated(true);
     } else if (wasAuthenticated) {
       setWasAuthenticated(false);
-      login(config.blueskyHandle, config.blueskyPassword);
+      login(config.blueskyHandle, config.blueskyPassword, config.blueskyPds);
     }
   }, [client]);
 

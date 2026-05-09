@@ -5,6 +5,7 @@ export interface StoredSession {
   refreshJwt: string;
   handle: string;
   did: string;
+  pdsUrl?: string;
 }
 
 export function getSession(): StoredSession | null {
