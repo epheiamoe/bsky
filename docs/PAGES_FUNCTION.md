@@ -99,14 +99,33 @@ If you add a new Pages Function:
 4. **Update this document** (`docs/PAGES_FUNCTION.md`) with the new function
 5. **Also update AGENTS.md** — add a note about the new function in the Pages Function section
 
+## Multi-Platform Deployment
+
+This project supports multiple deployment platforms. See [DEPLOY.md](../DEPLOY.md) for:
+
+- Cloudflare Pages setup
+- VPS + PHP (no Node.js needed)
+- VPS + Node.js
+- Vercel
+- Netlify
+
+Each platform provides its own proxy implementation. All behave identically: domain whitelist check → server-side fetch → return with CORS headers. `tools.ts` always calls `/api/proxy` — each platform ensures it's available at that path.
+
 ## Local Development
 
-Pages Functions are **not** served by `vite dev`. To test locally:
+Pages Functions are **not** served by `vite dev`. For local development, run two terminals:
 
 ```bash
-cd packages/pwa && npx wrangler pages dev dist --bind="" 2>/dev/null
+# Terminal 1: Vite dev server
+cd packages/pwa && pnpm dev
+
+# Terminal 2: Standalone DDG proxy (Node.js)
+cd packages/pwa && node scripts/proxy-server.mjs
 ```
 
-This starts a local server (default port 8788) that serves both static files and Pages Functions.
+Vite proxies `/api/*` requests to `http://localhost:8788` (the proxy server). The proxy server handles the domain whitelist check and server-side fetch.
 
-Alternatively, the Vite dev server in `pnpm dev` does NOT serve Pages Functions — test by deploying to Cloudflare preview URL.
+Alternatively, you can also test with:
+```bash
+cd packages/pwa && npx wrangler pages dev dist
+```

@@ -13,6 +13,8 @@
  7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
   8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
   9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
+  10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
+  11. **`DEPLOY.md`** — 面向部署者的多平台部署指南
   10. **`docs/KEYBOARD.md`** — TUI 快捷键
   11. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
   12. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范

@@ -165,11 +165,31 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 
 ## Build & Deploy
 
+**IMPORTANT**: Commit before build for correct `__COMMIT_HASH__`.  
+Two-step deploy: preview → test → production. No direct production deploys.
+
 ```bash
-# IMPORTANT: commit before build for correct __COMMIT_HASH__
-git add -A && git commit -m "..." && pnpm -r build
-cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true
+# 0. Commit so About page shows correct hash
+git add -A && git commit -m "..."
+
+# 1. Build all packages
+pnpm -r build
+
+# 2. Deploy to preview (does NOT affect ai-bsky.pages.dev)
+cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
+# → Preview URL: https://<hash>.ai-bsky.pages.dev
+# → Test here first (share with others, check functionality)
+
+# 3. After testing, deploy to production
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
+# → Production: https://ai-bsky.pages.dev
+
+# Quick full workflow:
+# git add -A && git commit -m "..." && pnpm -r build && cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
+# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 ```
+
+For deployment on other platforms (VPS/PHP, Vercel, Netlify, Node.js), see `DEPLOY.md`.
 
 ## Environment
 
