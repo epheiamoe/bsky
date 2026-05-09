@@ -174,6 +174,8 @@ const en: LocaleMessages = {
 
   // ── DMs ──
   'nav.dm': 'Messages',
+  'dm.emojiConfig': 'Customize Quick Emojis',
+  'dm.emojiConfigHint': 'Selected {n} emojis. Click to add/remove.',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

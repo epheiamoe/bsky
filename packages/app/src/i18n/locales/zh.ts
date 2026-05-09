@@ -399,6 +399,8 @@ const zh: LocaleMessages = {
 
   // ── DMs ──
   'nav.dm': '私信',
+  'dm.emojiConfig': '自定义快捷表情',
+  'dm.emojiConfigHint': '已选 {n} 个表情。点击添加/移除。',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

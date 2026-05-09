@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text } from 'ink';
+import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import type { ChatMessage } from '@bsky/app';
-import { useChatMessages, useI18n } from '@bsky/app';
+import { useChatMessages, useI18n, getDmEmojiConfig } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
 interface DMChatViewProps {
@@ -14,14 +14,16 @@ interface DMChatViewProps {
 
 export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewProps) {
   const { t } = useI18n();
-  const { messages, convo, loading, error, loadConvo, sendMessage } = useChatMessages(client);
+  const { messages, convo, loading, error, loadConvo, sendMessage, toggleReaction } = useChatMessages(client);
   const [input, setInput] = useState('');
+  const [reactMode, setReactMode] = useState(false);
   const did = client.getDID();
+  const emojis = getDmEmojiConfig();
 
   useEffect(() => { loadConvo(conversationId, true); }, [conversationId]);
 
   const rows = process.stdout.rows || 24;
-  const availableRows = rows - 6;
+  const availableRows = rows - (reactMode ? 9 : 6);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -29,6 +31,29 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
     setInput('');
     await sendMessage(text);
   };
+
+  useInput((_input, key) => {
+    if (reactMode) {
+      const n = parseInt(_input, 10);
+      if (!isNaN(n) && n >= 1 && n <= emojis.length) {
+        // React to the last message with selected emoji
+        const lastMsg = [...messages].reverse().find(m => 'text' in m) as ChatMessage | undefined;
+        if (lastMsg) {
+          const emoji = emojis[n - 1]!;
+          const hasMy = (lastMsg.reactions || []).some(r => r.sender.did === did && r.value === emoji);
+          toggleReaction(lastMsg.id, emoji, hasMy);
+        }
+        setReactMode(false);
+      } else {
+        setReactMode(false);
+      }
+      return;
+    }
+    if (_input === 'e' && !key.ctrl && !key.meta) {
+      setReactMode(true);
+      return;
+    }
+  });
 
   const getMemberName = () => {
     if (!convo) return '';
@@ -83,6 +108,15 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
           </Box>
         ))}
       </Box>
+
+      {reactMode && (
+        <Box height={2} flexDirection="column">
+          <Text color="yellow">Select emoji to react to last message:</Text>
+          <Text>
+            {emojis.map((e, i) => `${i + 1}:${e}  `).join('')}
+          </Text>
+        </Box>
+      )}
 
       <Box height={1}>
         <Text color="yellow">▸ </Text>

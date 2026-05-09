@@ -26,6 +26,8 @@ export interface TuiConfig {
     translate: string;
     polish: string;
   };
+  /** Custom emojis for DM reactions */
+  dmEmojis?: string[];
 }
 
 export const DEFAULT_TUI_CONFIG: TuiConfig = {

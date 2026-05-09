@@ -174,6 +174,8 @@ const ja: LocaleMessages = {
 
   // ── DMs ──
   'nav.dm': 'メッセージ',
+  'dm.emojiConfig': 'クイック絵文字のカスタマイズ',
+  'dm.emojiConfigHint': '{n} 個の絵文字を選択中。クリックで追加/削除。',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

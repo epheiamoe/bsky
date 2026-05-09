@@ -169,7 +169,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
         {/* ── 主题帖 / 当前帖子 ── */}
         {focused && (
-          <article className="mx-2 px-4 py-3 rounded-xl border border-primary/20 bg-surface/30 border-l-4 border-l-primary">
+          <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
             <div className="flex items-start gap-3 mb-3">
               <div

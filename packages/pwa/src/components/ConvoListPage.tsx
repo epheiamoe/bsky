@@ -110,25 +110,33 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
         {!loading && convos.length === 0 && (
           <div className="p-6 text-center text-text-secondary">{t('dm.empty')}</div>
         )}
-        {convos.map((convo) => (
-          <button
-            key={convo.id}
-            onClick={() => handleConvoClick(convo)}
-            className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-center gap-3"
-          >
-            {/* Avatar */}
-            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
+        {convos.map((convo) => {
+          const memberHandle = getMemberHandle(convo);
+          return (
+          <div key={convo.id} className="flex items-center px-4 py-3 border-b border-border hover:bg-surface transition-colors">
+            {/* Avatar — clickable for profile */}
+            <div
+              className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mr-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (memberHandle) goTo({ type: 'profile', actor: memberHandle });
+              }}
+            >
               {getMemberAvatar(convo) ? (
                 <img src={getMemberAvatar(convo)} alt="" className="w-full h-full object-cover" />
               ) : (
                 (getMemberName(convo) || '?')[0]
               )}
             </div>
-            <div className="flex-1 min-w-0">
+            {/* Rest of the row — clickable for chat */}
+            <button
+              onClick={() => handleConvoClick(convo)}
+              className="flex-1 min-w-0 text-left"
+            >
               <div className="flex items-center gap-2">
                 {convo.muted && <span className="text-text-secondary text-xs" title={t('dm.muted')}><Icon name="bell" size={12} /></span>}
                 <span className="text-sm font-semibold text-text-primary truncate">{getMemberName(convo)}</span>
-                <span className="text-xs text-text-secondary truncate">@{getMemberHandle(convo)}</span>
+                <span className="text-xs text-text-secondary truncate">@{memberHandle}</span>
                 {getLastMessageTime(convo) && (
                   <span className="text-xs text-text-secondary ml-auto shrink-0">{getLastMessageTime(convo)}</span>
                 )}
@@ -141,9 +149,10 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
                   </span>
                 )}
               </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          </div>
+          );
+        })}
       </div>
     </div>
   );
