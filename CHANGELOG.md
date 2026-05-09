@@ -13,21 +13,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Wikipedia 知识摘要工具** (`search_wikipedia`): 第 38 个 AI 工具，零 API 密钥。基于 Wikipedia REST API `page/summary`（原生 CORS），直接获取文章摘要、描述和链接。支持 `lang` 参数（默认 `en`），Wikipedia 自动处理重定向和模糊匹配。一步到位，无需搜索步骤。
 - **`/api/proxy` Pages Function**: `packages/pwa/functions/api/proxy.js` — Cloudflare Pages 服务端代理。浏览器 `instant_answer` 通过此代理调用 DDG API，在 Cloudflare 边缘节点执行 server-side fetch（无 `Sec-Fetch-*` 头），返回完整 JSON + CORS 头给浏览器。
 - **`docs/PAGES_FUNCTION.md`**: Pages Function 架构文档（规范、代码、本地测试命令）
+- **`DEPLOY.md`**: 面向部署者的多平台部署指南（Cloudflare/PHP/Vercel/Netlify/VPS/Node）
+- **多平台 DDG 代理文件**: PHP (`api/proxy.php`)、Vercel (`api/proxy.js`)、Netlify (`netlify/functions/proxy.js`)、Node (`scripts/proxy-server.mjs`)
+- **`docs/DDG_INSTANT_ANSWER_DEBUG.md`**: DuckDuckGo API `Sec-Fetch-*` 检测完整分析文档
+- **ChatStorage 工厂模式**: `setChatStorageFactory()` + `getDefaultChatStorage()` — 与 DraftStorage 一致的工厂模式，替代硬编码 `FileChatStorage`（Lesson 49）
+- **`get_profile` 支持 `actor="me"`**: AI 可直接 `get_profile actor="me"` 获取当前用户资料
 
 ### Changed
 
-- **系统提示词**: `P_ASSISTANT_BASE` 中告知 AI 有 `instant_answer` 和 `search_wikipedia` 两个零密钥知识查询工具
+- **系统提示词**: `P_ASSISTANT_BASE` 新增规则 5（AI 应使用提示词中的 handle 调工具）；`PF_CURRENT_USER` 新增 handle 使用提示 + 界面语言
 - **AI 工具总数**: 36 → 38
-- **`contracts/tools.json`**: 新增 `instant_answer` + `search_wikipedia` 合约条目
-- **`AGENTS.md`**: 新增 Pages Function 文档规范（新增 Pages Function 必须更新 `docs/PAGES_FUNCTION.md` + `AGENTS.md`）
-- **`docs/CONTEXT.md`**: 更新至 v0.10.0，新增 PAGES_FUNCTION.md 引用，更新工具数
-- **`docs/LESSONS.md`**: 新增 3 个教训（Lesson 46: Sec-Fetch-* 检测，Lesson 47: Wikipedia 搜索端点选择，Lesson 48: w/api.php CORS 要求）
+- **`contracts/tools.json`**: 新增 `instant_answer` + `search_wikipedia` + `get_profile` 描述更新
+- **`AGENTS.md`**: 新增 Pages Function 文档规范；Build & Deploy 改为两步流程（`--branch=staging` → `--branch=master`）
+- **`AGENTS.local.md`**: 部署流程同步更新
+- **`docs/CONTEXT.md`**: 更新至 v0.10.0，新增文件引用，工具数更新
+- **`docs/PAGES_FUNCTION.md`**: 增加多平台部署章节和本地开发说明
+- **`docs/LESSONS.md`**: 新增 Lesson 46-50（Sec-Fetch-* 检测、Wikipedia 端点、CORS 要求、ChatStorage 工厂、autoSave 竞态）
+- **`vite.config.ts`**: 添加 `server.proxy` 开发代理（`/api` → `localhost:8788`）
 - **版本**: v0.9.0 → v0.10.0 (AboutPage, README, docs)
 
-### Removed
+### Fixed
 
-- **`fetchViaJSONP` 函数**: 废弃的 JSONP 实现（DDG 已检测 `<script>` 标签的 `Sec-Fetch-Dest: script` 头）
-- **`WikipediaSearchResult` / `WikipediaOpenSearch` 类型**: 改用 `page/summary` 后不再需要搜索类型
+- **autoSave 竞态条件**: 删除 `send()` 中过早的 `void autoSave()` 调用（仅用户消息），只保留流结束后的保存，防止不完整数据覆盖完整对话历史（Lesson 50）
+- **`upload_blob` 死代码**: 移除 `assistant.ts` 中的死分支和 `contracts/tools.json` 条目
+- **`get_profile` 描述更新**: 明确告知 AI 可用 `actor="me"` 获取自身资料
+- **CORS 域名白名单**: `/api/proxy` 添加 `url` 前缀校验，仅允许 `api.duckduckgo.com`
 
 ## [0.3.0] — 2026-05-03
 

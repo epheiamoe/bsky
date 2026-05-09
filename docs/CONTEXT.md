@@ -15,12 +15,12 @@
   9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
   10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
   11. **`DEPLOY.md`** — 面向部署者的多平台部署指南
-  10. **`docs/KEYBOARD.md`** — TUI 快捷键
-  11. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
-  12. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
- 13. **`CHANGELOG.md`** — 版本历史
- 14. **`packages/core/src/ai/prompts.ts`** — AI 提示词
- 15. **`packages/core/src/ai/tools.ts`** — 38 个 AI 工具定义
+  12. **`docs/KEYBOARD.md`** — TUI 快捷键
+  13. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+  14. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+  15. **`CHANGELOG.md`** — 版本历史
+  16. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+  17. **`packages/core/src/ai/tools.ts`** — 38 个 AI 工具定义
 
 ## 版本
 
@@ -73,7 +73,13 @@
 - **i18n 补全** (v0.9.0): 向 en/zh/ja 三语言文件添加 19 个缺失的 UI 键（`dm.send`, `dm.placeholder`, `dm.confirmDelete`, `dm.deletedMessage`, `dm.empty`, `dm.mute`, `dm.unmute`, `dm.muted`, `dm.noMessages`, `dm.resolvingQuote`, `dm.systemMessage`, `dm.unknown`, `action.add`, `action.done`, `action.open`, `action.original`, `compose.uploadFailed`, `settings.provider`, `common.back`）。AGENTS.md 新增 i18n 提醒规则。
 - **instant_answer 工具** (v0.10.0): 新增第 37 个 AI 工具 `instant_answer`，基于 DuckDuckGo Instant Answer API（零 API 密钥）。浏览器环境下通过 Pages Function `/api/proxy` 代理调用以绕过 Sec-Fetch-* 检测。Node.js 环境下直接 fetch。read-only，无需用户确认。
 - **search_wikipedia 工具** (v0.10.0): 新增第 38 个 AI 工具 `search_wikipedia`，基于 Wikipedia REST API `page/summary`（原生 CORS，零 API 密钥）。一步到位获取知识摘要，Wikipedia 自动处理重定向和模糊匹配。支持语言参数（`lang`，默认 en）。
-- **/api/proxy Pages Function** (v0.10.0): `packages/pwa/functions/api/proxy.js` — Cloudflare Pages Function，服务端 fetch DDG API + CORS 响应头。浏览器 `instant_answer` 的浏览器路径通过此代理调用，绕过 DDG 的 Sec-Fetch-* 浏览器检测。
+- **/api/proxy Pages Function** (v0.10.0): `packages/pwa/functions/api/proxy.js` — Cloudflare Pages Function，服务端 fetch DDG API + CORS 响应头。浏览器 `instant_answer` 的浏览器路径通过此代理调用，绕过 DDG 的 Sec-Fetch-* 浏览器检测。新增域名白名单（仅允许 `api.duckduckgo.com`）。
+- **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
+- **ChatStorage 工厂模式** (v0.10.0): `setChatStorageFactory()` + `getDefaultChatStorage()` 替代硬编码 `new FileChatStorage()`。与 DraftStorage 一致的注册-解析模式。`useAIChat` 的 `UseAIChatOptions` 移除 `storage` 参数。PWA 在 `App.tsx` 注册 `IndexedDBChatStorage`；TUI 自动检测 Node.js 回退到 `FileChatStorage`。
+- **autoSave 竞态修复** (v0.10.0): 删除 `send()` 函数中过早的 `void autoSave(updated)`（用户消息发出时立即保存），只保留流结束后的保存。防止两个 `IndexedDB.put()` 并发写入同一 key 导致不完整数据覆盖完整对话历史。
+- **get_profile actor="me"** (v0.10.0): 工具描述和 handler 支持 `actor="me"` → 自动解析为 `client.getHandle()`。AI 无需猜测自己的 handle。
+- **系统提示词** (v0.10.0): `P_ASSISTANT_BASE` 新增规则 5（AI 应使用提示词中的 handle）；`PF_CURRENT_USER` 新增 handle 使用提示 + 界面语言参数。
+- **多平台 DDG 代理** (v0.10.0): PHP (`api/proxy.php`) / Vercel (`api/proxy.js`) / Netlify (`netlify/functions/proxy.js`) / Node (`scripts/proxy-server.mjs`)。`DEPLOY.md` 面向部署者的指南。`vite.config.ts` 添加 dev proxy。
 - **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
 
 ## 🔴 关键教训

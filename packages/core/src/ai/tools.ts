@@ -474,15 +474,16 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_profile',
-        description: "Get a user's profile by DID or handle. Returns full profile (handle, displayName, description, counts). Use this to resolve a DID to a handle and vice versa.",
+        description: "Get a user's profile by DID or handle. Use actor=\"me\" to get the current user's own profile. Returns full profile (handle, displayName, description, follower/following/post counts). Use this to resolve a DID to a handle and vice versa.",
         inputSchema: {
           type: 'object',
-          properties: { actor: { type: 'string', description: 'The DID or handle of the user' } },
+          properties: { actor: { type: 'string', description: 'The DID or handle of the user. Use "me" to get the current authenticated user.' } },
           required: ['actor'],
         },
       },
       handler: async (p) => {
-        const res = await client.getProfile(p.actor as string);
+        const actor = p.actor === 'me' ? client.getHandle() : (p.actor as string);
+        const res = await client.getProfile(actor);
         return JSON.stringify({
           did: res.did, handle: res.handle, displayName: res.displayName,
           description: res.description, followersCount: res.followersCount,

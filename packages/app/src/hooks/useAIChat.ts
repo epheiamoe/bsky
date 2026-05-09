@@ -64,6 +64,7 @@ export function useAIChat(
   const autoStartedRef = useRef(false);
   const chatNotifiedRef = useRef(false);
   const titleGeneratedRef = useRef(false);
+  const saveVersionRef = useRef(0);
   // Track current context for auto-save persistence
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
@@ -72,7 +73,7 @@ export function useAIChat(
     parts.push(P_ASSISTANT_BASE);
     if (options?.userHandle || options?.userDisplayName) {
       const name = options.userDisplayName || options.userHandle || '';
-      parts.push(PF_CURRENT_USER(name, options.userHandle));
+      parts.push(PF_CURRENT_USER(name, options.userHandle, options?.locale));
     }
     if (contextProfile) {
       parts.push(PF_PROFILE_CONTEXT(contextProfile, options?.userHandle));
@@ -223,6 +224,7 @@ export function useAIChat(
   }, [client, contextUri, assistant, options?.contextProfile, options?.contextPost, buildSystemPrompt]);
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
+    const version = ++saveVersionRef.current;
     // Skip view-context messages for title generation
     const firstRealUser = msgs.find(m => m.role === 'user' && !m.content.startsWith('<currently_viewing>'));
     const firstUser = firstRealUser ?? msgs.find(m => m.role === 'user');
@@ -237,6 +239,7 @@ export function useAIChat(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
+      if (version !== saveVersionRef.current) return; // superseded by newer save
       if (!chatNotifiedRef.current) {
         chatNotifiedRef.current = true;
         options?.onChatSaved?.();
@@ -262,6 +265,7 @@ export function useAIChat(
               console.log('[useAIChat] titleGen result:', { newTitle });
               if (newTitle) {
                 console.log('[useAIChat] saving new title:', newTitle);
+                if (version !== saveVersionRef.current) return; // superseded
                 await storage.saveChat({
                   id: chatIdRef.current,
                   title: newTitle,
@@ -283,11 +287,7 @@ export function useAIChat(
 
   const send = useCallback(async (text: string) => {
     const newUserMsg: AIChatMessage = { role: 'user', content: text };
-    setMessages(prev => {
-      const updated = [...prev, newUserMsg];
-      void autoSave(updated);
-      return updated;
-    });
+    setMessages(prev => [...prev, newUserMsg]);
     setGuidingQuestions([]);
     setLoading(true);
 

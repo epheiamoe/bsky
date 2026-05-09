@@ -235,11 +235,11 @@
   },
   {
     "name": "get_profile",
-    "description": "Get a user's profile",
+    "description": "Get a user's profile by DID or handle. Use actor=\"me\" for current user.",
     "inputSchema": {
       "type": "object",
       "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user" }
+        "actor": { "type": "string", "description": "The DID or handle of the user. Use \"me\" for the current authenticated user." }
       },
       "required": ["actor"]
     },

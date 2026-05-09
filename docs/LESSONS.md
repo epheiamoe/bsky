@@ -499,6 +499,47 @@ https://en.wikipedia.org/w/api.php?action=opensearch&search=Bluesky&origin=*
 
 ---
 
+### Lesson 49: ChatStorage 工厂模式重构
+
+**问题**：`useChatHistory` 硬编码 `new FileChatStorage()`（Node.js 文件系统），PWA 被迫在每个组件中手动 `new IndexedDBChatStorage()` 并传入参数。
+
+**修复**：参照 DraftStorage 的工厂模式，在 `chatStorage.ts` 中引入 `setChatStorageFactory()` + `getDefaultChatStorage()`。
+
+```
+TUI:  自动检测 Node.js → FileChatStorage（无需注册）
+PWA:  App.tsx 注册 setChatStorageFactory(() => new IndexedDBChatStorage())
+      AIChatPage/AIChatWidget → 无参调用 useChatHistory()
+```
+
+**教训**：写第二个类似系统时（ChatStorage 先写，DraftStorage 后写），应直接使用工厂模式而非硬编码。工厂模式消除调用方选择责任。
+
+---
+
+### Lesson 50: autoSave 并发写入 IndexedDB 的竞态条件
+
+**问题**：AI 工具调用过程中页面闪烁/消息丢失，刷新后依然丢失。IndexedDB 数据不完整（仅 user 消息，无 tool_call/tool_result）。
+
+**根因**：`useAIChat` 的 `send()` 函数有两处 `void autoSave()`：
+
+```
+send():
+  1. setMessages(prev => { void autoSave(updated); return updated; })
+     ← 用户消息发出时立即保存（仅用户消息，不等待）
+  [streaming...]
+  2. setMessages(prev => { void autoSave(prev); return prev; })
+     ← 流结束后保存（完整消息，也不等待）
+```
+
+两个 `autoSave` 都对同一 `chatIdRef.current` 执行 `IndexedDB.put()`（upsert）。`void` 不等待，两个写入并发。**即便 IndexedDB 有事务排队机制，最后一个完成的写入覆盖前一个**——较小的数据包（仅用户消息）可能晚于完整数据包完成，覆盖完整数据。
+
+从浏览器控制台看到的 IndexedDB 原始数据证实了这一点：只有 `[{user}, {thinking}, {assistant}]`，无任何工具调用记录。
+
+**修复**：删除 `send()` 中的第 1 处过早保存，只保留流结束后的第 2 处保存。
+
+**代价**：用户在 AI 回复过程中刷新，最近一条用户消息可能不保存。相比"不完整数据覆盖整个对话历史"来说可以接受。
+
+**教训**：`void` + `IndexedDB.put()` + 同一个 key = 竞态。所有写入同一个 key 的异步操作必须序列化，或只保留一个写入点。
+
 ## 架构升级（本次会话新增）
 
 | 组件 | 位置 | 说明 |
@@ -506,9 +547,15 @@ https://en.wikipedia.org/w/api.php?action=opensearch&search=Bluesky&origin=*
 | `instant_answer` 工具 | `tools.ts` | DuckDuckGo Instant Answer，浏览器路径走 Pages Function 代理 |
 | `search_wikipedia` 工具 | `tools.ts` | Wikipedia 知识摘要，直接调用 `page/summary`（原生 CORS） |
 | `/api/proxy` Pages Function | `packages/pwa/functions/api/proxy.js` | 服务端 fetch 代理，绕过 Sec-Fetch 检测 |
-| `packages/pwa/functions/api/proxy.js` | 新建 | Cloudflare Pages Function，DDG API 代理 |
+| 多平台 DDG 代理 | `packages/pwa/api/` + `scripts/` + `netlify/` | PHP / Vercel / Netlify / Node 四种实现 |
 | `docs/PAGES_FUNCTION.md` | 新建 | Pages Function 架构文档 |
+| `docs/DDG_INSTANT_ANSWER_DEBUG.md` | 新建 | Sec-Fetch-* 检测完整分析 |
+| `DEPLOY.md` | 新建 | 面向部署者的多平台指南 |
 | Wikipedia 类型 | `tools.ts` | `WikipediaSummary` 接口 + `formatWikipediaSummary` 函数 |
+| ChatStorage 工厂模式 | `chatStorage.ts` + `useChatHistory.ts` + `useAIChat.ts` | `setChatStorageFactory()` + `getDefaultChatStorage()` |
+| autoSave 竞态修复 | `useAIChat.ts send()` | 删除过早的保存，只保留流结束后的保存 |
+| get_profile "me" 支持 | `tools.ts` handler + description | `actor="me"` 解析为 `client.getHandle()` |
+| 系统提示词更新 | `prompts.ts` | 规则 5 + PF_CURRENT_USER 增强 |
 | 工具总数 | `tools.ts` | 36 → **38**（instant_answer + search_wikipedia） |
 
 ## 版本
