@@ -60,6 +60,10 @@ const ja: LocaleMessages = {
   'action.close': '閉じる',
   'action.save': '保存',
   'action.navigate': '移動',
+  'action.add': '追加',
+  'action.done': '完了',
+  'action.open': '開く',
+  'action.original': '原文',
 
   'status.loading': '読み込み中…',
   'status.error': '読み込み失敗',
@@ -103,6 +107,7 @@ const ja: LocaleMessages = {
   'compose.altWarning': '{n} 件のメディアにALTテキストがありません。ALTテキストは視覚障害者がメディアの内容を理解するのに役立ちます。',
   'compose.altPlaceholder': 'ALTテキストを入力（画像の説明、任意）',
   'compose.altLabel': 'ALT',
+  'compose.uploadFailed': 'アップロードに失敗しました。接続を確認して再試行してください。',
 
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',
@@ -176,6 +181,18 @@ const ja: LocaleMessages = {
   'nav.dm': 'メッセージ',
   'dm.emojiConfig': 'クイック絵文字のカスタマイズ',
   'dm.emojiConfigHint': '{n} 個の絵文字を選択中。クリックで追加/削除。',
+  'dm.send': '送信',
+  'dm.placeholder': 'メッセージを入力…',
+  'dm.confirmDelete': 'このメッセージを削除しますか？',
+  'dm.deletedMessage': 'このメッセージは削除されました',
+  'dm.empty': '会話がありません',
+  'dm.mute': 'ミュート',
+  'dm.unmute': 'ミュート解除',
+  'dm.muted': 'ミュート中',
+  'dm.noMessages': 'まだメッセージがありません',
+  'dm.resolvingQuote': '引用を解決中…',
+  'dm.systemMessage': 'システムメッセージ',
+  'dm.unknown': '不明なユーザー',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',
@@ -226,6 +243,8 @@ const ja: LocaleMessages = {
   'login.pdsLabel': 'PDS ホスト（任意）',
   'login.pdsHint': 'bsky.social（空欄で自動検出）',
   'login.pdsWarning': 'カスタムPDSは技術者向けです。意味がわからない場合はデフォルトのままにしてください。',
+  'settings.provider': 'プロバイダー',
+  'common.back': '戻る',
 };
 
 export default ja;

@@ -63,6 +63,10 @@ const zh: LocaleMessages = {
   'action.close': '关闭',
   'action.save': '保存',
   'action.navigate': '导航',
+  'action.add': '添加',
+  'action.done': '完成',
+  'action.open': '打开',
+  'action.original': '原文',
 
   // ── Status ──
   'status.loading': '加载中…',
@@ -108,6 +112,7 @@ const zh: LocaleMessages = {
   'compose.altWarning': '您的 {n} 张媒体没有添加ALT文字。ALT文字可以帮助视障群体更好地了解您媒体的内容。',
   'compose.altPlaceholder': '输入ALT文字（描述图片内容，可选）',
   'compose.altLabel': 'ALT',
+  'compose.uploadFailed': '上传失败，请检查网络连接后重试',
 
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',
@@ -312,6 +317,7 @@ const zh: LocaleMessages = {
   'settings.updateFailed': '更新失败',
   'settings.customPrompt': '自定义 AI 提示词',
   'settings.customPromptPlaceholder': '输入自定义指令，将附加到 AI 系统提示词末尾…',
+  'settings.provider': '提供商',
 
   // ── Theme ──
   'theme.dark': '深色模式',
@@ -325,6 +331,7 @@ const zh: LocaleMessages = {
   'common.unknownPage': '未知页面',
   'common.rawModeWarning': '当前终端不支持 raw mode。请在 Windows Terminal / iTerm2 中运行。',
   'common.escBack': 'Esc 返回',
+  'common.back': '返回',
 
   // ── Keyboard hints (TUI) ──
   'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用',
@@ -404,6 +411,18 @@ const zh: LocaleMessages = {
   'nav.dm': '私信',
   'dm.emojiConfig': '自定义快捷表情',
   'dm.emojiConfigHint': '已选 {n} 个表情。点击添加/移除。',
+  'dm.send': '发送',
+  'dm.placeholder': '输入消息…',
+  'dm.confirmDelete': '删除这条消息？',
+  'dm.deletedMessage': '此消息已被删除',
+  'dm.empty': '暂无对话',
+  'dm.mute': '静音',
+  'dm.unmute': '取消静音',
+  'dm.muted': '已静音',
+  'dm.noMessages': '暂无消息',
+  'dm.resolvingQuote': '正在解析引用…',
+  'dm.systemMessage': '系统消息',
+  'dm.unknown': '未知用户',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

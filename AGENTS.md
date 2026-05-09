@@ -25,6 +25,7 @@ Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Mono
 - **NEVER** hardcode credentials, handles, DIDs, API keys, or JWTs in ANY committed file
 - **NEVER** write local file paths (like `C:\Users\...` or `/home/...`) in committed files
 - **NEVER** put anything that could identify a real user or account in code or docs
+- **NEVER** add a new UI string or feature text without adding the corresponding i18n keys to ALL 3 locale files (`en.ts`, `zh.ts`, `ja.ts`). Missing i18n keys show as raw key names or `undefined` at runtime. Before merging any UI change, run the 19-key check: verify that `dm.send`, `dm.placeholder`, `action.done`, `settings.provider`, and other new keys exist in all 3 locales.
 - The ONLY place for local secrets is `.env` (gitignored) and `AGENTS.local.md` (gitignored)
 - Test files MUST use `process.env.VARIABLE_NAME` — never hardcoded values
 - All bluesky handles used in examples should be generic like `user.bsky.social`

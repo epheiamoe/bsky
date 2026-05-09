@@ -21,7 +21,7 @@
 
 ## 版本
 
-**v0.8.0** — PDS 第三方服务支持（PDS 发现 + 多 PDS 登录 + did:web: + 架构重构）
+**v0.9.0** — PDS 第三方服务支持 + i18n 全面补全
 
 ## 项目状态
 
@@ -61,12 +61,13 @@
 - **时区修正** (v0.7.0): About 页动态计算 `getTimezoneOffset()` 显示正确时区标签。
 - **PostCard 卡片化** (v0.7.0): 圆角矩形 `rounded-xl border border-border bg-surface/20`。
 - **登录页关于入口** (v0.7.0): 右上角图标 → 内联 AboutPage（返回按钮只关闭 about，不导航到需登录页）。
-- **第三方 PDS 支持** (v0.8.0): 登录页新增可选 PDS 主机字段，默认 `bsky.social`，带技术用户警告。TUI 通过 `BLUESKY_PDS` 环境变量配置。PDS 自动发现管线：`createSession` 后从 `didDoc` 提取用户真实 PDS URL，若不存在则通过 `resolveDid` 获取。`this.ky` 在登录后重建指向用户 PDS。
-- **`parseAtUri` did:web: 支持** (v0.8.0): 正则从 `did:plc:` 单格式改为通用 `did:[^:]+:[^/]+`，兼容 `did:web:` DID。
-- **JWT 刷新指向用户 PDS** (v0.8.0): `withRefresh` 内 `refreshSession` URL 改用 `this.pdsUrl` 而非硬编码 `BSKY_SERVICE`。
-- **downloadBlob 指向用户 PDS** (v0.8.0): 从 `BSKY_SERVICE` 改为 `this.pdsUrl`。
-- **DidDocument 类型** (v0.8.0): 新增 `DidDocument`、`ResolveDidResponse` 类型导出。
-- **CORS 错误提示** (v0.8.0): 第三方 PDS 未配置 CORS 时，浏览器抛 `TypeError` → UI 显示连接错误，提示用户检查 PDS 配置或使用 TUI（无 CORS 限制）。
+- **第三方 PDS 支持** (v0.9.0): 登录页新增可选 PDS 主机字段，默认 `bsky.social`，带技术用户警告。TUI 通过 `BLUESKY_PDS` 环境变量配置。PDS 自动发现管线：`createSession` 后从 `didDoc` 提取用户真实 PDS URL，若不存在则通过 `resolveDid` 获取。`this.ky` 在登录后重建指向用户 PDS。
+- **`parseAtUri` did:web: 支持** (v0.9.0): 正则从 `did:plc:` 单格式改为通用 `did:[^:]+:[^/]+`，兼容 `did:web:` DID。
+- **JWT 刷新指向用户 PDS** (v0.9.0): `withRefresh` 内 `refreshSession` URL 改用 `this.pdsUrl` 而非硬编码 `BSKY_SERVICE`。
+- **downloadBlob 指向用户 PDS** (v0.9.0): 从 `BSKY_SERVICE` 改为 `this.pdsUrl`。
+- **DidDocument 类型** (v0.9.0): 新增 `DidDocument`、`ResolveDidResponse` 类型导出。
+- **CORS 错误提示** (v0.9.0): 第三方 PDS 未配置 CORS 时，浏览器抛 `TypeError` → UI 显示连接错误，提示用户检查 PDS 配置或使用 TUI（无 CORS 限制）。
+- **i18n 补全** (v0.9.0): 向 en/zh/ja 三语言文件添加 19 个缺失的 UI 键（`dm.send`, `dm.placeholder`, `dm.confirmDelete`, `dm.deletedMessage`, `dm.empty`, `dm.mute`, `dm.unmute`, `dm.muted`, `dm.noMessages`, `dm.resolvingQuote`, `dm.systemMessage`, `dm.unknown`, `action.add`, `action.done`, `action.open`, `action.original`, `compose.uploadFailed`, `settings.provider`, `common.back`）。AGENTS.md 新增 i18n 提醒规则。
 
 ## 🔴 关键教训
 

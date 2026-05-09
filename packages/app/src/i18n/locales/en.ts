@@ -60,6 +60,10 @@ const en: LocaleMessages = {
   'action.close': 'Close',
   'action.save': 'Save',
   'action.navigate': 'Navigate',
+  'action.add': 'Add',
+  'action.done': 'Done',
+  'action.open': 'Open',
+  'action.original': 'Original',
 
   'status.loading': 'Loading…',
   'status.error': 'Load Failed',
@@ -103,6 +107,7 @@ const en: LocaleMessages = {
   'compose.altWarning': 'Your {n} media items have no ALT text. ALT text helps visually impaired users better understand your media.',
   'compose.altPlaceholder': 'ALT text (describe the image, optional)',
   'compose.altLabel': 'ALT',
+  'compose.uploadFailed': 'Upload failed. Check your connection and try again.',
 
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',
@@ -174,6 +179,18 @@ const en: LocaleMessages = {
 
   // ── DMs ──
   'nav.dm': 'Messages',
+  'dm.send': 'Send',
+  'dm.placeholder': 'Type a message…',
+  'dm.confirmDelete': 'Delete this message?',
+  'dm.deletedMessage': 'This message was deleted',
+  'dm.empty': 'No conversations',
+  'dm.mute': 'Mute',
+  'dm.unmute': 'Unmute',
+  'dm.muted': 'Muted',
+  'dm.noMessages': 'No messages yet',
+  'dm.resolvingQuote': 'Resolving quote…',
+  'dm.systemMessage': 'System message',
+  'dm.unknown': 'Unknown User',
   'dm.emojiConfig': 'Customize Quick Emojis',
   'dm.emojiConfigHint': 'Selected {n} emojis. Click to add/remove.',
   'nav.atplay': 'AT Play',
@@ -226,6 +243,8 @@ const en: LocaleMessages = {
   'login.pdsLabel': 'PDS Host (optional)',
   'login.pdsHint': 'bsky.social (leave empty for auto-detect)',
   'login.pdsWarning': 'Custom PDS is for technical users only. If you don\'t understand this, leave it as bsky.social.',
+  'settings.provider': 'Provider',
+  'common.back': 'Back',
 };
 
 export default en;
