@@ -253,6 +253,7 @@ const en: LocaleMessages = {
   'login.logFieldTime': 'Time',
   'login.logFieldVersion': 'App Version',
   'login.logFieldHandle': 'Entered Handle',
+  'login.logFieldPassword': 'Entered Password (masked)',
   'login.logFieldPds': 'PDS',
   'login.logFieldStatus': 'HTTP Status',
   'login.logFieldError': 'Bluesky Error',

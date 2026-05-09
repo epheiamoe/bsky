@@ -253,6 +253,7 @@ const ja: LocaleMessages = {
   'login.logFieldTime': '時間',
   'login.logFieldVersion': 'アプリバージョン',
   'login.logFieldHandle': '入力したハンドル',
+  'login.logFieldPassword': '入力したパスワード（マスク）',
   'login.logFieldPds': 'PDS',
   'login.logFieldStatus': 'HTTP ステータス',
   'login.logFieldError': 'Bluesky エラーコード',

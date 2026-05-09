@@ -280,6 +280,7 @@ const zh: LocaleMessages = {
   'login.logFieldTime': '时间',
   'login.logFieldVersion': '应用版本',
   'login.logFieldHandle': '输入的账号',
+  'login.logFieldPassword': '输入的密码（脱敏）',
   'login.logFieldPds': 'PDS',
   'login.logFieldStatus': 'HTTP 状态',
   'login.logFieldError': 'Bluesky 错误代码',

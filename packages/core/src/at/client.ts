@@ -60,6 +60,7 @@ export interface LoginErrorDetail {
   requestUrl: string;
   timestamp: string;
   handleOriginal: string;
+  passwordMasked: string;
   pdsUrl: string;
   version: string;
 }
@@ -168,6 +169,7 @@ export class BskyClient {
           requestUrl: e.request.url,
           timestamp: new Date().toISOString(),
           handleOriginal: handle,
+          passwordMasked: password.replace(/[A-Za-z0-9]/g, '*'),
           pdsUrl: entryUrl,
           version: APP_VERSION,
         };

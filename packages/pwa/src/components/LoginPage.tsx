@@ -10,10 +10,6 @@ interface LoginPageProps {
   errorLog?: LoginErrorDetail | null;
 }
 
-function sanitizeHandle(raw: string): string {
-  return raw.replace(/[A-Za-z1-9]/g, '*');
-}
-
 function LoginErrorModal({
   log,
   onClose,
@@ -28,7 +24,8 @@ function LoginErrorModal({
     '==== Login Error Log ====',
     `${t('login.logFieldTime')}: ${log.timestamp}`,
     `${t('login.logFieldVersion')}: ${log.version}`,
-    `${t('login.logFieldHandle')}: ${sanitizeHandle(log.handleOriginal)}`,
+    `${t('login.logFieldHandle')}: ${log.handleOriginal}`,
+    `${t('login.logFieldPassword')}: ${log.passwordMasked}`,
     `${t('login.logFieldPds')}: ${log.pdsUrl}`,
     `${t('login.logFieldStatus')}: ${log.status}`,
   ];
