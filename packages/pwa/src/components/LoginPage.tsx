@@ -1,14 +1,90 @@
 import React, { useState } from 'react';
 import { useI18n } from '@bsky/app';
+import type { LoginErrorDetail } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { AboutPage } from './AboutPage.js';
 
 interface LoginPageProps {
   onLogin: (handle: string, password: string, pdsUrl?: string) => Promise<void>;
   error?: string | null;
+  errorLog?: LoginErrorDetail | null;
 }
 
-export function LoginPage({ onLogin, error }: LoginPageProps) {
+function sanitizeHandle(raw: string): string {
+  return raw.replace(/[A-Za-z1-9]/g, '*');
+}
+
+function LoginErrorModal({
+  log,
+  onClose,
+}: {
+  log: LoginErrorDetail;
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+
+  const logLines: string[] = [
+    '==== Login Error Log ====',
+    `${t('login.logFieldTime')}: ${log.timestamp}`,
+    `${t('login.logFieldVersion')}: ${log.version}`,
+    `${t('login.logFieldHandle')}: ${sanitizeHandle(log.handleOriginal)}`,
+    `${t('login.logFieldPds')}: ${log.pdsUrl}`,
+    `${t('login.logFieldStatus')}: ${log.status}`,
+  ];
+  if (log.blueskyError) {
+    logLines.push(`${t('login.logFieldError')}: ${log.blueskyError}`);
+  }
+  if (log.blueskyMessage) {
+    logLines.push(`${t('login.logFieldMessage')}: ${log.blueskyMessage}`);
+  }
+  logLines.push(`${t('login.logFieldUrl')}: ${log.requestUrl}`);
+  const logText = logLines.join('\n');
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(logText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback for non-https
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl border border-border max-w-md w-full max-h-[80vh] flex flex-col">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-bold text-text-primary">{t('login.logTitle')}</h2>
+          <p className="text-text-secondary text-xs mt-1">{t('login.logHint')}</p>
+        </div>
+        <pre className="flex-1 overflow-auto p-4 text-xs font-mono text-text-primary bg-surface leading-relaxed whitespace-pre-wrap break-all">
+          {logText}
+        </pre>
+        <div className="p-4 border-t border-border flex gap-2">
+          <button
+            onClick={handleCopy}
+            className="flex-1 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors"
+          >
+            {copied ? (
+              <><Icon name="badge-check" size={14} /> {t('login.logCopied')}</>
+            ) : (
+              t('login.copyLog')
+            )}
+          </button>
+          <button
+            onClick={onClose}
+            className="py-2 px-4 rounded-lg border border-border text-text-secondary hover:text-text-primary text-sm transition-colors"
+          >
+            {t('action.done')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
   const { t } = useI18n();
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +92,7 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [showAbout, setShowAbout] = useState(false);
+  const [showLog, setShowLog] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,9 +109,6 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
     } finally {
       setSubmitting(false);
     }
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const displayError = localError ?? error;
@@ -45,6 +119,9 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
+      {showLog && errorLog && (
+        <LoginErrorModal log={errorLog} onClose={() => setShowLog(false)} />
+      )}
       <div className="relative w-full max-w-sm">
         <button
           onClick={() => setShowAbout(true)}
@@ -119,7 +196,15 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
 
           {displayError && (
             <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
-              {displayError}
+              <p>{displayError}</p>
+              {errorLog && (
+                <button
+                  onClick={() => setShowLog(true)}
+                  className="mt-2 text-xs text-red-400 hover:text-red-300 underline underline-offset-2"
+                >
+                  {t('login.viewLog')}
+                </button>
+              )}
             </div>
           )}
 

@@ -51,6 +51,18 @@ import { parseAtUri } from './types.js';
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
 const CHAT_API = 'https://api.bsky.chat';
+const APP_VERSION = '0.10.1';
+
+export interface LoginErrorDetail {
+  status: number;
+  blueskyError?: string;
+  blueskyMessage?: string;
+  requestUrl: string;
+  timestamp: string;
+  handleOriginal: string;
+  pdsUrl: string;
+  version: string;
+}
 
 export class BskyClient {
   session: CreateSessionResponse | null = null;
@@ -151,11 +163,22 @@ export class BskyClient {
     } catch (e) {
       if (e instanceof HTTPError) {
         const body = await e.response.clone().text();
+        const detail: LoginErrorDetail = {
+          status: e.response.status,
+          requestUrl: e.request.url,
+          timestamp: new Date().toISOString(),
+          handleOriginal: handle,
+          pdsUrl: entryUrl,
+          version: APP_VERSION,
+        };
         try {
           const err = JSON.parse(body) as { error?: string; message?: string };
-          throw new Error(err.message || err.error || e.message);
-        } catch {
-          throw new Error(e.message);
+          detail.blueskyError = err.error;
+          detail.blueskyMessage = err.message;
+          throw new Error(err.message || err.error || e.message, { cause: detail });
+        } catch (parseErr) {
+          if (parseErr instanceof Error && parseErr.cause) throw parseErr;
+          throw new Error(e.message, { cause: detail });
         }
       }
       throw e;

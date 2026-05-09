@@ -43,7 +43,7 @@ export function App() {
   setChatStorageFactory(() => new IndexedDBChatStorage());
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
-  const { client, loading: authLoading, error: authError, login, session, restoreSession } = useAuth();
+  const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession } = useAuth();
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
   const timeline = useTimeline(client, feedUri);
   const postActions = usePostActions(client);
@@ -224,7 +224,7 @@ export function App() {
 
   // ── Not logged in ──
   if (!isLoggedIn || !client) {
-    return <LoginPage onLogin={handleLogin} error={authError} />;
+    return <LoginPage onLogin={handleLogin} error={authError} errorLog={errorLog} />;
   }
 
   if (showWelcome) {

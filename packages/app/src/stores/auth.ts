@@ -1,5 +1,5 @@
 import { BskyClient } from '@bsky/core';
-import type { CreateSessionResponse, ProfileView } from '@bsky/core';
+import type { CreateSessionResponse, ProfileView, LoginErrorDetail } from '@bsky/core';
 
 export interface AuthStore {
   client: BskyClient | null;
@@ -8,6 +8,7 @@ export interface AuthStore {
   profile: ProfileView | null;
   loading: boolean;
   error: string | null;
+  errorLog: LoginErrorDetail | null;
   login: (handle: string, password: string, pdsUrl?: string) => Promise<void>;
   restoreSession: (session: CreateSessionResponse, pdsUrl: string) => void;
   listener: (() => void) | null;
@@ -24,11 +25,13 @@ export function createAuthStore(): AuthStore {
     profile: null,
     loading: false,
     error: null,
+    errorLog: null,
     listener: null,
 
     async login(handle: string, password: string, pdsUrl?: string) {
       store.loading = true;
       store.error = null;
+      store.errorLog = null;
       store._notify();
       try {
         const c = new BskyClient(pdsUrl ? { pdsUrl } : undefined);
@@ -38,6 +41,8 @@ export function createAuthStore(): AuthStore {
         store.profile = await c.getProfile(handle);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
+        const detail = e instanceof Error ? (e.cause as LoginErrorDetail | undefined) : undefined;
+        if (detail) store.errorLog = detail;
         if (msg.includes('AuthenticationRequired') || msg.includes('Invalid identifier') || msg.includes('401')) {
           store.error = `${msg}. Make sure you are using an App Password (not your account password).`;
         } else {

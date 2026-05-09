@@ -98,3 +98,4 @@ export {
   shouldSendThinkingParam,
 } from './ai/providers.js';
 export type { ProviderInfo, ModelInfo } from './ai/providers.js';
+export type { LoginErrorDetail } from './at/client.js';
