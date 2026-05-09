@@ -20,7 +20,7 @@
 
 ## 版本
 
-**v0.7.0** — AT Play + Social Circle analysis + compose pre-fill API + AI auto-naming
+**v0.7.0** — AT Play + Social Circle + AI auto-naming + Search history + Emoji config panel + Thread view cards + DM avatar navigation
 
 ## 项目状态
 
@@ -49,6 +49,17 @@
 - **AT Play 实验性功能** (v0.7.0): 侧边栏 🧪 AT Play 入口 → `#/atplay` 实验列表 → `#/atplay/social-circle` 社交圈分析。分析用户互动数据：权重图构建 + 核心/扩展/潜在分层 + Mermaid 可视化图表。默认分析 50 篇帖文（30-100 可调），Handle 预填充当前用户。结果底部「分享到 Bluesky」按钮。纯计算（无 AI 依赖），纯函数导出供未来 AI 工具复用。PWA only。
 - **Compose 预填充 API** (v0.7.0): `AppView` compose 类型新增 `initialText?: string` — 任意页面可通过 `goTo({ type: 'compose', initialText: '...' })` 跳转到发帖页并预填充文本。
 - **AI 自动标题命名** (v0.7.0): 使用 `singleTurnAI` 在首次助手回复后自动生成对话标题。`P_AUTO_TITLE_SYSTEM` + `PF_AUTO_TITLE_USER`。跳过 `<currently_viewing>` 上下文消息。`onTitleChanged` 回调刷新列表。
+- **ThreadView 卡片化 + handle 换行** (v0.7.0): 聚焦帖 `rounded-xl border border-border bg-surface/30`，回复 `marginLeft` 层级缩进。handle+时间移至 username 下方。
+- **搜索历史** (v0.7.0): 按 tab 分类存储（`localStorage`），最近 10 条。显示在 tabs 下方的块级元素（不遮挡 tabs）。每条可删除 + 全部删除。
+- **自定义 AI 提示词** (v0.7.0): 设置→场景→AI Chat 下 textarea，输入内容追加到 `buildSystemPrompt` 末尾。TUI 通过 `bsky-tui.config.json` 配置。
+- **AI 提示词写操作确认** (v0.7.0): `P_ASSISTANT_BASE` 新增规则 4 — 告知 AI 系统会自动弹出确认对话框，AI 无需单独询问。
+- **DM 头像→资料页** (v0.7.0): 私信列表 + 聊天顶栏头像可点击跳转 profile 页。
+- **表情配置面板** (v0.7.0): emoji picker 中新增 `+` 按钮 → modal 内加载 `/emoji.txt`（3551 个 emoji）→ 自动分组去肤 → 有肤色变体的展开 5 种肤色选择 → 点击切换选中/取消（在列表→退出，不在→加入）→ `localStorage` 持久化。
+- **TUI 表情反应** (v0.7.0): `e` 键进入反应模式 → 显示编号的 emoji → 按数字选择 → 调用 `toggleReaction`。`bsky-tui.config.json` 可配置 `dmEmojis`。
+- **Feed 订阅状态** (v0.7.0): `SuggestedFeedsWidget` 改用 `getFeedConfig()` 真实查询，显示 Subscribe/Unsubscribe。
+- **时区修正** (v0.7.0): About 页动态计算 `getTimezoneOffset()` 显示正确时区标签。
+- **PostCard 卡片化** (v0.7.0): 圆角矩形 `rounded-xl border border-border bg-surface/20`。
+- **登录页关于入口** (v0.7.0): 右上角图标 → 内联 AboutPage（返回按钮只关闭 about，不导航到需登录页）。
 
 ## 🔴 关键教训
 
@@ -213,6 +224,26 @@
 **根因**：`msgs.find(m => m.role === 'user')` 取到的是 `/view` 注入的 `<currently_viewing>` 消息，而非用户真实输入。标题变成了复读上下文。
 **修复**：过滤掉以 `<currently_viewing>` 开头的消息，只对真实用户消息触发标题生成。
 **教训**：注入的系统消息和用户消息在 messages 数组中不可区分，需要字符串前缀过滤。
+
+### 39. ThreadView 竖线过犹不及
+**根因**：给父链和回复帖添加了 `border-l-2` 线程连线，白色/蓝色竖线破坏了卡片化风格。
+**修复**：移除所有连线，仅保留 `marginLeft` 层级缩进。用户反馈「太丑了」。
+**教训**：现代化卡片风格不需要复古线程连线。简约缩进+圆角卡片更干净。
+
+### 40. 搜索历史 dropdown 遮挡 tabs
+**根因**：搜索历史用 `absolute top-full` 定位在 input 下方，tabs 渲染在后，dropdown 覆盖了 tabs。
+**修复**：移除 absolute 定位，将 history 放在 tabs 之后的块级元素，自然撑开不遮挡。
+**教训**：dropdown/overlay 定位时需要考虑后续 DOM 元素的 z-index 关系，更安全的做法是用块级元素自然布局。
+
+### 41. handle+时间应在 username 下方
+**根因**：ThreadView 聚焦帖的 handle 和时间与 username 同行显示，不符合主流 SNS 风格。
+**修复**：改为 avatar + [username+follow] 首行，[handle·时间] 次行的两行布局。
+**教训**：UI 布局应跟随平台惯例（Twitter/Bluesky 都是 handle 在 name 下方）。
+
+### 42. emoji.txt 的皮肤变体分组
+**根因**：emoji.txt 包含 3551 个 emoji，大量肤色变体（🏻🏼🏽🏾🏿）需要合理分组展示。
+**修复**：解析时检测 Unicode 肤色修饰符，自动分组为基础 emoji + variants。配置面板展示基础 emoji，仅点击时展开肤色选择。
+**教训**：处理含肤色的 Unicode 字符串时，用 `includes()` 检测特定 codepoint 比用正则更可靠。`replaceAll()` 剥离修饰符获得 base key。
 
 ---
 
@@ -415,3 +446,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/icons/flask-conical.svg` | AT Play 侧边栏图标 |
 | `packages/core/src/at/client.ts` (getRelationships, getActorLikes) | 社交圈分析 API 方法 |
 | `generateChatTitle`, `P_AUTO_TITLE_SYSTEM`, `PF_AUTO_TITLE_USER` (assistant.ts, prompts.ts) | AI 自动对话标题命名 |
+| `packages/app/src/hooks/useDmEmojiConfig.ts` | DM 表情持久化管理 + emoji.txt 解析分组 |
+| `packages/pwa/public/emoji.txt` | 3551 个 emoji 源文件 |
+| `packages/pwa/src/components/DMChatPage.tsx` | 动态表情读取 + 配置面板 + 头像跳转 |
+| `packages/pwa/src/components/ConvoListPage.tsx` | 头像跳转资料页 |
+| `packages/tui/src/components/DMChatView.tsx` | TUI 表情反应（e 键 + 编号选择） |
