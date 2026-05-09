@@ -262,6 +262,7 @@ const zh: LocaleMessages = {
   'login.submit': '登录',
   'login.submitting': '连接中…',
   'login.error': '登录失败',
+  'login.invalidCredentials': '用户名或密码错误。请确认使用的是 App Password（不是你的账号密码），以及 Handle 输入正确。',
   'login.connecting': '正在连接 Bluesky…',
   'login.passwordHint': '使用 App Password。在',
   'login.passwordHintLink': 'Bluesky 设置',

@@ -37,7 +37,12 @@ export function createAuthStore(): AuthStore {
         store.client = c;
         store.profile = await c.getProfile(handle);
       } catch (e) {
-        store.error = e instanceof Error ? e.message : String(e);
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes('AuthenticationRequired') || msg.includes('Invalid identifier') || msg.includes('401')) {
+          store.error = `${msg}. Make sure you are using an App Password (not your account password).`;
+        } else {
+          store.error = msg;
+        }
       } finally {
         store.loading = false;
         store._notify();

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] — 2026-05-10
+
+### Fixed
+
+- **Login 401 错误详情提取**: `client.ts` `login()` 捕获 `HTTPError`，解析 Bluesky API 响应体（如 `"Invalid identifier or password"`）替代 ky 默认的 `"Request failed with status code 401"`。auth store 追加 App Password 提示。
+- **Handle 输入净化**: `LoginPage.tsx` 自动去除 handle 中的 `@` 前缀和 `http://`/`https://` 前缀，减少用户输入错误。
+- **i18n 补全**: 三语言文件新增 `'login.invalidCredentials'`；en/ja 补充缺失的 `'login.error'` 键。
+
+### Changed
+
+- **版本**: v0.10.0 → v0.10.1 (AboutPage, README, README.zh)
+
 ## [0.10.0] — 2026-05-09
 
 ### Added

@@ -23,9 +23,15 @@ export function LoginPage({ onLogin, error }: LoginPageProps) {
     setSubmitting(true);
     setLocalError(null);
     try {
-      await onLogin(handle.trim(), password, pdsUrl.trim() || undefined);
+      let cleaned = handle.trim();
+      cleaned = cleaned.replace(/^@/, '');
+      cleaned = cleaned.replace(/^https?:\/\//, '');
+      await onLogin(cleaned, password, pdsUrl.trim() || undefined);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : t('login.error'));
+    } finally {
+      setSubmitting(false);
+    }
     } finally {
       setSubmitting(false);
     }

@@ -240,6 +240,8 @@ const ja: LocaleMessages = {
   'about.contact': '連絡先',
 
   // ── Login ──
+  'login.error': 'ログイン失敗',
+  'login.invalidCredentials': 'ユーザー名またはパスワードが無効です。アプリパスワード（アカウントパスワードではありません）を使用し、ハンドルが正しいことを確認してください。',
   'login.pdsLabel': 'PDS ホスト（任意）',
   'login.pdsHint': 'bsky.social（空欄で自動検出）',
   'login.pdsWarning': 'カスタムPDSは技術者向けです。意味がわからない場合はデフォルトのままにしてください。',

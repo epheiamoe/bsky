@@ -240,6 +240,8 @@ const en: LocaleMessages = {
   'about.contact': 'Contact',
 
   // ── Login ──
+  'login.error': 'Login failed',
+  'login.invalidCredentials': 'Invalid username or password. Make sure you are using an App Password (not your account password) and your handle is correct.',
   'login.pdsLabel': 'PDS Host (optional)',
   'login.pdsHint': 'bsky.social (leave empty for auto-detect)',
   'login.pdsWarning': 'Custom PDS is for technical users only. If you don\'t understand this, leave it as bsky.social.',

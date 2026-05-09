@@ -1,4 +1,4 @@
-import ky, { type KyInstance } from 'ky';
+import ky, { HTTPError, type KyInstance } from 'ky';
 import type {
   CreateSessionResponse,
   DidDocument,
@@ -143,9 +143,23 @@ export class BskyClient {
         })
       : this.ky;
 
-    const res = await entryKy.post('com.atproto.server.createSession', {
-      json: { identifier: handle, password },
-    }).json<CreateSessionResponse & { didDoc?: DidDocument }>();
+    let res: CreateSessionResponse & { didDoc?: DidDocument };
+    try {
+      res = await entryKy.post('com.atproto.server.createSession', {
+        json: { identifier: handle, password },
+      }).json<CreateSessionResponse & { didDoc?: DidDocument }>();
+    } catch (e) {
+      if (e instanceof HTTPError) {
+        const body = await e.response.clone().text();
+        try {
+          const err = JSON.parse(body) as { error?: string; message?: string };
+          throw new Error(err.message || err.error || e.message);
+        } catch {
+          throw new Error(e.message);
+        }
+      }
+      throw e;
+    }
 
     this.session = res;
 
