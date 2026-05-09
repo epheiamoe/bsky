@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, setChatStorageFactory, useConvoList } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
+import { BskyClient } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId } from '@bsky/app';
@@ -42,6 +43,10 @@ export function App() {
   setDraftStorageFactory(() => new IndexedDBDraftStorage());
   setChatStorageFactory(() => new IndexedDBChatStorage());
 
+  // Set build metadata for error logging
+  BskyClient.commitHash = typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : '(dev)';
+  BskyClient.buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '(dev)';
+
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
   const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession } = useAuth();
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
@@ -55,6 +60,7 @@ export function App() {
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed'));
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollTopRef = useRef(0);
 
@@ -233,6 +239,7 @@ export function App() {
         onGoToSettings={() => {
           localStorage.setItem('bsky_welcomed', '1');
           setShowWelcome(false);
+          setSettingsOpen(true);
         }}
         onSkip={() => {
           localStorage.setItem('bsky_welcomed', '1');
@@ -374,6 +381,9 @@ export function App() {
       dmCount={dmCount}
       polishConfig={scenarioModels.polish}
       aiConfig={effectiveAiConfig}
+      settingsOpen={settingsOpen}
+      onSettingsClose={() => setSettingsOpen(false)}
+      onSettingsOpen={() => setSettingsOpen(true)}
     >
       {renderView()}
     </Layout>

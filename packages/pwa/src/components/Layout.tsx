@@ -28,6 +28,9 @@ interface LayoutProps {
   composeDraft?: string;
   onComposeDraftChange?: (text: string) => void;
   aiConfig?: AIConfig;
+  settingsOpen: boolean;
+  onSettingsClose: () => void;
+  onSettingsOpen: () => void;
 }
 
 export function Layout({
@@ -48,13 +51,15 @@ export function Layout({
   composeDraft,
   onComposeDraftChange,
   aiConfig,
+  settingsOpen,
+  onSettingsClose,
+  onSettingsOpen,
 }: LayoutProps) {
   const { t } = useI18n();
   const [dark, setDark] = useState(() => {
     if (typeof document === 'undefined') return false;
     return document.documentElement.classList.contains('dark');
   });
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Widget state — module-level + local reactive counter
@@ -185,7 +190,7 @@ export function Layout({
           />
           <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={() => setSettingsOpen(true)}
+              onClick={onSettingsOpen}
               className="text-text-secondary hover:text-text-primary transition-colors p-1"
               aria-label={t('nav.settings')}
             >
@@ -270,7 +275,7 @@ export function Layout({
 
       <SettingsModal
         open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
+        onClose={onSettingsClose}
         config={config}
         onConfigChange={onConfigChange}
         onRelogin={onRelogin}

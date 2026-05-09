@@ -279,6 +279,8 @@ const zh: LocaleMessages = {
   'login.logCopied': '已复制！',
   'login.logFieldTime': '时间',
   'login.logFieldVersion': '应用版本',
+  'login.logFieldCommit': '提交哈希',
+  'login.logFieldBuildTime': '构建时间',
   'login.logFieldHandle': '输入的账号',
   'login.logFieldPassword': '输入的密码（脱敏）',
   'login.logFieldPds': 'PDS',

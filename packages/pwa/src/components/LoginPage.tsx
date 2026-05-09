@@ -24,6 +24,8 @@ function LoginErrorModal({
     '==== Login Error Log ====',
     `${t('login.logFieldTime')}: ${log.timestamp}`,
     `${t('login.logFieldVersion')}: ${log.version}`,
+    `${t('login.logFieldCommit')}: ${log.commitHash}`,
+    `${t('login.logFieldBuildTime')}: ${log.buildTime}`,
     `${t('login.logFieldHandle')}: ${log.handleOriginal}`,
     `${t('login.logFieldPassword')}: ${log.passwordMasked}`,
     `${t('login.logFieldPds')}: ${log.pdsUrl}`,

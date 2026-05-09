@@ -252,6 +252,8 @@ const en: LocaleMessages = {
   'login.logCopied': 'Copied!',
   'login.logFieldTime': 'Time',
   'login.logFieldVersion': 'App Version',
+  'login.logFieldCommit': 'Commit Hash',
+  'login.logFieldBuildTime': 'Build Time',
   'login.logFieldHandle': 'Entered Handle',
   'login.logFieldPassword': 'Entered Password (masked)',
   'login.logFieldPds': 'PDS',

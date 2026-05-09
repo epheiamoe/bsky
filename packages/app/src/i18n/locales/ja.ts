@@ -252,6 +252,8 @@ const ja: LocaleMessages = {
   'login.logCopied': 'コピーしました！',
   'login.logFieldTime': '時間',
   'login.logFieldVersion': 'アプリバージョン',
+  'login.logFieldCommit': 'コミットハッシュ',
+  'login.logFieldBuildTime': 'ビルド時間',
   'login.logFieldHandle': '入力したハンドル',
   'login.logFieldPassword': '入力したパスワード（マスク）',
   'login.logFieldPds': 'PDS',

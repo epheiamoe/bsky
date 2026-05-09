@@ -63,9 +63,14 @@ export interface LoginErrorDetail {
   passwordMasked: string;
   pdsUrl: string;
   version: string;
+  commitHash: string;
+  buildTime: string;
 }
 
 export class BskyClient {
+  static commitHash = '(unknown)';
+  static buildTime = '(unknown)';
+
   session: CreateSessionResponse | null = null;
   pdsUrl: string;
   private ky: KyInstance;
@@ -172,6 +177,8 @@ export class BskyClient {
           passwordMasked: password.replace(/[A-Za-z0-9]/g, '*'),
           pdsUrl: entryUrl,
           version: APP_VERSION,
+          commitHash: BskyClient.commitHash,
+          buildTime: BskyClient.buildTime,
         };
         try {
           const err = JSON.parse(body) as { error?: string; message?: string };
