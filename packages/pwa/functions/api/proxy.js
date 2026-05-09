@@ -32,6 +32,14 @@ export async function onRequest(context) {
     });
   }
 
+  // Domain whitelist: only DuckDuckGo Instant Answer API
+  if (!url.startsWith('https://api.duckduckgo.com/')) {
+    return new Response(JSON.stringify({ error: 'Domain not allowed' }), {
+      status: 403,
+      headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const resp = await fetch(url, {
       headers: { 'User-Agent': 'bsky-client/0.9.0' },

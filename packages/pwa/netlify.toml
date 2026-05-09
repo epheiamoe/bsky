@@ -1,0 +1,16 @@
+[build]
+  command = "echo 'Built externally — see monorepo build'"
+  publish = "dist"
+
+[build.processing]
+  skip_processing = true
+
+[[redirects]]
+  from = "/api/proxy"
+  to = "/.netlify/functions/proxy"
+  status = 200
+  
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
