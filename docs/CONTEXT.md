@@ -24,7 +24,7 @@
 
 ## 版本
 
-**v0.10.2** — autoSave 写队列防止 IndexedDB 事务乱序（Lesson 51）+ login 调试日志 + 全面 `100dvh` 替换
+**v0.10.3** — 回复深度标签 + PostInfoModal + 移除 emoji 媒体标签 + ISSUES.md
 
 ## 项目状态
 
@@ -85,6 +85,9 @@
 - **全面 `100dvh` 替换** (v0.10.2): 24 处 `100vh` → `100dvh`；`index.css` 改 `overscroll-behavior-y: contain` 作用于 `.overflow-y-auto` 容器（而非全局禁用下拉刷新）。
 - **登录调试日志** (v0.10.2): 错误详情面板 + 一键复制 + 密码脱敏 + 构建信息。
 - **PWA 更新检查** (v0.10.2): 关于页「检查更新」按钮 + visibilitychange 自动检查 + 底部 toast 双入口。`services/pwa.ts` 含 `_ignoreNextUpdate` 标志位去重。
+- **回复深度标签** (v0.10.3): `PostCard` 从 `record.reply` 推断深度，显示 `↩`（深度 1）/`↩ 2+`（嵌套）。头像下方圆角矩形。点击 ⓘ 弹出 `PostInfoModal` 显示 AT 原始数据（URI/DID/CID 独立圆角框+复制按钮；时间/作者/回复/媒体/统计/Viewer 分段）。
+- **移除 emoji 媒体标签** (v0.10.3): 删除全平台 `图片/视频/链接/引用` emoji badge。`getMediaTags()` 及 `FlatLine.mediaTags` 字段全部清理。
+- **`docs/ISSUSE.md`** (v0.10.3): 用户反馈问题日志。
 
 ## 🔴 关键教训
 

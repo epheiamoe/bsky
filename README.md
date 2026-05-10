@@ -117,4 +117,4 @@ Business logic lives once. TUI and PWA share the same hooks. 4 packages, 1 codeb
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.10.1** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.10.3** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)

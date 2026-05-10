@@ -117,4 +117,4 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.10.1** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.10.3** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

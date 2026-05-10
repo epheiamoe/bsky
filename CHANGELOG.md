@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.3] — 2026-05-10
+
+### Added
+
+- **回复深度标签**: `PostCard` 从 `post.record.reply` 推断回复深度。直接回复楼主显示 `↩`，嵌套回复显示 `↩ 2+`。圆角矩形 badge，位于头像下方。
+- **PostInfoModal**: 点击 ⓘ 图标弹窗显示 AT Protocol 原始信息——URI、DID、CID 各自独立圆角矩形 + 复制按钮；时间、作者、回复、媒体、统计、Viewer 状态分段展示。模态框可滑动，点击背景关闭。
+- **`badge-info.svg`**: Lucide 风格 info 图标。
+- **i18n**: `post.info`、`post.replyDepth`、`common.copy`、`common.copied` 及模态框字段标签（en/zh/ja）。
+- **`docs/USER_ISSUSES.md`**: 新增时间线滚动丢失问题记录。
+
+### Removed
+
+- **emoji 媒体标签**: 移除 PWA+TUI 帖子卡片左下角的 `图片/视频/链接/引用` emoji 标签。`getMediaTags()` 函数及 `FlatLine.mediaTags`/`quotedPost.mediaTags` 字段全部删除。
+- **ThreadView 旧 emoji badge 渲染**: 同步移除。
+
+### Changed
+
+- **版本**: v0.10.2 → v0.10.3
+
 ## [0.10.2] — 2026-05-10
 
 ### Fixed
