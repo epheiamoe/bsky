@@ -98,7 +98,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   }, [loadMore, cursor, posts.length]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] animate-fadeIn">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
       <FeedHeader
         goTo={goTo}
         currentFeedUri={feedUri}

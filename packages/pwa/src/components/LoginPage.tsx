@@ -117,7 +117,7 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
       {showLog && errorLog && (
         <LoginErrorModal log={errorLog} onClose={() => setShowLog(false)} />
       )}

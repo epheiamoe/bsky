@@ -30,7 +30,7 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
 
   if (allWidgets.length === 0) {
     return (
-      <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+      <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
         <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border px-4 h-12 flex items-center">
           <button onClick={goBack} className="text-text-secondary hover:text-text-primary mr-3">
             <Icon name="arrow-big-left" size={20} />
@@ -47,7 +47,7 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
   const isViewLimited = (w: any) => w.views.length > 0;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border px-4 h-12 flex items-center">
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary mr-3">
           <Icon name="arrow-big-left" size={20} />

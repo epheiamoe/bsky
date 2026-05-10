@@ -155,7 +155,7 @@ export function Layout({
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0A0A0A] text-text-primary font-sans">
+    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] text-text-primary font-sans">
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center gap-3 w-full">
@@ -253,15 +253,15 @@ export function Layout({
 
       <div className="flex">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100vh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
+        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
           <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} />
         </aside>
 
-        <main className="flex-1 max-w-content mx-auto w-full min-h-[calc(100vh-3rem)]">
+        <main className="flex-1 max-w-content mx-auto w-full min-h-[calc(100dvh-3rem)]">
           {children}
         </main>
 
-        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100vh-3rem)] sticky top-12 border-l border-border flex-shrink-0">
+        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100dvh-3rem)] sticky top-12 border-l border-border flex-shrink-0">
           <WidgetPanel
             viewType={currentView.type}
             enabledIds={enabledIds}

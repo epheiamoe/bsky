@@ -20,8 +20,16 @@
   --color-text-secondary: #A3B4C0;
 }
 
+html {
+  overscroll-behavior: none;
+}
 body {
   color: var(--color-text-primary);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.scroll-container {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ── Markdown body styling ── */

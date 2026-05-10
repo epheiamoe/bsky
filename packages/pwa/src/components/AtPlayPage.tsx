@@ -24,7 +24,7 @@ export function AtPlayPage({ goBack, goTo }: AtPlayPageProps) {
   const { t } = useI18n();
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] animate-fadeIn">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center gap-3">
         <button
           onClick={goBack}

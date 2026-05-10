@@ -70,7 +70,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
   }, [membersCursor, loading, loadMoreMembers]);
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)] animate-fadeIn">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
       {/* Header */}
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
