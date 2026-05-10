@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
@@ -43,6 +43,9 @@ function SkeletonCard() {
 
 const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 
+// Module-level cache: post.uri → measured pixel height (survives mount/unmount)
+const _heightCache = new Map<string, number>();
+
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost }: FeedTimelineProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,19 +55,22 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   const virtualizer = useVirtualizer({
     count: loading && posts.length === 0 ? 5 : posts.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_POST_HEIGHT,
+    estimateSize: (index) => {
+      const post = posts[index];
+      if (post) {
+        const cached = _heightCache.get(post.uri);
+        if (cached) return cached;
+      }
+      return ESTIMATED_POST_HEIGHT;
+    },
     overscan: 5,
   });
 
-  // ── Scroll position restoration (pixel-based) ──
-  useEffect(() => {
+  // ── Scroll position restoration (pixel-based, before paint) ──
+  useLayoutEffect(() => {
     if (initialScrollTop !== undefined && initialScrollTop > 0 && posts.length > 0) {
       const el = scrollRef.current;
-      if (!el) return;
-      const raf = requestAnimationFrame(() => {
-        el.scrollTop = initialScrollTop;
-      });
-      return () => cancelAnimationFrame(raf);
+      if (el) el.scrollTop = initialScrollTop;
     }
   }, [posts.length > 0 ? initialScrollTop : undefined]);
 
@@ -148,7 +154,13 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   width: '100%',
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
-                ref={virtualizer.measureElement}
+                ref={(el: HTMLDivElement | null) => {
+                  if (el) {
+                    virtualizer.measureElement(el);
+                    const h = el.getBoundingClientRect().height;
+                    if (h > 0) _heightCache.set(post.uri, h);
+                  }
+                }}
                 data-index={virtualItem.index}
               >
                 <PostCard

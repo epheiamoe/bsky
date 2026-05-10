@@ -26,5 +26,5 @@
 
 ## ✅ #7 PWA 时间线滚动位置丢失
 **修复于 2026-05-10** · **版本**: v0.10.4  
-**根因**: FeedTimeline 的 `useVirtualizer` 在组件卸载时完全销毁（所有测量缓存丢失）。重新挂载后全部回退到 `ESTIMATED_POST_HEIGHT=120px`，实测 ~170px 的偏差累积 40+ 帖后偏移 ~2000px。  
-**修复**: 保持 FeedTimeline 始终挂载（`display:none` 隐藏而非条件卸载），保留 virtualizer 状态和 DOM scrollTop。
+**根因**: `FeedTimeline` 视图切换时被条件卸载 → `useVirtualizer` 销毁，测量缓存全部丢失 → 重建后全部回退到 `ESTIMATED_POST_HEIGHT=120px`，实测 ~170px 累积 40+ 偏移 ~2000px。  
+**修复**: 模块级 `_heightCache` Map 跨 mount 持久化缓存实测高度；`estimateSize` 优先读缓存消除偏差；`useLayoutEffect` 同步设 scrollTop 消除 RAF 一帧延迟。
