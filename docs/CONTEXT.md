@@ -24,7 +24,9 @@
 
 ## 版本
 
-**v0.10.4** — PWA 时间线滚动位置丢失 + 帖子重置（lastFeed 初始化 + _heightCache + initialOffset）
+**v0.10.5** — ChatService 存储重构（解耦 useAIChat 与 React 生命周期，debounce 持久化）
+
+> 这是迄今为止最大的一次重构。核心变更：将 AI 对话持久化从 `useAIChat` hook 中完全解耦，提取为模块级单例 `ChatService`。移除旧的 `setChatStorageFactory`/`getDefaultChatStorage` 工厂模式。PWA 端 `App.tsx` 的 `setChatStorageFactory` 通过 `useEffect` 仅在 mount 时执行一次，杜绝了每 render 重置 `_defaultChatStorage` 导致 load effect 反复触发覆盖流式数据的致命 bug。
 
 ## 项目状态
 

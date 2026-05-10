@@ -56,7 +56,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
           <div className="text-center">
             <Icon name="astroid-as-AI-Button" size={32} />
             <h2 className="text-lg font-semibold text-text-primary mt-2">Bluesky Client</h2>
-            <p className="text-sm text-text-secondary">v0.10.3</p>
+            <p className="text-sm text-text-secondary">v0.10.5</p>
           </div>
 
           <div className="space-y-3 text-sm">

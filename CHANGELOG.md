@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.5] — 2026-05-11
+
+### Changed
+
+- **ChatService 存储重构**: AI 对话持久化从 `useAIChat` 解耦为独立模块级单例 `ChatService`。
+  - **根因 1**: `App.tsx` 中 `setChatStorageFactory()` 在渲染顶层执行，每 render 重置 `_defaultChatStorage = null` → PWA 端 `storage` 引用每 render 变化 → load effect 反复触发 → `setMessages(record.messages)` 在流式响应期间覆盖累积的对话 → autoSave 保存残缺数据。
+    - **修复**: `initChatService()` 仅在组件 mount 时通过 `useEffect` 执行一次，idempotent guard 确保 `_storage` 引用稳定。新增 `chatService.ts` 模块级单例。
+  - **根因 2**: `autoSave` 的 `saveVersionRef` 版本跳过机制：若先调用 autoSave(完整数据) 再调用 autoSave(残缺数据)，版本检查跳过"旧"版本（完整）而保留"新"版本（残缺）。
+    - **修复**: 移除 `saveVersionRef`/`saveQueueRef`。改用 debounce 300ms + `_latestSnapshot` Map 覆盖式存储。多次 autoSave 调用自动合并为一次写入，始终以最后调用的数据为准。
+  - **根因 3**: 无空消息保护措施，autoSave 可能将 `messages: []` 写入 IndexedDB 覆盖完整数据。
+    - **修复**: 双重 `messages.length === 0` guard：入口处直接 `return`，写入前二次校验。
+  - **根因 4**: load effect 依赖 `[options?.chatId, storage]`，`storage` 引用变化触发 reload。
+    - **修复**: load effect 现在只依赖 `[options?.chatId]`。
+- **TUI 启动初始化**: `cli.ts` 新增 `initChatService(new FileChatStorage())` 显式初始化。
+- **版本**: v0.10.4 → v0.10.5
+
+### Removed
+
+- **`setChatStorageFactory`/`getDefaultChatStorage`**: 废弃的工厂模式 API，由 `ChatService` 替代。
+
 ## [0.10.4] — 2026-05-10
 
 ### Fixed
