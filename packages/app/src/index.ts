@@ -22,8 +22,9 @@ export { usePostActions, isPostLiked, isPostReposted, getLikeCount, getRepostCou
 export { useAIChat } from './hooks/useAIChat.js';
 export type { AIChatMessage } from './hooks/useAIChat.js';
 export { useChatHistory } from './hooks/useChatHistory.js';
-export { FileChatStorage, setChatStorageFactory, getDefaultChatStorage } from './services/chatStorage.js';
+export { FileChatStorage } from './services/chatStorage.js';
 export type { ChatStorage, ChatRecord, ChatSummary } from './services/chatStorage.js';
+export { initChatService, saveChat, loadChat, saveChatNow, deleteChat, listChats } from './services/chatService.js';
 export { useTranslation } from './hooks/useTranslation.js';
 export type { TargetLang, TranslationResult } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';

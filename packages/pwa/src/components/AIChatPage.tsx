@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAIChat, useChatHistory, useI18n, enableWidget, getDefaultChatStorage } from '@bsky/app';
+import { useAIChat, useChatHistory, useI18n, enableWidget, saveChatNow } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { formatTime } from '../utils/format.js';
@@ -251,15 +251,13 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
       // Create a new session with imported messages
       const newId = crypto.randomUUID();
-      if (getDefaultChatStorage()) {
-        await getDefaultChatStorage().saveChat({
-          id: newId,
-          title: file.name.replace(/\.json$/i, '') || 'Imported Chat',
-          messages: imported,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
+      await saveChatNow({
+        id: newId,
+        title: file.name.replace(/\.json$/i, '') || 'Imported Chat',
+        messages: imported,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
       setImportSuccess('Imported successfully.');
       goTo({ type: 'aiChat', sessionId: newId });
     } catch (_err) {

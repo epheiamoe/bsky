@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ChatStorage, ChatSummary, ChatRecord } from '../services/chatStorage.js';
-import { getDefaultChatStorage } from '../services/chatStorage.js';
+import { listChats, loadChat, saveChatNow, deleteChat, getChatStorage } from '../services/chatService.js';
 
 export function useChatHistory(storage?: ChatStorage) {
   const [conversations, setConversations] = useState<ChatSummary[]>([]);
   const [loading, setLoading] = useState(false);
-  const store = storage ?? getDefaultChatStorage();
+  const store = storage ?? getChatStorage();
 
   const refresh = useCallback(async () => {
     setLoading(true);

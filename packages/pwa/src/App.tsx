@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, setChatStorageFactory, useConvoList } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, initChatService, useConvoList } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { BskyClient } from '@bsky/core';
@@ -41,7 +41,11 @@ import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.
 export function App() {
   // Register storage factories (browser: IndexedDB)
   setDraftStorageFactory(() => new IndexedDBDraftStorage());
-  setChatStorageFactory(() => new IndexedDBChatStorage());
+
+  // Initialize ChatService once (idempotent — only first call sets storage)
+  useEffect(() => {
+    initChatService(new IndexedDBChatStorage());
+  }, []);
 
   // Set build metadata for error logging
   BskyClient.commitHash = typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : '(dev)';

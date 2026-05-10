@@ -15,7 +15,7 @@ import {
 } from '@bsky/core';
 import type { AIConfig, BskyClient, ChatMessage, ToolCall } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
-import { getDefaultChatStorage } from '../services/chatStorage.js';
+import { saveChat, loadChat } from '../services/chatService.js';
 import { v4 as uuidv4 } from './uuid.js';
 
 interface UseAIChatOptions {
@@ -60,12 +60,11 @@ export function useAIChat(
   const abortRef = useRef<AbortController | null>(null);
   const lastChatId = useRef(options?.chatId);
   const chatIdRef = useRef(options?.chatId ?? uuidv4());
-  const storage = getDefaultChatStorage();
+  // Sync ref mirroring React state — always has the latest messages
+  const messagesRef = useRef<AIChatMessage[]>([]);
   const autoStartedRef = useRef(false);
   const chatNotifiedRef = useRef(false);
   const titleGeneratedRef = useRef(false);
-  const saveVersionRef = useRef(0);
-  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   // Track current context for auto-save persistence
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
@@ -104,6 +103,7 @@ export function useAIChat(
 
     assistant.clearMessages();
     setMessages([]);
+    messagesRef.current = [];
     setGuidingQuestions([]);
     autoStartedRef.current = false;
     chatNotifiedRef.current = false;
@@ -122,9 +122,9 @@ export function useAIChat(
 
   // Load existing conversation from storage when chatId changes
   useEffect(() => {
-    if (!storage || !options?.chatId) return;
+    if (!options?.chatId) return;
     void (async () => {
-      const record = await storage.loadChat(options.chatId!);
+      const record = await loadChat(options.chatId!);
       if (record) {
         setMessages(record.messages);
         // Restore context from saved record (survives page refresh)
@@ -145,7 +145,6 @@ export function useAIChat(
         for (const m of record.messages) {
           if (m.role === 'thinking') continue;
           if (m.role === 'tool_call' && m.toolCallId && m.toolName) {
-            // Reconstruct assistant with tool_calls for API compatibility
             const argsMatch = m.content.match(/\{.*\}/s);
             const toolArgs = argsMatch?.[0] ?? '{}';
             chatMsgs.push({
@@ -177,7 +176,7 @@ export function useAIChat(
         setMessages([]);
       }
     })();
-  }, [options?.chatId, storage]);
+  }, [options?.chatId]);
 
   // Initialize tools and system prompt
   useEffect(() => {
@@ -223,74 +222,50 @@ export function useAIChat(
       }
     }
   }, [client, contextUri, assistant, options?.contextProfile, options?.contextPost, buildSystemPrompt]);
-  const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
-    if (!storage) return;
-    const version = ++saveVersionRef.current;
-    // Capture snapshot of chatId at call time — reject save if chatId changed
-    const saveChatId = chatIdRef.current;
+
+  // Debounced persistence via ChatService
+  const autoSave = useCallback((msgs: AIChatMessage[]) => {
+    if (msgs.length === 0) return;
+
     const firstRealUser = msgs.find(m => m.role === 'user' && !m.content.startsWith('<currently_viewing>'));
     const firstUser = firstRealUser ?? msgs.find(m => m.role === 'user');
     const title = firstUser?.content.slice(0, 80) ?? '新对话';
-    try {
-      // Enqueue the IndexedDB write so concurrent autoSave calls are serialized
-      await new Promise<void>((resolve, reject) => {
-        saveQueueRef.current = saveQueueRef.current.then(async () => {
-          // Re-check: if a newer save is already queued, skip this one entirely
-          if (version !== saveVersionRef.current) { resolve(); return; }
-          if (saveChatId !== chatIdRef.current) { resolve(); return; }
-          await storage.saveChat({
-            id: saveChatId,
-            title,
-            contextUri,
-            context: contextRef.current,
-            messages: msgs,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          });
-          if (version !== saveVersionRef.current) { resolve(); return; }
-          if (saveChatId !== chatIdRef.current) { resolve(); return; }
-          if (!chatNotifiedRef.current) {
-            chatNotifiedRef.current = true;
-            options?.onChatSaved?.();
+
+    saveChat(chatIdRef.current, msgs, title, contextUri, contextRef.current);
+
+    if (!chatNotifiedRef.current) {
+      chatNotifiedRef.current = true;
+      options?.onChatSaved?.();
+    }
+
+    // Auto-generate title once after first assistant reply
+    if (!titleGeneratedRef.current && firstRealUser) {
+      const firstAssistant = msgs.find(m => m.role === 'assistant');
+      if (firstAssistant) {
+        titleGeneratedRef.current = true;
+        import('@bsky/core').then(({ generateChatTitle }) =>
+          generateChatTitle(
+            aiConfig,
+            firstRealUser.content.slice(0, 100),
+            firstAssistant.content.slice(0, 300),
+          )
+        ).then(newTitle => {
+          if (newTitle) {
+            saveChat(chatIdRef.current, messagesRef.current, newTitle, contextUri, contextRef.current);
+            options?.onTitleChanged?.();
           }
-          // Auto-generate title once after first assistant reply
-          if (!titleGeneratedRef.current && firstRealUser) {
-            const firstAssistant = msgs.find(m => m.role === 'assistant');
-            if (firstAssistant) {
-              titleGeneratedRef.current = true;
-              try {
-                const { generateChatTitle } = await import('@bsky/core');
-                const newTitle = await generateChatTitle(
-                  aiConfig,
-                  firstRealUser.content.slice(0, 100),
-                  firstAssistant.content.slice(0, 300),
-                );
-                if (newTitle) {
-                  if (version !== saveVersionRef.current) { resolve(); return; }
-                  if (saveChatId !== chatIdRef.current) { resolve(); return; }
-                  await storage.saveChat({
-                    id: saveChatId,
-                    title: newTitle,
-                    contextUri,
-                    context: contextRef.current,
-                    messages: msgs,
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                  });
-                  options?.onTitleChanged?.();
-                }
-              } catch { /* title gen failure is non-critical */ }
-            }
-          }
-          resolve();
-        }).catch(reject);
-      });
-    } catch { /* silently fail */ }
-  }, [storage, contextUri, options?.onChatSaved, options?.onTitleChanged, aiConfig]);
+        }).catch(() => {});
+      }
+    }
+  }, [contextUri, options?.onChatSaved, options?.onTitleChanged, aiConfig]);
 
   const send = useCallback(async (text: string) => {
     const newUserMsg: AIChatMessage = { role: 'user', content: text };
-    setMessages(prev => [...prev, newUserMsg]);
+    setMessages(prev => {
+      const next = [...prev, newUserMsg];
+      messagesRef.current = next;
+      return next;
+    });
     setGuidingQuestions([]);
     setLoading(true);
 
@@ -311,12 +286,13 @@ export function useAIChat(
             continue;
           }
           if (event.type === 'tool_call') {
-            streamingContent = ''; // Reset for next assistant turn
+            streamingContent = '';
             setMessages(prev => {
               const newMsgs: AIChatMessage[] = [
                 ...prev,
                 { role: 'tool_call', content: `🔧 ${event.content}`, toolName: event.toolName, toolCallId: (event as any).toolCallId },
               ];
+              messagesRef.current = newMsgs;
               return newMsgs;
             });
           } else if (event.type === 'tool_result') {
@@ -325,42 +301,43 @@ export function useAIChat(
                 ...prev,
                 { role: 'tool_result', content: event.content, toolName: event.toolName, toolCallId: (event as any).toolCallId },
               ];
+              messagesRef.current = newMsgs;
               return newMsgs;
             });
           } else if (event.type === 'thinking') {
-            // Accumulate reasoning content — show incrementally
             setMessages(prev => {
               const last = prev[prev.length - 1];
               if (last?.role === 'thinking') {
                 const updated = [...prev];
-                updated[updated.length - 1] = { role: 'thinking', content: last.content + event.content };
+                updated[updated.length - 1] = { role: 'thinking' as const, content: last.content + event.content };
+                messagesRef.current = updated;
                 return updated;
               }
-              return [...prev, { role: 'thinking', content: event.content }];
+              const updated = [...prev, { role: 'thinking' as const, content: event.content }];
+              messagesRef.current = updated;
+              return updated;
             });
           } else if (event.type === 'token') {
             streamingContent += event.content;
             setMessages(prev => {
               const last = prev[prev.length - 1];
               if (last?.role === 'assistant') {
-                // Append to existing assistant message
                 const updated = [...prev];
                 updated[updated.length - 1] = { ...last, content: streamingContent };
+                messagesRef.current = updated;
                 return updated;
               }
-              // First token — create new assistant message
-              return [...prev, { role: 'assistant', content: streamingContent }];
+              const updated = [...prev, { role: 'assistant' as const, content: streamingContent }];
+              messagesRef.current = updated;
+              return updated;
             });
           } else if (event.type === 'done') {
             // Already updated via tokens
           }
         }
 
-        // Auto-save after streaming complete
-        setMessages(prev => {
-          void autoSave(prev);
-          return prev;
-        });
+        // Auto-save after streaming complete — read from ref (always latest)
+        autoSave(messagesRef.current);
       } catch (e) {
         if (!ctrl.signal.aborted) {
           const errorText = `Error: ${e instanceof Error ? e.message : String(e)}`;
@@ -368,7 +345,8 @@ export function useAIChat(
           setMessages(prev => {
             const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
             const updated = [...prev, errMsg];
-            void autoSave(updated);
+            messagesRef.current = updated;
+            autoSave(updated);
             return updated;
           });
         }
@@ -395,7 +373,8 @@ export function useAIChat(
         }
         newMsgs.push({ role: 'assistant', content: result.content });
         const updated = [...prev, ...newMsgs];
-        void autoSave(updated);
+        messagesRef.current = updated;
+        autoSave(updated);
         return updated;
       });
     } catch (e) {
@@ -405,7 +384,8 @@ export function useAIChat(
         setMessages(prev => {
           const errMsg: AIChatMessage = { role: 'assistant', content: errorText, isError: true };
           const updated = [...prev, errMsg];
-          void autoSave(updated);
+          messagesRef.current = updated;
+          autoSave(updated);
           return updated;
         });
       }

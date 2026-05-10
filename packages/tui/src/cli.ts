@@ -12,9 +12,10 @@ import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
 import { getProviderById } from '@bsky/core';
-import { setDraftStorageFactory, FileDraftStorage } from '@bsky/app';
+import { setDraftStorageFactory, FileDraftStorage, initChatService, FileChatStorage } from '@bsky/app';
 
 setDraftStorageFactory(() => new FileDraftStorage());
+initChatService(new FileChatStorage());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
