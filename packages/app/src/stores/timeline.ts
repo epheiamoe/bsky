@@ -32,6 +32,7 @@ export function createTimelineStore(): TimelineStore {
     listener: null,
 
     async load(client, feedUri) {
+      console.log('[timeline] load() called. feedUri:', feedUri, 'cursor:', store.cursor, 'posts.length:', store.posts.length, new Error().stack?.split('\n').slice(2).join('\n'));
       store.loading = true;
       store._notify();
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -59,6 +60,7 @@ export function createTimelineStore(): TimelineStore {
     },
 
     async loadMore(client, feedUri) {
+      console.log('[timeline] loadMore() called. feedUri:', feedUri, 'cursor:', store.cursor, 'posts.length:', store.posts.length);
       if (!store.cursor || store.loading) return;
       store.loading = true;
       store._notify();
@@ -78,6 +80,7 @@ export function createTimelineStore(): TimelineStore {
     },
 
     async refresh(client, feedUri) {
+      console.log('[timeline] refresh() called. feedUri:', feedUri, new Error().stack?.split('\n').slice(2).join('\n'));
       store.cursor = undefined;
       store.posts = [];
       await store.load(client, feedUri);
