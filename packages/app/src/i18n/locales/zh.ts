@@ -483,8 +483,13 @@ const zh: LocaleMessages = {
   'about.commit': '提交',
   'about.commitDesc': '提交描述',
   'about.buildTime': '构建时间',
-  'about.feedback': '反馈问题',
+  'about.feedback': '反馈',
   'about.contact': '联系',
+  'about.checkUpdate': '检查更新',
+  'about.checking': '检查中…',
+  'about.upToDate': '已是最新版本',
+  'about.updateAvailable': '新版本可用',
+  'about.updateNow': '立即更新',
 };
 
 export default zh;

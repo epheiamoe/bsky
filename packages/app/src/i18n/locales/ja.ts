@@ -238,6 +238,11 @@ const ja: LocaleMessages = {
   'about.buildTime': 'ビルド時間',
   'about.feedback': 'フィードバック',
   'about.contact': '連絡先',
+  'about.checkUpdate': 'アップデートを確認',
+  'about.checking': '確認中…',
+  'about.upToDate': '最新です',
+  'about.updateAvailable': 'アップデートがあります',
+  'about.updateNow': '今すぐ更新',
 
   // ── Login ──
   'login.error': 'ログイン失敗',

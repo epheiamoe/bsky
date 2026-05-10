@@ -61,8 +61,16 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed'));
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollTopRef = useRef(0);
+
+  // Listen for PWA update notifications
+  useEffect(() => {
+    const handler = () => setUpdateAvailable(true);
+    window.addEventListener('pwa-update-available', handler);
+    return () => window.removeEventListener('pwa-update-available', handler);
+  }, []);
 
   // Resolve full AIConfig for a scenario model string ("provider/model" or just "model" or "")
   const resolveScenarioConfig = useCallback((scenarioModel: string): AIConfig => {
@@ -366,6 +374,7 @@ export function App() {
   };
 
   return (
+    <>
     <Layout
       currentView={currentView}
       canGoBack={canGoBack}
@@ -387,5 +396,24 @@ export function App() {
     >
       {renderView()}
     </Layout>
+    {updateAvailable && (
+      <div className="fixed bottom-4 right-4 z-[9999] bg-green-500 text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-slideUp">
+        <span>{t('about.updateAvailable')}</span>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-semibold transition-colors"
+        >
+          {t('about.updateNow')}
+        </button>
+        <button
+          onClick={() => setUpdateAvailable(false)}
+          className="text-white/60 hover:text-white transition-colors text-lg leading-none"
+          aria-label="Dismiss"
+        >
+          ×
+        </button>
+      </div>
+    )}
+    </>
   );
 }

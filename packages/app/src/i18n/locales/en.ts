@@ -238,6 +238,11 @@ const en: LocaleMessages = {
   'about.buildTime': 'Build time',
   'about.feedback': 'Feedback',
   'about.contact': 'Contact',
+  'about.checkUpdate': 'Check for Updates',
+  'about.checking': 'Checking…',
+  'about.upToDate': 'Up to date',
+  'about.updateAvailable': 'Update available',
+  'about.updateNow': 'Update',
 
   // ── Login ──
   'login.error': 'Login failed',

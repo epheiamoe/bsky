@@ -20,12 +20,13 @@
   --color-text-secondary: #A3B4C0;
 }
 
-html {
-  overscroll-behavior: none;
-}
 body {
   color: var(--color-text-primary);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent rubber-banding on all scrollable containers */
+[class*="overflow-y-auto"] {
+  overscroll-behavior-y: contain;
 }
 .scroll-container {
   overscroll-behavior: contain;

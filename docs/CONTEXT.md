@@ -82,8 +82,9 @@
 - **多平台 DDG 代理** (v0.10.0): PHP (`api/proxy.php`) / Vercel (`api/proxy.js`) / Netlify (`netlify/functions/proxy.js`) / Node (`scripts/proxy-server.mjs`)。`DEPLOY.md` 面向部署者的指南。`vite.config.ts` 添加 dev proxy。
 - **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
 - **autoSave 写队列** (v0.10.2): `saveQueueRef` Promise 链串行化 IndexedDB 写入，防止并发 autoSave 事务乱序覆盖完整数据。每次保存捕获 `chatIdRef.current` 快照，写入前校验版本和 chatId（Lesson 51）。
-- **全面 `100dvh` 替换** (v0.10.2): 24 处 `100vh` → `100dvh`；`index.css` 增 `overscroll-behavior: none` + `safe-area-inset-bottom`。
+- **全面 `100dvh` 替换** (v0.10.2): 24 处 `100vh` → `100dvh`；`index.css` 改 `overscroll-behavior-y: contain` 作用于 `.overflow-y-auto` 容器（而非全局禁用下拉刷新）。
 - **登录调试日志** (v0.10.2): 错误详情面板 + 一键复制 + 密码脱敏 + 构建信息。
+- **PWA 更新检查** (v0.10.2): 关于页「检查更新」按钮 + visibilitychange 自动检查 + 底部 toast 双入口。`services/pwa.ts` 含 `_ignoreNextUpdate` 标志位去重。
 
 ## 🔴 关键教训
 

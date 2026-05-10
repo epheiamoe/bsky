@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { checkForPwaUpdate } from '../services/pwa.js';
 
 interface AboutPageProps {
   goBack: () => void;
@@ -8,6 +9,7 @@ interface AboutPageProps {
 
 export function AboutPage({ goBack }: AboutPageProps) {
   const { t } = useI18n();
+  const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'available' | 'uptodate'>('idle');
 
   const commitHash = typeof __COMMIT_HASH__ !== 'undefined' ? __COMMIT_HASH__ : '(dev)';
   const commitDesc = typeof __COMMIT_DESC__ !== 'undefined' ? __COMMIT_DESC__ : '(dev)';
@@ -25,6 +27,21 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
   const issuesUrl = 'https://github.com/epheiamoe/bsky/issues';
   const contactEmail = 'bsky@desuwa.org';
 
+  const handleCheckUpdate = async () => {
+    setUpdateState('checking');
+    const onUpdate = () => {
+      setUpdateState('available');
+      window.removeEventListener('pwa-update-available', onUpdate);
+    };
+    window.addEventListener('pwa-update-available', onUpdate);
+    checkForPwaUpdate();
+    // If no update found within a reasonable time, show "up to date"
+    setTimeout(() => {
+      window.removeEventListener('pwa-update-available', onUpdate);
+      setUpdateState(prev => prev === 'checking' ? 'uptodate' : prev);
+    }, 5000);
+  };
+
   return (
     <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border px-4 h-12 flex items-center">
@@ -39,7 +56,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
           <div className="text-center">
             <Icon name="astroid-as-AI-Button" size={32} />
             <h2 className="text-lg font-semibold text-text-primary mt-2">Bluesky Client</h2>
-            <p className="text-sm text-text-secondary">v0.10.1</p>
+            <p className="text-sm text-text-secondary">v0.10.2</p>
           </div>
 
           <div className="space-y-3 text-sm">
@@ -76,6 +93,29 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
             <div>
               <p className="text-text-secondary text-xs font-medium uppercase tracking-wider">{t('about.buildTime')}</p>
               <p className="text-text-primary">{buildTime}</p>
+            </div>
+
+            {/* Check for updates */}
+            <div className="border-t border-border pt-3">
+              {updateState === 'idle' && (
+                <button onClick={handleCheckUpdate} className="text-primary hover:text-primary-hover text-sm font-medium transition-colors">
+                  {t('about.checkUpdate')}
+                </button>
+              )}
+              {updateState === 'checking' && (
+                <p className="text-text-secondary text-sm">{t('about.checking')}</p>
+              )}
+              {updateState === 'uptodate' && (
+                <p className="text-green-600 dark:text-green-400 text-sm">{t('about.upToDate')}</p>
+              )}
+              {updateState === 'available' && (
+                <div className="flex items-center gap-3">
+                  <p className="text-green-600 dark:text-green-400 text-sm font-medium">{t('about.updateAvailable')}</p>
+                  <button onClick={() => window.location.reload()} className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+                    {t('about.updateNow')}
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
