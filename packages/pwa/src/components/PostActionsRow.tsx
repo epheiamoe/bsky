@@ -45,7 +45,7 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
     <div className="flex items-center gap-3 text-text-secondary text-xs mt-1">
       {/* Reply */}
       <button onClick={(e) => { e.stopPropagation(); goTo({ type: 'compose', replyTo: post.uri }); }} className="hover:text-primary transition-colors flex items-center gap-0.5 btn-press" title="Reply">
-        <Icon name="corner-down-right" size={14} />{post.replyCount ?? 0}
+        <Icon name="corner-down-right" size={18} />{post.replyCount ?? 0}
       </button>
       {/* Repost + Quote popup */}
       <div className="relative inline-flex items-center">
