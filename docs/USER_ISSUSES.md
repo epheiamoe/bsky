@@ -26,5 +26,7 @@
 
 ## ✅ #7 PWA 时间线滚动位置丢失
 **修复于 2026-05-10** · **版本**: v0.10.4  
-**根因**: `FeedTimeline` 视图切换时被条件卸载 → `useVirtualizer` 销毁 → 测量缓存丢失 + 重建后 `scrollOffset=0`，实际 scrollTop ≠ virtualizer 内部偏移。  
-**修复**: 模块级 `_heightCache` Map 持久化缓存实测高度；`useVirtualizer` 的 `initialOffset` 选项利用内部 `_willUpdate` → `_scrollToOffset` + `flushSync` 在 mount 阶段同步恢复 scroll 位置。
+**根因**:
+1. `useTimeline.lastFeed.current` 初始 `undefined`（`feedUri` prop 首次渲染时未就绪），auth 后 `feedUri` 变有效 → effect 误判为 feed 切换 → `store.posts=[]` `loaded=false` → `store.load()` 重置到 20 条 → posts 缩水 + savedScrollTop 超限 clamp。
+2. `useVirtualizer` mount 时测量缓存清空 + 不认识手动 `el.scrollTop`。
+**修复**: `lastFeed.current` render body 初始化；`_heightCache` 持久化实测高度；`initialOffset` 利用 virtualizer 内部 `_willUpdate` → `_scrollToOffset` + `flushSync` 同步恢复。

@@ -24,7 +24,7 @@
 
 ## 版本
 
-**v0.10.4** — PWA 时间线滚动位置丢失修复（FeedTimeline 常驻挂载 → display:none 隐藏）
+**v0.10.4** — PWA 时间线滚动位置丢失 + 帖子重置（lastFeed 初始化 + _heightCache + initialOffset）
 
 ## 项目状态
 
@@ -90,7 +90,9 @@
 - **PostInfoModal** (v0.10.3): ThreadView 聚焦帖 action row 新增 ⓘ 按钮 → `createPortal` 到 `document.body` 弹窗，显示 AT URI/CID 可复制、时间、统计（SVG 图标）、Viewer 状态。杜绝 emoji。
 - **`docs/USER_ISSUSES.md`** (v0.10.3): 用户反馈问题日志。
 - **回复标签故障修复** (v0.10.3): info 按钮从 PostCard 移到 ThreadView（修复重叠/跟随滚动）。`useThread` 新增 `getPostView(uri)` 导出供 info modal 获取完整 `PostView`。
-- **滚动位置丢失修复** (v0.10.4, Issue #7): 模块级 `_heightCache`（`post.uri → 实际高度`）跨 mount 持久；`useVirtualizer` 改用 `initialOffset` — 利用内部 `_willUpdate` → `_scrollToOffset` + `flushSync` 机制在 mount 阶段同步恢复 scroll 位置，零帧跳转。
+- **滚动位置丢失 + 帖子重置修复** (v0.10.4, Issue #7): 三合一修复。
+  - **posts 重置** (首要根因): `useTimeline.lastFeed.current` 初始 `undefined`，`feedUri` auth 后变为有效值 → effect 误判 feed 切换 → `store.posts=[]`。修复: render body 中初始化 `lastFeed.current = effFeedUri`。
+  - **scroll 偏移**: `_heightCache`（`post.uri → 实际高度`）跨 mount 持久；`useVirtualizer` `initialOffset` 利用内部 `_willUpdate` → `_scrollToOffset` + `flushSync` 同步恢复 scroll 位置。
 
 ## 🔴 关键教训
 

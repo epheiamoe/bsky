@@ -50,7 +50,7 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
       {/* Repost + Quote popup */}
       <div className="relative inline-flex items-center">
         <button onClick={(e) => { e.stopPropagation(); setRepopup(!repopup); }} className={`hover:text-green-500 transition-colors flex items-center gap-0.5 btn-press ${isR ? 'text-green-500' : ''}`} title="Repost / Quote">
-          <Icon name="repeat" size={14} />{rc}
+          <Icon name="repeat" size={18} />{rc}
         </button>
         {repopup && (
           <div className="absolute bottom-full left-0 mb-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-50 py-1 min-w-[130px]" onClick={e => e.stopPropagation()}>
@@ -65,17 +65,17 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
       </div>
       {/* Like */}
       <button onClick={(e) => { e.stopPropagation(); likePost(client!, post.uri, post.cid).catch(() => {}); }} className={`hover:text-red-500 transition-colors flex items-center gap-0.5 btn-press ${isL ? 'text-red-500' : ''}`} title={isL ? 'Unlike' : 'Like'}>
-        <Icon name="heart" size={14} filled={isL} />{lc}
+        <Icon name="heart" size={18} filled={isL} />{lc}
       </button>
       {/* Bookmark */}
       {showBookmark && isBookmarked && onBookmark && (
         <button onClick={(e) => { e.stopPropagation(); onBookmark(post.uri, post.cid); }} className={`hover:text-yellow-500 transition-colors btn-press ${isBookmarked(post.uri) ? 'text-yellow-500' : ''}`} title="Bookmark">
-          <Icon name="bookmark" size={14} filled={isBookmarked(post.uri)} />
+          <Icon name="bookmark" size={18} filled={isBookmarked(post.uri)} />
         </button>
       )}
       {/* AI Analysis */}
       <button onClick={(e) => { e.stopPropagation(); openAIAnalysis(goTo, client, post.uri); }} className="hover:text-purple-500 transition-colors btn-press" title="AI Analysis">
-        <Icon name="astroid-as-AI-Button" size={14} />
+        <Icon name="astroid-as-AI-Button" size={18} />
       </button>
     </div>
   );

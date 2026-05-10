@@ -9,10 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **PWA 时间线滚动位置丢失** (Issue #7): `useVirtualizer` 每次重建时测量缓存丢失 + 首次渲染 `scrollOffset=0` 导致内容偏移或回顶部。修复：
-  - 模块级 `_heightCache`（`post.uri → 实测高度`）跨 mount 持久
-  - `estimateSize` 优先读缓存，消除 120px 估计 vs ~170px 实际的高度误差
-  - `useVirtualizer` `initialOffset` 选项 → 内部 `_willUpdate` 在 mount 时调用 `_scrollToOffset`，通过 `element.scrollTo()` + 原生 scroll 事件 → `flushSync` 同步重渲染，零帧跳转
+- **PWA 时间线滚动位置丢失 + 帖子列表意外重置** (Issue #7):
+  - **根因 1** — `useTimeline` 内 `lastFeed.current` 初始值来自 `feedUri` prop，首次渲染时 `feedUri=undefined`（auth 未就绪）。之后 `feedUri` 变为有效值时，effect 检测到 `effFeedUri !== lastFeed.current` 为 `true`，误判为 "feed 切换"，触发 `store.posts=[]` + `store.load()`，帖子列表从 40+ 条重置到 20 条。
+    - **修复**: render body 中初始化 `lastFeed.current = effFeedUri` 当两者都非 `undefined`。
+  - **根因 2** — `useVirtualizer` 每次 mount 重建时测量缓存丢失，`estimateSize` 回退到 120px 估计值，而实测高度 ~170px，按 scrollTop 恢复时产生 ~2000px 累积偏移。
+    - **修复**: 模块级 `_heightCache`（`post.uri → 实测高度`）跨 mount 持久；`estimateSize` 优先读缓存。
+  - **根因 3** — mount 时 virtualizer 首次渲染 `scrollOffset=0`，即使设了 `el.scrollTop` virtualizer 也不认（只从 scroll 事件读）。
+    - **修复**: `useVirtualizer` 的 `initialOffset` 选项，利用内部 `_willUpdate` → `_scrollToOffset` + `flushSync` 机制同步对齐 scroll 位置。
 
 ## [0.10.3] — 2026-05-10
 

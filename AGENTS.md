@@ -60,6 +60,7 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | 8 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
 | 9 | `docs/DM.md` | DM private messaging docs |
 | 10 | `docs/SCROLL.md` | Virtual scroll + scroll restoration spec |
+| 11 | `docs/SCROLL_DEBUG.md` | Scroll loss postmortem — root cause analysis, failed approaches, final fix |
 | 11 | `docs/LESSONS.md` | Key lessons from each session |
 | 12 | `docs/TODO.md` | Feature status (TUI/PWA checkboxes) |
 | 13 | `docs/USER_ISSUSES.md` | Known & resolved user issues |
