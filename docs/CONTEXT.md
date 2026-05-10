@@ -24,7 +24,7 @@
 
 ## 版本
 
-**v0.10.3** — 回复深度标签 + PostInfoModal + 移除 emoji 媒体标签 + ISSUES.md + PostInfoModal 修复
+**v0.10.4** — PWA 时间线滚动位置丢失修复（FeedTimeline 常驻挂载 → display:none 隐藏）
 
 ## 项目状态
 
@@ -90,6 +90,7 @@
 - **PostInfoModal** (v0.10.3): ThreadView 聚焦帖 action row 新增 ⓘ 按钮 → `createPortal` 到 `document.body` 弹窗，显示 AT URI/CID 可复制、时间、统计（SVG 图标）、Viewer 状态。杜绝 emoji。
 - **`docs/USER_ISSUSES.md`** (v0.10.3): 用户反馈问题日志。
 - **回复标签故障修复** (v0.10.3): info 按钮从 PostCard 移到 ThreadView（修复重叠/跟随滚动）。`useThread` 新增 `getPostView(uri)` 导出供 info modal 获取完整 `PostView`。
+- **滚动位置丢失修复** (v0.10.4, Issue #7): `FeedTimeline` 改用 `display:none` 常驻挂载而非条件卸载/重建。保留 `useVirtualizer` 测量缓存和 DOM `scrollTop`。根因：virtualizer 每次重建都用 `ESTIMATED_POST_HEIGHT=120px` 估算，实测 ~170px 累积偏移导致跳转。
 
 ## 🔴 关键教训
 

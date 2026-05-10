@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.4] — 2026-05-10
+
+### Fixed
+
+- **PWA 时间线滚动位置丢失** (Issue #7): `FeedTimeline` 的 `useVirtualizer` 在视图切换时被条件卸载/重建，测量缓存全部丢失导致 `estimateSize` 偏差累积。改为保持 FeedTimeline 始终挂载（`display:none` 隐藏），保留 virtualizer 状态和浏览器原生 scrollTop。
+
 ## [0.10.3] — 2026-05-10
 
 ### Added

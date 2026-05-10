@@ -24,12 +24,7 @@
 ## ⬜ #6 PWA 翻译状态在切换帖子时未清除
 **修复于 2026-04-29**: 使用 useEffect 监听 focused.uri 变化，自动清除翻译结果。
 
-## ⬜ #7 PWA 时间线滚动位置丢失
-**报告于 2026-05-10** · **复现**: 间歇性  
-**环境**: PWA standalone (mobile)  
-
-长时间刷时间线后，点进推文再返回时间线，滚动位置丢失——跳转到其他位置而非进入推文前的位置。非必现，可能与 `useScrollRestore` 在页面 Unmount/Remount 时的时机竞态有关。
-
-**根因推测**：`FeedTimeline` 的虚拟滚动容器在 `currentView.type` 切换时触发 Unmount，滚动恢复的像素值保存与恢复之间存在时序差。仅在长时间浏览（加载多页）后出现，猜测与虚拟 DOM 节点回收有关。
-
-**状态**: 🟡 待排查
+## ✅ #7 PWA 时间线滚动位置丢失
+**修复于 2026-05-10** · **版本**: v0.10.4  
+**根因**: FeedTimeline 的 `useVirtualizer` 在组件卸载时完全销毁（所有测量缓存丢失）。重新挂载后全部回退到 `ESTIMATED_POST_HEIGHT=120px`，实测 ~170px 的偏差累积 40+ 帖后偏移 ~2000px。  
+**修复**: 保持 FeedTimeline 始终挂载（`display:none` 隐藏而非条件卸载），保留 virtualizer 状态和 DOM scrollTop。

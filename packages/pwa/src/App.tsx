@@ -261,25 +261,7 @@ export function App() {
   const renderView = () => {
     switch (currentView.type) {
       case 'feed':
-        return (
-          <FeedTimeline
-            goTo={goTo}
-            posts={timeline.posts}
-            loading={timeline.loading}
-            cursor={timeline.cursor}
-            error={timeline.error}
-            loadMore={timeline.loadMore}
-            refresh={timeline.refresh}
-            initialScrollTop={feedScrollTopRef.current}
-            onScrollTopChange={(top) => { feedScrollTopRef.current = top; }}
-            feedUri={(currentView as { feedUri?: string }).feedUri}
-            client={client}
-            isLiked={postActions.isLiked}
-            isReposted={postActions.isReposted}
-            likePost={postActions.likePost}
-            repostPost={postActions.repostPost}
-          />
-        );
+        return null;
       case 'thread':
         return (
           <ThreadView
@@ -394,6 +376,25 @@ export function App() {
       onSettingsClose={() => setSettingsOpen(false)}
       onSettingsOpen={() => setSettingsOpen(true)}
     >
+      <div style={{ display: currentView.type === 'feed' ? '' : 'none' }}>
+        <FeedTimeline
+          goTo={goTo}
+          posts={timeline.posts}
+          loading={timeline.loading}
+          cursor={timeline.cursor}
+          error={timeline.error}
+          loadMore={timeline.loadMore}
+          refresh={timeline.refresh}
+          initialScrollTop={feedScrollTopRef.current}
+          onScrollTopChange={(top) => { feedScrollTopRef.current = top; }}
+          feedUri={(currentView as { feedUri?: string }).feedUri}
+          client={client}
+          isLiked={postActions.isLiked}
+          isReposted={postActions.isReposted}
+          likePost={postActions.likePost}
+          repostPost={postActions.repostPost}
+        />
+      </div>
       {renderView()}
     </Layout>
     {updateAvailable && (
