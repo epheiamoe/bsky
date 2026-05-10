@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
@@ -64,15 +64,8 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
       return ESTIMATED_POST_HEIGHT;
     },
     overscan: 5,
+    initialOffset: (initialScrollTop ?? 0) > 0 ? initialScrollTop : 0,
   });
-
-  // ── Scroll position restoration (pixel-based, before paint) ──
-  useLayoutEffect(() => {
-    if (initialScrollTop !== undefined && initialScrollTop > 0 && posts.length > 0) {
-      const el = scrollRef.current;
-      if (el) el.scrollTop = initialScrollTop;
-    }
-  }, [posts.length > 0 ? initialScrollTop : undefined]);
 
   // ── Report scroll position to parent ──
   const reportScrollTop = useCallback(() => {

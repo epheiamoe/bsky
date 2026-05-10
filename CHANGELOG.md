@@ -9,10 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **PWA 时间线滚动位置丢失** (Issue #7): `FeedTimeline` 的 `useVirtualizer` 每次重建时丢失测量缓存，全部回退到 `ESTIMATED_POST_HEIGHT=120px`，累积偏移 ~2000px。修复：
-  - 模块级 `_heightCache`（`post.uri → 实测高度` Map）跨 mount 持久，`estimateSize` 优先读缓存
-  - 回调 ref 替换 `virtualizer.measureElement`，测量同时缓存高度
-  - `useLayoutEffect` 替换 `requestAnimationFrame`，scrollTop 恢复在浏览器 paint 前同步执行
+- **PWA 时间线滚动位置丢失** (Issue #7): `useVirtualizer` 每次重建时测量缓存丢失 + 首次渲染 `scrollOffset=0` 导致内容偏移或回顶部。修复：
+  - 模块级 `_heightCache`（`post.uri → 实测高度`）跨 mount 持久
+  - `estimateSize` 优先读缓存，消除 120px 估计 vs ~170px 实际的高度误差
+  - `useVirtualizer` `initialOffset` 选项 → 内部 `_willUpdate` 在 mount 时调用 `_scrollToOffset`，通过 `element.scrollTo()` + 原生 scroll 事件 → `flushSync` 同步重渲染，零帧跳转
 
 ## [0.10.3] — 2026-05-10
 
