@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **回复深度标签**: `PostCard` 从 `post.record.reply` 推断回复深度。直接回复楼主显示 `↩`，嵌套回复显示 `↩ 2+`。圆角矩形 badge，位于头像下方。
-- **PostInfoModal**: 点击 ⓘ 图标弹窗显示 AT Protocol 原始信息——URI、DID、CID 各自独立圆角矩形 + 复制按钮；时间、作者、回复、媒体、统计、Viewer 状态分段展示。模态框可滑动，点击背景关闭。
+- **回复深度标签**: `PostCard` 从 `post.record.reply` 推断回复深度。直接回复楼主显示 `↩`，嵌套回复显示 `↩ 2+`。圆角矩形 badge，位于 PostCard avatar 列（头像正下方）。仅 feed/search/profile 页面显示，ThreadView 不显示。
+- **PostInfoModal**: ThreadView 聚焦帖 action row（复制按钮右侧）新增 ⓘ 按钮 → `createPortal` 到 `document.body` 弹窗。显示 AT URI、CID（各自独立圆角矩形+复制按钮）、时间、统计（SVG 图标: heart/repeat/message-square）、Viewer 状态。
 - **`badge-info.svg`**: Lucide 风格 info 图标。
 - **i18n**: `post.info`、`post.replyDepth`、`common.copy`、`common.copied` 及模态框字段标签（en/zh/ja）。
 - **`docs/USER_ISSUSES.md`**: 新增时间线滚动丢失问题记录。
+
+### Fixed
+
+- **PostInfoModal 重叠/跟随滚动**: 改在 ThreadView 通过 `createPortal` 挂到 `document.body`，非 PostCard 内嵌。emoji（♥♺💬✓）替换为 `<Icon>` SVG。`useThread` 新增 `getPostView(uri)` 导出供 modal 获取完整 PostView。
+- **回复标签位置纠正**: 从内容区移到 avatar 列（头像下方），仅在 `post` 路径显示。
 
 ### Removed
 
