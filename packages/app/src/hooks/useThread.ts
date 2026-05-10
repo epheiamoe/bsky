@@ -14,7 +14,6 @@ export interface FlatLine {
   displayName: string;
   authorAvatar?: string;
   hasReplies: boolean;
-  mediaTags: string[];
   imageDetails: Array<{ url: string; alt: string }>;
   externalLink: { uri: string; title: string; description: string } | null;
   hasVideo: boolean;
@@ -29,7 +28,6 @@ export interface FlatLine {
     handle: string;
     displayName: string;
     authorAvatar?: string;
-    mediaTags: string[];
     imageDetails: Array<{ url: string; alt: string }>;
     externalLink: { uri: string; title: string; description: string } | null;
   };
@@ -168,7 +166,6 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
       displayName: post.author.displayName ?? post.author.handle,
       authorAvatar: post.author.avatar,
       hasReplies: !!node.replies && node.replies.length > 0,
-      mediaTags: getMediaTags(post),
       imageDetails: getImageDetails(post),
       externalLink: getExternalLink(post),
       quotedPost: getQuotedPost(post),
@@ -200,7 +197,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
           depth: d + 1, uri: '', cid: '', rkey: '',
           text: `（还有 ${remaining} 条回复未显示）`,
           handle: '', displayName: '', authorAvatar: undefined,
-          hasReplies: false, mediaTags: [], imageDetails: [], externalLink: null, quotedPost: undefined,
+          hasReplies: false, imageDetails: [], externalLink: null, quotedPost: undefined,
           hasVideo: false,
           isRoot: false, isTruncation: true,
           likeCount: 0, repostCount: 0, replyCount: 0, indexedAt: '',
@@ -242,22 +239,18 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
   const rec = embed.record;
   if (!rec?.uri) return undefined;
 
-  const quotedMediaTags: string[] = [];
   const quotedImageDetails: Array<{ url: string; alt: string }> = [];
   let quotedExternalLink: FlatLine['externalLink'] | null = null;
 
   if (rec.embeds?.[0]) {
     const e = rec.embeds[0]!;
     if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
-      const count = e.images.length;
-      quotedMediaTags.push(count === 1 ? '🖼 图片' : `🖼 ${count}张图片`);
       const did = rec.author?.did ?? '';
       for (const img of e.images) {
         const url = (img as any).fullsize || getCdnImageUrl(did, (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
         if (url) quotedImageDetails.push({ url, alt: (img as any).alt || '' });
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
-      quotedMediaTags.push('🔗 链接');
       quotedExternalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
     }
   }
@@ -269,42 +262,9 @@ function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
     handle: rec.author?.handle ?? '',
     displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
     authorAvatar: rec.author?.avatar,
-    mediaTags: quotedMediaTags,
     imageDetails: quotedImageDetails,
     externalLink: quotedExternalLink,
   };
-}
-
-function getMediaTags(post: PostView): string[] {
-  const tags: string[] = [];
-  const embed = post.record.embed as {
-    $type?: string;
-    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
-  } | undefined;
-  if (!embed) return tags;
-
-  if (embed.$type === 'app.bsky.embed.images') {
-    const count = embed.images?.length ?? 0;
-    const hasGif = embed.images?.some((img: { image: { mimeType: string } }) => img.image.mimeType?.includes('gif'));
-    tags.push(hasGif ? (count === 1 ? '🎞 动图' : `🎞 ${count}张`) : (count === 1 ? '🖼 图片' : `🖼 ${count}张图片`));
-  } else if (embed.$type === 'app.bsky.embed.video') {
-    tags.push('🎬 视频');
-  } else if (embed.$type === 'app.bsky.embed.external') {
-    tags.push('🔗 链接');
-  } else if (embed.$type === 'app.bsky.embed.record') {
-    tags.push('📌 引用');
-  } else if (embed.$type === 'app.bsky.embed.recordWithMedia') {
-    const media = embed.media;
-    if (media?.images) {
-      const hasGif = media.images.some((img: { image: { mimeType: string } }) => img.image.mimeType?.includes('gif'));
-      tags.push(hasGif ? '📌🎞 引用+动图' : '📌🖼 引用+图片');
-    } else {
-      tags.push('📌 引用+媒体');
-    }
-  }
-
-  return tags;
 }
 
 function getVideoInfo(post: PostView): { hasVideo: boolean; thumbnailUrl?: string; playlistUrl?: string; alt?: string; aspectRatio?: { width: number; height: number } } {

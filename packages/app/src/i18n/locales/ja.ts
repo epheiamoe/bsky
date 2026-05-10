@@ -268,6 +268,19 @@ const ja: LocaleMessages = {
   'login.logFieldUrl': 'リクエスト URL',
   'settings.provider': 'プロバイダー',
   'common.back': '戻る',
+  'common.copy': 'コピー',
+  'common.copied': 'コピーしました！',
+  'post.replyDepth': '深さ',
+  'post.info': '投稿情報',
+  'post.timestamps': 'タイムスタンプ',
+  'post.createdAt': '作成',
+  'post.indexedAt': 'インデックス',
+  'post.author': '作成者',
+  'post.embed': 'メディア',
+  'post.stats': '統計',
+  'post.viewer': '状態',
+  'post.liked': 'いいね',
+  'post.reposted': 'リポスト',
 };
 
 export default ja;

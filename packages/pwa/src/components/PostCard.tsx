@@ -27,9 +27,151 @@ interface QuotedPostData {
   handle: string;
   displayName: string;
   authorAvatar?: string;
-  mediaTags: string[];
   imageDetails: Array<{ url: string; alt: string }>;
   externalLink: ExternalLink | null;
+}
+
+function getReplyDepth(post: PostView): number | '2+' | null {
+  const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
+  if (!reply) return null;
+  if (reply.root.uri === reply.parent.uri) return 1;
+  return '2+';
+}
+
+function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void }) {
+  const { t } = useI18n();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copy = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch { /* fallback */ }
+  };
+
+  const record = post.record as any;
+  const reply = record.reply as { root: { uri: string }; parent: { uri: string } } | undefined;
+  const depth = reply ? (reply.root.uri === reply.parent.uri ? 1 : '2+') : null;
+  const viewer = post.viewer as { like?: string; repost?: string } | undefined;
+  const embedTypes: string[] = [];
+  const apiEmbed = (post as any).embed as { $type?: string; images?: unknown[] } | undefined;
+  if (apiEmbed?.$type?.includes('images')) embedTypes.push(`images ×${(apiEmbed.images || []).length}`);
+  else if (apiEmbed?.$type?.includes('video')) embedTypes.push('video');
+  else if (apiEmbed?.$type?.includes('external')) embedTypes.push('link');
+  else if (apiEmbed?.$type?.includes('record')) embedTypes.push('quote');
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-base font-bold text-text-primary">{t('post.info')}</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* AT URI */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">AT URI</span>
+              <button onClick={() => copy('uri', post.uri)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                {copiedField === 'uri' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
+              </button>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5">
+              <code className="text-xs text-text-primary font-mono break-all">{post.uri}</code>
+            </div>
+          </div>
+
+          {/* DID */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">DID</span>
+              <button onClick={() => copy('did', post.author.did)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                {copiedField === 'did' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
+              </button>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5">
+              <code className="text-xs text-text-primary font-mono break-all">{post.author.did}</code>
+            </div>
+          </div>
+
+          {/* CID */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">CID</span>
+              <button onClick={() => copy('cid', post.cid)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                {copiedField === 'cid' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
+              </button>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5">
+              <code className="text-xs text-text-primary font-mono break-all">{post.cid}</code>
+            </div>
+          </div>
+
+          {/* Time info */}
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.timestamps')}</span>
+            <div className="text-sm text-text-primary">
+              <span className="text-text-secondary">{t('post.createdAt')}:</span> {record.createdAt ? record.createdAt.replace('T', ' ').replace(/\..+/, '') : '—'}
+              <br />
+              <span className="text-text-secondary">{t('post.indexedAt')}:</span> {post.indexedAt ? post.indexedAt.replace('T', ' ').replace(/\..+/, '') : '—'}
+            </div>
+          </div>
+
+          {/* Author */}
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.author')}</span>
+            <p className="text-sm text-text-primary">@{post.author.handle}</p>
+          </div>
+
+          {/* Reply */}
+          {reply && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.reply')}</span>
+              <p className="text-sm text-text-primary">{t('post.replyDepth')}: {depth}</p>
+              <div className="rounded-lg border border-border bg-surface p-2.5">
+                <code className="text-xs text-text-primary font-mono break-all">{reply.parent.uri}</code>
+              </div>
+            </div>
+          )}
+
+          {/* Embed */}
+          {embedTypes.length > 0 && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.embed')}</span>
+              <p className="text-sm text-text-primary">{embedTypes.join(', ')}</p>
+            </div>
+          )}
+
+          {/* Stats */}
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.stats')}</span>
+            <p className="text-sm text-text-primary">♥ {post.likeCount ?? 0}  ♺ {post.repostCount ?? 0}  💬 {post.replyCount ?? 0}</p>
+          </div>
+
+          {/* Viewer */}
+          {viewer && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.viewer')}</span>
+              <p className="text-sm text-text-primary">
+                {t('post.liked')}: {viewer.like ? '✓' : '—'}  {t('post.reposted')}: {viewer.repost ? '✓' : '—'}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors">
+            {t('action.done')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null; video: VideoData | null; hasGif: boolean } {
@@ -89,8 +231,6 @@ function extractEmbeds(post: PostView): { images: ImageData[]; external: Externa
 }
 
 function extractQuotedPost(post: PostView): QuotedPostData | undefined {
-  // Read from the API-resolved top-level embed (has full author/value/embeds),
-  // NOT from post.record.embed (stored format with only uri+cid)
   const embed = (post as any).embed as {
     $type?: string;
     record?: {
@@ -111,25 +251,20 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
   const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia#view' || embed.$type === 'app.bsky.embed.recordWithMedia';
   if (!isRecord && !isRecordWithMedia) return undefined;
 
-  // For resolved #view format, record is always single-nested
   const rec = embed.record;
   if (!rec?.uri) return undefined;
 
   const imageDetails: Array<{ url: string; alt: string }> = [];
   let externalLink: ExternalLink | null = null;
-  const mediaTags: string[] = [];
 
   if (rec.embeds?.[0]) {
     const e = rec.embeds[0]!;
     if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
-      const count = e.images.length;
-      mediaTags.push(count === 1 ? '图片' : `${count}张图片`);
       for (const img of e.images) {
         const url = (img as any).fullsize || getCdnImageUrl(rec.author?.did ?? '', (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
         if (url) imageDetails.push({ url, alt: (img as any).alt || '' });
       }
     } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
-      mediaTags.push('🔗 链接');
       externalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
     }
   }
@@ -141,7 +276,6 @@ function extractQuotedPost(post: PostView): QuotedPostData | undefined {
     handle: rec.author?.handle ?? '',
     displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
     authorAvatar: rec.author?.avatar,
-    mediaTags,
     imageDetails,
     externalLink,
   };
@@ -294,6 +428,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
 export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy }: PostCardProps) {
+  const { t } = useI18n();
   let displayName: string;
   let handle: string;
   let text: string;
@@ -306,10 +441,10 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let externalLink: ExternalLink | null = null;
   let avatarUrl: string | undefined;
   let quotedPost: FlatLine['quotedPost'];
-  let mediaTags: string[] = [];
   let video: VideoData | null = null;
-  let hasGif = false;
   let hasVideo = false;
+  const [showInfo, setShowInfo] = useState(false);
+  const replyDepth = post ? getReplyDepth(post) : null;
 
   if (post) {
     displayName = post.author.displayName ?? post.author.handle;
@@ -326,9 +461,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     externalLink = embeds.external;
     quotedPost = extractQuotedPost(post);
     video = embeds.video;
-    hasGif = embeds.hasGif;
     hasVideo = video !== null;
-    mediaTags = [];
   } else if (line) {
     displayName = line.displayName || line.handle;
     handle = line.handle;
@@ -346,7 +479,6 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
       externalLink = line.externalLink;
     }
     quotedPost = line.quotedPost;
-    mediaTags = line.mediaTags ?? [];
     hasVideo = line.hasVideo;
     if (hasVideo && line.videoThumbnailUrl && line.videoPlaylistUrl) {
       video = {
@@ -356,7 +488,6 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
         aspectRatio: line.videoAspectRatio,
       };
     }
-    hasGif = mediaTags.some(t => t.includes('动图'));
   } else {
     return null;
   }
@@ -418,31 +549,8 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             >
               <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
               {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
-              <p className="text-primary text-xs mt-1 truncate">🔗 {externalLink.uri}</p>
+              <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
             </a>
-          )}
-          {mediaTags.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {mediaTags.map((tag, i) => {
-                const isImage = /[0-9]/.test(tag) || tag.includes('图片');
-                const isGif = tag.includes('动图');
-                const isLink = tag.includes('链接');
-                const isVideo = tag.includes('视频');
-                const isQuote = tag.includes('引用');
-                let iconName: string;
-                if (isGif) iconName = 'video';
-                else if (isImage) iconName = 'camera';
-                else if (isLink) iconName = 'compass';
-                else if (isVideo) iconName = 'video';
-                else if (isQuote) iconName = 'corner-down-right';
-                else iconName = 'bell';
-                return (
-                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary flex items-center gap-0.5">
-                    <Icon name={iconName} size={10} />{tag}
-                  </span>
-                );
-              })}
-            </div>
           )}
           {quotedPost && (
             <div
@@ -469,9 +577,27 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               )}
             </div>
           )}
+          {/* Reply badge + Info button row */}
+          {post && (replyDepth !== null || true) && (
+            <div className="mt-2 flex items-center gap-1.5">
+              {replyDepth !== null && (
+                <span className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
+                  ↩{replyDepth === '2+' ? ' 2+' : ''}
+                </span>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowInfo(true); }}
+                className="inline-flex items-center text-xs text-text-secondary hover:text-primary transition-colors"
+                title={t('post.info')}
+              >
+                <Icon name="badge-info" size={14} />
+              </button>
+            </div>
+          )}
           {children}
         </div>
       </div>
+      {showInfo && post && <PostInfoModal post={post} onClose={() => setShowInfo(false)} />}
     </div>
   );
 }

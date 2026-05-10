@@ -261,17 +261,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               >
                 <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
                 {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                <p className="text-primary text-xs mt-1 truncate">🔗 {focused.externalLink.uri}</p>
+                <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
               </a>
-            )}
-            {focused.mediaTags.length > 0 && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {focused.mediaTags.map((tag, i) => (
-                  <span key={i} className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                    {tag}
-                  </span>
-                ))}
-              </div>
             )}
             {/* Unified action row + extras */}
             <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">

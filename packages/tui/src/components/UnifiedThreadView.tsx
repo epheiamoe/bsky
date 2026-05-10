@@ -167,9 +167,6 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           {line.displayName}
         </Text>
         <Text backgroundColor={bg} dimColor>{' @'}{line.handle}</Text>
-        {line.mediaTags.length > 0 && (
-          <Text backgroundColor={bg} color="yellow">{'  '}{line.mediaTags.join(' ')}</Text>
-        )}
       </Box>
       {/* Text */}
       <Box><Text backgroundColor={bg}>{line.text}</Text></Box>
@@ -285,9 +282,6 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                 <Text dimColor>{' @'}{line.handle}</Text>
                 {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
                 {line.hasReplies && <Text color="cyan">{' [+]'}</Text>}
-                {line.mediaTags.length > 0 && (
-                  <Text color="yellow">{'  '}{line.mediaTags.join(' ')}</Text>
-                )}
               </Box>
               {/* Text */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>

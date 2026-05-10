@@ -268,6 +268,19 @@ const en: LocaleMessages = {
   'login.logFieldUrl': 'Request URL',
   'settings.provider': 'Provider',
   'common.back': 'Back',
+  'common.copy': 'Copy',
+  'common.copied': 'Copied!',
+  'post.info': 'Post Info',
+  'post.replyDepth': 'Depth',
+  'post.timestamps': 'Timestamps',
+  'post.createdAt': 'Created',
+  'post.indexedAt': 'Indexed',
+  'post.author': 'Author',
+  'post.embed': 'Embed',
+  'post.stats': 'Stats',
+  'post.viewer': 'Viewer',
+  'post.liked': 'Liked',
+  'post.reposted': 'Reposted',
 };
 
 export default en;
