@@ -95,29 +95,6 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
               <p className="text-text-primary">{buildTime}</p>
             </div>
 
-            {/* Check for updates */}
-            <div className="border-t border-border pt-3">
-              {updateState === 'idle' && (
-                <button onClick={handleCheckUpdate} className="text-primary hover:text-primary-hover text-sm font-medium transition-colors">
-                  {t('about.checkUpdate')}
-                </button>
-              )}
-              {updateState === 'checking' && (
-                <p className="text-text-secondary text-sm">{t('about.checking')}</p>
-              )}
-              {updateState === 'uptodate' && (
-                <p className="text-green-600 dark:text-green-400 text-sm">{t('about.upToDate')}</p>
-              )}
-              {updateState === 'available' && (
-                <div className="flex items-center gap-3">
-                  <p className="text-green-600 dark:text-green-400 text-sm font-medium">{t('about.updateAvailable')}</p>
-                  <button onClick={() => window.location.reload()} className="bg-primary hover:bg-primary-hover text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                    {t('about.updateNow')}
-                  </button>
-                </div>
-              )}
-            </div>
-
             <div>
               <p className="text-text-secondary text-xs font-medium uppercase tracking-wider">{t('about.feedback')}</p>
               <a href={issuesUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary-hover break-all">{issuesUrl}</a>
@@ -127,6 +104,28 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
               <p className="text-text-secondary text-xs font-medium uppercase tracking-wider">{t('about.contact')}</p>
               <a href={`mailto:${contactEmail}`} className="text-primary hover:text-primary-hover">{contactEmail}</a>
             </div>
+          </div>
+          {/* ── Check for updates (full-width, bottom of card) ── */}
+          <div className="border-t border-border pt-4">
+            {updateState === 'idle' && (
+              <button onClick={handleCheckUpdate} className="w-full py-3 rounded-lg border border-primary/30 text-primary hover:bg-primary/5 text-sm font-semibold transition-colors">
+                {t('about.checkUpdate')}
+              </button>
+            )}
+            {updateState === 'checking' && (
+              <p className="text-center text-text-secondary text-sm">{t('about.checking')}</p>
+            )}
+            {updateState === 'uptodate' && (
+              <div className="flex items-center justify-center gap-3">
+                <p className="text-green-600 dark:text-green-400 text-sm">{t('about.upToDate')}</p>
+                <button onClick={handleCheckUpdate} className="text-xs text-text-secondary hover:text-primary underline underline-offset-2 transition-colors">{t('about.checkUpdate')}</button>
+              </div>
+            )}
+            {updateState === 'available' && (
+              <button onClick={() => window.location.reload()} className="w-full py-3 rounded-lg bg-green-500 hover:bg-green-600 text-white text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+                <Icon name="badge-check" size={16} /> {t('about.updateNow')}
+              </button>
+            )}
           </div>
         </div>
       </main>
