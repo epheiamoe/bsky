@@ -65,6 +65,7 @@ export function useAIChat(
   const chatNotifiedRef = useRef(false);
   const titleGeneratedRef = useRef(false);
   const saveVersionRef = useRef(0);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   // Track current context for auto-save persistence
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
@@ -225,63 +226,65 @@ export function useAIChat(
   const autoSave = useCallback(async (msgs: AIChatMessage[]) => {
     if (!storage) return;
     const version = ++saveVersionRef.current;
-    // Skip view-context messages for title generation
+    // Capture snapshot of chatId at call time — reject save if chatId changed
+    const saveChatId = chatIdRef.current;
     const firstRealUser = msgs.find(m => m.role === 'user' && !m.content.startsWith('<currently_viewing>'));
     const firstUser = firstRealUser ?? msgs.find(m => m.role === 'user');
     const title = firstUser?.content.slice(0, 80) ?? '新对话';
     try {
-      await storage.saveChat({
-        id: chatIdRef.current,
-        title,
-        contextUri,
-        context: contextRef.current,
-        messages: msgs,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+      // Enqueue the IndexedDB write so concurrent autoSave calls are serialized
+      await new Promise<void>((resolve, reject) => {
+        saveQueueRef.current = saveQueueRef.current.then(async () => {
+          // Re-check: if a newer save is already queued, skip this one entirely
+          if (version !== saveVersionRef.current) { resolve(); return; }
+          if (saveChatId !== chatIdRef.current) { resolve(); return; }
+          await storage.saveChat({
+            id: saveChatId,
+            title,
+            contextUri,
+            context: contextRef.current,
+            messages: msgs,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+          if (version !== saveVersionRef.current) { resolve(); return; }
+          if (saveChatId !== chatIdRef.current) { resolve(); return; }
+          if (!chatNotifiedRef.current) {
+            chatNotifiedRef.current = true;
+            options?.onChatSaved?.();
+          }
+          // Auto-generate title once after first assistant reply
+          if (!titleGeneratedRef.current && firstRealUser) {
+            const firstAssistant = msgs.find(m => m.role === 'assistant');
+            if (firstAssistant) {
+              titleGeneratedRef.current = true;
+              try {
+                const { generateChatTitle } = await import('@bsky/core');
+                const newTitle = await generateChatTitle(
+                  aiConfig,
+                  firstRealUser.content.slice(0, 100),
+                  firstAssistant.content.slice(0, 300),
+                );
+                if (newTitle) {
+                  if (version !== saveVersionRef.current) { resolve(); return; }
+                  if (saveChatId !== chatIdRef.current) { resolve(); return; }
+                  await storage.saveChat({
+                    id: saveChatId,
+                    title: newTitle,
+                    contextUri,
+                    context: contextRef.current,
+                    messages: msgs,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                  });
+                  options?.onTitleChanged?.();
+                }
+              } catch { /* title gen failure is non-critical */ }
+            }
+          }
+          resolve();
+        }).catch(reject);
       });
-      if (version !== saveVersionRef.current) return; // superseded by newer save
-      if (!chatNotifiedRef.current) {
-        chatNotifiedRef.current = true;
-        options?.onChatSaved?.();
-      }
-
-      // Auto-generate title once after first assistant reply to a real user message
-      if (!titleGeneratedRef.current && firstRealUser) {
-        const firstAssistant = msgs.find(m => m.role === 'assistant');
-        console.log('[useAIChat] titleGen check:', { titleGenerated: titleGeneratedRef.current, hasFirstRealUser: !!firstRealUser, hasFirstAssistant: !!firstAssistant, userContent: firstRealUser?.content.slice(0, 40), assistantContent: firstAssistant?.content.slice(0, 40) });
-        if (firstAssistant) {
-          titleGeneratedRef.current = true;
-          console.log('[useAIChat] triggering title generation...');
-          (async () => {
-            try {
-              console.log('[useAIChat] dynamic importing generateChatTitle...');
-              const { generateChatTitle } = await import('@bsky/core');
-              console.log('[useAIChat] calling generateChatTitle...');
-              const newTitle = await generateChatTitle(
-                aiConfig,
-                firstRealUser.content.slice(0, 100),
-                firstAssistant.content.slice(0, 300),
-              );
-              console.log('[useAIChat] titleGen result:', { newTitle });
-              if (newTitle) {
-                console.log('[useAIChat] saving new title:', newTitle);
-                if (version !== saveVersionRef.current) return; // superseded
-                await storage.saveChat({
-                  id: chatIdRef.current,
-                  title: newTitle,
-                  contextUri,
-                  context: contextRef.current,
-                  messages: msgs,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                });
-                console.log('[useAIChat] title saved successfully');
-                options?.onTitleChanged?.();
-              }
-            } catch (e) { console.error('[useAIChat] titleGen ERROR:', e); }
-          })();
-        }
-      }
     } catch { /* silently fail */ }
   }, [storage, contextUri, options?.onChatSaved, options?.onTitleChanged, aiConfig]);
 

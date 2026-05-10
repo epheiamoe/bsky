@@ -540,23 +540,56 @@ send():
 
 **教训**：`void` + `IndexedDB.put()` + 同一个 key = 竞态。所有写入同一个 key 的异步操作必须序列化，或只保留一个写入点。
 
+---
+
+### Lesson 51: autoSave 写队列防止 IndexedDB 事务乱序
+
+**问题**：Lesson 50 移除了过早保存后，PWA 中若两次 `autoSave` 并发（如 auto-analysis 与用户手动发消息同时触发），IndexedDB 事务可能乱序完成——`autoSave A`（不完整数据）在 `autoSave B`（完整数据）之后完成，覆盖掉完整数据。
+
+**根因**：与 Lesson 50 类似但不同。Lesson 50 是同一 `send()` 内的两处保存；Lesson 51 是两处 `send()` 各自的 `autoSave` 并发。
+
+```
+autoSave A: version=1, idx 写入 data_A  ← 发起
+autoSave B: version=2, idx 写入 data_B  ← 发起
+  [B 完成] → 磁盘 data_B（正确）
+  [A 完成] → 磁盘 data_A（不完整！覆盖 B）
+```
+
+版本检查 `if (version !== saveVersionRef.current)` 在写入**之后**——无法阻止已发生的覆盖。
+
+TUI (`FileChatStorage` 用 `fs.writeFileSync` 同步 I/O) 没有此问题——写入在 `await` 之前已完成。
+
+**修复**：引入 `saveQueueRef`（Promise 链），将所有 `storage.saveChat()` 串行化执行：
+
+```typescript
+const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+
+// autoSave 中的核心变化：
+await new Promise((resolve, reject) => {
+  saveQueueRef.current = saveQueueRef.current.then(async () => {
+    if (version !== saveVersionRef.current) { resolve(); return; }
+    if (saveChatId !== chatIdRef.current) { resolve(); return; }
+    await storage.saveChat(data);       // ← 入队执行
+    // ... 标题生成等后续操作 ...
+    resolve();
+  }).catch(reject);
+});
+```
+
+队列保证 `autoSave B` 的写入始终在 `autoSave A` 的写入**完成之后**才开始。加上 `saveChatId` 快照守卫（防止会话切换时错误覆盖），三重防护。
+
+**教训**：异步 I/O 竞态不能靠"写入后检查"解决——写入本身不可逆。必须用 Promise 链（写队列）保证顺序，并在写入前做版本校验。
+
 ## 架构升级（本次会话新增）
 
 | 组件 | 位置 | 说明 |
 |------|------|------|
-| `instant_answer` 工具 | `tools.ts` | DuckDuckGo Instant Answer，浏览器路径走 Pages Function 代理 |
-| `search_wikipedia` 工具 | `tools.ts` | Wikipedia 知识摘要，直接调用 `page/summary`（原生 CORS） |
-| `/api/proxy` Pages Function | `packages/pwa/functions/api/proxy.js` | 服务端 fetch 代理，绕过 Sec-Fetch 检测 |
-| 多平台 DDG 代理 | `packages/pwa/api/` + `scripts/` + `netlify/` | PHP / Vercel / Netlify / Node 四种实现 |
-| `docs/PAGES_FUNCTION.md` | 新建 | Pages Function 架构文档 |
-| `docs/DDG_INSTANT_ANSWER_DEBUG.md` | 新建 | Sec-Fetch-* 检测完整分析 |
-| `DEPLOY.md` | 新建 | 面向部署者的多平台指南 |
-| Wikipedia 类型 | `tools.ts` | `WikipediaSummary` 接口 + `formatWikipediaSummary` 函数 |
-| ChatStorage 工厂模式 | `chatStorage.ts` + `useChatHistory.ts` + `useAIChat.ts` | `setChatStorageFactory()` + `getDefaultChatStorage()` |
-| autoSave 竞态修复 | `useAIChat.ts send()` | 删除过早的保存，只保留流结束后的保存 |
-| get_profile "me" 支持 | `tools.ts` handler + description | `actor="me"` 解析为 `client.getHandle()` |
-| 系统提示词更新 | `prompts.ts` | 规则 5 + PF_CURRENT_USER 增强 |
-| 工具总数 | `tools.ts` | 36 → **38**（instant_answer + search_wikipedia） |
+| `100dvh` 替换 `100vh` | 全部 24 处 | `min-h-screen`→`min-h-[100dvh]`，`h-[calc(100vh)]`→`h-[calc(100dvh)]` |
+| `overscroll-behavior` | `index.css` | `html { overscroll-behavior: none }` |
+| `safe-area-inset-bottom` | `index.css` | `body { padding-bottom: env(safe-area-inset-bottom) }` |
+| `settingsOpen` 提升到 App | `App.tsx` / `Layout.tsx` | WelcomeCard "去设置"能正常打开设置弹窗 |
+| 登录错误日志 | `LoginPage.tsx` + 多文件 | 详细错误面板 + 一键复制 |
+| autoSave 写队列 | `useAIChat.ts` | `saveQueueRef` Promise 链串行化 IndexedDB 写入 |
 
 ## 版本
 

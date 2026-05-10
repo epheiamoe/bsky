@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] — 2026-05-10
+
+### Fixed
+
+- **autoSave IndexedDB 写队列**: `useAIChat.ts` `autoSave` 中引入 `saveQueueRef`（Promise 链），将对 `IndexedDBChatStorage.saveChat()` 的异步调用串行化。消除两个 `autoSave` 并发时 IndexedDB 事务乱序覆盖完整数据的竞态条件。TUI (`FileChatStorage` 同步 I/O) 不受影响。
+- **chatId 快照守卫**: 每次 `autoSave` 在调用时捕获 `chatIdRef.current` 快照，写入前对比当前值，防止 `chatId` 变化后错误覆盖其他会话。
+
+### Changed
+
+- **版本**: v0.10.1 → v0.10.2
+
 ## [0.10.1] — 2026-05-10
 
 ### Fixed

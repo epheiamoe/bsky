@@ -24,7 +24,7 @@
 
 ## 版本
 
-**v0.10.0** — 零密钥知识查询（instant_answer + search_wikipedia）+ Pages Function 代理 + 38 个 AI 工具
+**v0.10.2** — autoSave 写队列防止 IndexedDB 事务乱序（Lesson 51）+ login 调试日志 + 全面 `100dvh` 替换
 
 ## 项目状态
 
@@ -81,6 +81,9 @@
 - **系统提示词** (v0.10.0): `P_ASSISTANT_BASE` 新增规则 5（AI 应使用提示词中的 handle）；`PF_CURRENT_USER` 新增 handle 使用提示 + 界面语言参数。
 - **多平台 DDG 代理** (v0.10.0): PHP (`api/proxy.php`) / Vercel (`api/proxy.js`) / Netlify (`netlify/functions/proxy.js`) / Node (`scripts/proxy-server.mjs`)。`DEPLOY.md` 面向部署者的指南。`vite.config.ts` 添加 dev proxy。
 - **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
+- **autoSave 写队列** (v0.10.2): `saveQueueRef` Promise 链串行化 IndexedDB 写入，防止并发 autoSave 事务乱序覆盖完整数据。每次保存捕获 `chatIdRef.current` 快照，写入前校验版本和 chatId（Lesson 51）。
+- **全面 `100dvh` 替换** (v0.10.2): 24 处 `100vh` → `100dvh`；`index.css` 增 `overscroll-behavior: none` + `safe-area-inset-bottom`。
+- **登录调试日志** (v0.10.2): 错误详情面板 + 一键复制 + 密码脱敏 + 构建信息。
 
 ## 🔴 关键教训
 
