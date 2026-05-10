@@ -38,142 +38,6 @@ function getReplyDepth(post: PostView): number | '2+' | null {
   return '2+';
 }
 
-function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void }) {
-  const { t } = useI18n();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-
-  const copy = async (label: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedField(label);
-      setTimeout(() => setCopiedField(null), 1500);
-    } catch { /* fallback */ }
-  };
-
-  const record = post.record as any;
-  const reply = record.reply as { root: { uri: string }; parent: { uri: string } } | undefined;
-  const depth = reply ? (reply.root.uri === reply.parent.uri ? 1 : '2+') : null;
-  const viewer = post.viewer as { like?: string; repost?: string } | undefined;
-  const embedTypes: string[] = [];
-  const apiEmbed = (post as any).embed as { $type?: string; images?: unknown[] } | undefined;
-  if (apiEmbed?.$type?.includes('images')) embedTypes.push(`images ×${(apiEmbed.images || []).length}`);
-  else if (apiEmbed?.$type?.includes('video')) embedTypes.push('video');
-  else if (apiEmbed?.$type?.includes('external')) embedTypes.push('link');
-  else if (apiEmbed?.$type?.includes('record')) embedTypes.push('quote');
-
-  return (
-    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-base font-bold text-text-primary">{t('post.info')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* AT URI */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">AT URI</span>
-              <button onClick={() => copy('uri', post.uri)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
-                {copiedField === 'uri' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
-              </button>
-            </div>
-            <div className="rounded-lg border border-border bg-surface p-2.5">
-              <code className="text-xs text-text-primary font-mono break-all">{post.uri}</code>
-            </div>
-          </div>
-
-          {/* DID */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">DID</span>
-              <button onClick={() => copy('did', post.author.did)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
-                {copiedField === 'did' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
-              </button>
-            </div>
-            <div className="rounded-lg border border-border bg-surface p-2.5">
-              <code className="text-xs text-text-primary font-mono break-all">{post.author.did}</code>
-            </div>
-          </div>
-
-          {/* CID */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">CID</span>
-              <button onClick={() => copy('cid', post.cid)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
-                {copiedField === 'cid' ? <><Icon name="badge-check" size={12} /> {t('common.copied')}</> : <><Icon name="copy" size={12} /> {t('common.copy')}</>}
-              </button>
-            </div>
-            <div className="rounded-lg border border-border bg-surface p-2.5">
-              <code className="text-xs text-text-primary font-mono break-all">{post.cid}</code>
-            </div>
-          </div>
-
-          {/* Time info */}
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.timestamps')}</span>
-            <div className="text-sm text-text-primary">
-              <span className="text-text-secondary">{t('post.createdAt')}:</span> {record.createdAt ? record.createdAt.replace('T', ' ').replace(/\..+/, '') : '—'}
-              <br />
-              <span className="text-text-secondary">{t('post.indexedAt')}:</span> {post.indexedAt ? post.indexedAt.replace('T', ' ').replace(/\..+/, '') : '—'}
-            </div>
-          </div>
-
-          {/* Author */}
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.author')}</span>
-            <p className="text-sm text-text-primary">@{post.author.handle}</p>
-          </div>
-
-          {/* Reply */}
-          {reply && (
-            <div className="space-y-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.reply')}</span>
-              <p className="text-sm text-text-primary">{t('post.replyDepth')}: {depth}</p>
-              <div className="rounded-lg border border-border bg-surface p-2.5">
-                <code className="text-xs text-text-primary font-mono break-all">{reply.parent.uri}</code>
-              </div>
-            </div>
-          )}
-
-          {/* Embed */}
-          {embedTypes.length > 0 && (
-            <div className="space-y-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.embed')}</span>
-              <p className="text-sm text-text-primary">{embedTypes.join(', ')}</p>
-            </div>
-          )}
-
-          {/* Stats */}
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.stats')}</span>
-            <p className="text-sm text-text-primary">♥ {post.likeCount ?? 0}  ♺ {post.repostCount ?? 0}  💬 {post.replyCount ?? 0}</p>
-          </div>
-
-          {/* Viewer */}
-          {viewer && (
-            <div className="space-y-1">
-              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.viewer')}</span>
-              <p className="text-sm text-text-primary">
-                {t('post.liked')}: {viewer.like ? '✓' : '—'}  {t('post.reposted')}: {viewer.repost ? '✓' : '—'}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-border flex justify-end">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors">
-            {t('action.done')}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null; video: VideoData | null; hasGif: boolean } {
   const images: ImageData[] = [];
   let external: ExternalLink | null = null;
@@ -428,7 +292,6 @@ interface PostCardWithLine extends PostCardBaseProps {
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
 export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy }: PostCardProps) {
-  const { t } = useI18n();
   let displayName: string;
   let handle: string;
   let text: string;
@@ -443,7 +306,6 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let quotedPost: FlatLine['quotedPost'];
   let video: VideoData | null = null;
   let hasVideo = false;
-  const [showInfo, setShowInfo] = useState(false);
   const replyDepth = post ? getReplyDepth(post) : null;
 
   if (post) {
@@ -506,17 +368,24 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
         </div>
       )}
       <div className="flex gap-3">
-        <div
-          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            goTo?.({ type: 'profile', actor: handle });
-          }}
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            avatarLetter(displayName)
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <div
+            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              goTo?.({ type: 'profile', actor: handle });
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              avatarLetter(displayName)
+            )}
+          </div>
+          {replyDepth !== null && (
+            <span className="inline-flex items-center text-[10px] px-1 py-0.5 rounded-md bg-primary/10 text-primary font-medium leading-none">
+              ↩{replyDepth === '2+' ? ' 2+' : ''}
+            </span>
           )}
         </div>
         <div className="min-w-0 flex-1">
@@ -577,27 +446,9 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               )}
             </div>
           )}
-          {/* Reply badge + Info button row */}
-          {post && (replyDepth !== null || true) && (
-            <div className="mt-2 flex items-center gap-1.5">
-              {replyDepth !== null && (
-                <span className="inline-flex items-center text-xs px-1.5 py-0.5 rounded-md bg-primary/10 text-primary font-medium">
-                  ↩{replyDepth === '2+' ? ' 2+' : ''}
-                </span>
-              )}
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowInfo(true); }}
-                className="inline-flex items-center text-xs text-text-secondary hover:text-primary transition-colors"
-                title={t('post.info')}
-              >
-                <Icon name="badge-info" size={14} />
-              </button>
-            </div>
-          )}
           {children}
         </div>
       </div>
-      {showInfo && post && <PostInfoModal post={post} onClose={() => setShowInfo(false)} />}
     </div>
   );
 }

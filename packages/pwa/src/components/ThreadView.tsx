@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import type { BskyClient, AIConfig } from '@bsky/core';
+import type { BskyClient, AIConfig, PostView } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
@@ -40,7 +41,10 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     isLiked,
     isReposted,
     expandReplies,
+    getPostView,
   } = useThread(client, uri);
+  const { t } = useI18n();
+  const [showInfo, setShowInfo] = useState(false);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
@@ -112,7 +116,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     return { parentLines: parents, replyLines: replies };
   }, [flatLines]);
 
-  const { t } = useI18n();
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
 
@@ -269,6 +272,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
               {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
               <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
+              <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')}><Icon name="badge-info" size={18} /></button>
               {focused.handle === client.getHandle() && <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors"><Icon name="trash-2" size={18} /></button>}
             </div>
           </article>
@@ -316,6 +320,94 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           </div>
         )}
       </main>
+      {showInfo && focused && getPostView?.(focused.uri) && createPortal(
+        <PostInfoModal post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />,
+        document.body
+      )}
+    </div>
+  );
+}
+
+function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void }) {
+  const { t } = useI18n();
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copy = async (label: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(label);
+      setTimeout(() => setCopiedField(null), 1500);
+    } catch { /* fallback */ }
+  };
+
+  const record = post.record as any;
+  const reply = record.reply as { root: { uri: string }; parent: { uri: string } } | undefined;
+  const viewer = post.viewer as { like?: string; repost?: string } | undefined;
+  const embedTypes: string[] = [];
+  const apiEmbed = (post as any).embed as { $type?: string; images?: unknown[] } | undefined;
+  if (apiEmbed?.$type?.includes('images')) embedTypes.push(`images ×${(apiEmbed.images || []).length}`);
+  else if (apiEmbed?.$type?.includes('video')) embedTypes.push('video');
+  else if (apiEmbed?.$type?.includes('external')) embedTypes.push('link');
+  else if (apiEmbed?.$type?.includes('record')) embedTypes.push('quote');
+
+  return (
+    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <h2 className="text-base font-bold text-text-primary">{t('post.info')}</h2>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">AT URI</span>
+              <button onClick={() => copy('uri', post.uri)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                {copiedField === 'uri' ? <><Icon name="badge-check" size={12} />{t('common.copied')}</> : <><Icon name="copy" size={12} />{t('common.copy')}</>}
+              </button>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5"><code className="text-xs text-text-primary font-mono break-all">{post.uri}</code></div>
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">CID</span>
+              <button onClick={() => copy('cid', post.cid)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                {copiedField === 'cid' ? <><Icon name="badge-check" size={12} />{t('common.copied')}</> : <><Icon name="copy" size={12} />{t('common.copy')}</>}
+              </button>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5"><code className="text-xs text-text-primary font-mono break-all">{post.cid}</code></div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.timestamps')}</span>
+            <div className="text-sm text-text-primary">
+              <span className="text-text-secondary">{t('post.createdAt')}:</span> {record.createdAt ? record.createdAt.replace('T', ' ').replace(/\..+/, '') : '—'}
+              <br />
+              <span className="text-text-secondary">{t('post.indexedAt')}:</span> {post.indexedAt ? post.indexedAt.replace('T', ' ').replace(/\..+/, '') : '—'}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.stats')}</span>
+            <p className="text-sm text-text-primary flex items-center gap-2">
+              <Icon name="heart" size={14} />{post.likeCount ?? 0}
+              <Icon name="repeat" size={14} />{post.repostCount ?? 0}
+              <Icon name="message-square" size={14} />{post.replyCount ?? 0}
+            </p>
+          </div>
+          {viewer && (
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.viewer')}</span>
+              <p className="text-sm text-text-primary flex items-center gap-2">
+                {t('post.liked')}: {viewer.like ? <Icon name="badge-check" size={14} /> : '—'}
+                {'  '}{t('post.reposted')}: {viewer.repost ? <Icon name="repeat" size={14} /> : '—'}
+              </p>
+            </div>
+          )}
+        </div>
+        <div className="p-4 border-t border-border flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors">
+            {t('action.done')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

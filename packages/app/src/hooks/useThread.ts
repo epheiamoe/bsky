@@ -53,6 +53,7 @@ export function useThread(
   const [sync, setSync] = useState(0);
   const [maxSiblings, setMaxSiblings] = useState(INITIAL_SIBLINGS);
   const loadedUri = useRef('');
+  const postViewsRef = useRef<Map<string, PostView>>(new Map());
 
   const loadThread = useCallback(async () => {
     if (!client || !uri) return;
@@ -70,6 +71,11 @@ export function useThread(
       const lines = flattenThreadTree(res.thread, INITIAL_SIBLINGS, (post) => { posts.push(post); });
       seedPostViewers(posts);
       setSync(n => n + 1);
+
+      // Store PostViews for info modal lookup
+      const map = new Map<string, PostView>();
+      for (const p of posts) map.set(p.uri, p);
+      postViewsRef.current = map;
 
       setFlatLines(lines);
       const rootIdx = lines.findIndex(l => l.isRoot);
@@ -126,6 +132,7 @@ export function useThread(
     repostPost: repostPostFn,
     isLiked: isPostLiked,
     isReposted: isPostReposted,
+    getPostView: (u: string): PostView | undefined => postViewsRef.current.get(u),
   };
 }
 
