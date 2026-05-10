@@ -14,29 +14,26 @@ export function useTimeline(client: BskyClient | null, feedUri?: string) {
 
   const effFeedUri = feedUri ?? lastGoodFeed.current;
   if (feedUri !== undefined) lastGoodFeed.current = feedUri;
+  if (lastFeed.current === undefined && effFeedUri !== undefined) {
+    lastFeed.current = effFeedUri;
+  }
 
   // Reload when feed changes (only when consumer passes a new non-undefined URI)
   useEffect(() => {
     if (effFeedUri !== lastFeed.current) {
-      console.log('[useTimeline] RESET: effFeedUri changed', { effFeedUri, lastFeed: lastFeed.current, feedUri });
       lastFeed.current = effFeedUri;
       store.posts = [];
       store.cursor = undefined;
       store.error = null;
       loaded.current = false;
       store._notify();
-    } else {
-      console.log('[useTimeline] SKIP reset: effFeedUri unchanged', { effFeedUri, lastFeed: lastFeed.current, feedUri });
     }
   }, [effFeedUri, store]);
 
   useEffect(() => {
     if (client && !loaded.current) {
-      console.log('[useTimeline] AUTO-LOAD: loaded=false, effFeedUri:', effFeedUri, 'client:', !!client);
       loaded.current = true;
       store.load(client, effFeedUri);
-    } else {
-      console.log('[useTimeline] SKIP auto-load: loaded=', loaded.current, 'client:', !!client, 'effFeedUri:', effFeedUri);
     }
   }, [client, store, effFeedUri]);
 
