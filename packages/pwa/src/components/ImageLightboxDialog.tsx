@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ImageLightboxDialogProps {
   open: boolean;
@@ -15,12 +15,13 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
   const [current, setCurrent] = useState(initial);
   const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
   const [crossfade, setCrossfade] = useState(false);
+  const [slideDir, setSlideDir] = useState(1);
   const prevOpen = useRef(false);
   const sourceRectsRef = useRef(sourceRects);
 
   useEffect(() => {
-    setCurrent(initial);
-  }, [initial]);
+    if (open) setCurrent(initial);
+  }, [open, initial]);
 
   useEffect(() => {
     if (open) sourceRectsRef.current = sourceRects;
@@ -82,12 +83,15 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
     if (!open) return;
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
-      if (e.key === 'ArrowLeft' && hasMultiple) setCurrent(i => Math.max(0, i - 1));
-      if (e.key === 'ArrowRight' && hasMultiple) setCurrent(i => Math.min(images.length - 1, i + 1));
+      if (e.key === 'ArrowLeft' && hasMultiple) { setSlideDir(-1); setCurrent(i => Math.max(0, i - 1)); }
+      if (e.key === 'ArrowRight' && hasMultiple) { setSlideDir(1); setCurrent(i => Math.min(images.length - 1, i + 1)); }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose, hasMultiple, images.length]);
+
+  const goPrev = () => { setSlideDir(-1); setCurrent(i => Math.max(0, i - 1)); };
+  const goNext = () => { setSlideDir(1); setCurrent(i => Math.min(images.length - 1, i + 1)); };
 
   if (phase === 'hidden') return null;
 
@@ -121,7 +125,7 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
           {current > 0 && (
             <button
               className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
-              onClick={(e) => { e.stopPropagation(); setCurrent(i => i - 1); }}
+              onClick={(e) => { e.stopPropagation(); goPrev(); }}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
             </button>
@@ -129,7 +133,7 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
           {current < images.length - 1 && (
             <button
               className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
-              onClick={(e) => { e.stopPropagation(); setCurrent(i => i + 1); }}
+              onClick={(e) => { e.stopPropagation(); goNext(); }}
             >
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
             </button>
@@ -156,32 +160,42 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
         transition={{ type: 'spring', damping: 35, stiffness: 350, mass: 0.8 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Back layer: full image (contain), fades in */}
-        <img
-          src={img.url}
-          alt={img.alt}
-          className="absolute inset-0 w-full h-full"
-          draggable={false}
-          style={{
-            objectFit: 'contain',
-            opacity: crossfade ? 1 : 0,
-            transition: 'opacity 200ms ease-out',
-            transitionDelay: crossfade ? '0ms' : '0ms',
-          }}
-        />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={current}
+            className="absolute inset-0"
+            initial={{ x: slideDir * 80, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: slideDir * -80, opacity: 0 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+          >
+            {/* Back layer: full image (contain), fades in */}
+            <img
+              src={img.url}
+              alt={img.alt}
+              className="absolute inset-0 w-full h-full"
+              draggable={false}
+              style={{
+                objectFit: 'contain',
+                opacity: crossfade ? 1 : 0,
+                transition: 'opacity 200ms ease-out',
+              }}
+            />
 
-        {/* Front layer: cropped thumbnail (cover), fades out */}
-        <img
-          src={img.url}
-          alt=""
-          className="absolute inset-0 w-full h-full"
-          draggable={false}
-          style={{
-            objectFit: 'cover',
-            opacity: crossfade ? 0 : 1,
-            transition: 'opacity 200ms ease-out',
-          }}
-        />
+            {/* Front layer: cropped thumbnail (cover), fades out */}
+            <img
+              src={img.url}
+              alt=""
+              className="absolute inset-0 w-full h-full"
+              draggable={false}
+              style={{
+                objectFit: 'cover',
+                opacity: crossfade ? 0 : 1,
+                transition: 'opacity 200ms ease-out',
+              }}
+            />
+          </motion.div>
+        </AnimatePresence>
       </motion.div>
 
       {img.alt && showControls && (
