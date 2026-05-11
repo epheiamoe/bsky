@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
@@ -184,10 +184,9 @@ export function linkifyText(text: string): React.ReactNode[] {
 function ImageGrid({ images }: { images: ImageData[] }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
-  const [lightboxRects, setLightboxRects] = useState<DOMRect[] | null>(null);
+  const [lightboxRect, setLightboxRect] = useState<DOMRect | null>(null);
   const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   const grid = (() => {
     const n = images.length;
@@ -200,7 +199,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
   return (
     <>
       <div className="mt-2 rounded-xl overflow-hidden border border-border">
-        <div ref={gridRef} className={`grid ${grid}`}>
+        <div className={`grid ${grid}`}>
           {images.map((img, i) => {
             const spanFull = images.length === 3 && i === 2;
             const hasAlt = !!img.alt?.trim();
@@ -214,14 +213,12 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     const el = e.currentTarget;
-                    const allImgs = gridRef.current?.querySelectorAll('img');
-                    if (!allImgs) return;
-                    const rects = Array.from(allImgs).map(img => img.getBoundingClientRect());
-                    setLightboxRects(rects);
+                    const rect = el.getBoundingClientRect();
+                    setLightboxRect(rect);
                     if (el.naturalWidth && el.naturalHeight) {
                       setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
                     } else {
-                      setNaturalAspectRatio(rects[i]?.width / rects[i]?.height || 1);
+                      setNaturalAspectRatio(rect.width / rect.height);
                     }
                     setLightbox(i);
                   }}
@@ -266,12 +263,12 @@ function ImageGrid({ images }: { images: ImageData[] }) {
         </>
       )}
       <ImageLightboxDialog
-        open={lightbox !== null && lightboxRects !== null}
+        open={lightbox !== null && lightboxRect !== null}
         images={images}
         initial={lightbox ?? 0}
-        sourceRects={lightboxRects ?? [new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
+        sourceRect={lightboxRect ?? new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)}
         naturalAspectRatio={naturalAspectRatio}
-        onClose={() => { setLightbox(null); setLightboxRects(null); }}
+        onClose={() => { setLightbox(null); setLightboxRect(null); }}
       />
     </>
   );

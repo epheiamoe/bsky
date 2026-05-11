@@ -507,7 +507,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         open={bannerLightbox && profile.banner !== undefined && bannerLightboxRect !== null}
         images={[{ url: profile.banner ?? '', alt: 'Banner' }]}
         initial={0}
-        sourceRects={[bannerLightboxRect ?? new DOMRect(window.innerWidth / 2 - 200, 60, 400, 200)]}
+        sourceRect={bannerLightboxRect ?? new DOMRect(window.innerWidth / 2 - 200, 60, 400, 200)}
         naturalAspectRatio={bannerNaturalRatio}
         onClose={() => { setBannerLightbox(false); setBannerLightboxRect(null); }}
       />
@@ -515,7 +515,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         open={avatarLightbox && profile.avatar !== undefined && avatarLightboxRect !== null}
         images={[{ url: profile.avatar ?? '', alt: profile.handle }]}
         initial={0}
-        sourceRects={[avatarLightboxRect ?? new DOMRect(window.innerWidth / 2 - 48, window.innerHeight / 2 - 48, 96, 96)]}
+        sourceRect={avatarLightboxRect ?? new DOMRect(window.innerWidth / 2 - 48, window.innerHeight / 2 - 48, 96, 96)}
         naturalAspectRatio={avatarNaturalRatio}
         onClose={() => { setAvatarLightbox(false); setAvatarLightboxRect(null); }}
       />
