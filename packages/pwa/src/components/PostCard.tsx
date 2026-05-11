@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
@@ -187,7 +187,6 @@ function ImageGrid({ images }: { images: ImageData[] }) {
   const [lightboxRect, setLightboxRect] = useState<DOMRect | null>(null);
   const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
-  const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
   const grid = (() => {
     const n = images.length;
@@ -205,17 +204,15 @@ function ImageGrid({ images }: { images: ImageData[] }) {
             const spanFull = images.length === 3 && i === 2;
             const hasAlt = !!img.alt?.trim();
             return (
-              <div key={i} className="relative">
+                  <div key={i} className="relative">
                 <img
                   src={img.url}
                   alt={img.alt || t('post.imageAlt', { n: i + 1 })}
                   width="800" height="600"
                   className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
-                  ref={(el) => { imgRefs.current[i] = el; }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    const el = imgRefs.current[i];
-                    if (!el) return;
+                    const el = e.currentTarget;
                     const rect = el.getBoundingClientRect();
                     setLightboxRect(rect);
                     if (el.naturalWidth && el.naturalHeight) {
