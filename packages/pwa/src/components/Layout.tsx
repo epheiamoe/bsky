@@ -62,6 +62,8 @@ export function Layout({
     return document.documentElement.classList.contains('dark');
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarDrag, setSidebarDrag] = useState<{ offset: number; startX: number } | null>(null);
+  const sidebarDragCancelRef = useRef(false);
 
   // Widget state — module-level + local reactive counter
   const [widgetTick, setWidgetTick] = useState(0);
@@ -142,6 +144,33 @@ export function Layout({
   }, [dark]);
 
   const toggleDark = useCallback(() => setDark((d) => !d), []);
+
+  const sidebarDragPointerId = useRef<number | null>(null);
+
+  const handleSidebarPointerDown = useCallback((e: React.PointerEvent) => {
+    if (sidebarOpen || e.clientX > 20 || sidebarDrag) return;
+    sidebarDragPointerId.current = e.pointerId;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setSidebarDrag({ offset: 0, startX: e.clientX });
+  }, [sidebarOpen, sidebarDrag]);
+
+  const handleSidebarPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!sidebarDrag || e.pointerId !== sidebarDragPointerId.current) return;
+    const offset = Math.max(0, Math.min(256, e.clientX - sidebarDrag.startX));
+    setSidebarDrag(prev => prev ? { ...prev, offset } : null);
+  }, [sidebarDrag]);
+
+  const handleSidebarPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!sidebarDrag || e.pointerId !== sidebarDragPointerId.current) return;
+    sidebarDragPointerId.current = null;
+    if (sidebarDrag.offset >= 80) {
+      setSidebarOpen(true);
+      setSidebarDrag(null);
+    } else {
+      sidebarDragCancelRef.current = true;
+      setTimeout(() => { sidebarDragCancelRef.current = false; setSidebarDrag(null); }, 200);
+    }
+  }, [sidebarDrag]);
 
   // Widget context for the right panel
   const widgetContext = {
@@ -268,7 +297,56 @@ export function Layout({
         )}
       </AnimatePresence>
 
-      <div className="flex">
+      {/* ── Sidebar drag-to-open overlay ── */}
+      {sidebarDrag !== null && (
+        <div className="fixed inset-0 z-[60] md:hidden" style={{ pointerEvents: 'none' }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundColor: `rgba(0,0,0,${Math.min(sidebarDrag.offset / 256, 0.4)})`,
+              backdropFilter: 'blur(4px)',
+              transition: sidebarDragCancelRef.current ? 'background-color 200ms ease-out' : 'none',
+            }}
+          />
+          <div
+            className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-[#0A0A0A] border-r border-border shadow-lg"
+            style={{
+              transform: `translateX(${sidebarDrag.offset - 256}px)`,
+              transition: sidebarDragCancelRef.current ? 'transform 200ms ease-out' : 'none',
+            }}
+          >
+            <Sidebar
+              currentView={currentView}
+              goTo={(v) => { goTo(v); setSidebarOpen(false); }}
+              client={client}
+              draftCount={draftCount}
+              dmCount={dmCount}
+            />
+            <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3 space-y-1">
+              <button
+                onClick={() => { goTo({ type: 'about' }); setSidebarOpen(false); }}
+                className="w-full text-left text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-surface"
+              >
+                {t('nav.about')}
+              </button>
+              <button
+                onClick={() => { onLogout(); setSidebarOpen(false); }}
+                className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"
+              >
+                {t('settings.logout')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex"
+        onPointerDown={handleSidebarPointerDown}
+        onPointerMove={handleSidebarPointerMove}
+        onPointerUp={handleSidebarPointerUp}
+        onPointerCancel={handleSidebarPointerUp}
+        style={{ touchAction: 'pan-y' }}
+      >
         {/* Desktop sidebar */}
         <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
           <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} />
