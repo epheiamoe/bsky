@@ -14,7 +14,6 @@ interface ImageLightboxDialogProps {
 export function ImageLightboxDialog({ open, images, initial, sourceRect, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
   const [current, setCurrent] = useState(initial);
   const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
-  const [crossfade, setCrossfade] = useState(false);
   const prevOpen = useRef(false);
   const sourceRectRef = useRef(sourceRect);
 
@@ -29,11 +28,8 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
   useEffect(() => {
     if (open && !prevOpen.current) {
       setPhase('visible');
-      const timer = setTimeout(() => setCrossfade(true), 80);
       prevOpen.current = true;
-      return () => clearTimeout(timer);
     } else if (!open && prevOpen.current) {
-      setCrossfade(false);
       setPhase('exiting');
       const timer = setTimeout(() => setPhase('hidden'), 250);
       prevOpen.current = false;
@@ -97,12 +93,11 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
   const showControls = phase === 'visible' || (phase === 'exiting' && open);
 
   return createPortal(
-    <div
+    <motion.div
       className="fixed inset-0 z-[9999]"
-      style={{
-        backgroundColor: open ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0)',
-        transition: 'background-color 250ms ease-out',
-      }}
+      initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
+      animate={{ backgroundColor: open ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0)' }}
+      transition={{ duration: 0.2 }}
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => {
         if (e.target === e.currentTarget && open) onClose();
@@ -159,31 +154,23 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
         transition={{ type: 'spring', damping: 35, stiffness: 350, mass: 0.8 }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Back layer: full image (contain), fades in */}
+        {/* Back layer: full image (contain), always visible */}
         <img
           src={img.url}
           alt={img.alt}
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full object-contain"
           draggable={false}
-          style={{
-            objectFit: 'contain',
-            opacity: crossfade ? 1 : 0,
-            transition: 'opacity 200ms ease-out',
-            transitionDelay: crossfade ? '0ms' : '0ms',
-          }}
         />
 
-        {/* Front layer: cropped thumbnail (cover), fades out */}
-        <img
+        {/* Front layer: cropped thumbnail (cover), fades out on mount */}
+        <motion.img
           src={img.url}
           alt=""
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 w-full h-full object-cover"
           draggable={false}
-          style={{
-            objectFit: 'cover',
-            opacity: crossfade ? 0 : 1,
-            transition: 'opacity 200ms ease-out',
-          }}
+          initial={{ opacity: 1 }}
+          animate={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut', delay: 0.08 }}
         />
       </motion.div>
 
@@ -200,7 +187,7 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
           </div>
         </div>
       )}
-    </div>,
+    </motion.div>,
     document.body
   );
 }
