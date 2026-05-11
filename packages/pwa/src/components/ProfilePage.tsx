@@ -59,9 +59,13 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const [avatarLightbox, setAvatarLightbox] = useState(false);
   const [bannerLightboxRect, setBannerLightboxRect] = useState<DOMRect | null>(null);
   const [avatarLightboxRect, setAvatarLightboxRect] = useState<DOMRect | null>(null);
+  const [bannerNaturalRatio, setBannerNaturalRatio] = useState(1);
+  const [avatarNaturalRatio, setAvatarNaturalRatio] = useState(1);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const bannerRef = useRef<HTMLButtonElement>(null);
+  const bannerImgRef = useRef<HTMLImageElement>(null);
   const avatarRef = useRef<HTMLButtonElement>(null);
+  const avatarImgRef = useRef<HTMLImageElement>(null);
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
@@ -220,9 +224,12 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           <button ref={bannerRef} className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => {
             const rect = bannerRef.current?.getBoundingClientRect();
             if (rect) setBannerLightboxRect(rect);
+            if (bannerImgRef.current?.naturalWidth && bannerImgRef.current?.naturalHeight) {
+              setBannerNaturalRatio(bannerImgRef.current.naturalWidth / bannerImgRef.current.naturalHeight);
+            }
             setBannerLightbox(true);
           }}>
-            <img src={profile.banner} alt="" className="w-full h-full object-cover" />
+            <img ref={bannerImgRef} src={profile.banner} alt="" className="w-full h-full object-cover" />
           </button>
         ) : (
           <div className="h-32 bg-primary/10" />
@@ -235,9 +242,13 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
               <button ref={avatarRef} className="border-none bg-transparent p-0 cursor-pointer" onClick={() => {
                 const rect = avatarRef.current?.getBoundingClientRect();
                 if (rect) setAvatarLightboxRect(rect);
+                if (avatarImgRef.current?.naturalWidth && avatarImgRef.current?.naturalHeight) {
+                  setAvatarNaturalRatio(avatarImgRef.current.naturalWidth / avatarImgRef.current.naturalHeight);
+                }
                 setAvatarLightbox(true);
               }}>
                 <img
+                  ref={avatarImgRef}
                   src={profile.avatar}
                   alt={profile.handle}
                   className="w-24 h-24 rounded-full border-4 border-white dark:border-[#0A0A0A] bg-surface"
@@ -488,24 +499,22 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         )}
       </div>
 
-      {bannerLightbox && profile.banner && bannerLightboxRect && (
-        <ImageLightboxDialog
-          open={bannerLightbox}
-          images={[{ url: profile.banner, alt: 'Banner' }]}
-          initial={0}
-          sourceRect={bannerLightboxRect}
-          onClose={() => { setBannerLightbox(false); setBannerLightboxRect(null); }}
-        />
-      )}
-      {avatarLightbox && profile.avatar && avatarLightboxRect && (
-        <ImageLightboxDialog
-          open={avatarLightbox}
-          images={[{ url: profile.avatar, alt: profile.handle }]}
-          initial={0}
-          sourceRect={avatarLightboxRect}
-          onClose={() => { setAvatarLightbox(false); setAvatarLightboxRect(null); }}
-        />
-      )}
+      <ImageLightboxDialog
+        open={bannerLightbox && profile.banner !== undefined && bannerLightboxRect !== null}
+        images={[{ url: profile.banner ?? '', alt: 'Banner' }]}
+        initial={0}
+        sourceRect={bannerLightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        naturalAspectRatio={bannerNaturalRatio}
+        onClose={() => { setBannerLightbox(false); setBannerLightboxRect(null); }}
+      />
+      <ImageLightboxDialog
+        open={avatarLightbox && profile.avatar !== undefined && avatarLightboxRect !== null}
+        images={[{ url: profile.avatar ?? '', alt: profile.handle }]}
+        initial={0}
+        sourceRect={avatarLightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        naturalAspectRatio={avatarNaturalRatio}
+        onClose={() => { setAvatarLightbox(false); setAvatarLightboxRect(null); }}
+      />
       {showEditProfile && profile && (
         <EditProfileModal client={client} profile={profile} onClose={() => setShowEditProfile(false)} onSaved={() => { setShowEditProfile(false); }} />
       )}

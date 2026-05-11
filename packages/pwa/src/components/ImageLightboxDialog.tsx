@@ -7,10 +7,11 @@ interface ImageLightboxDialogProps {
   images: Array<{ url: string; alt: string }>;
   initial: number;
   sourceRect: DOMRect;
+  naturalAspectRatio: number;
   onClose: () => void;
 }
 
-export function ImageLightboxDialog({ open, images, initial, sourceRect, onClose }: ImageLightboxDialogProps) {
+export function ImageLightboxDialog({ open, images, initial, sourceRect, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
   const [current, setCurrent] = useState(initial);
 
   useEffect(() => {
@@ -22,17 +23,16 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, onClose
 
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const aspectRatio = sourceRect.width / sourceRect.height;
   const maxW = vw * 0.9;
   const maxH = vh * 0.9;
 
   let targetW: number, targetH: number;
-  if (aspectRatio > maxW / maxH) {
+  if (naturalAspectRatio > maxW / maxH) {
     targetW = maxW;
-    targetH = maxW / aspectRatio;
+    targetH = maxW / naturalAspectRatio;
   } else {
     targetH = maxH;
-    targetW = maxH * aspectRatio;
+    targetW = maxH * naturalAspectRatio;
   }
   const targetX = (vw - targetW) / 2;
   const targetY = (vh - targetH) / 2;
@@ -104,6 +104,7 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, onClose
 
           <motion.div
             className="absolute z-[1]"
+            onClick={(e) => e.stopPropagation()}
             initial={{
               left: sourceRect.left, top: sourceRect.top,
               width: sourceRect.width, height: sourceRect.height,

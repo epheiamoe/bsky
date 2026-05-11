@@ -185,6 +185,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [lightboxRect, setLightboxRect] = useState<DOMRect | null>(null);
+  const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
   const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
@@ -213,8 +214,14 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                   ref={(el) => { imgRefs.current[i] = el; }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    const rect = imgRefs.current[i]?.getBoundingClientRect();
+                    const el = imgRefs.current[i];
+                    const rect = el?.getBoundingClientRect();
                     if (rect) setLightboxRect(rect);
+                    if (el?.naturalWidth && el?.naturalHeight) {
+                      setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
+                    } else {
+                      setNaturalAspectRatio(rect ? rect.width / rect.height : 1);
+                    }
                     setLightbox(i);
                   }}
                 />
@@ -257,15 +264,14 @@ function ImageGrid({ images }: { images: ImageData[] }) {
           </div>
         </>
       )}
-      {lightbox !== null && lightboxRect && (
-        <ImageLightboxDialog
-          open={lightbox !== null}
-          images={images}
-          initial={lightbox}
-          sourceRect={lightboxRect}
-          onClose={() => { setLightbox(null); setLightboxRect(null); }}
-        />
-      )}
+      <ImageLightboxDialog
+        open={lightbox !== null && lightboxRect !== null}
+        images={images}
+        initial={lightbox ?? 0}
+        sourceRect={lightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        naturalAspectRatio={naturalAspectRatio}
+        onClose={() => { setLightbox(null); setLightboxRect(null); }}
+      />
     </>
   );
 }
