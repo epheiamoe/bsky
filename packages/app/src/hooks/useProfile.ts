@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient, ProfileView, PostView } from '@bsky/core';
 import type { ProfileViewBasic } from '@bsky/core';
+import { readCache, writeCache, hasCache } from '../stores/cache';
 
 type ProfileTab = 'posts' | 'replies';
 
@@ -11,25 +12,40 @@ export interface FollowListItem {
   avatar?: string;
 }
 
+function profileCacheKey(actor: string): string {
+  return `profile-${actor}`;
+}
+
+interface ProfileCache {
+  profile: ProfileView | null;
+  posts: PostView[];
+  repostReasons: Record<string, string>;
+  feedCursor?: string;
+  isFollowing: boolean;
+  followUri?: string;
+}
+
 export function useProfile(
   client: BskyClient | null,
   actor: string | undefined,
   initialTab?: ProfileTab,
 ) {
-  const [profile, setProfile] = useState<ProfileView | null>(null);
-  const [loading, setLoading] = useState(false);
+  const ck = actor ? profileCacheKey(actor) : '';
+  const cached = ck ? readCache<ProfileCache>(ck) : undefined;
+  const [profile, setProfile] = useState<ProfileView | null>(cached?.profile ?? null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState<string | null>(null);
 
   // Feed tabs
   const [tab, setTab] = useState<ProfileTab>(initialTab ?? 'posts');
-  const [posts, setPosts] = useState<PostView[]>([]);
-  const [repostReasons, setRepostReasons] = useState<Record<string, string>>({});
-  const [feedCursor, setFeedCursor] = useState<string | undefined>();
+  const [posts, setPosts] = useState<PostView[]>(cached?.posts ?? []);
+  const [repostReasons, setRepostReasons] = useState<Record<string, string>>(cached?.repostReasons ?? {});
+  const [feedCursor, setFeedCursor] = useState<string | undefined>(cached?.feedCursor);
   const [feedLoading, setFeedLoading] = useState(false);
 
   // Follow state (viewer.following contains follow record URI)
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followUri, setFollowUri] = useState<string | undefined>();
+  const [isFollowing, setIsFollowing] = useState(cached?.isFollowing ?? false);
+  const [followUri, setFollowUri] = useState<string | undefined>(cached?.followUri);
 
   // Follows / Followers lists
   const [followList, setFollowList] = useState<'follows' | 'followers' | null>(null);
@@ -38,36 +54,52 @@ export function useProfile(
   const [followListLoading, setFollowListLoading] = useState(false);
 
   const loadedActor = useRef('');
+  const currentPostsRef = useRef<PostView[]>([]);
+  const currentRepostRef = useRef<Record<string, string>>({});
 
-  const loadProfile = useCallback(async (retried = false) => {
+  // Keep refs in sync with state
+  currentPostsRef.current = posts;
+  currentRepostRef.current = repostReasons;
+
+  const loadProfile = useCallback(async (retried = false, silent = false) => {
     if (!client || !actor) return;
     if (actor === loadedActor.current) return;
     loadedActor.current = actor;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
-    setPosts([]);
-    setRepostReasons({});
-    setFeedCursor(undefined);
-    setFollowList(null);
-    setFollowItems([]);
+    if (!silent) {
+      setPosts([]);
+      setRepostReasons({});
+      setFeedCursor(undefined);
+      setFollowList(null);
+      setFollowItems([]);
+    }
 
     try {
       const p = await client.getProfile(actor);
+      writeCache(ck, {
+        profile: p,
+        posts: currentPostsRef.current,
+        repostReasons: currentRepostRef.current,
+        feedCursor: feedCursor,
+        isFollowing: !!p.viewer?.following,
+        followUri: p.viewer?.following,
+      });
       setProfile(p);
       setIsFollowing(!!p.viewer?.following);
       setFollowUri(p.viewer?.following);
     } catch (e) {
       if (!retried) {
         await new Promise(r => setTimeout(r, 1500));
-        return loadProfile(true);
+        return loadProfile(true, silent);
       }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, [client, actor]);
+  }, [client, actor, ck]);
 
-  useEffect(() => { void loadProfile(); }, [loadProfile]);
+  useEffect(() => { void loadProfile(false, hasCache(ck)); }, [loadProfile]);
 
   // Load author feed for current tab
   const loadFeed = useCallback(async (cursor?: string) => {
@@ -92,12 +124,18 @@ export function useProfile(
         setRepostReasons(reasons);
       }
       setFeedCursor(res.cursor);
+      if (!cursor) {
+        writeCache(ck, {
+          profile, posts: newPosts, repostReasons: reasons,
+          feedCursor: res.cursor, isFollowing, followUri,
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setFeedLoading(false);
     }
-  }, [client, actor, tab]);
+  }, [client, actor, tab, ck, profile, isFollowing, followUri]);
 
   // Load feed when tab changes
   useEffect(() => {

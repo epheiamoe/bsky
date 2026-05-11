@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl, useScrollRestore, isWidgetEnabled, toggleWidget } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -20,9 +19,11 @@ interface ProfilePageProps {
   targetLang: string;
   translateMode: 'simple' | 'json';
   translateConfig?: AIConfig;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
 }
 
-const ESTIMATED_POST_HEIGHT = 150;
+
 
 function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
@@ -41,7 +42,7 @@ function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: 
   );
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -72,21 +73,12 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const [showEditProfile, setShowEditProfile] = useState(false);
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange },
+  );
   const sentinelRef = useRef<HTMLDivElement>(null);
   const followScrollRef = useRef<HTMLDivElement>(null);
   const followSentinelRef = useRef<HTMLDivElement>(null);
-
-  // Restore scroll position on back navigation
-  useScrollRestore(`profile-${actor}`, scrollRef, posts.length > 0);
-
-  // ── Virtual scroll for posts ──
-  const virtualizer = useVirtualizer({
-    count: posts.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_POST_HEIGHT,
-    overscan: 5,
-  });
 
   // ── Auto-load-more sentinel for posts ──
   useEffect(() => {
@@ -459,7 +451,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   width: '100%',
                   transform: `translateY(${virtualItem.start}px)`,
                 }}
-                ref={virtualizer.measureElement}
+                ref={(el) => measureAndCache(el, post)}
                 data-index={virtualItem.index}
               >
                 <PostCard

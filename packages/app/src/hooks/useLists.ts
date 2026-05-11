@@ -1,35 +1,48 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { ListView, ListPurpose } from '@bsky/core';
+import { readCache, writeCache, hasCache } from '../stores/cache';
+
+function listCacheKey(actor?: string): string {
+  return `lists-${actor ?? 'self'}`;
+}
+
+interface ListsCache {
+  lists: ListView[];
+  cursor?: string;
+}
 
 export function useLists(client: BskyClient | null, actor?: string) {
-  const [lists, setLists] = useState<ListView[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [cursor, setCursor] = useState<string | undefined>();
+  const ck = listCacheKey(actor);
+  const cached = readCache<ListsCache>(ck);
+  const [lists, setLists] = useState<ListView[]>(cached?.lists ?? []);
+  const [loading, setLoading] = useState(!hasCache(ck));
+  const [cursor, setCursor] = useState<string | undefined>(cached?.cursor);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (retried = false) => {
+  const load = useCallback(async (retried = false, silent = false) => {
     if (!client) return;
     if (!actor && !client.isAuthenticated()) return;
     const target = actor ?? client.getHandle();
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await client.getLists(target, 50, undefined, undefined);
+      writeCache(ck, { lists: res.lists, cursor: res.cursor });
       setLists(res.lists);
       setCursor(res.cursor);
     } catch (e) {
       if (!retried) {
         await new Promise(r => setTimeout(r, 1500));
-        return load(true);
+        return load(true, silent);
       }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [client, actor]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(false, hasCache(ck)); }, [load]);
 
   const createList = useCallback(async (name: string, purpose: ListPurpose, description?: string): Promise<ListView | null> => {
     if (!client) return null;

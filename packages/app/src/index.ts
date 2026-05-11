@@ -17,6 +17,8 @@ export type { DraftStorage } from './services/draftStorage.js';
 export { setDraftStorageFactory, getDefaultDraftStorage, FileDraftStorage } from './services/draftStorage.js';
 export { useActiveFeed, getLastFeedUri, setLastFeedUri } from './hooks/useActiveFeed.js';
 export { useScrollRestore, saveScrollTop, getScrollTop } from './hooks/useScrollRestore.js';
+export { useVirtualizedList } from './hooks/useVirtualizedList.js';
+export { hasCache } from './stores/cache.js';
 export { saveViewState, getViewState } from './state/viewStateStore.js';
 export { usePostActions, isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers, seedPostViewer } from './hooks/usePostActions.js';
 export { useAIChat } from './hooks/useAIChat.js';

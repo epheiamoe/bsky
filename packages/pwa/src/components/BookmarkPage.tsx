@@ -1,8 +1,7 @@
-import React, { useRef } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks, useI18n, useScrollRestore } from '@bsky/app';
+import { useBookmarks, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -11,23 +10,16 @@ interface BookmarkPageProps {
   client: BskyClient;
   goBack: () => void;
   goTo: (v: AppView) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
 }
 
-const ESTIMATED_POST_HEIGHT = 120;
-
-export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
+export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange }: BookmarkPageProps) {
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const virtualizer = useVirtualizer({
-    count: bookmarks.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_POST_HEIGHT,
-    overscan: 5,
-  });
-
-  useScrollRestore('bookmarks', scrollRef, !loading && bookmarks.length > 0);
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
+  );
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
@@ -69,7 +61,7 @@ export function BookmarkPage({ client, goBack, goTo }: BookmarkPageProps) {
                 <div
                   key={post.uri}
                   data-index={vi.index}
-                  ref={virtualizer.measureElement}
+                  ref={(el) => measureAndCache(el, post)}
                   style={{
                     position: 'absolute', top: 0, left: 0,
                     transform: `translateY(${vi.start}px)`, width: '100%',

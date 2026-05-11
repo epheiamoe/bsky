@@ -1,44 +1,69 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { PostView, ListView, ListItemView } from '@bsky/core';
+import { readCache, writeCache, hasCache } from '../stores/cache';
+
+function detailCacheKey(listUri: string): string {
+  return `listDetail-${listUri}`;
+}
+
+interface ListDetailCache {
+  list: ListView | null;
+  members: ListItemView[];
+  membersCursor?: string;
+  feed: PostView[];
+  feedCursor?: string;
+  isMuted: boolean;
+}
 
 export function useListDetail(client: BskyClient | null, listUri: string) {
-  const [list, setList] = useState<ListView | null>(null);
-  const [members, setMembers] = useState<ListItemView[]>([]);
-  const [membersCursor, setMembersCursor] = useState<string | undefined>();
-  const [feed, setFeed] = useState<PostView[]>([]);
-  const [feedCursor, setFeedCursor] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
+  const ck = detailCacheKey(listUri);
+  const cached = readCache<ListDetailCache>(ck);
+  const [list, setList] = useState<ListView | null>(cached?.list ?? null);
+  const [members, setMembers] = useState<ListItemView[]>(cached?.members ?? []);
+  const [membersCursor, setMembersCursor] = useState<string | undefined>(cached?.membersCursor);
+  const [feed, setFeed] = useState<PostView[]>(cached?.feed ?? []);
+  const [feedCursor, setFeedCursor] = useState<string | undefined>(cached?.feedCursor);
+  const [loading, setLoading] = useState(!hasCache(ck));
   const [error, setError] = useState<string | null>(null);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(cached?.isMuted ?? false);
 
-  const load = useCallback(async (retried = false) => {
+  const load = useCallback(async (retried = false, silent = false) => {
     if (!client || !listUri) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [listRes, feedRes] = await Promise.all([
         client.getList(listUri, 50),
         client.getListFeed(listUri, 20),
       ]);
+      const newFeed = feedRes.feed.map(f => (f as any).post ?? f);
+      writeCache(ck, {
+        list: listRes.list,
+        members: listRes.items,
+        membersCursor: listRes.cursor,
+        feed: newFeed,
+        feedCursor: feedRes.cursor,
+        isMuted: !!listRes.list.viewer?.muted,
+      });
       setList(listRes.list);
       setMembers(listRes.items);
       setMembersCursor(listRes.cursor);
-      setFeed(feedRes.feed.map(f => (f as any).post ?? f));
+      setFeed(newFeed);
       setFeedCursor(feedRes.cursor);
       setIsMuted(!!listRes.list.viewer?.muted);
     } catch (e) {
       if (!retried) {
         await new Promise(r => setTimeout(r, 1500));
-        return load(true);
+        return load(true, silent);
       }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [client, listUri]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(false, hasCache(ck)); }, [load]);
 
   const loadMoreMembers = useCallback(async () => {
     if (!client || !listUri || !membersCursor) return;

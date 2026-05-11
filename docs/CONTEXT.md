@@ -10,21 +10,22 @@
 4. **`docs/ARCHITECTURE.md`** — 系统架构
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
- 7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
-  8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
-  9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
-  10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
-  11. **`DEPLOY.md`** — 面向部署者的多平台部署指南
-  12. **`docs/KEYBOARD.md`** — TUI 快捷键
-  13. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
-  14. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
-  15. **`CHANGELOG.md`** — 版本历史
+7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
+8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
+9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
+10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
+11. **`DEPLOY.md`** — 面向部署者的多平台部署指南
+12. **`docs/KEYBOARD.md`** — TUI 快捷键
+13. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
+14. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
+15. **`docs/CHAT_SERVICE.md`** — ChatService 存储架构文档（v0.10.5 重构）
+16. **`CHANGELOG.md`** — 版本历史
   16. **`packages/core/src/ai/prompts.ts`** — AI 提示词
   17. **`packages/core/src/ai/tools.ts`** — 38 个 AI 工具定义
 
 ## 版本
 
-**v0.10.5** — ChatService 存储重构（解耦 useAIChat 与 React 生命周期，debounce 持久化）
+**v0.10.6** — 滚动位置恢复最终修复。全部虚拟滚动页面统一 FeedTimeline 路径：App.tsx 持 ref → props `initialScrollTop`/`onScrollTopChange` → `useVirtualizedList` 接收。关键修复：`useEffect` deps 增加 `items.length`，确保延迟出现的容器也能挂上 scroll listener。6 个 data hook 加 `silent` 参数，有 cache 时静默刷新不触发 loading。
 
 > 这是迄今为止最大的一次重构。核心变更：将 AI 对话持久化从 `useAIChat` hook 中完全解耦，提取为模块级单例 `ChatService`。移除旧的 `setChatStorageFactory`/`getDefaultChatStorage` 工厂模式。PWA 端 `App.tsx` 的 `setChatStorageFactory` 通过 `useEffect` 仅在 mount 时执行一次，杜绝了每 render 重置 `_defaultChatStorage` 导致 load effect 反复触发覆盖流式数据的致命 bug。
 
@@ -503,6 +504,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/tui/src/components/DMChatView.tsx` | TUI 表情反应（e 键 + 编号选择） |
 | `packages/core/src/at/client.ts` | PDS 发现管线 + this.ky 重建 + withRefresh 复用 |
 | `packages/core/src/at/types.ts` | DidDocument / ResolveDidResponse 类型 |
+| `packages/app/src/stores/cache.ts` | 模块级数据缓存层（readCache / writeCache / hasCache）v0.10.6 |
+| `packages/app/src/hooks/useVirtualizedList.ts` | 统一虚拟滚动 + 高度缓存 + 位置恢复 hook v0.10.6 |
 | `packages/app/src/stores/auth.ts` | pdsUrl 字段 + login/restore pdsUrl 参数 |
 | `packages/app/src/hooks/useAuth.ts` | 透传 pdsUrl 参数 |
 | `packages/pwa/src/components/LoginPage.tsx` | PDS 主机输入 + 警告框 |

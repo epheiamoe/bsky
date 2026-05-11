@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useSearch, useI18n, addFeed, useScrollRestore, useSearchHistory, addToHistory } from '@bsky/app';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -15,6 +15,8 @@ interface SearchPageProps {
   initialTab?: SearchTab;
   goBack: () => void;
   goTo: (v: AppView) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
 }
 
 const TABS: { key: SearchTab; labelKey: string }[] = [
@@ -28,24 +30,28 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: SearchPageProps) {
+export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange }: SearchPageProps) {
   const { t } = useI18n();
-  const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab);
+  const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
   const { history, add, remove, clear } = useSearchHistory(tab);
   const hasHistory = history.length > 0;
 
-  // Restore scroll position on back navigation (window-level scroll)
-  useScrollRestore(searched ? `search-${input}` : undefined, null, searched && !loading);
+  const isPostsTab = tab === 'top' || tab === 'latest';
+  const items: any[] = isPostsTab ? posts : tab === 'users' ? users : feeds;
+  const itemHeight = isPostsTab ? 120 : 60;
+  const getItemKey = (item: any) => item.uri ?? item.did;
 
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    items, `search-${input}`, itemHeight, getItemKey, { initialScrollTop, onScrollTopChange },
+  );
+
+  // Sync searched state with items availability (e.g. from cache-restored search)
   useEffect(() => {
-    if (initialQuery && !searched) {
-      setSearched(true);
-      search(initialQuery, 'top');
-    }
-  }, [initialQuery]);
+    if (items.length > 0) setSearched(true);
+  }, [items.length > 0]);
 
   const handleSearch = () => {
     if (!input.trim()) return;
@@ -72,13 +78,13 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
   };
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
-      <div className="border-b border-border px-4 py-3 flex items-center gap-3">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+      <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors text-lg shrink-0"><Icon name="arrow-big-left" size={20} /></button>
         <h1 className="text-text-primary font-semibold text-lg"><Icon name="compass" size={18} /> {t('search.title')}</h1>
       </div>
 
-      <div className="px-4 py-3 flex gap-2">
+      <div className="flex-shrink-0 px-4 py-3 flex gap-2">
         <div className="flex-1">
           <input
             type="text" value={input} onChange={e => setInput(e.target.value)}
@@ -95,7 +101,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
         </button>
       </div>
 
-      <div className="flex border-b border-border">
+      <div className="flex-shrink-0 flex border-b border-border">
         {TABS.map(tb => (
           <button key={tb.key} onClick={() => handleTabSwitch(tb.key)}
             className={`flex-1 py-2 text-sm font-medium transition-colors ${tab === tb.key ? 'text-primary border-b-2 border-primary' : 'text-text-secondary hover:text-text-primary'}`}
@@ -106,7 +112,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
       </div>
 
       {inputFocused && !input && hasHistory && !searched && (
-        <div className="mx-4 my-2 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-y-auto">
+        <div className="flex-shrink-0 mx-4 my-2 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-y-auto">
           <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
             <span className="text-[10px] text-text-secondary font-medium uppercase tracking-wider">{t('search.history')}</span>
             <button onClick={() => clear()}
@@ -131,91 +137,74 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo }: S
         </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
+      {loading && items.length === 0 ? (
+        <div className="flex items-center justify-center py-12 flex-1">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : (
-        <>
-          {/* Posts tab */}
-          {(tab === 'top' || tab === 'latest') && (
-            posts.length > 0 ? (
-              <div>
-                  {posts.map(post => (
-                    <PostCard key={post.uri} post={post}
-                      onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
+      ) : items.length > 0 ? (
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+            {virtualizer.getVirtualItems().map((vi) => {
+              const item = items[vi.index]!;
+              const key = item.uri ?? item.did;
+              return (
+                <div
+                  key={key}
+                  data-index={vi.index}
+                  ref={(el) => measureAndCache(el, item)}
+                  style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%',
+                    transform: `translateY(${vi.start}px)`,
+                  }}
+                >
+                  {isPostsTab ? (
+                    <PostCard post={item}
+                      onClick={() => goTo({ type: 'thread', uri: item.uri })} goTo={goTo}
                     >
-                      <PostActionsRow client={client} goTo={goTo} post={post} />
+                      <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostCard>
-                  ))}
-              </div>
-            ) : searched ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
-                <p className="text-text-secondary text-sm">{t('search.noResults')}</p>
-              </div>
-            ) : null
-          )}
-
-          {/* Users tab */}
-          {tab === 'users' && (
-            users.length > 0 ? (
-              <div>
-                {users.map(user => (
-                  <div key={user.did} className="px-4 py-3 border-b border-border cursor-pointer hover:bg-surface transition-colors"
-                    onClick={() => goTo({ type: 'profile', actor: user.handle })}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
-                        {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : avatarLetter(user.displayName ?? user.handle)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-text-primary truncate">{truncateName(user.displayName ?? user.handle)}</p>
-                        <p className="text-xs text-text-secondary">@{user.handle}</p>
+                  ) : tab === 'users' ? (
+                    <div className="px-4 py-3 border-b border-border cursor-pointer hover:bg-surface transition-colors"
+                      onClick={() => goTo({ type: 'profile', actor: item.handle })}>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
+                          {item.avatar ? <img src={item.avatar} alt="" className="w-full h-full object-cover" /> : avatarLetter(item.displayName ?? item.handle)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-text-primary truncate">{truncateName(item.displayName ?? item.handle)}</p>
+                          <p className="text-xs text-text-secondary">@{item.handle}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : searched ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
-                <p className="text-text-secondary text-sm">{t('search.noResults')}</p>
-              </div>
-            ) : null
-          )}
-
-          {/* Feeds tab */}
-          {tab === 'feeds' && (
-            feeds.length > 0 ? (
-              <div>
-                {feeds.map(feed => (
-                  <div key={feed.uri} className="px-4 py-3 border-b border-border">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1 cursor-pointer hover:bg-surface transition-colors rounded-lg -ml-2 pl-2"
-                        onClick={() => goTo({ type: 'feed', feedUri: feed.uri })}>
-                        <p className="text-sm font-semibold text-text-primary">{feed.displayName}</p>
-                        {feed.creator && <p className="text-xs text-text-secondary">@{feed.creator.handle}</p>}
-                        {feed.description && <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{feed.description}</p>}
+                  ) : (
+                    <div className="px-4 py-3 border-b border-border">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1 cursor-pointer hover:bg-surface transition-colors rounded-lg -ml-2 pl-2"
+                          onClick={() => goTo({ type: 'feed', feedUri: item.uri })}>
+                          <p className="text-sm font-semibold text-text-primary">{item.displayName}</p>
+                          {item.creator && <p className="text-xs text-text-secondary">@{item.creator.handle}</p>}
+                          {item.description && <p className="text-xs text-text-secondary mt-0.5 line-clamp-1">{item.description}</p>}
+                        </div>
+                        <button onClick={() => handleFeedSubscribe(item)}
+                          className="text-xs px-3 py-1 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors shrink-0 ml-3">
+                          {t('feed.subscribe')}
+                        </button>
                       </div>
-                      <button onClick={() => handleFeedSubscribe(feed)}
-                        className="text-xs px-3 py-1 rounded-full bg-primary text-white hover:bg-primary-hover transition-colors shrink-0 ml-3">
-                        {t('feed.subscribe')}
-                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : searched ? (
-              <div className="flex flex-col items-center justify-center py-16 px-4">
-                <p className="text-text-secondary text-sm">{t('search.noResults')}</p>
-              </div>
-            ) : null
-          )}
-
-          {!searched && (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <p className="text-text-secondary text-sm">{t('search.startTyping')}</p>
-            </div>
-          )}
-        </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : searched ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 flex-1">
+          <p className="text-text-secondary text-sm">{t('search.noResults')}</p>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 px-4 flex-1">
+          <p className="text-text-secondary text-sm">{t('search.startTyping')}</p>
+        </div>
       )}
     </div>
   );

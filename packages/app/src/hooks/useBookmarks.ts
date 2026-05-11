@@ -1,35 +1,48 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { PostView, GetBookmarksResponse } from '@bsky/core';
+import { readCache, writeCache, hasCache } from '../stores/cache';
+
+const CACHE_KEY = 'bookmarks';
+
+interface BookmarkCache {
+  bookmarks: PostView[];
+  bookmarkedUris: string[];
+  cursor?: string;
+}
 
 export function useBookmarks(client: BskyClient | null) {
-  const [bookmarks, setBookmarks] = useState<PostView[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [cursor, setCursor] = useState<string | undefined>();
-  const [bookmarkedUris, setBookmarkedUris] = useState<Set<string>>(new Set());
+  const cached = readCache<BookmarkCache>(CACHE_KEY);
+  const [bookmarks, setBookmarks] = useState<PostView[]>(cached?.bookmarks ?? []);
+  const [loading, setLoading] = useState(!hasCache(CACHE_KEY));
+  const [cursor, setCursor] = useState<string | undefined>(cached?.cursor);
+  const [bookmarkedUris, setBookmarkedUris] = useState<Set<string>>(new Set(cached?.bookmarkedUris ?? []));
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async (retried = false) => {
+  const load = useCallback(async (retried = false, silent = false) => {
     if (!client) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await client.getBookmarks(50);
-      setBookmarks(res.bookmarks.map(b => b.item));
+      const newBookmarks = res.bookmarks.map(b => b.item);
+      const newUris = res.bookmarks.map(b => b.subject.uri);
+      writeCache(CACHE_KEY, { bookmarks: newBookmarks, bookmarkedUris: newUris, cursor: res.cursor });
+      setBookmarks(newBookmarks);
       setCursor(res.cursor);
-      setBookmarkedUris(new Set(res.bookmarks.map(b => b.subject.uri)));
+      setBookmarkedUris(new Set(newUris));
     } catch (e) {
       if (!retried) {
         await new Promise(r => setTimeout(r, 1500));
-        return load(true);
+        return load(true, silent);
       }
       setError(e instanceof Error ? e.message : String(e));
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [client]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(false, hasCache(CACHE_KEY)); }, [load]);
 
   const isBookmarked = useCallback((uri: string) => bookmarkedUris.has(uri), [bookmarkedUris]);
 

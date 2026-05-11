@@ -1,8 +1,7 @@
-import React, { useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { useState } from 'react';
 import type { BskyClient, ListPurpose } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useLists, useI18n, useScrollRestore } from '@bsky/app';
+import { useLists, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 interface ListsPageProps {
@@ -10,12 +9,16 @@ interface ListsPageProps {
   goBack: () => void;
   goTo: (v: AppView) => void;
   actor?: string;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
 }
 
-export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
+export function ListsPage({ client, goBack, goTo, actor, initialScrollTop, onScrollTopChange }: ListsPageProps) {
   const { t } = useI18n();
   const { lists, loading, error, createList, deleteList, refresh } = useLists(client, actor);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    lists, `lists-${actor ?? 'self'}`, 80, l => l.uri, { initialScrollTop, onScrollTopChange },
+  );
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
@@ -61,15 +64,6 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
       }));
     } catch (e) { console.error('Remove from list error:', e); }
   };
-
-  const virtualizer = useVirtualizer({
-    count: lists.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => 80,
-    overscan: 5,
-  });
-
-  useScrollRestore('lists', scrollRef, !loading && lists.length > 0);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -195,7 +189,8 @@ export function ListsPage({ client, goBack, goTo, actor }: ListsPageProps) {
               const list = lists[vi.index]!;
               const isMod = list.purpose === 'app.bsky.graph.defs#modlist';
               return (
-                <div key={list.uri} data-index={vi.index} ref={virtualizer.measureElement}
+                <div key={list.uri} data-index={vi.index}
+                  ref={(el) => measureAndCache(el, list)}
                   style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                 >
                   <button

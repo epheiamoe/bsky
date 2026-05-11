@@ -68,6 +68,13 @@ export function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollTopRef = useRef(0);
+  const profileScrollTopRef = useRef(0);
+  const notifsScrollTopRef = useRef(0);
+  const searchScrollTopRef = useRef(0);
+  const bookmarksScrollTopRef = useRef(0);
+  const listsScrollTopRef = useRef(0);
+  const listDetailFeedScrollTopRef = useRef(0);
+  const listDetailMemberScrollTopRef = useRef(0);
 
   // Listen for PWA update notifications
   useEffect(() => {
@@ -323,10 +330,18 @@ export function App() {
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
             translateConfig={scenarioModels.translate}
+            initialScrollTop={profileScrollTopRef.current}
+            onScrollTopChange={(top) => { profileScrollTopRef.current = top; }}
           />
         );
       case 'notifications':
-        return <NotifsPage client={client} goBack={goBack} goTo={goTo} />;
+        return (
+          <NotifsPage
+            client={client} goBack={goBack} goTo={goTo}
+            initialScrollTop={notifsScrollTopRef.current}
+            onScrollTopChange={(top) => { notifsScrollTopRef.current = top; }}
+          />
+        );
       case 'search':
         return (
           <SearchPage
@@ -335,6 +350,8 @@ export function App() {
             initialTab={(currentView as { searchTab?: SearchTab }).searchTab}
             goBack={goBack}
             goTo={goTo}
+            initialScrollTop={searchScrollTopRef.current}
+            onScrollTopChange={(top) => { searchScrollTopRef.current = top; }}
           />
         );
       case 'aiChat': {
@@ -353,11 +370,31 @@ export function App() {
         );
       }
       case 'bookmarks':
-        return <BookmarkPage client={client} goBack={goBack} goTo={goTo} />;
+        return (
+          <BookmarkPage
+            client={client} goBack={goBack} goTo={goTo}
+            initialScrollTop={bookmarksScrollTopRef.current}
+            onScrollTopChange={(top) => { bookmarksScrollTopRef.current = top; }}
+          />
+        );
       case 'lists':
-        return <ListsPage client={client} goBack={goBack} goTo={goTo} actor={(currentView as { actor?: string }).actor} />;
+        return (
+          <ListsPage
+            client={client} goBack={goBack} goTo={goTo} actor={(currentView as { actor?: string }).actor}
+            initialScrollTop={listsScrollTopRef.current}
+            onScrollTopChange={(top) => { listsScrollTopRef.current = top; }}
+          />
+        );
       case 'listDetail':
-        return <ListDetailPage client={client} listUri={(currentView as { uri: string }).uri} goBack={goBack} goTo={goTo} initialTab={(currentView as { tab?: 'posts' | 'members' }).tab} />;
+        return (
+          <ListDetailPage
+            client={client} listUri={(currentView as { uri: string }).uri} goBack={goBack} goTo={goTo} initialTab={(currentView as { tab?: 'posts' | 'members' }).tab}
+            initialScrollTop={listDetailFeedScrollTopRef.current}
+            onScrollTopChange={(top) => { listDetailFeedScrollTopRef.current = top; }}
+            membersScrollTop={listDetailMemberScrollTopRef.current}
+            onMembersScrollTop={(top) => { listDetailMemberScrollTopRef.current = top; }}
+          />
+        );
       case 'drafts':
         return <DraftsPage client={client} goBack={goBack} goTo={goTo} />;
       case 'dm':

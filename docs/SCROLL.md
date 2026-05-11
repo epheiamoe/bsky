@@ -50,11 +50,13 @@ const virtualizer = useVirtualizer({
 
 | 页面 | 虚拟滚动 | 实现方式 | 状态 |
 |------|---------|---------|------|
-| FeedTimeline | ✅ | `useVirtualizer` + container ref | ✅ |
-| ProfilePage | ✅ | `useVirtualizer` + container ref | ✅ |
-| BookmarkPage | ✅ | `useVirtualizer` + container ref | ✅ v0.5.1 |
-| SearchPage | ⬜ | — | 待适配 |
-| NotifsPage | ⬜ | — | 低优先级 |
+| FeedTimeline | ✅ | `useVirtualizer` + container ref | ✅ (保持独立 pattern) |
+| ProfilePage | ✅ | `useVirtualizedList` | ✅ v0.10.6 |
+| BookmarkPage | ✅ | `useVirtualizedList` | ✅ v0.10.6 |
+| ListsPage | ✅ | `useVirtualizedList` | ✅ v0.10.6 |
+| ListDetailPage | ✅ | `useVirtualizedList` x2 | ✅ v0.10.6 |
+| NotifsPage | ✅ | `useVirtualizedList` | ✅ v0.10.6 |
+| SearchPage | ✅ | `useVirtualizedList` | ✅ v0.10.6 |
 | DMChatPage | ⬜ | — | 纯文本，暂不需要 |
 | DraftsPage | ⬜ | — | 条目太少 |
 | ConvoListPage | ⬜ | — | 条目轻量 |
@@ -63,7 +65,23 @@ const virtualizer = useVirtualizer({
 
 ## 滚动位置恢复
 
-### 关键教训：必须使用像素值，不能用索引
+### 数据缓存层（v0.10.6）
+
+scroll 恢复依赖数据在 mount 时立即可用。v0.10.6 新增 `packages/app/src/stores/cache.ts`：
+
+```typescript
+readCache<T>(key: string): T | undefined    // 同步读取
+writeCache<T>(key: string, data: T): void    // 写入
+hasCache(key: string): boolean               // 判断是否已缓存
+```
+
+所有虚拟滚动页面的 hook 在 mount 时读取缓存 → `ready=true` → `initialOffset` 生效。背景刷新异步更新数据，不阻塞恢复流程。
+
+**已在以下 hook 中集成**: `useBookmarks`, `useNotifications`, `useLists`, `useListDetail`, `useProfile`
+
+---
+
+## 关键教训：必须使用像素值，不能用索引
 
 **错误做法**（已在 FeedTimeline 中修复）：
 
@@ -80,7 +98,67 @@ virtualizer.scrollToIndex(N, { align: 'start' });
 scrollRef.current.scrollTop = savedScrollTop;
 ```
 
-### 实现规范
+### 实现规范（虚拟滚动页面）
+
+使用 `useVirtualizedList` hook + App.tsx 端 ref（FeedTimeline 路径）：
+
+**App.tsx** — 每页一个 `useRef` + props 透传：
+
+```tsx
+// App.tsx
+const bookmarksScrollRef = useRef(0);
+
+// render:
+<BookmarkPage
+  // ...其他 props...
+  initialScrollTop={bookmarksScrollRef.current}
+  onScrollTopChange={(top) => { bookmarksScrollRef.current = top; }}
+/>
+```
+
+**页面组件** — 透传给 `useVirtualizedList`：
+
+```tsx
+import { useVirtualizedList } from '@bsky/app';
+
+const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+  items,
+  'page-key', // height cache key
+  120,        // 估算高度（px）
+  item => item.uri, // height cache key per item
+  { initialScrollTop, onScrollTopChange },
+);
+
+// JSX:
+<div ref={scrollRef} className="flex-1 overflow-y-auto">
+  <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+    {virtualizer.getVirtualItems().map((vi) => {
+      const item = items[vi.index]!;
+      return (
+        <div
+          key={itemKey(item)}
+          data-index={vi.index}
+          ref={(el) => measureAndCache(el, item)}
+          style={{ position: 'absolute', top: 0, ... }}
+        >
+          {renderItem(item)}
+        </div>
+      );
+    })}
+  </div>
+</div>
+```
+
+**注意事项**：`useEffect` deps 包含 `items.length` — 当容器因 loading 状态延迟出现时，scroll listener 会自动重挂。
+
+`useVirtualizedList` 结构：
+- **模块级高度缓存** `_globalHeightCaches` Map 跨 mount 持久
+- **scrollTop 通过 props 传入/传出**，完全复制 FeedTimeline 模式
+- **render body**: 读取 `options.initialScrollTop` → 传给 `useVirtualizer({ initialOffset })`
+- **scroll listener**: 通过 `options.onScrollTopChange` 回调实时上报（deps 含 `items.length`）
+- **measureAndCache**: 测量实际高度 → 写入 `_globalHeightCaches` + 调用 `virtualizer.measureElement`
+
+### 实现规范（非虚拟滚动页面）
 
 使用 `useScrollRestore` hook，传入**容器 ref**（不是 `null`）：
 
@@ -96,15 +174,20 @@ useScrollRestore('page-key', scrollRef, !loading && items.length > 0);
 
 ### 页面缓存状态
 
-| 页面 | 位置恢复 | Key | Ref 类型 | 状态 |
-|------|---------|-----|---------|------|
-| FeedTimeline | ✅ 像素 | `feedScrollTopRef` (App.tsx ref) | container ref | ✅ v0.5.1 修复 |
-| ProfilePage | ✅ 像素 | `profile-${actor}` | container ref | ✅ |
-| BookmarkPage | ✅ 像素 | `bookmarks` | container ref | ✅ v0.5.1 |
-| SearchPage | ✅ 像素 | `search-${query}` | `null` (window) | ✅ |
-| NotifsPage | ⬜ | — | — | 待添加 |
-| ThreadView | ⬜ | — | — | 不需要（逐次加载） |
-| DM Chat | ⬜ | — | — | 部分保留（auto-scroll底部） |
+所有虚拟滚动页面均使用 FeedTimeline 路径（App.tsx `useRef` → props `initialScrollTop`/`onScrollTopChange`）。
+
+| 页面 | 位置恢复 | Ref 容器 | 状态 |
+|------|---------|---------|------|
+| FeedTimeline | ✅ 像素 | `feedScrollTopRef` | ✅ v0.10.4 |
+| ProfilePage | ✅ 像素 | `profileScrollTopRef` | ✅ v0.10.6 |
+| BookmarkPage | ✅ 像素 | `bookmarksScrollTopRef` | ✅ v0.10.6 |
+| ListsPage | ✅ 像素 | `listsScrollTopRef` | ✅ v0.10.6 |
+| ListDetailPage (posts) | ✅ 像素 | `listDetailFeedScrollTopRef` | ✅ v0.10.6 |
+| ListDetailPage (members) | ✅ 像素 | `listDetailMemberScrollTopRef` | ✅ v0.10.6 |
+| NotifsPage | ✅ 像素 | `notifsScrollTopRef` | ✅ v0.10.6 |
+| SearchPage | ✅ 像素 | `searchScrollTopRef` | ✅ v0.10.6 |
+| ThreadView | ⬜ | — | 不需要（逐次加载） |
+| DM Chat | ⬜ | — | 部分保留（auto-scroll底部） |
 
 ### DMChatPage auto-scroll 规则
 

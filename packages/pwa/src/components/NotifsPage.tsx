@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
-import { useNotifications, useI18n } from '@bsky/app';
+import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { Icon } from './Icon.js';
 
@@ -8,6 +8,8 @@ interface NotifsPageProps {
   client: BskyClient;
   goBack: () => void;
   goTo: (v: AppView) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -27,12 +29,12 @@ function timeAgo(dateStr: string): string {
 }
 
 const REASON_EMOJI: Record<string, string> = {
-  like: '♥',
-  repost: '♻',
-  follow: '👤',
-  reply: '💬',
+  like: '\u2665',
+  repost: '\u267B',
+  follow: '\uD83D\uDC64',
+  reply: '\uD83D\uDCAC',
   mention: '@',
-  quote: '💬',
+  quote: '\uD83D\uDCAC',
 };
 
 function reasonText(reason: string, t: (key: string) => string): string {
@@ -91,13 +93,16 @@ function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) =>
   );
 }
 
-export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
+export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange }: NotifsPageProps) {
   const { t } = useI18n();
   const { notifications, loading, error, refresh } = useNotifications(client);
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    notifications, 'notifs', 72, n => n.uri, { initialScrollTop, onScrollTopChange },
+  );
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
-      <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+      <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={goBack}
@@ -127,10 +132,25 @@ export function NotifsPage({ client, goBack, goTo }: NotifsPageProps) {
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : notifications.length > 0 ? (
-        <div>
-          {notifications.map((n, i) => (
-            <NotifItem key={n.uri} n={n} t={t} goTo={goTo} index={i} />
-          ))}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+            {virtualizer.getVirtualItems().map((vi) => {
+              const n = notifications[vi.index]!;
+              return (
+                <div
+                  key={n.uri}
+                  data-index={vi.index}
+                  ref={(el) => measureAndCache(el, n)}
+                  style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%',
+                    transform: `translateY(${vi.start}px)`,
+                  }}
+                >
+                  <NotifItem n={n} t={t} goTo={goTo} index={vi.index} />
+                </div>
+              );
+            })}
+          </div>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">

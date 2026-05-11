@@ -1,8 +1,7 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useScrollRestore } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -13,12 +12,13 @@ interface ListDetailPageProps {
   goBack: () => void;
   goTo: (v: AppView) => void;
   initialTab?: 'posts' | 'members';
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
+  membersScrollTop?: number;
+  onMembersScrollTop?: (top: number) => void;
 }
 
-const ESTIMATED_POST_HEIGHT = 120;
-const ESTIMATED_MEMBER_HEIGHT = 52;
-
-export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: ListDetailPageProps) {
+export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, initialScrollTop, onScrollTopChange, membersScrollTop, onMembersScrollTop }: ListDetailPageProps) {
   const { t } = useI18n();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
@@ -29,28 +29,21 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const feedScrollRef = useRef<HTMLDivElement>(null);
-  const memberScrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const isOwnList = list?.creator?.did === client.getDID();
 
-  const feedVirtualizer = useVirtualizer({
-    count: feed.length,
-    getScrollElement: () => feedScrollRef.current,
-    estimateSize: () => ESTIMATED_POST_HEIGHT,
-    overscan: 5,
-  });
+  const {
+    scrollRef: feedScrollRef,
+    virtualizer: feedVirtualizer,
+    measureAndCache: feedMeasureAndCache,
+  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange });
 
-  const memberVirtualizer = useVirtualizer({
-    count: members.length,
-    getScrollElement: () => memberScrollRef.current,
-    estimateSize: () => ESTIMATED_MEMBER_HEIGHT,
-    overscan: 5,
-  });
-
-  useScrollRestore(`listDetail-posts-${listUri}`, feedScrollRef, !loading && feed.length > 0);
-  useScrollRestore(`listDetail-members-${listUri}`, memberScrollRef, !loading && members.length > 0);
+  const {
+    scrollRef: memberScrollRef,
+    virtualizer: memberVirtualizer,
+    measureAndCache: memberMeasureAndCache,
+  } = useVirtualizedList(members, `listDetail-members-${listUri}`, 52, m => m.uri, { initialScrollTop: membersScrollTop, onScrollTopChange: onMembersScrollTop });
 
   // Auto-load-more for feed
   useEffect(() => {
@@ -215,7 +208,8 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
                   {feedVirtualizer.getVirtualItems().map((vi) => {
                     const post = feed[vi.index]!;
                     return (
-                      <div key={post.uri} data-index={vi.index} ref={feedVirtualizer.measureElement}
+                      <div key={post.uri} data-index={vi.index}
+                        ref={(el) => feedMeasureAndCache(el, post)}
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                       >
                         <PostCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}>
@@ -253,7 +247,8 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab }: Li
                   {memberVirtualizer.getVirtualItems().map((vi) => {
                     const member = members[vi.index]!;
                     return (
-                      <div key={member.uri} data-index={vi.index} ref={memberVirtualizer.measureElement}
+                      <div key={member.uri} data-index={vi.index}
+                        ref={(el) => memberMeasureAndCache(el, member)}
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                         className="flex items-center border-b border-border hover:bg-surface transition-colors"
                       >
