@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
 import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget } from '@bsky/app';
@@ -7,6 +6,7 @@ import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
 import { EditProfileModal } from './EditProfileModal.js';
+import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 import { Icon } from './Icon.js';
 
 interface ProfilePageProps {
@@ -27,19 +27,6 @@ interface ProfilePageProps {
 
 function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
-}
-
-function ImageModal({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
-  return createPortal(
-    <button className="fixed inset-0 z-[9999] bg-black/90 flex flex-col items-center justify-center p-4 border-none cursor-pointer" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-      <div className="absolute top-4 right-4 flex gap-2 z-10">
-        <a href={src} download target="_blank" className="text-white bg-white/10 hover:bg-white/20 rounded-lg px-4 py-2 text-sm no-underline" onClick={e => e.stopPropagation()}><Icon name="arrow-big-down" size={18} /> Download</a>
-        <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="text-white text-3xl leading-none hover:opacity-70 bg-transparent border-none cursor-pointer"><Icon name="x" size={16} /></button>
-      </div>
-      <img src={src} alt={alt} className="max-w-full max-h-[85vh] object-contain rounded-lg" onClick={e => e.stopPropagation()} />
-    </button>,
-    document.body
-  );
 }
 
 export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
@@ -70,7 +57,11 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   const [bannerLightbox, setBannerLightbox] = useState(false);
   const [avatarLightbox, setAvatarLightbox] = useState(false);
+  const [bannerLightboxRect, setBannerLightboxRect] = useState<DOMRect | null>(null);
+  const [avatarLightboxRect, setAvatarLightboxRect] = useState<DOMRect | null>(null);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const bannerRef = useRef<HTMLButtonElement>(null);
+  const avatarRef = useRef<HTMLButtonElement>(null);
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
@@ -226,7 +217,11 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {/* Banner */}
         {profile.banner ? (
-          <button className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => setBannerLightbox(true)}>
+          <button ref={bannerRef} className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => {
+            const rect = bannerRef.current?.getBoundingClientRect();
+            if (rect) setBannerLightboxRect(rect);
+            setBannerLightbox(true);
+          }}>
             <img src={profile.banner} alt="" className="w-full h-full object-cover" />
           </button>
         ) : (
@@ -237,7 +232,11 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           {/* Avatar + Follow button row */}
           <div className="relative -mt-12 mb-3 flex justify-between items-end">
             {profile.avatar ? (
-              <button className="border-none bg-transparent p-0 cursor-pointer" onClick={() => setAvatarLightbox(true)}>
+              <button ref={avatarRef} className="border-none bg-transparent p-0 cursor-pointer" onClick={() => {
+                const rect = avatarRef.current?.getBoundingClientRect();
+                if (rect) setAvatarLightboxRect(rect);
+                setAvatarLightbox(true);
+              }}>
                 <img
                   src={profile.avatar}
                   alt={profile.handle}
@@ -489,11 +488,23 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         )}
       </div>
 
-      {bannerLightbox && profile.banner && (
-        <ImageModal src={profile.banner} alt="Banner" onClose={() => setBannerLightbox(false)} />
+      {bannerLightbox && profile.banner && bannerLightboxRect && (
+        <ImageLightboxDialog
+          open={bannerLightbox}
+          images={[{ url: profile.banner, alt: 'Banner' }]}
+          initial={0}
+          sourceRect={bannerLightboxRect}
+          onClose={() => { setBannerLightbox(false); setBannerLightboxRect(null); }}
+        />
       )}
-      {avatarLightbox && profile.avatar && (
-        <ImageModal src={profile.avatar} alt={profile.handle} onClose={() => setAvatarLightbox(false)} />
+      {avatarLightbox && profile.avatar && avatarLightboxRect && (
+        <ImageLightboxDialog
+          open={avatarLightbox}
+          images={[{ url: profile.avatar, alt: profile.handle }]}
+          initial={0}
+          sourceRect={avatarLightboxRect}
+          onClose={() => { setAvatarLightbox(false); setAvatarLightboxRect(null); }}
+        />
       )}
       {showEditProfile && profile && (
         <EditProfileModal client={client} profile={profile} onClose={() => setShowEditProfile(false)} onSaved={() => { setShowEditProfile(false); }} />

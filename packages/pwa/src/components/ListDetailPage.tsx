@@ -5,6 +5,7 @@ import { useListDetail, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
+import { Modal } from './Modal.js';
 
 interface ListDetailPageProps {
   client: BskyClient;
@@ -308,23 +309,21 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
       )}
 
       {/* Delete confirmation modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full shadow-xl p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
-            <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
-              <button onClick={async () => { setDeleting(true); await deleteList(); setDeleting(false); setShowDeleteConfirm(false); goBack(); }}
-                disabled={deleting}
-                className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
-              >
-                {deleting ? t('action.loading') : t('action.delete')}
-              </button>
-            </div>
+      <Modal open={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)}>
+        <div className="p-6">
+          <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
+          <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setShowDeleteConfirm(false)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+            <button onClick={async () => { setDeleting(true); await deleteList(); setDeleting(false); setShowDeleteConfirm(false); goBack(); }}
+              disabled={deleting}
+              className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
+            >
+              {deleting ? t('action.loading') : t('action.delete')}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

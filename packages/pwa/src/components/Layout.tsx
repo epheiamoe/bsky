@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useI18n } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { initEnabledWidgets, getEnabledWidgetIds, toggleWidget, disableWidget, setWidgetToggleCallback, getWidgetsForView } from '@bsky/app';
@@ -221,35 +222,51 @@ export function Layout({
         </div>
       </header>
 
-      {/* ── Mobile sidebar overlay ── */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-[60] md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setSidebarOpen(false)} />
-          <div className="relative w-64 h-full bg-white dark:bg-[#0A0A0A] border-r border-border shadow-lg">
-            <Sidebar
-              currentView={currentView}
-              goTo={(v) => { goTo(v); setSidebarOpen(false); }}
-              client={client}
-              draftCount={draftCount}
-              dmCount={dmCount}
-            />
-            <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3 space-y-1">
-              <button
-                onClick={() => { goTo({ type: 'about' }); setSidebarOpen(false); }}
-                className="w-full text-left text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-surface"
-              >
-                {t('nav.about')}
-              </button>
-              <button
-                onClick={() => { onLogout(); setSidebarOpen(false); }}
-                className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"
-              >
-                {t('settings.logout')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Mobile sidebar overlay with slide animation ── */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            key="mobile-sidebar"
+            className="fixed inset-0 z-[60] md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+            <motion.div
+              className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-[#0A0A0A] border-r border-border shadow-lg"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <Sidebar
+                currentView={currentView}
+                goTo={(v) => { goTo(v); setSidebarOpen(false); }}
+                client={client}
+                draftCount={draftCount}
+                dmCount={dmCount}
+              />
+              <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3 space-y-1">
+                <button
+                  onClick={() => { goTo({ type: 'about' }); setSidebarOpen(false); }}
+                  className="w-full text-left text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-surface"
+                >
+                  {t('nav.about')}
+                </button>
+                <button
+                  onClick={() => { onLogout(); setSidebarOpen(false); }}
+                  className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"
+                >
+                  {t('settings.logout')}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="flex">
         {/* Desktop sidebar */}

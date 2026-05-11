@@ -3,6 +3,7 @@ import type { BskyClient, ListPurpose } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { useLists, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { Modal } from './Modal.js';
 
 interface ListsPageProps {
   client: BskyClient;
@@ -249,79 +250,75 @@ export function ListsPage({ client, goBack, goTo, actor, initialScrollTop, onScr
         </div>
       )}
       {/* List add popup overlay */}
-      {showListAddPopup && (
-        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4" onClick={() => setShowListAddPopup(false)}>
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full max-h-[70vh] overflow-hidden shadow-xl flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
-              <h3 className="font-semibold text-text-primary text-sm">{t('lists.addMember')} @{actor}</h3>
-              <button onClick={() => setShowListAddPopup(false)} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('action.close')}>
-                <Icon name="x" size={16} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1">
-              {membershipLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : listMembership.length === 0 ? (
-                <div className="px-4 py-12 text-center text-text-secondary text-sm">{t('lists.empty')}</div>
-              ) : (
-                listMembership.map((item: any) => {
-                  const list = item.list;
-                  const isMember = !!item.listItem;
-                  const isMod = list.purpose === 'app.bsky.graph.defs#modlist';
-                  return (
-                    <button
-                      key={list.uri}
-                      onClick={() => isMember ? handleRemoveFromList(item.listItem.uri, list.uri) : handleAddToList(list.uri)}
-                      className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-center gap-3"
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                        isMod ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
-                      }`}>
-                        <Icon name="list" size={16} />
+      <Modal open={showListAddPopup} onClose={() => setShowListAddPopup(false)} containerClass="items-start pt-16 md:pt-0 md:items-center">
+        <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full max-h-[70vh] overflow-hidden shadow-xl flex flex-col">
+          <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+            <h3 className="font-semibold text-text-primary text-sm">{t('lists.addMember')} @{actor}</h3>
+            <button onClick={() => setShowListAddPopup(false)} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('action.close')}>
+              <Icon name="x" size={16} />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1">
+            {membershipLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : listMembership.length === 0 ? (
+              <div className="px-4 py-12 text-center text-text-secondary text-sm">{t('lists.empty')}</div>
+            ) : (
+              listMembership.map((item: any) => {
+                const list = item.list;
+                const isMember = !!item.listItem;
+                const isMod = list.purpose === 'app.bsky.graph.defs#modlist';
+                return (
+                  <button
+                    key={list.uri}
+                    onClick={() => isMember ? handleRemoveFromList(item.listItem.uri, list.uri) : handleAddToList(list.uri)}
+                    className="w-full text-left px-4 py-3 border-b border-border hover:bg-surface transition-colors flex items-center gap-3"
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                      isMod ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      <Icon name="list" size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-text-primary text-sm truncate">{list.name}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
+                          isMod ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                        }`}>
+                          {isMod ? t('lists.moderation') : t('lists.curated')}
+                        </span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-text-primary text-sm truncate">{list.name}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0 ${
-                            isMod ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                          }`}>
-                            {isMod ? t('lists.moderation') : t('lists.curated')}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors btn-press ${
-                        isMember ? 'bg-primary text-white' : 'bg-border text-text-secondary'
-                      }`}>
-                        {isMember ? (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
+                    </div>
+                    <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-colors btn-press ${
+                      isMember ? 'bg-primary text-white' : 'bg-border text-text-secondary'
+                    }`}>
+                      {isMember ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete confirmation modal */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-sm w-full shadow-xl p-6" onClick={e => e.stopPropagation()}>
-            <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
-            <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
-            <div className="flex justify-end gap-2">
-              <button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
-              <button onClick={() => { deleteList(deleteTarget); setDeleteTarget(null); }} className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium">{t('action.delete')}</button>
-            </div>
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <div className="p-6">
+          <h3 className="text-text-primary font-semibold text-sm mb-2">{t('lists.delete')}</h3>
+          <p className="text-text-secondary text-sm mb-4">{t('lists.deleteConfirm')}</p>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setDeleteTarget(null)} className="px-4 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
+            <button onClick={() => { deleteList(deleteTarget!); setDeleteTarget(null); }} className="px-4 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium">{t('action.delete')}</button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

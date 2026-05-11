@@ -1,5 +1,4 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig, PostView } from '@bsky/core';
@@ -11,6 +10,7 @@ import { ImageGrid } from './PostCard.js';
 import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
+import { Modal } from './Modal.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -320,15 +320,14 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           </div>
         )}
       </main>
-      {showInfo && focused && getPostView?.(focused.uri) && createPortal(
-        <PostInfoModal post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />,
-        document.body
+      {showInfo && focused && getPostView?.(focused.uri) && (
+        <PostInfoModal open={showInfo} post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />
       )}
     </div>
   );
 }
 
-function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void }) {
+function PostInfoModal({ open, post, onClose }: { open: boolean; post: PostView; onClose: () => void }) {
   const { t } = useI18n();
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -351,8 +350,8 @@ function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void 
   else if (apiEmbed?.$type?.includes('record')) embedTypes.push('quote');
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
+    <Modal open={open} onClose={onClose}>
+      <div className="max-w-lg" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-base font-bold text-text-primary">{t('post.info')}</h2>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
@@ -408,6 +407,6 @@ function PostInfoModal({ post, onClose }: { post: PostView; onClose: () => void 
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

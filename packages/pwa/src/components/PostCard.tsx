@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useRef, useState } from 'react';
 import type { PostView } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
@@ -8,6 +7,7 @@ import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 import { VideoCard } from './VideoCard.js';
 import type { VideoData } from './VideoCard.js';
+import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 
 interface ImageData {
   url: string;
@@ -181,24 +181,12 @@ export function linkifyText(text: string): React.ReactNode[] {
   return parts.length > 0 ? parts : [text];
 }
 
-function ImageLightbox({ images, initial, onClose }: { images: ImageData[]; initial: number; onClose: () => void }) {
-  return (
-      <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-      <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="absolute top-4 right-4 text-white text-3xl leading-none hover:opacity-70 z-10"><Icon name="x" size={16} /></button>
-      <img
-        src={images[initial]!.url}
-        alt={images[initial]!.alt}
-        className="max-w-full max-h-[90vh] object-contain rounded-lg"
-        onClick={(e) => e.stopPropagation()}
-      />
-    </div>
-  );
-}
-
 function ImageGrid({ images }: { images: ImageData[] }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
+  const [lightboxRect, setLightboxRect] = useState<DOMRect | null>(null);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
+  const imgRefs = useRef<(HTMLImageElement | null)[]>([]);
 
   const grid = (() => {
     const n = images.length;
@@ -222,7 +210,13 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                   alt={img.alt || t('post.imageAlt', { n: i + 1 })}
                   width="800" height="600"
                   className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
-                  onClick={(e) => { e.stopPropagation(); setLightbox(i); }}
+                  ref={(el) => { imgRefs.current[i] = el; }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = imgRefs.current[i]?.getBoundingClientRect();
+                    if (rect) setLightboxRect(rect);
+                    setLightbox(i);
+                  }}
                 />
                 {hasAlt && (
                   <button
@@ -263,9 +257,14 @@ function ImageGrid({ images }: { images: ImageData[] }) {
           </div>
         </>
       )}
-      {lightbox !== null && createPortal(
-        <ImageLightbox images={images} initial={lightbox} onClose={() => setLightbox(null)} />,
-        document.body
+      {lightbox !== null && lightboxRect && (
+        <ImageLightboxDialog
+          open={lightbox !== null}
+          images={images}
+          initial={lightbox}
+          sourceRect={lightboxRect}
+          onClose={() => { setLightbox(null); setLightboxRect(null); }}
+        />
       )}
     </>
   );
@@ -453,4 +452,4 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   );
 }
 
-export { ImageGrid, ImageLightbox };
+export { ImageGrid };

@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { BskyClient, ProfileView } from '@bsky/core';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { Modal } from './Modal.js';
 
 interface EditProfileModalProps {
   client: BskyClient;
@@ -62,12 +63,8 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
   };
 
   return (
-    <>
-      {/* Backdrop */}
-      <button className="fixed inset-0 bg-black/50 z-[9998]" onClick={onClose} aria-label="Close" />
-      {/* Modal */}
-      <div className="fixed inset-x-0 bottom-0 z-[9999] bg-white dark:bg-[#0A0A0A] rounded-t-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
-        {/* Header */}
+    <Modal open onClose={onClose} variant="bottom-sheet">
+      <div className="bg-white dark:bg-[#0A0A0A] rounded-t-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary"><Icon name="arrow-big-left" size={20} /></button>
           <span className="font-semibold text-text-primary">{t('profile.editProfile')}</span>
@@ -76,11 +73,9 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-4 space-y-4">
           {error && <div className="p-2 bg-red-100 dark:bg-red-900/20 text-red-600 text-sm rounded-lg">{error}</div>}
 
-          {/* Banner */}
           <div className="relative">
             <div className="h-32 bg-surface rounded-lg overflow-hidden">
               {bannerPreview ? (
@@ -95,7 +90,6 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
             </button>
           </div>
 
-          {/* Avatar */}
           <div className="flex items-center gap-3">
             <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center overflow-hidden">
               {avatarPreview ? (
@@ -110,7 +104,6 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
             </button>
           </div>
 
-          {/* Display Name */}
           <div>
             <label className="text-sm text-text-secondary mb-1 block">{t('profile.displayName')}</label>
             <input
@@ -122,7 +115,6 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="text-sm text-text-secondary mb-1 block">{t('profile.description')}</label>
             <textarea
@@ -136,6 +128,6 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
           </div>
         </div>
       </div>
-    </>
+    </Modal>
   );
 }

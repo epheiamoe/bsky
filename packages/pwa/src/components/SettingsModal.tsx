@@ -6,6 +6,7 @@ import type { TargetLang, Locale } from '@bsky/app';
 import { PROVIDERS, getProviderByBaseUrl, getModelInfo, getProviderById } from '@bsky/core';
 import type { ProviderInfo, ModelInfo } from '@bsky/core';
 import { Icon } from './Icon.js';
+import { Modal } from './Modal.js';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
   { value: 'zh', label: '中文' },
@@ -111,7 +112,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       apiKeys: newApiKeys,
       scenarioModels,
       aiConfig: {
-        apiKey: apiKey,                   // active key for current provider
+        apiKey: apiKey,
         baseUrl,
         model,
         provider: currentProvider?.id,
@@ -140,10 +141,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+    <Modal open={open} onClose={onClose} containerClass="items-start pt-12 md:pt-0 md:items-center">
+      <div className="bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-white dark:bg-[#121212] z-10">
           <h2 className="text-lg font-semibold text-text-primary">{t('settings.title')}</h2>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1"><Icon name="x" size={16} /></button>
         </div>
@@ -417,6 +417,6 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
