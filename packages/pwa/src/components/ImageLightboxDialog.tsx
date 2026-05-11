@@ -6,25 +6,25 @@ interface ImageLightboxDialogProps {
   open: boolean;
   images: Array<{ url: string; alt: string }>;
   initial: number;
-  sourceRect: DOMRect;
+  sourceRects: DOMRect[];
   naturalAspectRatio: number;
   onClose: () => void;
 }
 
-export function ImageLightboxDialog({ open, images, initial, sourceRect, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
+export function ImageLightboxDialog({ open, images, initial, sourceRects, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
   const [current, setCurrent] = useState(initial);
   const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
   const [crossfade, setCrossfade] = useState(false);
   const prevOpen = useRef(false);
-  const sourceRectRef = useRef(sourceRect);
+  const sourceRectsRef = useRef(sourceRects);
 
   useEffect(() => {
     setCurrent(initial);
   }, [initial]);
 
   useEffect(() => {
-    if (open) sourceRectRef.current = sourceRect;
-  }, [open, sourceRect]);
+    if (open) sourceRectsRef.current = sourceRects;
+  }, [open, sourceRects]);
 
   useEffect(() => {
     if (open && !prevOpen.current) {
@@ -62,15 +62,12 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
 
   const hasMultiple = images.length > 1;
 
-  const rect = sourceRect;
-  const isSourceValid = rect.width > 0 && rect.height > 0
-    && rect.top < vh && rect.bottom > 0
-    && rect.left < vw && rect.right > 0;
+  const rect = sourceRects[current] || sourceRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
+  const isSourceValid = rect.width > 0 && rect.height > 0;
 
-  const exitRect = sourceRectRef.current;
-  const isExitValid = exitRect.width > 0 && exitRect.height > 0
-    && exitRect.top < vh && exitRect.bottom > 0
-    && exitRect.left < vw && exitRect.right > 0;
+  const exitRects = sourceRectsRef.current;
+  const exitRect = exitRects[current] || exitRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
+  const isExitValid = exitRect.width > 0 && exitRect.height > 0;
 
   const fromX = isSourceValid ? rect.left : vw / 2 - (rect.width || 100) / 2;
   const fromY = isSourceValid ? rect.top : vh / 2 - (rect.height || 100) / 2;
