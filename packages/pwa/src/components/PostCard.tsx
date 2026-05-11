@@ -215,12 +215,13 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     const el = imgRefs.current[i];
-                    const rect = el?.getBoundingClientRect();
-                    if (rect) setLightboxRect(rect);
-                    if (el?.naturalWidth && el?.naturalHeight) {
+                    if (!el) return;
+                    const rect = el.getBoundingClientRect();
+                    setLightboxRect(rect);
+                    if (el.naturalWidth && el.naturalHeight) {
                       setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
                     } else {
-                      setNaturalAspectRatio(rect ? rect.width / rect.height : 1);
+                      setNaturalAspectRatio(rect.width / rect.height);
                     }
                     setLightbox(i);
                   }}
@@ -268,7 +269,7 @@ function ImageGrid({ images }: { images: ImageData[] }) {
         open={lightbox !== null && lightboxRect !== null}
         images={images}
         initial={lightbox ?? 0}
-        sourceRect={lightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        sourceRect={lightboxRect ?? new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)}
         naturalAspectRatio={naturalAspectRatio}
         onClose={() => { setLightbox(null); setLightboxRect(null); }}
       />

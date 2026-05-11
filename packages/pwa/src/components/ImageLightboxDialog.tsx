@@ -15,17 +15,22 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
   const [current, setCurrent] = useState(initial);
   const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
   const prevOpen = useRef(false);
+  const sourceRectRef = useRef(sourceRect);
 
   useEffect(() => {
     setCurrent(initial);
   }, [initial]);
 
   useEffect(() => {
+    if (open) sourceRectRef.current = sourceRect;
+  }, [open, sourceRect]);
+
+  useEffect(() => {
     if (open && !prevOpen.current) {
       setPhase('visible');
     } else if (!open && prevOpen.current) {
       setPhase('exiting');
-      const timer = setTimeout(() => setPhase('hidden'), 200);
+      const timer = setTimeout(() => setPhase('hidden'), 250);
       return () => clearTimeout(timer);
     }
     prevOpen.current = open;
@@ -52,6 +57,25 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
 
   const hasMultiple = images.length > 1;
 
+  const rect = sourceRect;
+  const isSourceValid = rect.width > 0 && rect.height > 0
+    && rect.top < vh && rect.bottom > 0
+    && rect.left < vw && rect.right > 0;
+
+  const exitRect = sourceRectRef.current;
+  const isExitValid = exitRect.width > 0 && exitRect.height > 0
+    && exitRect.top < vh && exitRect.bottom > 0
+    && exitRect.left < vw && exitRect.right > 0;
+
+  const fromX = isSourceValid ? rect.left : vw / 2 - (rect.width || 100) / 2;
+  const fromY = isSourceValid ? rect.top : vh / 2 - (rect.height || 100) / 2;
+  const fromW = rect.width || 100;
+  const fromH = rect.height || 100;
+  const exitFromX = isExitValid ? exitRect.left : vw / 2 - (exitRect.width || 100) / 2;
+  const exitFromY = isExitValid ? exitRect.top : vh / 2 - (exitRect.height || 100) / 2;
+  const exitFromW = exitRect.width || 100;
+  const exitFromH = exitRect.height || 100;
+
   useEffect(() => {
     if (!open) return;
     const handleEsc = (e: KeyboardEvent) => {
@@ -65,21 +89,22 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
 
   if (phase === 'hidden') return null;
 
+  const showControls = phase === 'visible' || (phase === 'exiting' && open);
+
   return createPortal(
     <div
       className="fixed inset-0 z-[9999]"
       style={{
         pointerEvents: 'auto',
         backgroundColor: open ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0)',
-        transition: 'background-color 200ms ease-out',
+        transition: 'background-color 250ms ease-out',
       }}
+      onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => {
-        e.stopPropagation();
         if (e.target === e.currentTarget && open) onClose();
       }}
     >
-      {/* Close button */}
-      {open && (
+      {showControls && (
         <button
           className="absolute top-4 right-4 text-white/70 hover:text-white z-10 p-2"
           onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -90,8 +115,7 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
         </button>
       )}
 
-      {/* Nav arrows */}
-      {hasMultiple && open && (
+      {hasMultiple && showControls && (
         <>
           {current > 0 && (
             <button
@@ -115,39 +139,31 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
         </>
       )}
 
-      {/* Image with hero animation */}
-      <motion.img
-        src={img.url}
-        alt={img.alt}
-        draggable={false}
-        style={{
-          position: 'fixed',
-          borderRadius: 8,
-          objectFit: 'contain',
-        }}
+      <motion.div
+        className="fixed z-[1]"
+        style={{ borderRadius: 8, overflow: 'hidden' }}
         initial={{
-          left: sourceRect.left,
-          top: sourceRect.top,
-          width: sourceRect.width,
-          height: sourceRect.height,
+          left: fromX, top: fromY,
+          width: fromW, height: fromH,
         }}
         animate={{
-          left: open ? targetX : sourceRect.left,
-          top: open ? targetY : sourceRect.top,
-          width: open ? targetW : sourceRect.width,
-          height: open ? targetH : sourceRect.height,
+          left: open ? targetX : exitFromX,
+          top: open ? targetY : exitFromY,
+          width: open ? targetW : exitFromW,
+          height: open ? targetH : exitFromH,
         }}
-        transition={{
-          type: 'spring',
-          damping: 25,
-          stiffness: 300,
-          mass: 0.8,
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-      />
+        transition={{ type: 'spring', damping: 35, stiffness: 350, mass: 0.8 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <img
+          src={img.url}
+          alt={img.alt}
+          className="w-full h-full object-contain"
+          draggable={false}
+        />
+      </motion.div>
 
-      {/* Alt text */}
-      {img.alt && open && (
+      {img.alt && showControls && (
         <div
           className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[80vw] z-10"
           style={{

@@ -222,10 +222,12 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         {/* Banner */}
         {profile.banner ? (
           <button ref={bannerRef} className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => {
+            const el = bannerImgRef.current;
+            if (!el) return;
             const rect = bannerRef.current?.getBoundingClientRect();
             if (rect) setBannerLightboxRect(rect);
-            if (bannerImgRef.current?.naturalWidth && bannerImgRef.current?.naturalHeight) {
-              setBannerNaturalRatio(bannerImgRef.current.naturalWidth / bannerImgRef.current.naturalHeight);
+            if (el.naturalWidth && el.naturalHeight) {
+              setBannerNaturalRatio(el.naturalWidth / el.naturalHeight);
             }
             setBannerLightbox(true);
           }}>
@@ -240,10 +242,12 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           <div className="relative -mt-12 mb-3 flex justify-between items-end">
             {profile.avatar ? (
               <button ref={avatarRef} className="border-none bg-transparent p-0 cursor-pointer" onClick={() => {
+                const el = avatarImgRef.current;
+                if (!el) return;
                 const rect = avatarRef.current?.getBoundingClientRect();
                 if (rect) setAvatarLightboxRect(rect);
-                if (avatarImgRef.current?.naturalWidth && avatarImgRef.current?.naturalHeight) {
-                  setAvatarNaturalRatio(avatarImgRef.current.naturalWidth / avatarImgRef.current.naturalHeight);
+                if (el.naturalWidth && el.naturalHeight) {
+                  setAvatarNaturalRatio(el.naturalWidth / el.naturalHeight);
                 }
                 setAvatarLightbox(true);
               }}>
@@ -503,7 +507,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         open={bannerLightbox && profile.banner !== undefined && bannerLightboxRect !== null}
         images={[{ url: profile.banner ?? '', alt: 'Banner' }]}
         initial={0}
-        sourceRect={bannerLightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        sourceRect={bannerLightboxRect ?? new DOMRect(window.innerWidth / 2 - 200, 60, 400, 200)}
         naturalAspectRatio={bannerNaturalRatio}
         onClose={() => { setBannerLightbox(false); setBannerLightboxRect(null); }}
       />
@@ -511,7 +515,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         open={avatarLightbox && profile.avatar !== undefined && avatarLightboxRect !== null}
         images={[{ url: profile.avatar ?? '', alt: profile.handle }]}
         initial={0}
-        sourceRect={avatarLightboxRect ?? new DOMRect(0, 0, 1, 1)}
+        sourceRect={avatarLightboxRect ?? new DOMRect(window.innerWidth / 2 - 48, window.innerHeight / 2 - 48, 96, 96)}
         naturalAspectRatio={avatarNaturalRatio}
         onClose={() => { setAvatarLightbox(false); setAvatarLightboxRect(null); }}
       />
