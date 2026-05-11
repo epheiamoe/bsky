@@ -25,9 +25,7 @@
 
 ## 版本
 
-**v0.10.6** — 滚动位置恢复最终修复。全部虚拟滚动页面统一 FeedTimeline 路径：App.tsx 持 ref → props `initialScrollTop`/`onScrollTopChange` → `useVirtualizedList` 接收。关键修复：`useEffect` deps 增加 `items.length`，确保延迟出现的容器也能挂上 scroll listener。6 个 data hook 加 `silent` 参数，有 cache 时静默刷新不触发 loading。
-
-> 这是迄今为止最大的一次重构。核心变更：将 AI 对话持久化从 `useAIChat` hook 中完全解耦，提取为模块级单例 `ChatService`。移除旧的 `setChatStorageFactory`/`getDefaultChatStorage` 工厂模式。PWA 端 `App.tsx` 的 `setChatStorageFactory` 通过 `useEffect` 仅在 mount 时执行一次，杜绝了每 render 重置 `_defaultChatStorage` 导致 load effect 反复触发覆盖流式数据的致命 bug。
+**v0.10.8** — 图片灯箱 Hero 动画最终修复 + 文档化。`sourceRects: DOMRect[]` 数组存储每张图片的 grid 位置，退出动画正确飞回当前图片位置。`useEffect` 加 `if (open)` guard 防止关闭时重置 `current`。`AnimatePresence mode="wait"` 加回图片切换滑动动画。点击穿透 / 飞走 / 打不开 三问题全部修复。Animation System 文档 `docs/ANIMATIONS.md`。framer-motion v12.38.0。
 
 ## 项目状态
 
@@ -44,7 +42,7 @@
 - **AI Chat**: 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 人类可读结果), 31 工具格式化, `/view` 命令给 AI 注入当前页面上下文
 - **AI Chat 侧边栏 Widget**: 持久化会话（`_aiChatSessionId`）、折叠卡片、新对话/全页打开按钮
 - **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 删除 + 静音 + 加载更早
-- **页面动画**: 11 页面 fadeIn 入场、PostCard hover、PostActionsRow 按压反馈、NotifsPage/DraftsPage 交错入场
+- **页面动画**: framer-motion v12.38.0 驱动。11 页面 fadeIn 入场、PostCard hover、PostActionsRow 按压反馈、NotifsPage/DraftsPage 交错入场。**Image lightbox**: hero 弹簧动画（sourceRects[current] 位置→居中）、两层 cover→contain 交叉淡入淡出、AnimatePresence mode="wait" 左右滑动切换。**Mobile sidebar**: 左侧滑入（AnimatePresence + spring）+ backdrop-blur-sm。**统一 Modal**: scaleIn/Out + backdrop-blur + Esc 关闭 + bottom-sheet 变体。
 - **滚动**: 像素值恢复（非索引）、AIChatPage requestAnimationFrame 精准滚动、visualViewport 移动键盘适应
 - **JWT 刷新**: `withRefresh` 并发锁（`_refreshPromise` 缓存）、时间线首次加载自动重试
 - **API 重试**: ky 实例显式 `retry: { statusCodes: [408,413,429,500,502,503,504] }`
