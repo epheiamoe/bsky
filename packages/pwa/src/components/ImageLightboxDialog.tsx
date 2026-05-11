@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface ImageLightboxDialogProps {
   open: boolean;
@@ -13,10 +13,23 @@ interface ImageLightboxDialogProps {
 
 export function ImageLightboxDialog({ open, images, initial, sourceRect, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
   const [current, setCurrent] = useState(initial);
+  const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
+  const prevOpen = useRef(false);
 
   useEffect(() => {
     setCurrent(initial);
   }, [initial]);
+
+  useEffect(() => {
+    if (open && !prevOpen.current) {
+      setPhase('visible');
+    } else if (!open && prevOpen.current) {
+      setPhase('exiting');
+      const timer = setTimeout(() => setPhase('hidden'), 200);
+      return () => clearTimeout(timer);
+    }
+    prevOpen.current = open;
+  }, [open]);
 
   const img = images[current];
   if (!img) return null;
@@ -50,98 +63,104 @@ export function ImageLightboxDialog({ open, images, initial, sourceRect, natural
     return () => window.removeEventListener('keydown', handleEsc);
   }, [open, onClose, hasMultiple, images.length]);
 
-  const portalContent = (
-    <AnimatePresence>
+  if (phase === 'hidden') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999]"
+      style={{
+        pointerEvents: 'auto',
+        backgroundColor: open ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0)',
+        transition: 'background-color 200ms ease-out',
+      }}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget && open) onClose();
+      }}
+    >
+      {/* Close button */}
       {open && (
-        <motion.div
-          key="lb"
-          className="fixed inset-0 z-[9999]"
-          initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
-          animate={{ backgroundColor: 'rgba(0,0,0,0.9)' }}
-          exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
-          transition={{ duration: 0.2 }}
+        <button
+          className="absolute top-4 right-4 text-white/70 hover:text-white z-10 p-2"
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
         >
-          <div className="absolute inset-0" onClick={onClose}>
-            <motion.button
-              className="absolute top-4 right-4 text-white/70 hover:text-white z-10 p-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={(e) => { e.stopPropagation(); onClose(); }}
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
-              </svg>
-            </motion.button>
-
-            {hasMultiple && (
-              <>
-                <motion.button
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: current > 0 ? 1 : 0.3 }}
-                  onClick={(e) => { e.stopPropagation(); setCurrent(i => Math.max(0, i - 1)); }}
-                >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
-                </motion.button>
-                <motion.button
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: current < images.length - 1 ? 1 : 0.3 }}
-                  onClick={(e) => { e.stopPropagation(); setCurrent(i => Math.min(images.length - 1, i + 1)); }}
-                >
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
-                </motion.button>
-              </>
-            )}
-
-            {hasMultiple && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-sm z-10">
-                {current + 1} / {images.length}
-              </div>
-            )}
-          </div>
-
-          <motion.div
-            className="absolute z-[1]"
-            onClick={(e) => e.stopPropagation()}
-            initial={{
-              left: sourceRect.left, top: sourceRect.top,
-              width: sourceRect.width, height: sourceRect.height,
-              borderRadius: '8px',
-            }}
-            animate={{
-              left: targetX, top: targetY,
-              width: targetW, height: targetH,
-              borderRadius: '8px',
-            }}
-            exit={{
-              left: sourceRect.left, top: sourceRect.top,
-              width: sourceRect.width, height: sourceRect.height,
-              borderRadius: '8px',
-            }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300, mass: 0.8 }}
-          >
-            <img src={img.url} alt={img.alt} className="w-full h-full object-contain" draggable={false} />
-          </motion.div>
-
-          {img.alt && (
-            <motion.div
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[80vw] z-10"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ delay: 0.15, duration: 0.15 }}
-            >
-              <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-lg max-h-20 overflow-y-auto text-center">
-                {img.alt}
-              </div>
-            </motion.div>
-          )}
-        </motion.div>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
       )}
-    </AnimatePresence>
-  );
 
-  return typeof document !== 'undefined' ? createPortal(portalContent, document.body) : null;
+      {/* Nav arrows */}
+      {hasMultiple && open && (
+        <>
+          {current > 0 && (
+            <button
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
+              onClick={(e) => { e.stopPropagation(); setCurrent(i => i - 1); }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+          )}
+          {current < images.length - 1 && (
+            <button
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white z-10 p-2"
+              onClick={(e) => { e.stopPropagation(); setCurrent(i => i + 1); }}
+            >
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
+          )}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-sm z-10">
+            {current + 1} / {images.length}
+          </div>
+        </>
+      )}
+
+      {/* Image with hero animation */}
+      <motion.img
+        src={img.url}
+        alt={img.alt}
+        draggable={false}
+        style={{
+          position: 'fixed',
+          borderRadius: 8,
+          objectFit: 'contain',
+        }}
+        initial={{
+          left: sourceRect.left,
+          top: sourceRect.top,
+          width: sourceRect.width,
+          height: sourceRect.height,
+        }}
+        animate={{
+          left: open ? targetX : sourceRect.left,
+          top: open ? targetY : sourceRect.top,
+          width: open ? targetW : sourceRect.width,
+          height: open ? targetH : sourceRect.height,
+        }}
+        transition={{
+          type: 'spring',
+          damping: 25,
+          stiffness: 300,
+          mass: 0.8,
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      />
+
+      {/* Alt text */}
+      {img.alt && open && (
+        <div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 max-w-[80vw] z-10"
+          style={{
+            opacity: phase === 'visible' ? 1 : 0,
+            transition: 'opacity 150ms ease-out',
+          }}
+        >
+          <div className="bg-black/60 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-lg max-h-20 overflow-y-auto text-center">
+            {img.alt}
+          </div>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
 }
