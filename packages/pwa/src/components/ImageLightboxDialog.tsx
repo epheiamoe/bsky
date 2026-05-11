@@ -13,29 +13,33 @@ interface ImageLightboxDialogProps {
 
 export function ImageLightboxDialog({ open, images, initial, sourceRects, naturalAspectRatio, onClose }: ImageLightboxDialogProps) {
   const [current, setCurrent] = useState(initial);
-  const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>(open ? 'visible' : 'hidden');
-  const [showCover, setShowCover] = useState(true);
+  const [phase, setPhase] = useState<'hidden' | 'visible' | 'exiting'>('hidden');
+  const [crossfade, setCrossfade] = useState(false);
   const [slideDir, setSlideDir] = useState(1);
+  const prevOpen = useRef(false);
   const sourceRectsRef = useRef(sourceRects);
 
   useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => setShowCover(false), 80);
-      return () => clearTimeout(timer);
-    }
-  }, []);
+    if (open) setCurrent(initial);
+  }, [open, initial]);
 
   useEffect(() => {
     if (open) sourceRectsRef.current = sourceRects;
   }, [open, sourceRects]);
 
   useEffect(() => {
-    if (!open && phase === 'visible') {
+    if (open && !prevOpen.current) {
+      setPhase('visible');
+      const timer = setTimeout(() => setCrossfade(true), 80);
+      prevOpen.current = true;
+      return () => clearTimeout(timer);
+    } else if (!open && prevOpen.current) {
       setPhase('exiting');
       const timer = setTimeout(() => setPhase('hidden'), 250);
+      prevOpen.current = false;
       return () => clearTimeout(timer);
     }
-  }, [open, phase]);
+  }, [open]);
 
   const img = images[current];
   if (!img) return null;
@@ -58,21 +62,26 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
 
   const hasMultiple = images.length > 1;
 
-  const currentRect = sourceRects[current] || sourceRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
-  const isSourceValid = currentRect.width > 0 && currentRect.height > 0;
+  const currentRect = sourceRects[current];
+  const rect = currentRect || sourceRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
+  const isSourceValid = rect.width > 0 && rect.height > 0
+    && rect.top < vh && rect.bottom > 0
+    && rect.left < vw && rect.right > 0;
 
   const exitRects = sourceRectsRef.current;
-  const exitRect = exitRects[current] || exitRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
-  const isExitValid = exitRect.width > 0 && exitRect.height > 0;
+  const exitCurrentRect = exitRects[current] || exitRects[0] || new DOMRect(vw / 2 - 60, vh / 2 - 60, 120, 120);
+  const isExitValid = exitCurrentRect.width > 0 && exitCurrentRect.height > 0
+    && exitCurrentRect.top < vh && exitCurrentRect.bottom > 0
+    && exitCurrentRect.left < vw && exitCurrentRect.right > 0;
 
-  const fromX = isSourceValid ? currentRect.left : vw / 2 - (currentRect.width || 100) / 2;
-  const fromY = isSourceValid ? currentRect.top : vh / 2 - (currentRect.height || 100) / 2;
-  const fromW = currentRect.width || 100;
-  const fromH = currentRect.height || 100;
-  const exitFromX = isExitValid ? exitRect.left : vw / 2 - (exitRect.width || 100) / 2;
-  const exitFromY = isExitValid ? exitRect.top : vh / 2 - (exitRect.height || 100) / 2;
-  const exitFromW = exitRect.width || 100;
-  const exitFromH = exitRect.height || 100;
+  const fromX = isSourceValid ? rect.left : vw / 2 - (rect.width || 100) / 2;
+  const fromY = isSourceValid ? rect.top : vh / 2 - (rect.height || 100) / 2;
+  const fromW = rect.width || 100;
+  const fromH = rect.height || 100;
+  const exitFromX = isExitValid ? exitCurrentRect.left : vw / 2 - (exitCurrentRect.width || 100) / 2;
+  const exitFromY = isExitValid ? exitCurrentRect.top : vh / 2 - (exitCurrentRect.height || 100) / 2;
+  const exitFromW = exitCurrentRect.width || 100;
+  const exitFromH = exitCurrentRect.height || 100;
 
   useEffect(() => {
     if (!open) return;
@@ -155,28 +164,38 @@ export function ImageLightboxDialog({ open, images, initial, sourceRects, natura
         transition={{ type: 'spring', damping: 35, stiffness: 350, mass: 0.8 }}
         onClick={(e) => e.stopPropagation()}
       >
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" custom={slideDir}>
           <motion.div
             key={current}
             className="absolute inset-0"
+            custom={slideDir}
             initial={{ x: slideDir * 80, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: slideDir * -80, opacity: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
+            {/* Back layer: full image (contain), fades in */}
             <img
               src={img.url}
               alt={img.alt}
-              className="absolute inset-0 w-full h-full object-contain"
+              className="absolute inset-0 w-full h-full"
               draggable={false}
+              style={{
+                objectFit: 'contain',
+                opacity: crossfade ? 1 : 0,
+                transition: 'opacity 200ms ease-out',
+              }}
             />
+
+            {/* Front layer: cropped thumbnail (cover), fades out */}
             <img
               src={img.url}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full"
               draggable={false}
               style={{
-                opacity: showCover ? 1 : 0,
+                objectFit: 'cover',
+                opacity: crossfade ? 0 : 1,
                 transition: 'opacity 200ms ease-out',
               }}
             />

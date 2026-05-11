@@ -186,7 +186,6 @@ function ImageGrid({ images }: { images: ImageData[] }) {
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [lightboxRects, setLightboxRects] = useState<DOMRect[] | null>(null);
   const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
-  const [lbSession, setLbSession] = useState(0);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -224,7 +223,6 @@ function ImageGrid({ images }: { images: ImageData[] }) {
                     } else {
                       setNaturalAspectRatio(rects[i]?.width / rects[i]?.height || 1);
                     }
-                    setLbSession(s => s + 1);
                     setLightbox(i);
                   }}
                 />
@@ -268,7 +266,6 @@ function ImageGrid({ images }: { images: ImageData[] }) {
         </>
       )}
       <ImageLightboxDialog
-        key={`lb-${lbSession}`}
         open={lightbox !== null && lightboxRects !== null}
         images={images}
         initial={lightbox ?? 0}
