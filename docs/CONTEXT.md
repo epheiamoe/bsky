@@ -21,7 +21,7 @@
 15. **`docs/CHAT_SERVICE.md`** — ChatService 存储架构文档（v0.10.5 重构）
 16. **`CHANGELOG.md`** — 版本历史
   16. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-  17. **`packages/core/src/ai/tools.ts`** — 38 个 AI 工具定义
+  17. **`packages/core/src/ai/tools.ts`** — 33 个 AI 工具定义
 
 ## 版本
 
@@ -75,13 +75,13 @@
 - **instant_answer 工具** (v0.10.0): 新增第 37 个 AI 工具 `instant_answer`，基于 DuckDuckGo Instant Answer API（零 API 密钥）。浏览器环境下通过 Pages Function `/api/proxy` 代理调用以绕过 Sec-Fetch-* 检测。Node.js 环境下直接 fetch。read-only，无需用户确认。
 - **search_wikipedia 工具** (v0.10.0): 新增第 38 个 AI 工具 `search_wikipedia`，基于 Wikipedia REST API `page/summary`（原生 CORS，零 API 密钥）。一步到位获取知识摘要，Wikipedia 自动处理重定向和模糊匹配。支持语言参数（`lang`，默认 en）。
 - **/api/proxy Pages Function** (v0.10.0): `packages/pwa/functions/api/proxy.js` — Cloudflare Pages Function，服务端 fetch DDG API + CORS 响应头。浏览器 `instant_answer` 的浏览器路径通过此代理调用，绕过 DDG 的 Sec-Fetch-* 浏览器检测。新增域名白名单（仅允许 `api.duckduckgo.com`）。
-- **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
+- **AI 工具总数（当前）**: 33（v0.11.0 合并为 33 个，搜索改为多级回退 jina.ai → DDG Lite）
 - **ChatStorage 工厂模式** (v0.10.0): `setChatStorageFactory()` + `getDefaultChatStorage()` 替代硬编码 `new FileChatStorage()`。与 DraftStorage 一致的注册-解析模式。`useAIChat` 的 `UseAIChatOptions` 移除 `storage` 参数。PWA 在 `App.tsx` 注册 `IndexedDBChatStorage`；TUI 自动检测 Node.js 回退到 `FileChatStorage`。
 - **autoSave 竞态修复** (v0.10.0): 删除 `send()` 函数中过早的 `void autoSave(updated)`（用户消息发出时立即保存），只保留流结束后的保存。防止两个 `IndexedDB.put()` 并发写入同一 key 导致不完整数据覆盖完整对话历史。
 - **get_profile actor="me"** (v0.10.0): 工具描述和 handler 支持 `actor="me"` → 自动解析为 `client.getHandle()`。AI 无需猜测自己的 handle。
 - **系统提示词** (v0.10.0): `P_ASSISTANT_BASE` 新增规则 5（AI 应使用提示词中的 handle）；`PF_CURRENT_USER` 新增 handle 使用提示 + 界面语言参数。
 - **多平台 DDG 代理** (v0.10.0): PHP (`api/proxy.php`) / Vercel (`api/proxy.js`) / Netlify (`netlify/functions/proxy.js`) / Node (`scripts/proxy-server.mjs`)。`DEPLOY.md` 面向部署者的指南。`vite.config.ts` 添加 dev proxy。
-- **AI 工具总数**: 36 → 38（+instant_answer + search_wikipedia）
+- **AI 工具总数（v0.11.0 起）**: 33（搜索重构为 jina.ai + DDG Lite 三回退，工具合并 38→33）
 - **autoSave 写队列** (v0.10.2): `saveQueueRef` Promise 链串行化 IndexedDB 写入，防止并发 autoSave 事务乱序覆盖完整数据。每次保存捕获 `chatIdRef.current` 快照，写入前校验版本和 chatId（Lesson 51）。
 - **全面 `100dvh` 替换** (v0.10.2): 24 处 `100vh` → `100dvh`；`index.css` 改 `overscroll-behavior-y: contain` 作用于 `.overflow-y-auto` 容器（而非全局禁用下拉刷新）。
 - **登录调试日志** (v0.10.2): 错误详情面板 + 一键复制 + 密码脱敏 + 构建信息。
@@ -321,7 +321,7 @@ import { Icon } from './Icon.js';
 import { ThinkingCard, ToolCard, UserMessage, AssistantMessage, formatToolResult } from './ai/index.js';
 ```
 - **ThinkingCard**: 可折叠推理卡片，brain SVG，紫色主题
-- **ToolCard**: 可折叠工具结果卡片，wrench SVG，琥珀主题，`formatToolResult` 格式化 31 种工具输出
+- **ToolCard**: 可折叠工具结果卡片，wrench SVG，琥珀主题，`formatToolResult` 格式化 33 种工具输出
 - **UserMessage/AssistantMessage**: Markdown 渲染用户/AI 消息
 - AIChatPage 和 AIChatWidget 共同引用，`compact` prop 控制大小
 
@@ -465,7 +465,7 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范 |
 | `docs/LESSONS.md` | 本期会话详细教训（上下文压缩快速恢复） |
 | `packages/pwa/src/components/ai/` | AI 共享组件（ThinkingCard, ToolCard, UserMessage, AssistantMessage, formatToolResult） |
-| `packages/pwa/src/components/ai/formatToolResult.ts` | 31 工具结果人类可读格式化 |
+| `packages/pwa/src/components/ai/formatToolResult.ts` | 33 工具结果人类可读格式化 |
 | `packages/pwa/src/components/widgets/AIChatWidget.tsx` | 侧边栏 AI 对话 Widget（持久化, /view） |
 | `packages/pwa/src/components/AboutPage.tsx` | PWA 关于页面 |
 | `packages/pwa/vite.config.ts` | +`define.__COMMIT_HASH__/__COMMIT_DESC__/__BUILD_TIME__` |
@@ -477,7 +477,7 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/hooks/useThread.ts` | FlatLine 含 imageDetails[{url,alt}] |
 | `packages/app/src/hooks/useTimeline.ts` | 时间线 |
 | `packages/app/src/hooks/useAIChat.ts` | AI 对话 |
-| `packages/core/src/ai/tools.ts` | 31 个 AI 工具定义 |
+| `packages/core/src/ai/tools.ts` | 33 个 AI 工具定义 |
 | `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
 | `packages/core/src/ai/assistant.ts` | AI 对话引擎 |
 | `packages/core/src/ai/providers.ts` | 多提供商注册表 |

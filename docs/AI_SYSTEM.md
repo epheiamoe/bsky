@@ -229,9 +229,9 @@ interface ToolDescriptor {
 }
 ```
 
-### All 31 Tools
+### All 33 Tools
 
-**Read Tools (27)**:
+**Read Tools (29)**:
 - `resolve_handle` — resolve handle → DID
 - `get_record` — get raw AT record
 - `list_records` — list repo collection records
@@ -241,24 +241,28 @@ interface ToolDescriptor {
 - `get_popular_feed_generators` — trending feeds
 - `get_feed_generator` — feed generator details
 - `get_feed` — feed content
-- `get_post_thread` — raw thread tree
-- `get_post_thread_flat` — flattened thread with depth markers (prefer for AI context)
-- `get_post_subtree` — expand folded replies
+- `get_post_thread` — thread tree (format=flat|tree|subtree)
 - `get_post_context` — full context: thread + media + text
-- `get_likes` — who liked a post
-- `get_reposted_by` — who reposted
+- `get_post_interactions` — who liked/reposted a post
 - `get_quotes` — posts quoting a specific post
 - `search_actors` — search users
 - `get_profile` — user profile
-- `get_follows` / `get_followers` / `get_suggested_follows` — social graph
+- `get_connections` — social graph (direction=following|followers)
+- `get_suggested_follows` — suggested follows
 - `list_notifications` — notifications
 - `extract_images_from_post` — extract blob refs (did+cid)
 - `download_image` — download blob (TUI saves to disk, PWA returns data URL)
 - `view_image` — download + convert to base64 for vision model
 - `extract_external_link` — extract link embed
 - `fetch_web_markdown` — fetch external URL as markdown via r.jina.ai proxy
+- `search_web_ddg` — web search via jina.ai → DDG Lite (no API key)
+- `search_wikipedia` — Wikipedia page summary
+- `get_lists` — user's lists
+- `get_list_feed` — posts from list members
 
 **Write Tools (4, require confirmation)**:
+- `create_list` — create a list
+- `edit_list_members` — add/remove list members
 - `create_post` — post/reply/quote (supports `pendingImageIndex` for chat-uploaded images)
 - `like` — like a post
 - `repost` — repost a post

@@ -7,7 +7,7 @@
 ```
 bsky/
 ├── packages/
-│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 31 tools.
+│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 33 tools.
 │   ├── app/         Layer 1: React hooks + pure stores. PWA-ready.
 │   ├── tui/         Layer 2: Ink/React terminal UI.
 │   │   └── src/
@@ -65,7 +65,7 @@ bsky/
 ```
 ┌──────────┐
 │ @bsky/   │  纯 TS, 零 UI 依赖
-│ core     │  BskyClient | AIAssistant | 31 tools | types
+│ core     │  BskyClient | AIAssistant | 33 tools | types
 └────┬─────┘
      │
 ┌────▼─────┐

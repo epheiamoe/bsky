@@ -34,7 +34,7 @@ Create curated lists for custom feeds, or moderation lists to mute in bulk. Mana
 
 ![AI Chat](assets/illustration/AI-chat-1.png)
 
-Streaming responses with visible thinking. 36 tools bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
+Streaming responses with visible thinking. 33 tools bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
 
 ---
 

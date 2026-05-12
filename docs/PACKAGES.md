@@ -4,7 +4,7 @@
 
 **Exports** (`src/index.ts`):
 - `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`, `listConvos`, `getConvoForMembers`, `getMessages`, `sendMessage`, `addReaction`, `removeReaction`, `updateRead`, `deleteMessageForSelf`, `muteConvo`, `unmuteConvo`, `putProfile`)
-- `createTools(tools)` — 31 tool definitions + handlers
+- `createTools(tools)` — 33 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
@@ -16,7 +16,7 @@
 | File | Purpose |
 |------|---------|
 | `src/at/client.ts` | BskyClient class. Auth (createSession), all AT endpoints via `ky`. |
-| `src/ai/tools.ts` | `createTools()` → 31 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
+| `src/ai/tools.ts` | `createTools()` → 33 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
 | `src/at/types.ts` | All AT Protocol TypeScript types. |
 | `src/ai/assistant.ts` | AIAssistant class. Multi-turn tool-calling loop (unlimited rounds, user-controlled). `translateText()` with dual-mode + retry. `sendMessageStreaming()` for real-time token delivery. `polishDraft()` for draft refinement. |
 
@@ -195,6 +195,6 @@ Hash-based SPA routing (`useHashRouter.ts`):
 
 | File | Content |
 |------|---------|
-| `tools.json` | JSON Schema for all 31 tools (name, description, inputSchema, endpoint, readonly) |
+| `tools.json` | JSON Schema for all 33 tools (name, description, inputSchema, endpoint, readonly) |
 | `system_prompts.md` | System prompts used by AI assistant, translator, and Polish functions |
 | `package.json` | Package metadata only |
