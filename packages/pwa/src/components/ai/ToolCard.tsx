@@ -69,11 +69,12 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
       {/* Expanded content — animated max-height + scrollable */}
       <div
         onWheel={handleScroll}
+        style={{ overscrollBehaviorY: 'auto' }}
         className={`transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'
+          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto overflow-x-auto' : 'max-h-0 opacity-0 overflow-hidden'
         }`}
       >
-        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap break-all leading-relaxed`}>
+        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>
           {formattedArgs && <div className="mb-2 pb-2 border-b border-border/50 text-text-secondary/60 text-xs flex items-center gap-1.5">
             <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="shrink-0" dangerouslySetInnerHTML={{ __html: WRENCH_SVG }} />
             {formattedArgs}

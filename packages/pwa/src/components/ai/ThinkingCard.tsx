@@ -48,11 +48,12 @@ export function ThinkingCard({ content, expanded, onToggle, compact }: ThinkingC
       {/* Expanded content — animated max-height + scrollable */}
       <div
         onWheel={handleScroll}
+        style={{ overscrollBehaviorY: 'auto' }}
         className={`transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'
+          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto overflow-x-auto' : 'max-h-0 opacity-0 overflow-hidden'
         }`}
       >
-        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap break-all leading-relaxed`}>
+        <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>
           {content}
         </div>
       </div>

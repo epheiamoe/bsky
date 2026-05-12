@@ -1,0 +1,70 @@
+{
+  "react-hooks-体系": {
+    "packages/core/src/ai/tools.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "contracts/tools.json": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/hooks/useCompose.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/hooks/useThread.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/stores/auth.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/ai/assistant.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/ai/prompts.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/ai/fetchViaJina.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/ddg-search/src/index.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/app/src/hooks/useAIChat.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/at/types.ts": [
+      [
+        1,
+        999999
+      ]
+    ]
+  }
+}

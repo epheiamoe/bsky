@@ -4,6 +4,8 @@
 A dual-interface social client — terminal for the keyboard lovers, browser for everyone else.  
 Pure front-end. Zero servers. AI that reaches beyond Bluesky — web search, Wikipedia, any URL. Privacy-first.
 
+Supports third-party PDS.
+
 <div align="center">
 
 [**Open Web App**](https://ai-bsky.pages.dev) · [**View Source**](https://github.com/epheiamoe/bsky)
@@ -26,11 +28,11 @@ Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky �
 
 Your AI isn't locked inside Bluesky. Three built-in tools bridge it to the open web at zero cost:
 
-| Tool | What it does | Key needed? |
-|------|-------------|:-----------:|
-| **`search_web_ddg`** | DuckDuckGo web search with jina.ai reader — get summarized answers and full pages | ✗ None |
-| **`search_wikipedia`** | Direct Wikipedia API with auto-redirect and fuzzy matching. Multi-language support. | ✗ None |
-| **`fetch_web_markdown`** | Fetch any URL and extract clean Markdown — documentation, blog posts, any public page | ✗ None |
+| Tool                     | What it does                                                                          | Key needed? |
+| ------------------------ | ------------------------------------------------------------------------------------- |:-----------:|
+| **`search_web_ddg`**     | DuckDuckGo web search with jina.ai reader — get summarized answers and full pages     | ✗ None      |
+| **`search_wikipedia`**   | Direct Wikipedia API with auto-redirect and fuzzy matching. Multi-language support.   | ✗ None      |
+| **`fetch_web_markdown`** | Fetch any URL and extract clean Markdown — documentation, blog posts, any public page | ✗ None      |
 
 Ask the AI _"what's new in AT Protocol?"_, _"summarize this GitHub README"_, or _"look up this term on Wikipedia"_ — it handles the rest.
 
@@ -75,11 +77,12 @@ First time here? A guided welcome card walks you through AI key setup — with s
 ---
 
 **And also:**
+
 - **Bookmarks** — bookmark anything, browse later
 - **Search** — posts, users, feeds across 4 tabs
 - **Profile** — edit avatar, banner, display name
 - **Compose** — multi-post threads with images and ALT text
-- **Drafts** — auto-save to Bluesky PDS + local fallback
+- **Drafts** — auto-save to your PDS + local fallback
 - **Notifications** — real-time refresh
 - **PWA** — installable, works offline
 - **Dark mode** — follows your system
