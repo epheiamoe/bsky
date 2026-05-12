@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { BskyClient } from '@bsky/core';
+import { BskyClient, type ThreadgateRule } from '@bsky/core';
 
 export interface ComposeMedia {
   type: 'image' | 'video';
@@ -24,12 +24,17 @@ export interface Draft {
   updatedAt: string;
 }
 
-export function useCompose(client: BskyClient | null, goBack: () => void, onSuccess?: () => void) {
+export function useCompose(client: BskyClient | null, goBack: () => void, onSuccess?: (uris?: string[]) => void) {
   const [posts, setPosts] = useState<ComposePostItem[]>([{ id: crypto.randomUUID(), text: '' }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<string | undefined>();
   const [quoteUri, setQuoteUri] = useState<string | undefined>();
+  const [threadgateRules, setThreadgateRules] = useState<ThreadgateRule[] | null | undefined>(undefined);
+  // undefined = "everyone" (no threadgate record created)
+  // null = no explicit value set (treated as everyone)
+  // [] = nobody can reply
+  // [...rules] = restricted to specific rules
 
   const addPost = useCallback(() => {
     setPosts(prev => [...prev, { id: crypto.randomUUID(), text: '' }]);
@@ -73,6 +78,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     let rootCid: string | undefined;
 
     try {
+      let threadgateApplied = false;
       for (let i = 0; i < nonEmptyPosts.length; i++) {
         const post = nonEmptyPosts[i]!;
         const record: Record<string, unknown> = {
@@ -192,6 +198,12 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
         createdUris.push(res.uri);
         createdCids.push(res.cid);
 
+        // Apply threadgate to the first post (only for non-replies)
+        if (i === 0 && !replyTo && threadgateRules !== undefined && threadgateRules !== null && !threadgateApplied) {
+          await client.putThreadgate(res.uri, threadgateRules);
+          threadgateApplied = true;
+        }
+
         if (i === 0 && !replyTo) {
           rootUri = res.uri;
           rootCid = res.cid;
@@ -201,8 +213,9 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
       setPosts([{ id: crypto.randomUUID(), text: '' }]);
       setReplyTo(undefined);
       setQuoteUri(undefined);
+      setThreadgateRules(undefined);
       goBack();
-      onSuccess?.();
+      onSuccess?.(createdUris);
     } catch (e) {
       const created = createdUris.length;
       const remaining = nonEmptyPosts.length - created;
@@ -227,6 +240,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     setReplyTo,
     quoteUri,
     setQuoteUri,
+    threadgateRules,
+    setThreadgateRules,
     submit,
     loadFromDraft,
     toDraftData,

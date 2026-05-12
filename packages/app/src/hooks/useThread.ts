@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BskyClient } from '@bsky/core';
-import type { ThreadViewPost, NotFoundPost as NFP, PostView } from '@bsky/core';
+import type { ThreadViewPost, NotFoundPost as NFP, PostView, ThreadgateRule, ListViewBasic } from '@bsky/core';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from '../utils/imageUrl.js';
 import { isPostLiked, isPostReposted, likePost, repostPost, seedPostViewers } from './usePostActions.js';
 
@@ -37,6 +37,10 @@ export interface FlatLine {
   repostCount: number;
   replyCount: number;
   indexedAt: string;
+  threadgate?: {
+    rules: ThreadgateRule[];
+    listInfo?: Array<{ uri: string; name: string }>;
+  };
 }
 
 const INITIAL_SIBLINGS = 5;
@@ -52,6 +56,7 @@ export function useThread(
   const [themeUri, setThemeUri] = useState<string | undefined>(uri);
   const [sync, setSync] = useState(0);
   const [maxSiblings, setMaxSiblings] = useState(INITIAL_SIBLINGS);
+  const [threadgate, setThreadgate] = useState<FlatLine['threadgate'] | undefined>(undefined);
   const loadedUri = useRef('');
   const postViewsRef = useRef<Map<string, PostView>>(new Map());
 
@@ -81,6 +86,14 @@ export function useThread(
       const rootIdx = lines.findIndex(l => l.isRoot);
       setFocusedIndex(rootIdx >= 0 ? rootIdx : 0);
       if (!themeUri) setThemeUri(uri);
+      // Parse threadgate
+      const tg = res.threadgate;
+      if (tg?.record?.allow) {
+        const listInfo: Array<{ uri: string; name: string }> | undefined = tg.lists?.map(l => ({ uri: l.uri, name: l.name }));
+        setThreadgate({ rules: tg.record.allow, listInfo });
+      } else {
+        setThreadgate(undefined);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
       console.error('Thread load error:', e);
@@ -127,6 +140,7 @@ export function useThread(
   return {
     flatLines, loading, error, focusedIndex, themeUri,
     focused: focusedLine,
+    threadgate,
     expandReplies,
     likePost: likePostFn,
     repostPost: repostPostFn,
