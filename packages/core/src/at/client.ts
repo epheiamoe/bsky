@@ -45,6 +45,7 @@ import type {
   ListPurpose,
   GetActorLikesResponse,
   GetRelationshipsResponse,
+  ThreadgateRule,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -700,6 +701,34 @@ export class BskyClient {
         rkey: parsed.rkey,
       },
     });
+  }
+
+  // ── Threadgate (app.bsky.feed.threadgate) methods ──
+
+  /**
+   * Create or update a threadgate for a post.
+   * The rkey MUST match the post's rkey. putRecord handles both create and update.
+   * Pass allow=undefined for "everyone can reply" (no record needed — call deleteThreadgate instead).
+   */
+  async putThreadgate(postUri: string, allow: ThreadgateRule[]): Promise<CreateRecordResponse> {
+    const parsed = parseAtUri(postUri);
+    const record: Record<string, unknown> = {
+      $type: 'app.bsky.feed.threadgate',
+      post: postUri,
+      allow,
+      createdAt: new Date().toISOString(),
+    };
+    return this.putRecord(parsed.did, 'app.bsky.feed.threadgate', parsed.rkey, record);
+  }
+
+  /** Delete an existing threadgate (= revert to "anyone can reply"). Silently ignores if none exists. */
+  async deleteThreadgate(postUri: string): Promise<void> {
+    const parsed = parseAtUri(postUri);
+    try {
+      await this.deleteRecord(parsed.did, 'app.bsky.feed.threadgate', parsed.rkey);
+    } catch {
+      // threadgate may not exist yet — silently ignore
+    }
   }
 
   async getBookmarks(limit = 50, cursor?: string): Promise<GetBookmarksResponse> {

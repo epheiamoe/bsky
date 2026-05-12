@@ -160,9 +160,41 @@ export interface SearchPostsResponse {
   hitsTotal?: number;
 }
 
+// ── Threadgate (app.bsky.feed.threadgate) types ──
+
+export interface ThreadgateMentionRule {
+  $type: 'app.bsky.feed.threadgate#mentionRule';
+}
+export interface ThreadgateFollowerRule {
+  $type: 'app.bsky.feed.threadgate#followerRule';
+}
+export interface ThreadgateFollowingRule {
+  $type: 'app.bsky.feed.threadgate#followingRule';
+}
+export interface ThreadgateListRule {
+  $type: 'app.bsky.feed.threadgate#listRule';
+  list: string;
+}
+export type ThreadgateRule = ThreadgateMentionRule | ThreadgateFollowerRule | ThreadgateFollowingRule | ThreadgateListRule;
+
+export interface ThreadgateRecord {
+  $type: 'app.bsky.feed.threadgate';
+  post: string;
+  allow?: ThreadgateRule[];
+  createdAt: string;
+  hiddenReplies?: string[];
+}
+
+export interface ThreadgateView {
+  uri: string;
+  cid: string;
+  record: ThreadgateRecord;
+  lists?: ListViewBasic[];
+}
+
 export interface PostThreadResponse {
   thread: ThreadViewPost | NotFoundPost;
-  threadgate?: unknown;
+  threadgate?: ThreadgateView | null;
 }
 
 export interface GetLikesResponse {

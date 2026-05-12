@@ -796,6 +796,14 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
               },
               description: 'Optional: Images to attach. Use extract_images_from_post first to get did/cid',
             },
+            threadgate: {
+              type: 'object',
+              properties: {
+                type: { type: 'string', enum: ['everyone', 'nobody', 'mentioned', 'followers', 'following', 'list'], description: 'Who can reply. Use "everyone" for no restriction. Only applicable for original posts and quotes, NOT replies.' },
+                listUri: { type: 'string', description: 'AT-URI of the list (required when type is "list"). Use the get_lists tool first to find list URIs.' },
+              },
+              description: 'Optional: Who can reply to this post. Only for original posts (no replyTo) and quotes (quoteUri without replyTo). For replies, this is ignored.',
+            },
           },
           required: ['text'],
         },
@@ -806,7 +814,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           text,
           createdAt: new Date().toISOString(),
         };
+        // Check reply restrictions before replying
+        let isReply = false;
         if (p.replyTo) {
+          isReply = true;
           const replyParsed = parseAtUri(p.replyTo as string);
           const replyRec = await client.getRecord(replyParsed.did, replyParsed.collection, replyParsed.rkey);
           const parentCid = replyRec.cid ?? '';
@@ -814,6 +825,21 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           let rootCid = parentCid;
           try {
             const threadRes = await client.getPostThread(p.replyTo as string, 0, 10);
+            // Check threadgate on target post
+            if (threadRes.threadgate?.record?.allow) {
+              const allow = threadRes.threadgate.record.allow;
+              const tgLabels: string[] = [];
+              for (const rule of allow) {
+                if (rule.$type === 'app.bsky.feed.threadgate#mentionRule') tgLabels.push('only mentioned users can reply');
+                else if (rule.$type === 'app.bsky.feed.threadgate#followerRule') tgLabels.push('only followers can reply');
+                else if (rule.$type === 'app.bsky.feed.threadgate#followingRule') tgLabels.push('only people they follow can reply');
+                else if (rule.$type === 'app.bsky.feed.threadgate#listRule') tgLabels.push('only specific list members can reply');
+              }
+              if (allow.length === 0) {
+                return JSON.stringify({ error: 'This post has replies disabled — nobody can reply. Consider quoting it instead, or create a new post.', postUri: p.replyTo });
+              }
+              return JSON.stringify({ error: `This post has reply restrictions: ${tgLabels.join(', ')}. You cannot reply to this post. Try quoting it instead (use quoteUri), or create a new post.`, postUri: p.replyTo });
+            }
             if (threadRes.thread.$type === 'app.bsky.feed.defs#threadViewPost') {
               let current: ThreadViewPost | undefined = threadRes.thread as ThreadViewPost;
               while (current?.parent && (current.parent as ThreadViewPost).$type === 'app.bsky.feed.defs#threadViewPost') {
@@ -881,7 +907,37 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           }
         }
         const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
-        return JSON.stringify({ uri: res.uri, cid: res.cid, text });
+
+        // Apply threadgate if specified (only for original posts and quotes, not replies)
+        const tgParam = p.threadgate as { type?: string; listUri?: string } | undefined;
+        if (tgParam && tgParam.type && !isReply) {
+          let tgRules: import('../at/types.js').ThreadgateRule[] | null = null;
+          switch (tgParam.type) {
+            case 'everyone': tgRules = null; break;
+            case 'nobody': tgRules = []; break;
+            case 'mentioned': tgRules = [{ $type: 'app.bsky.feed.threadgate#mentionRule' as const }]; break;
+            case 'followers': tgRules = [{ $type: 'app.bsky.feed.threadgate#followerRule' as const }]; break;
+            case 'following': tgRules = [{ $type: 'app.bsky.feed.threadgate#followingRule' as const }]; break;
+            case 'list':
+              if (tgParam.listUri) tgRules = [{ $type: 'app.bsky.feed.threadgate#listRule' as const, list: tgParam.listUri }];
+              break;
+          }
+          if (tgRules !== null) {
+            try {
+              await client.putThreadgate(res.uri, tgRules);
+            } catch {}
+          } else if (tgRules === null && tgParam.type !== 'everyone') {
+            // null means no rule, don't create threadgate — this is the default behavior
+          } else if (tgRules === null && tgParam.type === 'everyone') {
+            try { await client.deleteThreadgate(res.uri); } catch {}
+          }
+        }
+
+        const result: Record<string, unknown> = { uri: res.uri, cid: res.cid, text };
+        if (tgParam?.type && !isReply) {
+          result.threadgate = tgParam.type;
+        }
+        return JSON.stringify(result);
       },
       requiresWrite: true,
     },
@@ -1097,8 +1153,18 @@ async function flattenThread(client: BskyClient, uri: string, maxDepth: number, 
     lines.push(formatPostLine(post, depth, prefix));
   }
 
-  // Root post
+  // Root post with threadgate info
   lines.push(formatPostLine(thread.post, 0, ''));
+  if (res.threadgate?.record?.allow) {
+    const tgLabels: string[] = [];
+    for (const rule of res.threadgate.record.allow) {
+      if (rule.$type === 'app.bsky.feed.threadgate#mentionRule') tgLabels.push('mentioned');
+      else if (rule.$type === 'app.bsky.feed.threadgate#followerRule') tgLabels.push('followers');
+      else if (rule.$type === 'app.bsky.feed.threadgate#followingRule') tgLabels.push('following');
+      else if (rule.$type === 'app.bsky.feed.threadgate#listRule') tgLabels.push('list');
+    }
+    lines.push(`  ↳ [reply restriction: ${tgLabels.join(' + ') || 'nobody'}]`);
+  }
 
   // Replies
   buildReplyLines(thread.replies ?? [], 1, maxDepth, capped, lines);

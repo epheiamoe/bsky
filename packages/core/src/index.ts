@@ -58,6 +58,9 @@ export type {
   GetActorLikesResponse,
   GetRelationshipsResponse,
   RelationshipInfo,
+  ThreadgateRule,
+  ThreadgateRecord,
+  ThreadgateView,
 } from './at/types.js';
 
 // AI exports
