@@ -22,7 +22,7 @@ export function UserMessage({ content, isLastUser, compact, loading, onEdit }: U
           </button>
         )}
       </div>
-      <div className={`bg-primary text-white rounded-lg ${compact ? 'px-2.5 py-1.5 max-w-[85%]' : 'px-3 py-2 max-w-[75%]'}`}>
+      <div className={`bg-primary text-white rounded-lg ${compact ? 'px-2.5 py-1.5 max-w-[85%]' : 'px-3 py-2 max-w-[85%] md:max-w-[75%]'}`}>
         <p className={`whitespace-pre-wrap break-words ${compact ? 'text-[13px]' : 'text-sm'}`}>{content}</p>
       </div>
     </div>

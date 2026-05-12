@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] — 2026-05-12
+
+### Fixed
+
+- **AI chat tool_call display corruption after edit/undo**: `mapMessages()` in `useAIChat` pushed tool_calls BEFORE assistant text instead of after, causing `messageGroups` to split tool_call+tool_result pairs. Fix:
+  - Reordered `mapMessages` output: assistant text → tool_calls → tool_results (was tool_calls → text).
+  - Empty-content assistant messages (artifact of broken load reconstruction) are now skipped.
+  - `editByIndex`/`undoLastMessage` now sync `messagesRef.current` after `setMessages` to prevent stale refs from being auto-saved.
+- **Auto-repair of previously corrupted conversations**: New `repairCorruptedMessages()` function runs on load — removes empty assistant messages, detects the `tool_call → assistant → tool_result` corruption pattern, reorders to `assistant → tool_call → tool_result`, and writes the fixed data back to IndexedDB. Pre-v0.12.2 conversations heal automatically on first load.
+- **PWA check-for-updates broken on About page**: `checkForPwaUpdate()` set `_ignoreNextUpdate=true` (designed to prevent duplicate `visibilitychange` events), but About page's manual check hit the same flag → `pwa-update-available` event never dispatched → always showed "Up to date". New `checkForPwaUpdateManual()` skips the ignore flag.
+
+### Changed
+
+- **AI chat export**: Now uses **OpenAI standard format** (`bsky-chat-v2`). Tools are nested inside assistant messages as `tool_calls[]`, thinking blocks use `reasoning_content`, and tool results are separate `role: "tool"` messages with `tool_call_id`. Old export format removed from JSON export (HTML/MD unchanged).
+- **AI chat import**: Now auto-detects and supports **both** v1 (old custom format) and v2 (OpenAI standard format). Detection logic: explicit `format` field → message role heuristics (`tool_calls`/`role: "tool"` vs `role: "tool_call"`/`role: "tool_result"`).
+- **PWA mobile user message width**: User messages now `max-w-[85%]` on mobile (was `75%`), matching assistant message width for better readability on narrow screens.
+
+## [0.12.1] — 2026-05-12
+
+### Fixed
+
+- **About page "Check for updates" always showed "Up to date"**: Root cause: `checkForPwaUpdate()` in `services/pwa.ts` set `_ignoreNextUpdate=true` before calling SW `update()`. The flag is designed to prevent `visibilitychange` auto-detection from double-firing `pwa-update-available`, but the About page's manual check also hit it → the event was suppressed → 5-second timeout → "Up to date". Fix: added `checkForPwaUpdateManual()` that skips the ignore flag.
+
 ## [0.12.0] — 2026-05-12
 
 ### Added
