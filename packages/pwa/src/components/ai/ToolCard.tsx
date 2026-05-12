@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import { formatToolResult } from './formatToolResult.js';
 
@@ -16,6 +16,14 @@ interface ToolCardProps {
 export function ToolCard({ toolName, args, resultContent, expanded, onToggle, compact }: ToolCardProps) {
   const { t } = useI18n();
   const display = useMemo(() => formatToolResult(toolName, resultContent ?? args ?? ''), [toolName, resultContent, args]);
+
+  const handleScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 2;
+    const atTop = el.scrollTop < 2;
+    if ((atBottom && e.deltaY > 0) || (atTop && e.deltaY < 0)) return;
+    e.stopPropagation();
+  }, []);
 
   const formattedArgs = useMemo(() => {
     if (!args) return '';
@@ -58,10 +66,11 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
         {display.summary}
       </div>
 
-      {/* Expanded content — animated max-height + opacity */}
+      {/* Expanded content — animated max-height + scrollable */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
+        onWheel={handleScroll}
+        className={`transition-all duration-300 ease-out ${
+          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'
         }`}
       >
         <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap break-all leading-relaxed`}>
