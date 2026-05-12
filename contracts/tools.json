@@ -1,521 +1,200 @@
 [
   {
     "name": "resolve_handle",
-    "description": "Resolve a Bluesky handle to a DID",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "handle": { "type": "string", "description": "The handle to resolve (e.g., alice.bsky.social)" }
-      },
-      "required": ["handle"]
-    },
+    "description": "Resolve a Bluesky handle to a DID. Returns the DID for a handle (alice.bsky.social → did:plc:xxx). For reverse (DID → handle), use get_profile.",
     "endpoint": "com.atproto.identity.resolveHandle",
     "readonly": true
   },
   {
     "name": "get_record",
-    "description": "Get a raw record by AT URI",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI (at://did:plc:xxx/collection/rkey)" }
-      },
-      "required": ["uri"]
-    },
+    "description": "Get a raw AT Protocol record by its full AT URI. Supports any record type — posts, likes, follows, lists, etc. For browsing all records of a type, use list_records.",
     "endpoint": "com.atproto.repo.getRecord",
     "readonly": true
   },
   {
     "name": "list_records",
-    "description": "List records in a repository collection",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "repo": { "type": "string", "description": "The DID or handle of the repo" },
-        "collection": { "type": "string", "description": "The NSID collection" },
-        "limit": { "type": "number", "description": "Maximum records (default 50)" }
-      },
-      "required": ["repo", "collection"]
-    },
+    "description": "List records in a repository collection. Enumerate all records of a given type for a user. Supports cursor pagination. Repo accepts handle or DID.",
     "endpoint": "com.atproto.repo.listRecords",
     "readonly": true
   },
   {
     "name": "search_posts",
-    "description": "Search for posts on Bluesky",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "q": { "type": "string", "description": "Search query" },
-        "limit": { "type": "number", "description": "Maximum results (default 25)" },
-        "sort": { "type": "string", "description": "Sort order: top or latest" }
-      },
-      "required": ["q"]
-    },
+    "description": "Search for posts on Bluesky by keyword. Supports sort (top/latest), Lucene syntax, and cursor pagination.",
     "endpoint": "app.bsky.feed.searchPosts",
     "readonly": true
   },
   {
     "name": "get_timeline",
-    "description": "Get the authenticated user's home timeline",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
-      },
-      "required": []
-    },
+    "description": "Get the authenticated user's home timeline — posts from people they follow. Supports cursor pagination.",
     "endpoint": "app.bsky.feed.getTimeline",
     "readonly": true
   },
   {
     "name": "get_author_feed",
-    "description": "Get a user's post feed",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user" },
-        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
-      },
-      "required": ["actor"]
-    },
+    "description": "Get a user's post feed. Actor accepts handle, DID, or 'me' for current user. Supports cursor pagination.",
     "endpoint": "app.bsky.feed.getAuthorFeed",
     "readonly": true
   },
   {
     "name": "get_popular_feed_generators",
-    "description": "Get popular feed generators",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": []
-    },
+    "description": "Get popular/trending feed generators on Bluesky. Returns name, description, creator, AT URI.",
     "endpoint": "app.bsky.unspecced.getPopularFeedGenerators",
     "readonly": true
   },
   {
     "name": "get_feed_generator",
-    "description": "Get details about a feed generator",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "feed": { "type": "string", "description": "The AT URI of the feed generator" }
-      },
-      "required": ["feed"]
-    },
+    "description": "Get detailed info about a specific feed generator by its AT URI.",
     "endpoint": "app.bsky.feed.getFeedGenerator",
     "readonly": true
   },
   {
     "name": "get_feed",
-    "description": "Get posts from a specific feed",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "feed": { "type": "string", "description": "The AT URI of the feed" },
-        "limit": { "type": "number", "description": "Maximum posts (default 50)" }
-      },
-      "required": ["feed"]
-    },
+    "description": "Get posts from a specific feed generator. Use the AT URI from get_feed_generator or get_popular_feed_generators. Supports cursor pagination.",
     "endpoint": "app.bsky.feed.getFeed",
     "readonly": true
   },
   {
     "name": "get_post_thread",
-    "description": "Get the raw post thread (tree structure)",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" },
-        "depth": { "type": "number", "description": "Thread depth (default 6)" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "app.bsky.feed.getPostThread",
-    "readonly": true
-  },
-  {
-    "name": "get_post_thread_flat",
-    "description": "Get a flattened, human-readable version of a post thread with depth markers and reply arrows. Prefer this over get_post_thread for understanding conversations.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post to start from" },
-        "depth": { "type": "number", "description": "Maximum depth (default 3)" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "Composite tool (calls getPostThread + formatting)",
-    "readonly": true
-  },
-  {
-    "name": "get_post_subtree",
-    "description": "Flatten a subtree starting from a specific post URI. Use to expand folded replies.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post to expand" },
-        "depth": { "type": "number", "description": "Maximum depth (default 3)" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "Composite tool (calls getPostThread + formatting)",
+    "description": "Get a post thread. Supports format='flat' (human-readable, default), 'tree' (raw AT Protocol), or 'subtree' (expand folded replies).",
+    "endpoint": "Composite tool (getPostThread + formatting)",
     "readonly": true
   },
   {
     "name": "get_post_context",
-    "description": "Get full context for a post: parent chain, quoted post content, and media summary",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "Composite tool (calls getPostThread + getRecord)",
+    "description": "Get comprehensive context for a post: ancestors, replies, media summary, reply status.",
+    "endpoint": "Composite tool (getPostThread + getRecord)",
     "readonly": true
   },
   {
-    "name": "get_likes",
-    "description": "Get users who liked a post",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" },
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "app.bsky.feed.getLikes",
-    "readonly": true
-  },
-  {
-    "name": "get_reposted_by",
-    "description": "Get users who reposted a post",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" },
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "app.bsky.feed.getRepostedBy",
+    "name": "get_post_interactions",
+    "description": "Get users who interacted with a post. Type='likes' (default) or 'reposts'. Supports cursor pagination.",
+    "endpoint": "app.bsky.feed.getLikes / getRepostedBy",
     "readonly": true
   },
   {
     "name": "get_quotes",
-    "description": "Search for posts that quote a specific post",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the quoted post" },
-        "limit": { "type": "number", "description": "Maximum results (default 25)" }
-      },
-      "required": ["uri"]
-    },
+    "description": "Find posts that quote a specific AT URI. Supports cursor pagination.",
     "endpoint": "Composite tool (calls searchPosts)",
     "readonly": true
   },
   {
     "name": "search_actors",
-    "description": "Search for users on Bluesky",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "q": { "type": "string", "description": "Search query" },
-        "limit": { "type": "number", "description": "Maximum results (default 25)" }
-      },
-      "required": ["q"]
-    },
+    "description": "Search for users on Bluesky by name, handle, or keyword. Supports cursor pagination.",
     "endpoint": "app.bsky.actor.searchActors",
     "readonly": true
   },
   {
     "name": "get_profile",
-    "description": "Get a user's profile by DID or handle. Use actor=\"me\" for current user.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user. Use \"me\" for the current authenticated user." }
-      },
-      "required": ["actor"]
-    },
+    "description": "Get a user's profile by DID or handle. Use actor='me' for current user. Returns full profile with counts.",
     "endpoint": "app.bsky.actor.getProfile",
     "readonly": true
   },
   {
-    "name": "get_follows",
-    "description": "Get who a user follows",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user" },
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": ["actor"]
-    },
-    "endpoint": "app.bsky.graph.getFollows",
-    "readonly": true
-  },
-  {
-    "name": "get_followers",
-    "description": "Get a user's followers",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user" },
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": ["actor"]
-    },
-    "endpoint": "app.bsky.graph.getFollowers",
+    "name": "get_connections",
+    "description": "Get a user's social connections. Direction='following' (default) or 'followers'. Actor accepts handle, DID, or 'me'. Supports cursor pagination.",
+    "endpoint": "app.bsky.graph.getFollows / getFollowers",
     "readonly": true
   },
   {
     "name": "get_suggested_follows",
-    "description": "Get suggested follows for a user",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "The DID or handle of the user" }
-      },
-      "required": ["actor"]
-    },
+    "description": "Get suggested follows (recommended users) for a user. Actor accepts handle, DID, or 'me'.",
     "endpoint": "app.bsky.graph.getSuggestedFollowsByActor",
     "readonly": true
   },
   {
     "name": "list_notifications",
-    "description": "Get notifications for the authenticated user",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "limit": { "type": "number", "description": "Maximum results (default 50)" }
-      },
-      "required": []
-    },
+    "description": "Get notifications for the authenticated user. Returns reason, author, timestamp, read status. Supports cursor pagination.",
     "endpoint": "app.bsky.notification.listNotifications",
     "readonly": true
   },
   {
     "name": "extract_images_from_post",
-    "description": "Extract image blob references (did + cid) from a post",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" }
-      },
-      "required": ["uri"]
-    },
+    "description": "Extract image blob references (DID + CID) from a Bluesky post. Use the results with download_image or view_image.",
     "endpoint": "Composite tool (parses record)",
     "readonly": true
   },
   {
     "name": "download_image",
-    "description": "Download an image blob and return as base64 (truncated to 500 chars for preview)",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "did": { "type": "string", "description": "The DID of the repo" },
-        "cid": { "type": "string", "description": "The CID of the blob" }
-      },
-      "required": ["did", "cid"]
-    },
+    "description": "Download a Bluesky post image to local Downloads folder (Node.js) or return as data URL (PWA/browser).",
     "endpoint": "com.atproto.sync.getBlob",
     "readonly": true
   },
   {
+    "name": "view_image",
+    "description": "View and analyze a Bluesky post image. For vision models only. Use did+cid for post images or uploadIndex for chat-uploaded images.",
+    "endpoint": "Composite tool (downloadBlob + vision API)",
+    "readonly": true
+  },
+  {
     "name": "extract_external_link",
-    "description": "Extract external link embed from a post",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post" }
-      },
-      "required": ["uri"]
-    },
+    "description": "Extract the external link embed (link card) from a post. Returns URL, title, description.",
     "endpoint": "Composite tool (parses record)",
     "readonly": true
   },
   {
+    "name": "fetch_web_markdown",
+    "description": "Fetch an external web page as clean markdown via r.jina.ai proxy. Use to read articles and links.",
+    "endpoint": "Proxy: https://r.jina.ai/{url}",
+    "readonly": true
+  },
+  {
+    "name": "search_web_ddg",
+    "description": "Web search via DuckDuckGo (no API key needed). Returns web results with titles, URLs, and snippets.",
+    "endpoint": "jina.ai → DuckDuckGo → DDG Lite fallback",
+    "readonly": true
+  },
+  {
+    "name": "search_wikipedia",
+    "description": "Search Wikipedia and return a summary of the top matching article. Supports language parameter (default 'en').",
+    "endpoint": "https://{lang}.wikipedia.org/api/rest_v1/",
+    "readonly": true
+  },
+  {
     "name": "create_post",
-    "description": "Create a new post, or reply to an existing post. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "text": { "type": "string", "description": "The post text content" },
-        "replyTo": { "type": "string", "description": "Optional: AT URI of the post to reply to" },
-        "quoteUri": { "type": "string", "description": "Optional: AT URI of the post to quote" }
-      },
-      "required": ["text"]
-    },
+    "description": "Create a new post, reply, or quote with optional images. Requires user confirmation.",
     "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.post)",
     "readonly": false
   },
   {
     "name": "like",
     "description": "Like a post. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post to like" }
-      },
-      "required": ["uri"]
-    },
     "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.like)",
     "readonly": false
   },
   {
     "name": "repost",
     "description": "Repost a post. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post to repost" }
-      },
-      "required": ["uri"]
-    },
     "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.feed.repost)",
     "readonly": false
   },
   {
     "name": "follow",
-    "description": "Follow a user. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "subject": { "type": "string", "description": "The DID of the user to follow" }
-      },
-      "required": ["subject"]
-    },
+    "description": "Follow a user. Subject accepts handle or DID. Requires user confirmation.",
     "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.follow)",
     "readonly": false
   },
   {
-    "name": "view_image",
-    "description": "View an image from a post by downloading the blob and sending to the vision model for analysis. Only works when vision mode is enabled.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "uri": { "type": "string", "description": "The AT URI of the post containing the image" }
-      },
-      "required": ["uri"]
-    },
-    "endpoint": "Composite tool (downloadBlob + vision API)",
-    "readonly": true
-  },
-  {
     "name": "get_lists",
-    "description": "Get all lists created by a user. Lists can be curatelist (curated for feeds) or modlist (moderation for mute/block).",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "actor": { "type": "string", "description": "Handle or DID of the user whose lists to fetch. Defaults to current user." }
-      },
-      "required": []
-    },
+    "description": "Get all lists created by a user. Actor accepts handle, DID, 'me', or leave empty for current user. Returns name, purpose, member count, description.",
     "endpoint": "app.bsky.graph.getLists",
     "readonly": true
   },
   {
     "name": "get_list_feed",
-    "description": "Get recent posts from members of a specific list.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "list": { "type": "string", "description": "AT-URI of the list" },
-        "limit": { "type": "number", "description": "Number of posts to fetch (default 30)" }
-      },
-      "required": ["list"]
-    },
+    "description": "Get recent posts from members of a specific list. Supports cursor pagination.",
     "endpoint": "app.bsky.feed.getListFeed",
     "readonly": true
   },
   {
     "name": "create_list",
-    "description": "Create a new user list. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "name": { "type": "string", "description": "List name (1-64 characters)" },
-        "purpose": { "type": "string", "description": "List purpose: curated or moderation", "enum": ["curated", "moderation"] },
-        "description": { "type": "string", "description": "Optional list description (up to 300 characters)" }
-      },
-      "required": ["name", "purpose"]
-    },
+    "description": "Create a new user list. Purpose='curated' or 'moderation'. Requires user confirmation.",
     "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.list)",
     "readonly": false
   },
   {
-    "name": "add_to_list",
-    "description": "Add a user to a list. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "list": { "type": "string", "description": "AT-URI of the list to add to" },
-        "subject": { "type": "string", "description": "DID of the user to add" }
-      },
-      "required": ["list", "subject"]
-    },
-    "endpoint": "com.atproto.repo.createRecord (collection: app.bsky.graph.listitem)",
+    "name": "edit_list_members",
+    "description": "Add a user to or remove a user from a list. Action='add' (default) or 'remove'. Subject accepts handle or DID. Requires user confirmation.",
+    "endpoint": "com.atproto.repo.createRecord / deleteRecord (collection: app.bsky.graph.listitem)",
     "readonly": false
-  },
-  {
-    "name": "remove_from_list",
-    "description": "Remove a user from a list. Removes ALL matching entries if the user was added multiple times. Requires user confirmation.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "list": { "type": "string", "description": "AT-URI of the list to remove from" },
-        "subject": { "type": "string", "description": "DID of the user to remove" }
-      },
-      "required": ["list", "subject"]
-    },
-    "endpoint": "com.atproto.repo.deleteRecord (collection: app.bsky.graph.listitem)",
-    "readonly": false
-  },
-  {
-    "name": "fetch_web_markdown",
-    "description": "Fetch an external web page as clean markdown via r.jina.ai proxy. Use to read articles, links shared in posts.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "url": { "type": "string", "description": "The full URL of the web page to fetch" }
-      },
-      "required": ["url"]
-    },
-    "endpoint": "Proxy: https://r.jina.ai/{url}",
-    "readonly": true
-  },
-  {
-    "name": "instant_answer",
-    "description": "Quick knowledge lookup via DuckDuckGo Instant Answer (no API key needed). Returns Wikipedia summary, structured infobox, direct answers, and related links. Works best with English queries.",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "query": { "type": "string", "description": "Search query (English recommended for best results)" },
-        "skipDisambig": { "type": "boolean", "description": "Skip disambiguation pages (default true)" }
-      },
-      "required": ["query"]
-    },
-    "endpoint": "https://api.duckduckgo.com/?q={query}&format=json&no_html=1",
-    "readonly": true
-  },
-  {
-    "name": "search_wikipedia",
-    "description": "Search Wikipedia and return a concise summary of the top matching article. No API key needed. Use for factual knowledge lookup (people, places, concepts, events).",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "query": { "type": "string", "description": "Search query (e.g. \"Albert Einstein\", \"Python programming language\")" },
-        "lang": { "type": "string", "description": "Wikipedia language code (default \"en\")" }
-      },
-      "required": ["query"]
-    },
-    "endpoint": "https://{lang}.wikipedia.org/api/rest_v1/",
-    "readonly": true
   }
 ]

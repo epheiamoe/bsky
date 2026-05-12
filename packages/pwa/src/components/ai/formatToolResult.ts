@@ -89,6 +89,8 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       cid: String(obj.cid ?? ''),
     }));
     if (r) return { summary: r.uri?.split('/').slice(-2).join('/') ?? 'Record', body: `${r.uri}\n${r.cid}` };
+    const raw = jsonTry(content, obj => ({ uri: String(obj.uri ?? ''), value: String(JSON.stringify(obj.value ?? '')) }));
+    if (raw) return { summary: raw.uri?.split('/').slice(-2).join('/') ?? 'Record', body: `${raw.uri}\n${raw.value.slice(0, 2000)}` };
     return { summary: 'Record', body: truncate(content, 500) };
   }
 
@@ -139,24 +141,16 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Users found', body: truncate(content, 300) };
   }
 
-  if (toolName === 'get_likes') {
+  if (toolName === 'get_post_interactions') {
     const r = jsonTry(content, obj => {
-      const likes = obj.likes as Array<Record<string, unknown>> ?? [];
-      const total = Number(obj.total ?? likes.length);
-      const handles = likes.slice(0, 10).map(l => `@${l.handle}`).join(', ');
-      return { total, handles };
+      const type = String(obj.type ?? 'likes');
+      const items = obj.items as Array<Record<string, unknown>> ?? [];
+      const total = Number(obj.total ?? items.length);
+      const preview = items.slice(0, 8).map(i => type === 'likes' ? `@${i.handle}` : `@${i}`).join(', ');
+      return { type, total, preview };
     });
-    if (r) return { summary: `${r.total} likes`, body: r.handles || `(${r.total} total)` };
-    return { summary: 'Likes', body: truncate(content, 300) };
-  }
-
-  if (toolName === 'get_reposted_by') {
-    const r = jsonTry(content, obj => {
-      const list = obj.repostedBy as string[] ?? [];
-      return { total: list.length, list: list.slice(0, 10).map(h => `@${h}`).join(', ') };
-    });
-    if (r) return { summary: `${r.total} reposts`, body: r.list || `(${r.total} total)` };
-    return { summary: 'Reposts', body: truncate(content, 300) };
+    if (r) return { summary: `${r.total} ${r.type}`, body: r.preview || `(${r.total} total)` };
+    return { summary: 'Interactions', body: truncate(content, 300) };
   }
 
   if (toolName === 'get_quotes') {
@@ -188,12 +182,10 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
   if (toolName === 'get_timeline') {
     const r = jsonTry(content, obj => {
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
-      const posts = feed.map(f => {
-        const p = f.post as Record<string, unknown> | undefined;
-        const rec = p?.record as Record<string, unknown> | undefined;
-        const author = p?.author as Record<string, unknown> | undefined;
-        return { handle: String(author?.handle ?? ''), text: truncate(String(rec?.text ?? ''), 120) };
-      });
+      const posts = feed.map(f => ({
+        handle: String(f.author ?? ''),
+        text: truncate(String(f.text ?? ''), 120),
+      }));
       return {
         total: posts.length,
         first3: posts.slice(0, 3).map(p => `@${p.handle}: ${p.text}`).join('\n\n'),
@@ -206,12 +198,14 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
   if (toolName === 'get_author_feed') {
     const r = jsonTry(content, obj => {
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
-      const posts = feed.map(f => {
-        const p = f.post as Record<string, unknown> | undefined;
-        const rec = p?.record as Record<string, unknown> | undefined;
-        return truncate(String(rec?.text ?? ''), 120);
-      });
-      return { total: posts.length, first3: posts.slice(0, 3).map((t, i) => `${i + 1}. ${t}`).join('\n\n') };
+      const posts = feed.map(f => ({
+        handle: String(f.author ?? ''),
+        text: truncate(String(f.text ?? ''), 120),
+      }));
+      return {
+        total: posts.length,
+        first3: posts.slice(0, 3).map(p => `@${p.handle}: ${p.text}`).join('\n\n'),
+      };
     });
     if (r) return { summary: `Posts: ${r.total} items`, body: r.first3 || '(empty)' };
     return { summary: 'Author feed', body: truncate(content, 500) };
@@ -220,12 +214,10 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
   if (toolName === 'get_feed') {
     const r = jsonTry(content, obj => {
       const feed = obj.feed as Array<Record<string, unknown>> ?? [];
-      const posts = feed.map(f => {
-        const p = f.post as Record<string, unknown> | undefined;
-        const rec = p?.record as Record<string, unknown> | undefined;
-        const author = p?.author as Record<string, unknown> | undefined;
-        return { handle: String(author?.handle ?? ''), text: truncate(String(rec?.text ?? ''), 120) };
-      });
+      const posts = feed.map(f => ({
+        handle: String(f.author ?? ''),
+        text: truncate(String(f.text ?? ''), 120),
+      }));
       return {
         total: posts.length,
         first3: posts.slice(0, 3).map(p => `@${p.handle}: ${p.text}`).join('\n\n'),
@@ -271,15 +263,17 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'List feed', body: truncate(content, 500) };
   }
 
-  if (toolName === 'remove_from_list') {
-    return { summary: '已从列表移除', body: truncate(content, 300) };
+  if (toolName === 'edit_list_members') {
+    const r = jsonTry(content, obj => ({ added: obj.added }));
+    if (r) return { summary: `Added @${String(r.added).split('/').pop()}`, body: String(content) };
+    if (content.includes('Removed user')) return { summary: 'Removed from list', body: truncate(content, 300) };
+    return { summary: 'List updated', body: truncate(content, 300) };
   }
 
   // ── Thread tools ──
-  if (toolName === 'get_post_thread_flat' || toolName === 'get_post_subtree') {
-    const body = truncate(content, 2000);
+  if (toolName === 'get_post_thread') {
     const lineCount = content.split('\n').length;
-    return { summary: `Thread: ${lineCount} lines`, body: lineCount > 1 ? body : content };
+    return { summary: `Thread: ${lineCount} lines`, body: content };
   }
 
   if (toolName === 'get_post_context') {
@@ -300,39 +294,31 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
 
   if (toolName === 'get_post_thread') {
     const lineCount = content.split('\n').length;
-    return { summary: `Thread: ${lineCount} lines`, body: truncate(content, 2000) };
+    return { summary: `Thread: ${lineCount} lines`, body: content };
   }
 
   // ── Follows/followers (Category C) ──
-  if (toolName === 'get_follows') {
+  if (toolName === 'get_connections') {
     const r = jsonTry(content, obj => {
-      const list = obj.follows as Array<Record<string, unknown>> ?? [];
-      const total = Number(obj.total ?? list.length);
-      const first5 = list.slice(0, 5).map(f => `@${f.handle}${f.displayName ? ` (${f.displayName})` : ''}`);
-      return { total, list: first5.join('\n\n') };
+      const direction = String(obj.direction ?? 'following');
+      const items = obj.items as Array<Record<string, unknown>> ?? [];
+      const total = Number(obj.total ?? items.length);
+      const first5 = items.slice(0, 5).map(f => `@${f.handle}${f.displayName ? ` (${f.displayName})` : ''}`);
+      const label = direction === 'followers' ? 'Followers' : 'Following';
+      return { total, list: first5.join('\n\n'), label };
     });
-    if (r) return { summary: `Follows ${r.total} people`, body: r.list || `(${r.total} total)` };
-    return { summary: 'Follows', body: truncate(content, 300) };
-  }
-
-  if (toolName === 'get_followers') {
-    const r = jsonTry(content, obj => {
-      const list = obj.followers as Array<Record<string, unknown>> ?? [];
-      const total = Number(obj.total ?? list.length);
-      const first5 = list.slice(0, 5).map(f => `@${f.handle}${f.displayName ? ` (${f.displayName})` : ''}`);
-      return { total, list: first5.join('\n\n') };
-    });
-    if (r) return { summary: `${r.total} followers`, body: r.list || `(${r.total} total)` };
-    return { summary: 'Followers', body: truncate(content, 300) };
+    if (r) return { summary: `${r.label}: ${r.total}`, body: r.list || `(${r.total} total)` };
+    return { summary: 'Connections', body: truncate(content, 300) };
   }
 
   // ── List records (Category C) ──
   if (toolName === 'list_records') {
     const r = jsonTry(content, obj => {
-      const records = obj.records as Array<Record<string, unknown>> ?? [];
-      return { total: records.length, first3: records.slice(0, 3).map(r2 => String(r2.uri ?? '')).join('\n\n') };
+      const records = (obj.records as Array<Record<string, unknown>> ?? []);
+      const curs = obj.cursor;
+      return { total: records.length, cursor: curs ? String(curs) : undefined, first3: records.slice(0, 3).map(r2 => String(r2.uri ?? '')).join('\n\n') };
     });
-    if (r) return { summary: `${r.total} records`, body: r.first3 || `(${r.total} total)` };
+    if (r) return { summary: `${r.total} records${r.cursor ? ' (more)' : ''}`, body: r.first3 || `(${r.total} total)` };
     return { summary: 'Records', body: truncate(content, 300) };
   }
 
@@ -397,17 +383,16 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
       content: String(obj.content ?? ''),
     }));
     if (r) {
-      const preview = r.content.replace(/\n\n.*/s, '').slice(0, 120);
       return {
         summary: r.heading ? truncate(r.heading, 60) : 'Wikipedia',
-        body: truncate(r.content, 2000),
+        body: r.content,
       };
     }
-    return { summary: 'Wikipedia', body: truncate(content, 500) };
+    return { summary: 'Wikipedia', body: content };
   }
 
-  // ── DuckDuckGo Instant Answer tool (Category C) ──
-  if (toolName === 'instant_answer') {
+  // ── DuckDuckGo Web Search tool (Category C) ──
+  if (toolName === 'search_web_ddg') {
     const r = jsonTry(content, obj => ({
       heading: String(obj.heading ?? ''),
       content: String(obj.content ?? ''),
@@ -415,11 +400,11 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     if (r) {
       const preview = r.content.replace(/\n\n.*/s, '').slice(0, 120);
       return {
-        summary: r.heading ? truncate(r.heading, 60) : 'Instant answer',
-        body: truncate(r.content, 2000),
+        summary: r.heading ? truncate(r.heading, 60) : 'DuckDuckGo search',
+        body: r.content,
       };
     }
-    return { summary: 'Instant answer', body: truncate(content, 500) };
+    return { summary: 'DuckDuckGo search', body: content };
   }
 
   // ── Web fetch tool (Category C) ──
@@ -432,14 +417,13 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     }));
     if (r) {
       if (r.error) return { summary: `Fetch error: ${truncate(r.error, 60)}`, body: r.error };
-      const contentPreview = truncate(r.content.replace(/\n+/g, '\n'), 300);
-      const wordCount = r.content.length;
-      return { summary: truncate(r.title, 60), body: `${r.title}\n${r.url}\n\n${contentPreview}\n... (${wordCount} chars total)` };
+      const charCount = r.content.length;
+      return { summary: truncate(r.title, 60), body: `${r.title}\n${r.url}\n\n${r.content}\n\n(${charCount} chars total)` };
     }
-    return { summary: 'Web page', body: truncate(content, 400) };
+    return { summary: 'Web page', body: content };
   }
 
   // ── Fallback: show content directly ──
   const previewLine = content.split('\n')[0] || content;
-  return { summary: truncate(previewLine, 80), body: truncate(content, 2000) };
+  return { summary: truncate(previewLine, 80), body: content };
 }

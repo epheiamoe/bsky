@@ -11,6 +11,8 @@ import type {
   ListPurpose,
 } from '../at/types.js';
 import { parseAtUri } from '../at/types.js';
+import { fetchViaJina } from './fetchViaJina.js';
+import { parseDDGLite, formatResultsAsMarkdown, extractRealUrl, type SearchResult } from '@bsky/ddg-search';
 
 export interface ToolDefinition {
   name: string;
@@ -22,12 +24,6 @@ export interface ToolDefinition {
   };
 }
 
-interface DDGIcon { Height: string; URL: string; Width: string; }
-interface DDGResult { FirstURL: string; Icon: DDGIcon; Result: string; Text: string; }
-interface DDGRelatedTopic { FirstURL: string; Icon: DDGIcon; Result: string; Text: string; Topics?: DDGRelatedTopic[]; Name?: string; }
-interface DDGInfoboxData { data_type: string; label: string; value: unknown; wiki_order: number | string; }
-interface DDGInfoboxMeta { data_type: string; label: string; value: string; }
-interface DDGInfobox { content: DDGInfoboxData[]; meta: DDGInfoboxMeta[]; }
 interface WikipediaSummary {
   title: string;
   displaytitle: string;
@@ -42,28 +38,6 @@ interface WikipediaSummary {
   timestamp: string;
   type: string;
   lang: string;
-}
-
-interface DDGResponse {
-  Abstract: string;
-  AbstractSource: string;
-  AbstractURL: string;
-  Answer: string;
-  AnswerType: string;
-  Definition: string;
-  DefinitionSource: string;
-  DefinitionURL: string;
-  Heading: string;
-  Image: string;
-  ImageHeight: number;
-  ImageIsLogo: number;
-  ImageWidth: number;
-  Infobox: DDGInfobox;
-  Redirect: string;
-  RelatedTopics: DDGRelatedTopic[];
-  Results: DDGResult[];
-  Type: '' | 'A' | 'D' | 'E' | 'N' | 'X';
-  meta: Record<string, unknown>;
 }
 
 export type ToolHandler = (params: Record<string, unknown>, assistant?: unknown) => Promise<string>;
@@ -104,7 +78,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'resolve_handle',
-        description: 'Resolve a Bluesky handle to a DID',
+        description: "Resolve a Bluesky handle to a DID. Input a handle (alice.bsky.social) and get back the user's DID (did:plc:xxx). Use this when you have a handle and need a DID for other operations. For the reverse (DID → handle), use get_profile.",
         inputSchema: {
           type: 'object',
           properties: { handle: { type: 'string', description: 'The handle to resolve (e.g., alice.bsky.social)' } },
@@ -120,10 +94,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_record',
-        description: 'Get a raw record by AT URI',
+        description: 'Get a raw AT Protocol record by its full AT URI. Use this to retrieve the underlying record of any type — posts (app.bsky.feed.post), likes, follows, lists, etc. The URI format is at://did:plc:xxx/app.bsky.feed.post/rkey. For browsing all records of a type, use list_records instead.',
         inputSchema: {
           type: 'object',
-          properties: { uri: { type: 'string', description: 'The AT URI (at://did:plc:xxx/collection/rkey)' } },
+          properties: { uri: { type: 'string', description: 'The full AT URI (at://did:plc:xxx/collection/rkey)' } },
           required: ['uri'],
         },
       },
@@ -137,19 +111,20 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'list_records',
-        description: 'List records in a repository collection',
+        description: 'List records in a repository collection. Use this to enumerate all records of a given type for a user. The repo parameter accepts a handle or DID. The collection is the NSID (e.g., app.bsky.feed.post for posts, app.bsky.graph.follow for follows). Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
-            repo: { type: 'string', description: 'The DID or handle of the repo' },
-            collection: { type: 'string', description: 'The NSID collection (e.g., app.bsky.feed.post)' },
+            repo: { type: 'string', description: 'Handle or DID of the repo owner' },
+            collection: { type: 'string', description: 'The NSID collection (e.g., app.bsky.feed.post, app.bsky.graph.follow, app.bsky.feed.like)' },
             limit: { type: 'number', description: 'Maximum records (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['repo', 'collection'],
         },
       },
       handler: async (p) => {
-        const res = await client.listRecords(p.repo as string, p.collection as string, (p.limit as number) ?? 50);
+        const res = await client.listRecords(p.repo as string, p.collection as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
         return JSON.stringify(res);
       },
       requiresWrite: false,
@@ -157,13 +132,14 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'search_posts',
-        description: 'Search for posts on Bluesky',
+        description: 'Search for posts on Bluesky by keyword. Use sort="top" (default) for relevance or sort="latest" for recent. Supports advanced Lucene syntax: from:handle, to:handle, mentions:handle, since:date, until:date, lang:code, has:image, "exact phrase". Returns posts with author, text, like/repost counts, and indexedAt. Use cursor to paginate.',
         inputSchema: {
           type: 'object',
           properties: {
-            q: { type: 'string', description: 'Search query' },
+            q: { type: 'string', description: 'Search query. Supports Lucene syntax: from:handle to:handle mentions:handle since:2024-01-01 until:2024-12-31 lang:zh has:image "exact phrase"' },
             limit: { type: 'number', description: 'Maximum results (default 25)' },
-            sort: { type: 'string', description: 'Sort order: top or latest' },
+            sort: { type: 'string', description: 'Sort order: "top" (relevance) or "latest" (most recent)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['q'],
         },
@@ -173,6 +149,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           q: p.q as string,
           limit: (p.limit as number) ?? 25,
           sort: p.sort as string | undefined,
+          cursor: p.cursor as string | undefined,
         });
         const posts = res.posts.map((post: PostView) => ({
           uri: post.uri,
@@ -182,22 +159,25 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           repostCount: post.repostCount,
           indexedAt: post.indexedAt,
         }));
-        return JSON.stringify({ posts, total: posts.length, hitsTotal: res.hitsTotal });
+        return JSON.stringify({ posts, total: posts.length, hitsTotal: res.hitsTotal, cursor: res.cursor });
       },
       requiresWrite: false,
     },
     {
       definition: {
         name: 'get_timeline',
-        description: 'Get the authenticated user\'s home timeline',
+        description: "Get the authenticated user's home timeline — the main feed of posts from people they follow. Returns recent posts with author, text, like/repost counts, and a cursor for pagination. Use cursor to load more (second page, third page, etc.).",
         inputSchema: {
           type: 'object',
-          properties: { limit: { type: 'number', description: 'Maximum posts (default 50)' } },
+          properties: {
+            limit: { type: 'number', description: 'Maximum posts (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
+          },
           required: [],
         },
       },
       handler: async (p) => {
-        const res = await client.getTimeline((p.limit as number) ?? 50);
+        const res = await client.getTimeline((p.limit as number) ?? 50, p.cursor as string | undefined);
         const posts = res.feed.map((f) => ({
           uri: f.post.uri,
           author: f.post.author.handle,
@@ -212,20 +192,23 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_author_feed',
-        description: 'Get a user\'s post feed',
+        description: "Get a user's post feed — all posts from a specific user. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns posts with text, like/repost counts, and a cursor for pagination.",
         inputSchema: {
           type: 'object',
           properties: {
-            actor: { type: 'string', description: 'The DID or handle of the user' },
+            actor: { type: 'string', description: 'Handle or DID of the user. Use "me" for the current authenticated user.' },
             limit: { type: 'number', description: 'Maximum posts (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['actor'],
         },
       },
       handler: async (p) => {
-        const res = await client.getAuthorFeed(p.actor as string, (p.limit as number) ?? 50);
+        const actor = p.actor === 'me' ? client.getHandle() : (p.actor as string);
+        const res = await client.getAuthorFeed(actor, (p.limit as number) ?? 50, p.cursor as string | undefined);
         const posts = res.feed.map((f) => ({
           uri: f.post.uri,
+          author: f.post.author.handle,
           text: (f.post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
           likeCount: f.post.likeCount,
           repostCount: f.post.repostCount,
@@ -237,7 +220,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_popular_feed_generators',
-        description: 'Get popular feed generators',
+        description: 'Get popular/trending feed generators on Bluesky. Returns a list of feeds with name, description, creator, and AT URI. Use the AT URI with get_feed to view posts from a feed, or get_feed_generator for more details about a specific one.',
         inputSchema: {
           type: 'object',
           properties: { limit: { type: 'number', description: 'Maximum results (default 50)' } },
@@ -253,7 +236,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_feed_generator',
-        description: 'Get details about a feed generator',
+        description: 'Get detailed information about a specific feed generator by its AT URI. Returns name, description, creator, like count, and the AT URI you can use with get_feed to view the actual posts.',
         inputSchema: {
           type: 'object',
           properties: { feed: { type: 'string', description: 'The AT URI of the feed generator' } },
@@ -269,18 +252,19 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_feed',
-        description: 'Get posts from a specific feed',
+        description: 'Get posts from a specific feed generator (AT URI). Use this when you know the feed URI (e.g., from get_feed_generator or get_popular_feed_generators). Returns posts with author, text, and cursor for pagination.',
         inputSchema: {
           type: 'object',
           properties: {
-            feed: { type: 'string', description: 'The AT URI of the feed' },
+            feed: { type: 'string', description: 'The AT URI of the feed (e.g., at://did:plc:xxx/app.bsky.feed.generator/...) ' },
             limit: { type: 'number', description: 'Maximum posts (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['feed'],
         },
       },
       handler: async (p) => {
-        const res = await client.getFeed(p.feed as string, (p.limit as number) ?? 50);
+        const res = await client.getFeed(p.feed as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
         const posts = res.feed.map((f) => ({
           uri: f.post.uri,
           author: f.post.author.handle,
@@ -293,60 +277,36 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_post_thread',
-        description: 'Get the raw post thread (tree structure)',
+        description: 'Get a post thread with multi-format output. Use format="flat" (default, recommended) for a human-readable view with depth markers, reply arrows, and author info — ideal for understanding conversations. Use format="tree" for the raw AT Protocol tree structure. Use format="subtree" to expand folded replies from a specific post (pass the post URI that showed "N replies folded"). The depth parameter controls how many levels of replies to show.',
         inputSchema: {
           type: 'object',
           properties: {
             uri: { type: 'string', description: 'The AT URI of the post' },
-            depth: { type: 'number', description: 'Thread depth (default 6)' },
+            format: { type: 'string', description: 'Output format: "flat" (default, human-readable with depth markers), "tree" (raw AT Protocol tree), or "subtree" (expand folded replies from this post)' },
+            depth: { type: 'number', description: 'Maximum thread depth (default 3 for flat/subtree, 6 for tree)' },
+            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20). Only used for flat/subtree format.' },
           },
           required: ['uri'],
         },
       },
       handler: async (p) => {
-        const res = await client.getPostThread(p.uri as string, (p.depth as number) ?? 6);
-        return JSON.stringify(res);
+        const uri = p.uri as string;
+        const format = (p.format as string) || 'flat';
+        if (format === 'tree') {
+          const res = await client.getPostThread(uri, (p.depth as number) ?? 6);
+          return JSON.stringify(res);
+        }
+        const depth = (p.depth as number) ?? 3;
+        const maxReplies = (p.maxReplies as number) ?? 5;
+        const flat = await flattenThread(client, uri, depth, maxReplies);
+        return JSON.stringify(flat);
       },
-      requiresWrite: false,
-    },
-    {
-      definition: {
-        name: 'get_post_thread_flat',
-        description: 'Get a flattened, human-readable version of a post thread with depth markers and reply arrows. Prefer this over get_post_thread for understanding conversations.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uri: { type: 'string', description: 'The AT URI of the post to start from' },
-            depth: { type: 'number', description: 'Maximum depth (default 3)' },
-            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20)' },
-          },
-          required: ['uri'],
-        },
-      },
-      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3, (p.maxReplies as number) ?? 5),
-      requiresWrite: false,
-    },
-    {
-      definition: {
-        name: 'get_post_subtree',
-        description: 'Flatten a subtree starting from a specific post URI. Use to expand folded replies.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uri: { type: 'string', description: 'The AT URI of the post to expand' },
-            depth: { type: 'number', description: 'Maximum depth (default 3)' },
-            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20)' },
-          },
-          required: ['uri'],
-        },
-      },
-      handler: async (p) => flattenThread(client, p.uri as string, (p.depth as number) ?? 3, (p.maxReplies as number) ?? 5),
       requiresWrite: false,
     },
     {
       definition: {
         name: 'get_post_context',
-        description: 'Get full context for a post: parent chain, quoted post content, and media summary',
+        description: 'Get comprehensive context for a post: parent chain (ancestors), the post itself, its replies (via get_post_thread flat format), embedded media summary (images/links/quotes/video), and whether it is a reply. Best for understanding the full conversation around a post. Use get_post_thread for more control over thread depth and format.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -387,82 +347,72 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     },
     {
       definition: {
-        name: 'get_likes',
-        description: 'Get users who liked a post',
+        name: 'get_post_interactions',
+        description: 'Get users who interacted with a post. Use type="likes" (default) to see who liked it with handle+DID, or type="reposts" to see who reposted it with handle. Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
             uri: { type: 'string', description: 'The AT URI of the post' },
+            type: { type: 'string', description: 'Interaction type: "likes" (default) for who liked the post, "reposts" for who reposted it' },
             limit: { type: 'number', description: 'Maximum results (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['uri'],
         },
       },
       handler: async (p) => {
-        const res = await client.getLikes(p.uri as string, (p.limit as number) ?? 50);
-        const likes = res.likes.map((l) => ({ handle: l.actor.handle, did: l.actor.did }));
-        return JSON.stringify({ likes, total: likes.length, cursor: res.cursor });
-      },
-      requiresWrite: false,
-    },
-    {
-      definition: {
-        name: 'get_reposted_by',
-        description: 'Get users who reposted a post',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            uri: { type: 'string', description: 'The AT URI of the post' },
-            limit: { type: 'number', description: 'Maximum results (default 50)' },
-          },
-          required: ['uri'],
-        },
-      },
-      handler: async (p) => {
-        const res = await client.getRepostedBy(p.uri as string, (p.limit as number) ?? 50);
-        return JSON.stringify({ repostedBy: res.repostedBy.map((a) => a.handle) });
+        const itype = (p.type as string) || 'likes';
+        if (itype === 'likes') {
+          const res = await client.getLikes(p.uri as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
+          const likes = res.likes.map((l) => ({ handle: l.actor.handle, did: l.actor.did }));
+          return JSON.stringify({ type: 'likes', items: likes, total: likes.length, cursor: res.cursor });
+        }
+        const res = await client.getRepostedBy(p.uri as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
+        return JSON.stringify({ type: 'reposts', items: res.repostedBy.map((a) => a.handle), total: res.repostedBy.length, cursor: res.cursor });
       },
       requiresWrite: false,
     },
     {
       definition: {
         name: 'get_quotes',
-        description: 'Search for posts that quote a specific post',
+        description: 'Find posts that quote a specific AT URI. Use this when you want to see who has shared a link to a particular post. Returns matching posts with author and text. Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
-            uri: { type: 'string', description: 'The AT URI of the quoted post' },
+            uri: { type: 'string', description: 'The AT URI of the quoted post (the post being referenced)' },
             limit: { type: 'number', description: 'Maximum results (default 25)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['uri'],
         },
       },
       handler: async (p) => {
-        const res = await client.searchPosts({ q: p.uri as string, limit: (p.limit as number) ?? 25 });
+        const res = await client.searchPosts({ q: p.uri as string, limit: (p.limit as number) ?? 25, cursor: p.cursor as string | undefined });
         const posts = res.posts.map((post: PostView) => ({
           uri: post.uri,
           author: post.author.handle,
           text: (post.record as unknown as PostRecord)?.text ?? '',
         }));
-        return JSON.stringify({ quotes: posts, total: posts.length });
+        return JSON.stringify({ quotes: posts, total: posts.length, cursor: res.cursor });
       },
       requiresWrite: false,
     },
     {
       definition: {
         name: 'search_actors',
-        description: 'Search for users on Bluesky',
+        description: 'Search for users on Bluesky by name, handle, or keyword. Returns matching profiles with DID, handle, displayName, and description. Use this to find Bluesky users when you know their name but not their exact handle. Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
-            q: { type: 'string', description: 'Search query' },
+            q: { type: 'string', description: 'Search query — name, handle fragment, or keyword' },
             limit: { type: 'number', description: 'Maximum results (default 25)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['q'],
         },
       },
       handler: async (p) => {
-        const res = await client.searchActors({ q: p.q as string, limit: (p.limit as number) ?? 25 });
+        const res = await client.searchActors({ q: p.q as string, limit: (p.limit as number) ?? 25, cursor: p.cursor as string | undefined });
         const actors = res.actors.map((a) => ({
           did: a.did, handle: a.handle, displayName: a.displayName,
           description: a.description,
@@ -474,10 +424,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_profile',
-        description: "Get a user's profile by DID or handle. Use actor=\"me\" to get the current user's own profile. Returns full profile (handle, displayName, description, follower/following/post counts). Use this to resolve a DID to a handle and vice versa.",
+        description: "Get a user's profile by DID or handle. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns full profile: did, handle, displayName, description, followersCount, followsCount, postsCount. Use this to resolve a DID to a handle and vice versa.",
         inputSchema: {
           type: 'object',
-          properties: { actor: { type: 'string', description: 'The DID or handle of the user. Use "me" to get the current authenticated user.' } },
+          properties: { actor: { type: 'string', description: 'Handle or DID of the user. Use "me" for the current authenticated user.' } },
           required: ['actor'],
         },
       },
@@ -494,62 +444,44 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     },
     {
       definition: {
-        name: 'get_follows',
-        description: 'Get who a user follows',
+        name: 'get_connections',
+        description: "Get a user's social connections. Use direction='following' (default) to see who they follow, or direction='followers' to see their followers. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns handles and displayNames with cursor for pagination.",
         inputSchema: {
           type: 'object',
           properties: {
-            actor: { type: 'string', description: 'The DID or handle of the user' },
+            actor: { type: 'string', description: 'Handle or DID of the user. Use "me" for the current authenticated user.' },
+            direction: { type: 'string', description: 'Direction: "following" (default) for who they follow, "followers" for who follows them' },
             limit: { type: 'number', description: 'Maximum results (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['actor'],
         },
       },
       handler: async (p) => {
-        const res = await client.getFollows(p.actor as string, (p.limit as number) ?? 50);
-        return JSON.stringify({
-          follows: res.follows.map((f) => ({ handle: f.handle, displayName: f.displayName })),
-          total: res.follows.length,
-          cursor: res.cursor,
-        });
-      },
-      requiresWrite: false,
-    },
-    {
-      definition: {
-        name: 'get_followers',
-        description: 'Get a user\'s followers',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            actor: { type: 'string', description: 'The DID or handle of the user' },
-            limit: { type: 'number', description: 'Maximum results (default 50)' },
-          },
-          required: ['actor'],
-        },
-      },
-      handler: async (p) => {
-        const res = await client.getFollowers(p.actor as string, (p.limit as number) ?? 50);
-        return JSON.stringify({
-          followers: res.followers.map((f) => ({ handle: f.handle, displayName: f.displayName })),
-          total: res.followers.length,
-          cursor: res.cursor,
-        });
+        const actor = p.actor === 'me' ? client.getHandle() : (p.actor as string);
+        const direction = (p.direction as string) || 'following';
+        if (direction === 'followers') {
+          const res = await client.getFollowers(actor, (p.limit as number) ?? 50, p.cursor as string | undefined);
+          return JSON.stringify({ direction: 'followers', items: res.followers.map((f) => ({ handle: f.handle, displayName: f.displayName })), total: res.followers.length, cursor: res.cursor });
+        }
+        const res = await client.getFollows(actor, (p.limit as number) ?? 50, p.cursor as string | undefined);
+        return JSON.stringify({ direction: 'following', items: res.follows.map((f) => ({ handle: f.handle, displayName: f.displayName })), total: res.follows.length, cursor: res.cursor });
       },
       requiresWrite: false,
     },
     {
       definition: {
         name: 'get_suggested_follows',
-        description: 'Get suggested follows for a user',
+        description: "Get suggested follows (recommended users to follow) for a given user. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns suggested user profiles with handle and displayName.",
         inputSchema: {
           type: 'object',
-          properties: { actor: { type: 'string', description: 'The DID or handle of the user' } },
+          properties: { actor: { type: 'string', description: 'Handle or DID of the user. Use "me" for the current authenticated user.' } },
           required: ['actor'],
         },
       },
       handler: async (p) => {
-        const res = await client.getSuggestedFollows(p.actor as string);
+        const actor = p.actor === 'me' ? client.getHandle() : (p.actor as string);
+        const res = await client.getSuggestedFollows(actor);
         return JSON.stringify({
           suggestions: res.suggestions.map((s) => ({ handle: s.handle, displayName: s.displayName })),
         });
@@ -559,15 +491,18 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'list_notifications',
-        description: 'Get notifications for the authenticated user',
+        description: "Get notifications for the authenticated user. Returns notification items with reason (like, repost, follow, reply, etc.), author handle, timestamp, read status, and a cursor for pagination. Use cursor to load more notifications.",
         inputSchema: {
           type: 'object',
-          properties: { limit: { type: 'number', description: 'Maximum results (default 50)' } },
+          properties: {
+            limit: { type: 'number', description: 'Maximum results (default 50)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
+          },
           required: [],
         },
       },
       handler: async (p) => {
-        const res = await client.listNotifications((p.limit as number) ?? 50);
+        const res = await client.listNotifications((p.limit as number) ?? 50, p.cursor as string | undefined);
         const notifications = res.notifications.map((n) => ({
           reason: n.reason, author: n.author.handle, indexedAt: n.indexedAt, isRead: n.isRead,
         }));
@@ -578,10 +513,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'extract_images_from_post',
-        description: 'Extract image blob references (did + cid) from a post',
+        description: 'Extract image blob references (DID + CID) from a Bluesky post. Use this to get the image identifiers needed for download_image or view_image. Handles both direct images and recordWithMedia embeds. Returns image count and per-image metadata.',
         inputSchema: {
           type: 'object',
-          properties: { uri: { type: 'string', description: 'The AT URI of the post' } },
+          properties: { uri: { type: 'string', description: 'The AT URI of the post containing images' } },
           required: ['uri'],
         },
       },
@@ -710,10 +645,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'extract_external_link',
-        description: 'Extract external link embed from a post',
+        description: 'Extract the external link embed from a post. If the post contains a link card (website preview), this returns the URL, title, and description. Use fetch_web_markdown to read the actual page content after getting the URL.',
         inputSchema: {
           type: 'object',
-          properties: { uri: { type: 'string', description: 'The AT URI of the post' } },
+          properties: { uri: { type: 'string', description: 'The AT URI of the post with an external link embed' } },
           required: ['uri'],
         },
       },
@@ -741,14 +676,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
       },
       handler: async (p) => {
         const url = p.url as string;
-        const proxyUrl = `https://r.jina.ai/${url}`;
-        const res = await fetch(proxyUrl, {
-          headers: { 'Accept': 'text/markdown' },
-        });
-        if (!res.ok) {
-          return JSON.stringify({ error: `HTTP ${res.status}: ${res.statusText}`, url });
+        const md = await fetchViaJina(url);
+        if (!md) {
+          return JSON.stringify({ error: 'Failed to fetch page content', url });
         }
-        const md = await res.text();
         const trimmed = md.length > 10000 ? md.slice(0, 10000) + '\n\n... (truncated)' : md;
         return JSON.stringify({ url, title: extractTitle(md), content: trimmed });
       },
@@ -756,61 +687,49 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     },
     {
       definition: {
-        name: 'instant_answer',
-        description: 'Quick knowledge lookup via DuckDuckGo Instant Answer (no API key needed). Returns Wikipedia summary, structured infobox, direct answers, and related links. Works best with English queries — for non-English topics, the AI can translate results.',
+        name: 'search_web_ddg',
+        description: 'Web search via DuckDuckGo (no API key needed, no configuration required). Returns up to 10 web search results with titles, URLs, and snippets. Use this for general web search — news, articles, websites, documentation, and current information. Falls back gracefully if DuckDuckGo is unreachable.',
         inputSchema: {
           type: 'object',
           properties: {
-            query: { type: 'string', description: 'Search query (English recommended for best results)' },
-            skipDisambig: { type: 'boolean', description: 'Skip disambiguation pages (default true)' },
+            query: { type: 'string', description: 'Search query' },
           },
           required: ['query'],
         },
       },
       handler: async (p) => {
-        const rawQuery = p.query as string;
-        const skip = p.skipDisambig !== false ? '&skip_disambig=1' : '';
-        const encoded = encodeURIComponent(rawQuery);
-        const url = `https://api.duckduckgo.com/?q=${encoded}&format=json&no_html=1${skip}`;
-        const g = globalThis as Record<string, unknown>;
-
-        // Browser: route via Cloudflare Pages Function (/api/proxy) to
-        // strip Sec-Fetch-* headers. DDG API returns empty fields when it
-        // detects browser-specific headers. The Pages Function runs server-side
-        // fetch (no browser fingerprint), so DDG returns full data.
-        if (typeof g.document !== 'undefined' && typeof g.window !== 'undefined') {
-          try {
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(url)}`;
-            const res = await fetch(proxyUrl);
-            if (!res.ok) {
-              return JSON.stringify({ error: `instant_answer proxy error: HTTP ${res.status}` });
-            }
-            const data = (await res.json()) as DDGResponse;
-            return formatDDGResponse(data);
-          } catch (err) {
-            return JSON.stringify({
-              error: `instant_answer via /api/proxy failed: ${err instanceof Error ? err.message : String(err)}`,
-              hint: 'Try a different query or check your network connection.',
-            });
-          }
+        const query = (p.query as string).trim()
+        if (!query) {
+          return JSON.stringify({ heading: '', content: 'Search query is empty.' })
         }
 
-        // Node.js / non-browser: direct fetch (works fine without Sec-Fetch-*)
+        // Tier 1: jina.ai Reader fetches DDG search page as Markdown
+        const ddgSearchUrl = `https://html.duckduckgo.com/html?q=${encodeURIComponent(query)}`
+        const jinaMd = await fetchViaJina(ddgSearchUrl)
+        if (jinaMd) {
+          const cleaned = cleanJinaSearchOutput(jinaMd)
+          if (cleaned) return cleaned
+        }
+
+        // Tier 2: direct DDG Lite fetch (TUI) or via Pages Function (PWA)
         try {
-          const res = await fetch(url, {
-            headers: { 'User-Agent': 'bsky-client/0.9.0' },
-          });
-          if (!res.ok) {
-            return JSON.stringify({ error: `DuckDuckGo API error: HTTP ${res.status}` });
+          const g = globalThis as Record<string, unknown>
+          const isBrowser = typeof g.document !== 'undefined'
+          const fetchUrl = isBrowser
+            ? `/api/search?q=${encodeURIComponent(query)}`
+            : `https://lite.duckduckgo.com/lite?q=${encodeURIComponent(query)}`
+          const res = await fetch(fetchUrl, {
+            headers: isBrowser ? {} : { 'User-Agent': 'bsky-client/1.0' },
+          })
+          if (res.ok) {
+            const html = await res.text()
+            const results = parseDDGLite(html)
+            return formatResultsAsMarkdown(query, results)
           }
-          const data = (await res.json()) as DDGResponse;
-          return formatDDGResponse(data);
-        } catch (err) {
-          return JSON.stringify({
-            error: `instant_answer fetch failed: ${err instanceof Error ? err.message : String(err)}`,
-            hint: 'This tool requires network access to api.duckduckgo.com. Check your network connection.',
-          });
-        }
+        } catch {}
+
+        // All tiers failed
+        return JSON.stringify({ heading: '', content: `No search results found for "${query}".` })
       },
       requiresWrite: false,
     },
@@ -857,7 +776,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'create_post',
-        description: 'Create a new post, or reply to an existing post. Requires user confirmation.',
+        description: 'Create a new post, reply to an existing post, or quote a post with optional image attachments. Use replyTo to reply to a specific post (pass its AT URI). Use quoteUri to quote a post. For images, first use extract_images_from_post to get did/cid, then pass them in the images array. Requires user confirmation.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -969,7 +888,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'like',
-        description: 'Like a post. Requires user confirmation.',
+        description: 'Like (heart) a post on Bluesky. Pass the AT URI of the post you want to like. Requires user confirmation. Returns the like record URI.',
         inputSchema: {
           type: 'object',
           properties: { uri: { type: 'string', description: 'The AT URI of the post to like' } },
@@ -990,7 +909,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'repost',
-        description: 'Repost a post. Requires user confirmation.',
+        description: 'Repost (share/boost) a post on Bluesky. Pass the AT URI of the post you want to repost. Requires user confirmation. Returns the repost record URI.',
         inputSchema: {
           type: 'object',
           properties: { uri: { type: 'string', description: 'The AT URI of the post to repost' } },
@@ -1011,10 +930,10 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'follow',
-        description: 'Follow a user. Requires user confirmation.',
+        description: 'Follow a user on Bluesky. The subject parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Requires user confirmation.',
         inputSchema: {
           type: 'object',
-          properties: { subject: { type: 'string', description: 'The DID of the user to follow' } },
+          properties: { subject: { type: 'string', description: 'Handle or DID of the user to follow' } },
           required: ['subject'],
         },
       },
@@ -1030,15 +949,16 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_lists',
-        description: 'Get all lists created by a user. Lists can be curatelist (curated for feeds) or modlist (moderation for mute/block).',
+        description: "Get all lists created by a user. Lists can be curation lists (curated for feeds) or moderation lists (for mute/block). The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' or omit for the current logged-in user. Returns list name, purpose, member count, and description.",
         inputSchema: {
           type: 'object',
-          properties: { actor: { type: 'string', description: 'Handle or DID of the user whose lists to fetch. Defaults to current user.' } },
+          properties: { actor: { type: 'string', description: 'Handle or DID of the user. Use "me" or leave empty for the current authenticated user.' } },
           required: [],
         },
       },
       handler: async (p) => {
-        const handle = (p.actor as string) || client.getHandle();
+        const raw = p.actor as string | undefined;
+        const handle = !raw || raw === 'me' ? client.getHandle() : raw;
         const res = await client.getLists(handle);
         const summary = res.lists.map(l => ({
           uri: l.uri,
@@ -1054,19 +974,20 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'get_list_feed',
-        description: 'Get recent posts from members of a specific list.',
+        description: 'Get recent posts from members of a specific list. The list parameter is the AT URI of the list (e.g., from get_lists). Returns posts with author, text, and indexedAt. Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
             list: { type: 'string', description: 'AT-URI of the list (format: at://did:plc:.../app.bsky.graph.list/...)' },
             limit: { type: 'number', description: 'Number of posts to fetch (default: 30)' },
+            cursor: { type: 'string', description: 'Pagination cursor from a previous response. Include to get the next page. Omit for the first page.' },
           },
           required: ['list'],
         },
       },
       handler: async (p) => {
         const limit = (p.limit as number) ?? 30;
-        const res = await client.getListFeed(p.list as string, limit);
+        const res = await client.getListFeed(p.list as string, limit, p.cursor as string | undefined);
         const posts = res.feed.map(f => {
           const post = (f as any).post ?? f;
           return {
@@ -1083,12 +1004,12 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     {
       definition: {
         name: 'create_list',
-        description: 'Create a new user list. Requires user confirmation.',
+        description: 'Create a new user list on Bluesky. Use purpose="curated" for curation feeds (content discovery) or "moderation" for mute/block lists. After creating a list, use edit_list_members to add users to it. Requires user confirmation.',
         inputSchema: {
           type: 'object',
           properties: {
             name: { type: 'string', description: 'List name (1-64 characters)' },
-            purpose: { type: 'string', description: 'List purpose: "curated" or "moderation"', enum: ['curated', 'moderation'] },
+            purpose: { type: 'string', description: 'List purpose: "curated" (content curation) or "moderation" (mute/block management)', enum: ['curated', 'moderation'] },
             description: { type: 'string', description: 'Optional list description (up to 300 characters)' },
           },
           required: ['name', 'purpose'],
@@ -1105,49 +1026,36 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
     },
     {
       definition: {
-        name: 'add_to_list',
-        description: 'Add a user to a list. Requires user confirmation.',
+        name: 'edit_list_members',
+        description: 'Add a user to or remove a user from a list. Use action="add" (default) to add a user to a list, or action="remove" to remove them (removes ALL matching entries if the user was added multiple times). The subject parameter accepts a handle or DID. Requires user confirmation.',
         inputSchema: {
           type: 'object',
           properties: {
-            list: { type: 'string', description: 'AT-URI of the list to add to' },
-            subject: { type: 'string', description: 'DID of the user to add' },
+            list: { type: 'string', description: 'AT-URI of the list (e.g., from get_lists)' },
+            subject: { type: 'string', description: 'Handle or DID of the user to add or remove' },
+            action: { type: 'string', description: 'Action: "add" (default) to add, "remove" to remove' },
           },
           required: ['list', 'subject'],
         },
       },
       handler: async (p) => {
+        const action = (p.action as string) || 'add';
+        if (action === 'remove') {
+          const listUri = p.list as string;
+          const parsed = parseAtUri(listUri);
+          const allItems = await client.listRecords(parsed.did, 'app.bsky.graph.listitem', 100);
+          const matches = allItems.records.filter(r => {
+            const v = r.value as Record<string, unknown>;
+            return v.subject === p.subject && v.list === listUri;
+          });
+          if (matches.length === 0) return 'User is not in this list.';
+          for (const m of matches) {
+            await client.removeListItem(m.uri);
+          }
+          return `Removed user ${p.subject} from list (${matches.length} entries).`;
+        }
         const res = await client.addListItem(p.list as string, p.subject as string);
         return JSON.stringify({ uri: res.uri, added: p.subject });
-      },
-      requiresWrite: true,
-    },
-    {
-      definition: {
-        name: 'remove_from_list',
-        description: 'Remove a user from a list. Requires user confirmation. Removes ALL matching entries if the user was added multiple times.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            list: { type: 'string', description: 'AT-URI of the list to remove from' },
-            subject: { type: 'string', description: 'DID of the user to remove' },
-          },
-          required: ['list', 'subject'],
-        },
-      },
-      handler: async (p) => {
-        const listUri = p.list as string;
-        const parsed = parseAtUri(listUri);
-        const allItems = await client.listRecords(parsed.did, 'app.bsky.graph.listitem', 100);
-        const matches = allItems.records.filter(r => {
-          const v = r.value as Record<string, unknown>;
-          return v.subject === p.subject && v.list === listUri;
-        });
-        if (matches.length === 0) return 'User is not in this list.';
-        for (const m of matches) {
-          await client.removeListItem(m.uri);
-        }
-        return `Removed user ${p.subject} from list (${matches.length} entries).`;
       },
       requiresWrite: true,
     },
@@ -1237,7 +1145,7 @@ function buildReplyLines(
 
   if (hidden > 0) {
     const indent = '  '.repeat(currentDepth + 1);
-    lines.push(`${indent}（还有 ${hidden} 条回复被折叠，可调用 get_post_subtree 展开）`);
+    lines.push(`${indent}（还有 ${hidden} 条回复被折叠，可调用 get_post_thread(format='subtree') 展开）`);
   }
 }
 
@@ -1287,54 +1195,61 @@ function extractTitle(md: string): string {
   return firstLine ? firstLine.trim().slice(0, 120) : '(no title)';
 }
 
-function formatDDGResponse(d: DDGResponse): string {
-  const parts: string[] = [];
+/**
+ * Clean jina.ai's DDG search Markdown output: strip header, ads, favicons, footer.
+ */
+function cleanJinaSearchOutput(md: string): string | null {
+  // Skip the jina.ai header block (Title / URL Source / Markdown Content)
+  const contentStart = md.indexOf('Markdown Content:')
+  const body = contentStart >= 0 ? md.slice(contentStart + 'Markdown Content:'.length) : md
 
-  if (d.Heading) parts.push(`# ${d.Heading}`);
+  const lines = body.split('\n')
+  const cleaned: string[] = []
+  let inHeader = true
+  let reachedResults = false
 
-  if (d.Answer) {
-    parts.push(`## Direct Answer\n${d.Answer}`);
-  }
+  for (const raw of lines) {
+    const line = raw.trimEnd()
 
-  if (d.Abstract) {
-    const src = d.AbstractSource ? ` (via ${d.AbstractSource})` : '';
-    parts.push(`## Summary${src}\n${d.Abstract}`);
-    if (d.AbstractURL) parts.push(`Source: ${d.AbstractURL}`);
-  }
-
-  if (d.Definition && d.Definition !== d.Heading) {
-    parts.push(`## Definition\n${d.Definition}`);
-    if (d.DefinitionURL) parts.push(`Source: ${d.DefinitionURL}`);
-  }
-
-  if (d.Infobox?.content?.length > 0) {
-    const rows = d.Infobox.content
-      .filter((item) => item.label && item.value && typeof item.value === 'string')
-      .map((item) => `- ${item.label}: ${item.value}`);
-    if (rows.length > 0) {
-      parts.push(`## Info\n${rows.join('\n')}`);
+    // Skip the first # heading (DDG page title like "# query at DuckDuckGo")
+    if (inHeader && line.startsWith('# ') && !line.startsWith('## ')) {
+      inHeader = false
+      continue
     }
+    // Skip blank lines in header
+    if (inHeader && line === '') continue
+    inHeader = false
+
+    // Skip empty markdown link (DDG logo link)
+    if (/^\[\]\(https?:\/\/html\.duckduckgo\.com/.test(line)) continue
+
+    // Skip favicon image lines
+    if (/^\[!\[Image \d+\]/.test(line)) continue
+
+    // Skip ad marker and disclaimer
+    if (line === 'Ad' || line.includes('Viewing ads is privacy protected by DuckDuckGo')) continue
+
+    // Skip footer
+    if (line === '[Feedback]' || line.includes('[Feedback]') || line.includes('duckduckgo.com/feedback')) continue
+    if (line.includes('duckduckgo.com/t/sl_h')) continue
+
+    // Track if we have actual results (## headings with content)
+    if (line.startsWith('## ')) reachedResults = true
+
+    cleaned.push(line)
   }
 
-  if (d.Results?.length > 0) {
-    parts.push(`## Results\n${d.Results.map((r) => `- [${r.Text}](${r.FirstURL})`).join('\n')}`);
-  }
+  if (!reachedResults) return null
 
-  if (d.RelatedTopics?.length > 0) {
-    const topics = d.RelatedTopics.slice(0, 8).flatMap((t) => {
-      if (t.Topics) return t.Topics.map((st) => `- ${st.Text} (${st.FirstURL})`);
-      return `- ${t.Text} (${t.FirstURL})`;
-    });
-    if (topics.length > 0) {
-      parts.push(`## Related\n${topics.join('\n')}`);
-    }
-  }
+  // Resolve DDG redirect URLs to real URLs
+  const resolved = cleaned.join('\n').replace(
+    /https:\/\/duckduckgo\.com\/l\/\?uddg=[^\s)"']+/g,
+    (m) => extractRealUrl(m),
+  )
 
-  if (parts.length === 0) {
-    parts.push('No instant answer found for this query.');
-  }
-
-  return JSON.stringify({ heading: d.Heading || '', content: parts.join('\n\n') });
+  const heading = `DuckDuckGo Search Results`
+  const content = resolved.trim()
+  return JSON.stringify({ heading, content })
 }
 
 /**

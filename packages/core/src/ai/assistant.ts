@@ -651,8 +651,10 @@ function buildToolDescription(toolName: string, args: Record<string, unknown>): 
     case 'repost': return `转发帖子: ${String(args.uri || '')}`;
     case 'follow': return `关注用户: ${String(args.subject || '')}`;
     case 'create_list': return `创建列表: "${String(args.name || '')}" (${String(args.purpose || '') === 'moderation' ? '管理' : '精选'})`;
-    case 'add_to_list': return `添加用户 ${String(args.subject || '')} 到列表`;
-    case 'remove_from_list': return `从列表移除用户 ${String(args.subject || '')}`;
+    case 'edit_list_members': {
+      const action = String(args.action || 'add');
+      return action === 'add' ? `添加用户 ${String(args.subject || '')} 到列表` : `从列表移除用户 ${String(args.subject || '')}`;
+    }
     default: return `${toolName}: ${JSON.stringify(args).slice(0, 100)}`;
   }
 }
