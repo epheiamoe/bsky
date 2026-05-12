@@ -409,7 +409,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               </>
             )}
           </div>
-          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-all line-clamp-6">
+          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
             {linkifyText(text)}
           </p>
           {hasImages && <ImageGrid images={images} />}
@@ -442,7 +442,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
                 <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
                 <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
               </div>
-              <p className="text-xs text-text-primary line-clamp-3 break-all">{linkifyText(quotedPost.text)}</p>
+              <p className="text-xs text-text-primary line-clamp-3 break-words">{linkifyText(quotedPost.text)}</p>
               {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
                 <div className="mt-1 flex gap-1">
                   {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
