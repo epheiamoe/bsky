@@ -6,6 +6,111 @@ import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 import { ThinkingCard, ToolCard, UserMessage, AssistantMessage } from './ai/index.js';
 
+// ── Export/Import format conversion utilities ──
+
+/** Convert display messages to OpenAI standard format for export (bsky-chat-v2). */
+function toOpenAIFormat(messages: AIChatMessage[]): Record<string, unknown>[] {
+  const result: Record<string, unknown>[] = [];
+  let reasoning = '';
+  let textContent = '';
+  const toolCalls: Record<string, unknown>[] = [];
+
+  function flushAssistant() {
+    if (textContent || toolCalls.length > 0 || reasoning) {
+      const entry: Record<string, unknown> = { role: 'assistant', content: textContent };
+      if (reasoning) entry.reasoning_content = reasoning;
+      if (toolCalls.length > 0) entry.tool_calls = [...toolCalls];
+      result.push(entry);
+    }
+    reasoning = '';
+    textContent = '';
+    toolCalls.length = 0;
+  }
+
+  for (const m of messages) {
+    if (m.role === 'thinking') {
+      reasoning += (reasoning ? '\n' : '') + m.content;
+    } else if (m.role === 'assistant') {
+      textContent = m.content;
+    } else if (m.role === 'tool_call') {
+      const argsMatch = m.content.match(/\{.*\}/s);
+      toolCalls.push({
+        id: m.toolCallId || '',
+        type: 'function',
+        function: { name: m.toolName || '', arguments: argsMatch ? argsMatch[0] : '{}' },
+      });
+    } else if (m.role === 'tool_result') {
+      flushAssistant();
+      result.push({
+        role: 'tool',
+        content: m.content,
+        tool_call_id: m.toolCallId || '',
+        name: m.toolName || '',
+      });
+    } else if (m.role === 'user') {
+      flushAssistant();
+      result.push({ role: 'user', content: m.content });
+    }
+  }
+  flushAssistant();
+  return result;
+}
+
+/** Convert OpenAI standard messages to internal AIChatMessage format for import. */
+function fromOpenAIFormat(messages: Record<string, unknown>[]): AIChatMessage[] {
+  const result: AIChatMessage[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+    if (m.role === 'assistant') {
+      const rc = m.reasoning_content;
+      if (typeof rc === 'string' && rc.length > 0) {
+        result.push({ role: 'thinking', content: rc });
+      }
+      const text = typeof m.content === 'string' ? m.content : '';
+      if (text.trim().length > 0) {
+        result.push({ role: 'assistant', content: text });
+      }
+      if (Array.isArray(m.tool_calls)) {
+        for (const tc of m.tool_calls as Record<string, unknown>[]) {
+          const func = (tc.function || {}) as Record<string, unknown>;
+          result.push({
+            role: 'tool_call',
+            content: String(func.name || ''),
+            toolName: String(func.name || ''),
+            toolCallId: String(tc.id || ''),
+          });
+        }
+      }
+    } else if (m.role === 'tool') {
+      result.push({
+        role: 'tool_result',
+        content: typeof m.content === 'string' ? m.content : String(m.content || ''),
+        toolName: typeof m.name === 'string' ? m.name : undefined,
+        toolCallId: typeof m.tool_call_id === 'string' ? m.tool_call_id : undefined,
+      });
+    } else {
+      result.push({
+        role: String(m.role || 'user') as AIChatMessage['role'],
+        content: typeof m.content === 'string' ? m.content : String(m.content || ''),
+      });
+    }
+  }
+  return result;
+}
+
+/** Detect whether imported data uses v1 (old custom) or v2 (OpenAI standard) format. */
+function detectImportFormat(data: Record<string, unknown>, messages: Record<string, unknown>[]): 'v1' | 'v2' {
+  if (data.format === 'bsky-chat-v1') return 'v1';
+  if (data.format === 'bsky-chat-v2') return 'v2';
+  if (messages.length > 0) {
+    const hasOldRoles = messages.some(m => m.role === 'tool_call' || m.role === 'tool_result' || m.role === 'thinking');
+    const hasNewRoles = messages.some(m => m.role === 'tool' || (m.role === 'assistant' && (m as Record<string, unknown>).tool_calls));
+    if (hasOldRoles && !hasNewRoles) return 'v1';
+    if (hasNewRoles) return 'v2';
+  }
+  return 'v2';
+}
+
 interface AIChatPageProps {
   client: BskyClient;
   aiConfig: AIConfig;
@@ -95,17 +200,6 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const importFileRef = useRef<HTMLInputElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
 
-  // Visual Viewport height — updates when keyboard opens/closes
-  const [visualHeight, setVisualHeight] = useState<number | null>(null);
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const update = () => setVisualHeight(vv.height);
-    update();
-    vv.addEventListener('resize', update);
-    return () => vv.removeEventListener('resize', update);
-  }, []);
-
   // Scroll refs — user-controlled
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -167,20 +261,13 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   // ═══════════════════ Export ═══════════════════
   const handleExport = useCallback((format: 'json' | 'html' | 'md') => {
     if (format === 'json') {
-      // Complete export: all messages with tool_call_id, toolName, etc.
-      // NOTE: Image data is intentionally omitted — not yet supported in export/import.
+      // Export in OpenAI standard format (bsky-chat-v2) — tools nested in assistant, thinking as reasoning_content
       const exp: Record<string, unknown> = {
-        format: 'bsky-chat-v1',
+        format: 'bsky-chat-v2',
         exportedAt: new Date().toISOString(),
         model: aiConfig.model,
         provider: aiConfig.provider || null,
-        messages: messages.map(m => {
-          const entry: Record<string, unknown> = { role: m.role, content: m.content };
-          if (m.toolName) entry.toolName = m.toolName;
-          if (m.toolCallId) entry.toolCallId = m.toolCallId;
-          if (m.isError) entry.isError = m.isError;
-          return entry;
-        }),
+        messages: toOpenAIFormat(messages),
       };
       if (contextUri) exp.contextUri = contextUri;
       if (contextPost) exp.contextPost = contextPost;
@@ -218,38 +305,54 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       }
 
       const data = parsed as Record<string, unknown>;
-      // Validate format
-      if (data.format !== 'bsky-chat-v1') {
-        setImportError(`Unsupported format: "${data.format || 'none'}". Expected "bsky-chat-v1".`);
-        return;
-      }
       if (!Array.isArray(data.messages)) {
         setImportError('Missing required field: "messages" is not an array.');
         return;
       }
       const msgs = data.messages as Array<Record<string, unknown>>;
-      for (let i = 0; i < msgs.length; i++) {
-        const m = msgs[i]!;
-        if (!m.role || !m.content) {
-          setImportError(`Invalid message at index ${i}: missing "role" or "content".`);
-          return;
-        }
-        if (!['user', 'assistant', 'tool_call', 'tool_result', 'thinking'].includes(String(m.role))) {
-          setImportError(`Unknown role "${m.role}" at index ${i}.`);
-          return;
-        }
+      if (msgs.length === 0) {
+        setImportError('Cannot import an empty conversation.');
+        return;
       }
 
-      // Convert to AIChatMessage format and create new chat
-      const imported: AIChatMessage[] = msgs.map(m => ({
-        role: m.role as AIChatMessage['role'],
-        content: String(m.content),
-        toolName: typeof m.toolName === 'string' ? m.toolName : undefined,
-        toolCallId: typeof m.toolCallId === 'string' ? m.toolCallId : undefined,
-        isError: typeof m.isError === 'boolean' ? m.isError : undefined,
-      }));
+      const fmt = detectImportFormat(data, msgs);
+      let imported: AIChatMessage[];
 
-      // Create a new session with imported messages
+      if (fmt === 'v1') {
+        for (let i = 0; i < msgs.length; i++) {
+          const m = msgs[i]!;
+          if (!m.role || m.content === undefined) {
+            setImportError(`Invalid message at index ${i}: missing "role" or "content".`);
+            return;
+          }
+          if (!['user', 'assistant', 'tool_call', 'tool_result', 'thinking'].includes(String(m.role))) {
+            setImportError(`Unknown role "${m.role}" at index ${i}.`);
+            return;
+          }
+        }
+        imported = msgs.map(m => ({
+          role: m.role as AIChatMessage['role'],
+          content: String(m.content),
+          toolName: typeof m.toolName === 'string' ? m.toolName : undefined,
+          toolCallId: typeof m.toolCallId === 'string' ? m.toolCallId : undefined,
+          isError: typeof m.isError === 'boolean' ? m.isError : undefined,
+        }));
+      } else {
+        for (let i = 0; i < msgs.length; i++) {
+          const m = msgs[i]!;
+          if (!m.role) {
+            setImportError(`Invalid message at index ${i}: missing "role".`);
+            return;
+          }
+          const validRoles = ['system', 'user', 'assistant', 'tool'];
+          if (!validRoles.includes(String(m.role))) {
+            setImportError(`Unsupported role "${m.role}" at index ${i} for v2 format. Expected: ${validRoles.join(', ')}.`);
+            return;
+          }
+        }
+        imported = fromOpenAIFormat(msgs);
+      }
+
       const newId = crypto.randomUUID();
       await saveChatNow({
         id: newId,
@@ -322,7 +425,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div className="flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn" style={visualHeight ? { height: visualHeight - 48 } : { height: 'calc(100dvh - 3rem)' }}>
+    <div className="h-[calc(100dvh-3rem)] flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
