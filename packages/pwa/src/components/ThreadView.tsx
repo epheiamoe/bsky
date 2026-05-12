@@ -375,6 +375,20 @@ function PostInfoModal({ open, post, onClose }: { open: boolean; post: PostView;
             </div>
             <div className="rounded-lg border border-border bg-surface p-2.5"><code className="text-xs text-text-primary font-mono break-all">{post.cid}</code></div>
           </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.openInBsky')}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => copy('bskyUrl', `https://bsky.app/profile/${post.author.handle}/post/${post.uri.split('/').pop()}`)} className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                  {copiedField === 'bskyUrl' ? <><Icon name="badge-check" size={12} />{t('common.copied')}</> : <><Icon name="copy" size={12} />{t('common.copy')}</>}
+                </button>
+                <a href={`https://bsky.app/profile/${post.author.handle}/post/${post.uri.split('/').pop()}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:text-primary-hover transition-colors flex items-center gap-1">
+                  <Icon name="corner-down-right" size={12} />{t('action.open')}
+                </a>
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-surface p-2.5"><code className="text-xs text-text-primary font-mono break-all">{`https://bsky.app/profile/${post.author.handle}/post/${post.uri.split('/').pop()}`}</code></div>
+          </div>
           <div className="space-y-1">
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('post.timestamps')}</span>
             <div className="text-sm text-text-primary">

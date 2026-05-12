@@ -281,6 +281,7 @@ const ja: LocaleMessages = {
   'post.viewer': '状態',
   'post.liked': 'いいね',
   'post.reposted': 'リポスト',
+  'post.openInBsky': 'bsky.app で見る',
 };
 
 export default ja;

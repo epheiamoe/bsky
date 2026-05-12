@@ -281,6 +281,7 @@ const en: LocaleMessages = {
   'post.viewer': 'Viewer',
   'post.liked': 'Liked',
   'post.reposted': 'Reposted',
+  'post.openInBsky': 'View in bsky.app',
 };
 
 export default en;

@@ -362,6 +362,7 @@ const zh: LocaleMessages = {
   'post.viewer': '状态',
   'post.liked': '已赞',
   'post.reposted': '已转',
+  'post.openInBsky': '在 bsky.app 中查看',
 
   // ── Keyboard hints (TUI) ──
   'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用',
