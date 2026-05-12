@@ -35,6 +35,57 @@ interface UseAIChatOptions {
   onTitleChanged?: () => void;
 }
 
+/** Repairs messages corrupted by pre-v0.12.2 mapMessages ordering bug.
+ *  1. Removes empty assistant messages (artifact of broken load reconstruction)
+ *  2. Reorders tool_call blocks: [tool_calls, assistant, tool_results] → [assistant, tool_calls, tool_results]
+ *  Returns the original array unchanged if no repair is needed. */
+function repairCorruptedMessages(messages: AIChatMessage[]): AIChatMessage[] {
+  // Step 1: remove empty assistant messages
+  const cleaned = messages.filter(m =>
+    !(m.role === 'assistant' && (!m.content || m.content.trim() === ''))
+  );
+  if (cleaned.length === messages.length) return messages; // nothing to clean
+
+  // Step 2: reorder corrupted tool_call blocks
+  // Corrupted pattern: tool_call… → assistant → tool_result…
+  // Correct pattern:  assistant → tool_call… → tool_result…
+  const result: AIChatMessage[] = [];
+  let i = 0;
+  while (i < cleaned.length) {
+    const m = cleaned[i]!;
+    if (m.role === 'tool_call') {
+      // Collect consecutive tool_calls
+      const toolStart = i;
+      while (i < cleaned.length && cleaned[i]!.role === 'tool_call') i++;
+      const toolCallMsgs = cleaned.slice(toolStart, i);
+
+      if (i < cleaned.length && cleaned[i]!.role === 'assistant') {
+        const assistantMsg = cleaned[i]!;
+        i++;
+        // Collect following tool_results
+        const resultStart = i;
+        while (i < cleaned.length && cleaned[i]!.role === 'tool_result') i++;
+        const toolResultMsgs = cleaned.slice(resultStart, i);
+        if (toolResultMsgs.length > 0) {
+          // Reorder: assistant → tool_calls → tool_results
+          result.push(assistantMsg);
+          result.push(...toolCallMsgs);
+          result.push(...toolResultMsgs);
+        } else {
+          result.push(...toolCallMsgs);
+          result.push(assistantMsg);
+        }
+      } else {
+        result.push(...toolCallMsgs);
+      }
+    } else {
+      result.push(m);
+      i++;
+    }
+  }
+  return result;
+}
+
 export function useAIChat(
   client: BskyClient | null,
   aiConfig: AIConfig,
@@ -126,7 +177,12 @@ export function useAIChat(
     void (async () => {
       const record = await loadChat(options.chatId!);
       if (record) {
-        setMessages(record.messages);
+        const repaired = repairCorruptedMessages(record.messages);
+        setMessages(repaired);
+        // Persist repair back to storage so the fix is permanent
+        if (repaired !== record.messages) {
+          saveChat(record.id, repaired, record.title, record.contextUri, record.context);
+        }
         // Restore context from saved record (survives page refresh)
         if (record.context) {
           contextRef.current = record.context;
@@ -426,6 +482,18 @@ export function useAIChat(
         if (m.reasoning_content) {
           result.push({ role: 'thinking', content: m.reasoning_content as string });
         }
+        // Push text content first so tool_call pairs correctly with the tool_result that follows
+        const textContent = contentToString(m.content);
+        const hasContent = textContent.trim().length > 0;
+        if (hasContent) {
+          result.push({
+            role: 'assistant',
+            content: textContent,
+            reasoning_content: m.reasoning_content,
+            tool_calls: m.tool_calls as any,
+          });
+        }
+        // Tool calls come after text so they are adjacent to tool_result in the message stream
         if (m.tool_calls && m.tool_calls.length > 0) {
           for (const tc of m.tool_calls) {
             result.push({
@@ -436,12 +504,15 @@ export function useAIChat(
             });
           }
         }
-        result.push({
-          role: 'assistant',
-          content: contentToString(m.content),
-          reasoning_content: m.reasoning_content,
-          tool_calls: m.tool_calls as any,
-        });
+        // Only push empty-content assistant when there's nothing else (no tool_calls, no reasoning)
+        if (!hasContent && (!m.tool_calls || m.tool_calls.length === 0) && !m.reasoning_content) {
+          result.push({
+            role: 'assistant',
+            content: textContent,
+            reasoning_content: m.reasoning_content,
+            tool_calls: m.tool_calls as any,
+          });
+        }
       } else if (m.role === 'tool') {
         result.push({
           role: 'tool_result',
@@ -470,7 +541,9 @@ export function useAIChat(
           const userContent = contentToString(allMsgs[i]!.content);
           const keep = allMsgs.slice(0, i);
           assistant.loadMessages(keep);
-          setMessages(mapMessages(keep));
+          const newMsgs = mapMessages(keep);
+          setMessages(newMsgs);
+          messagesRef.current = newMsgs;
           return userContent;
         }
         count++;
@@ -488,7 +561,9 @@ export function useAIChat(
     if (lastUserIdx < 0) return;
     const keep = allMsgs.slice(0, lastUserIdx);
     assistant.loadMessages(keep);
-    setMessages(mapMessages(keep));
+    const newMsgs = mapMessages(keep);
+    setMessages(newMsgs);
+    messagesRef.current = newMsgs;
   }, [assistant, mapMessages]);
 
   const edit = useCallback((): string | null => {
