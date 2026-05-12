@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAIChat, useChatHistory, useI18n, enableWidget, saveChatNow } from '@bsky/app';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
@@ -438,28 +439,101 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   return (
     <div ref={chatContainerRef} className="h-[calc(100dvh-3rem)] flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {/* Mobile sidebar overlay with slide animation */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            key="ai-chat-sidebar"
+            className="fixed inset-0 z-[60] md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+            <motion.aside
+              className="absolute left-0 top-0 h-full w-[280px] flex flex-col bg-surface border-r border-border shadow-lg"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h2 className="text-sm font-semibold text-text-primary"><Icon name="astroid-as-AI-Button" size={18} /> {t('ai.history')}</h2>
+                <button
+                  className="md:hidden text-text-secondary hover:text-text-primary p-1"
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon name="x" size={18} />
+                </button>
+              </div>
 
-      {/* Sidebar */}
+              <div className="p-3">
+                <button
+                  onClick={handleNewChat}
+                  className="w-full py-2 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
+                >
+                  <Icon name="plus" size={16} /> {t('ai.newChat')}
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-2 pb-2">
+                {conversations.length === 0 ? (
+                  <p className="text-text-secondary text-xs text-center mt-8 px-4">{t('ai.emptyHistory')}</p>
+                ) : (
+                  conversations.map((c) => (
+                    <div
+                      key={c.id}
+                      onClick={() => handleSelectChat(c.id)}
+                      className={`group flex items-start gap-2 px-3 py-2.5 rounded-lg cursor-pointer transition-colors mx-1 ${
+                        c.id === sessionId
+                          ? 'bg-primary/10 border border-primary/30'
+                          : 'hover:bg-surface border border-transparent'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-primary truncate">{c.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-text-secondary">
+                            {t('ai.messageCount', { n: c.messageCount })}
+                          </span>
+                          <span className="text-xs text-text-secondary/60">
+                            {formatTime(c.updatedAt)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setRenameTarget({ id: c.id, title: c.title }); setRenameInput(c.title); }}
+                          className="text-text-secondary hover:text-primary p-0.5 transition-colors"
+                          title={t('ai.renameChat')}
+                        >
+                          <Icon name="pencil" size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteChat(e, c.id)}
+                          className="text-text-secondary hover:text-red-500 p-0.5 transition-colors"
+                          title={t('ai.deleteChat')}
+                        >
+                          <Icon name="trash-2" size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop sidebar */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-[280px] flex flex-col bg-surface border-r border-border transition-transform duration-200 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        className="hidden md:flex flex-col w-[280px] flex-shrink-0 bg-surface border-r border-border"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <h2 className="text-sm font-semibold text-text-primary"><Icon name="astroid-as-AI-Button" size={18} /> {t('ai.history')}</h2>
-          <button
-            className="md:hidden text-text-secondary hover:text-text-primary p-1"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <Icon name="x" size={18} />
-          </button>
         </div>
 
         <div className="p-3">
