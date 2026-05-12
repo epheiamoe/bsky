@@ -101,6 +101,7 @@ export function useAIChat(
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
   const [guidingQuestions, setGuidingQuestions] = useState<string[]>([]);
+  const [wasRepaired, setWasRepaired] = useState(false);
   const [pendingConfirmation, setPendingConfirmation] = useState<{
     toolName: string;
     description: string;
@@ -156,6 +157,7 @@ export function useAIChat(
     setMessages([]);
     messagesRef.current = [];
     setGuidingQuestions([]);
+    setWasRepaired(false);
     autoStartedRef.current = false;
     chatNotifiedRef.current = false;
     titleGeneratedRef.current = false;
@@ -182,6 +184,7 @@ export function useAIChat(
         // Persist repair back to storage so the fix is permanent
         if (repaired !== record.messages) {
           saveChat(record.id, repaired, record.title, record.contextUri, record.context);
+          setWasRepaired(true);
         }
         // Restore context from saved record (survives page refresh)
         if (record.context) {
@@ -195,10 +198,10 @@ export function useAIChat(
         } else if (contextUri) {
           assistant.addSystemMessage(buildSystemPrompt(contextUri, options?.contextProfile));
         }
-        // Sync assistant state with stored messages so editByIndex works
+        // Sync assistant state with repaired messages so editByIndex works
         const system = assistant.getMessages().filter(m => m.role === 'system');
         const chatMsgs: ChatMessage[] = [];
-        for (const m of record.messages) {
+        for (const m of repaired) {
           if (m.role === 'thinking') continue;
           if (m.role === 'tool_call' && m.toolCallId && m.toolName) {
             const argsMatch = m.content.match(/\{.*\}/s);
@@ -584,7 +587,7 @@ export function useAIChat(
     return assistant.addUserUpload(data, mimeType, alt);
   }, [assistant]);
 
-  return { messages, loading, guidingQuestions, send, stop, addUserImage, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex };
+  return { messages, loading, guidingQuestions, wasRepaired, send, stop, addUserImage, chatId: chatIdRef.current, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex };
 }
 
 // Re-export the AIChatMessage type for consumers

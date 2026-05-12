@@ -262,6 +262,7 @@ const zh: LocaleMessages = {
   'ai.pickExport': '选择导出格式',
   'ai.exported': '已导出',
   'ai.copied': '已复制',
+  'ai.repaired': '此对话已被自动修复，请刷新页面以完成。',
   'ai.pickCopy': '复制: 输入序号 + Enter',
   'ai.pickEdit': '编辑: 输入序号 + Enter',
   'ai.escReturn': '[Esc 返回主面板 · Tab 切换焦点]',

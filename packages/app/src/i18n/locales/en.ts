@@ -7,6 +7,7 @@ const en: LocaleMessages = {
   'nav.bookmarks': 'Bookmarks',
   'nav.profile': 'Profile',
   'nav.aiChat': 'AI Chat',
+  'ai.repaired': 'This conversation was automatically repaired. Refresh the page to complete the fix.',
   'nav.compose': 'Compose',
   'nav.lists': 'Lists',
   'nav.settings': 'Settings',

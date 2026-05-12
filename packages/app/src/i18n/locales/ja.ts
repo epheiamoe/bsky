@@ -7,6 +7,7 @@ const ja: LocaleMessages = {
   'nav.bookmarks': 'ブックマーク',
   'nav.profile': 'プロフィール',
   'nav.aiChat': 'AI チャット',
+  'ai.repaired': 'この会話は自動修復されました。ページを更新して修正を完了してください。',
   'nav.compose': '投稿',
   'nav.lists': 'リスト',
   'nav.settings': '設定',

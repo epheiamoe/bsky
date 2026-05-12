@@ -143,7 +143,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const { conversations, deleteConversation, saveConversation, loadConversation, refresh } = useChatHistory();
 
-  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
+  const { messages, loading, guidingQuestions, wasRepaired, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, undoLastMessage, edit, editByIndex } = useAIChat(client, aiConfig, isProfile ? undefined : contextUri, {
     chatId: sessionId,
     stream: true,
     userHandle,
@@ -555,14 +555,6 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                   )}
                 </div>
                 <button
-                  onClick={() => importFileRef.current?.click()}
-                  className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5"
-                  title="Import JSON"
-                >
-                  <Icon name="upload" size={16} />
-                </button>
-                <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
-                <button
                   onClick={() => { enableWidget('aiChat'); goTo({ type: 'feed' }); }}
                   className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5 hidden lg:flex"
                   title="Open in Widgets"
@@ -570,14 +562,22 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                 >
                   <Icon name="arrow-big-right" size={16} />
                 </button>
-                {/* Import toast */}
-                {importError && (
-                  <div className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
-                )}
-                {importSuccess && (
-                  <div className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
-                )}
               </>
+            )}
+            <button
+              onClick={() => importFileRef.current?.click()}
+              className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5"
+              title="Import JSON"
+            >
+              <Icon name="upload" size={16} />
+            </button>
+            <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+            {/* Import toast */}
+            {importError && (
+              <div className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
+            )}
+            {importSuccess && (
+              <div className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
             )}
           </div>
           {contextUri && (
@@ -788,6 +788,18 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
           </div>
         </div>
       </main>
+        {/* Repair toast — shown when a previously corrupted conversation was auto-fixed */}
+        {wasRepaired && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-4 py-3 rounded-xl shadow-lg z-[100] flex items-center gap-3 animate-slideUp max-w-[90%]">
+            <span className="leading-snug">{t('ai.repaired')}</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-xs font-semibold transition-colors shrink-0"
+            >
+              {t('action.refresh')}
+            </button>
+          </div>
+        )}
     </div>
   );
 }
