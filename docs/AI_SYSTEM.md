@@ -231,7 +231,7 @@ interface ToolDescriptor {
 
 ### All 33 Tools
 
-**Read Tools (29)**:
+**Read Tools (27)**:
 - `resolve_handle` — resolve handle → DID
 - `get_record` — get raw AT record
 - `list_records` — list repo collection records
@@ -260,7 +260,7 @@ interface ToolDescriptor {
 - `get_lists` — user's lists
 - `get_list_feed` — posts from list members
 
-**Write Tools (4, require confirmation)**:
+**Write Tools (6, require confirmation)**:
 - `create_list` — create a list
 - `edit_list_members` — add/remove list members
 - `create_post` — post/reply/quote (supports `pendingImageIndex` for chat-uploaded images)
@@ -270,7 +270,7 @@ interface ToolDescriptor {
 
 ### Thread Flattening Format
 
-`get_post_thread_flat` returns:
+`get_post_thread` with `format=flat` returns:
 ```
 depth:0 | alice.bsky.social (Alice) (post:abc123)
 "Hello World"
