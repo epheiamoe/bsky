@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
 import type { AppView } from '@bsky/app';
-import type { BskyClient, AIConfig, PostView } from '@bsky/core';
+import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
@@ -10,7 +10,9 @@ import { ImageGrid } from './PostCard.js';
 import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
+import { getThreadgateDisplayKey } from '@bsky/app';
 import { Modal } from './Modal.js';
+import { ThreadgateEditor } from './ThreadgateEditor.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -36,6 +38,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     flatLines,
     loading,
     focused,
+    threadgate,
     likePost,
     repostPost,
     isLiked,
@@ -45,6 +48,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   } = useThread(client, uri);
   const { t } = useI18n();
   const [showInfo, setShowInfo] = useState(false);
+  const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
@@ -210,7 +214,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 </div>
               </div>
             </div>
-            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-all">
+            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
               {linkifyText(focused.text)}
             </p>
             {focused.quotedPost && (
@@ -225,7 +229,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
                   <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
                 </div>
-                <p className="text-sm text-text-primary line-clamp-4 break-all">{linkifyText(focused.quotedPost.text)}</p>
+                <p className="text-sm text-text-primary line-clamp-4 break-words">{linkifyText(focused.quotedPost.text)}</p>
                 {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
                   <div className="mt-1 flex gap-1">
                     {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
@@ -267,13 +271,25 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
               </a>
             )}
+            {/* Threadgate restriction badge */}
+            {threadgate && threadgate.rules !== undefined && (
+              <div className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                <Icon name="corner-down-right" size={12} />
+                {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
+              </div>
+            )}
             {/* Unified action row + extras */}
             <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
               <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
               {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
               <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
               <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')}><Icon name="badge-info" size={18} /></button>
-              {focused.handle === client.getHandle() && <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors"><Icon name="trash-2" size={18} /></button>}
+              {focused.handle === client.getHandle() && (
+                <>
+                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')}><Icon name="message-square-off" size={18} /></button>
+                  <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors"><Icon name="trash-2" size={18} /></button>
+                </>
+              )}
             </div>
           </article>
         )}
@@ -322,6 +338,16 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
       </main>
       {showInfo && focused && getPostView?.(focused.uri) && (
         <PostInfoModal open={showInfo} post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />
+      )}
+      {showThreadgateEditor && focused && (
+        <ThreadgateEditor
+          client={client}
+          postUri={focused.uri}
+          currentRules={threadgate?.rules ?? null}
+          listInfo={threadgate?.listInfo}
+          onClose={() => setShowThreadgateEditor(false)}
+          onSaved={() => { setShowThreadgateEditor(false); window.location.reload(); }}
+        />
       )}
     </div>
   );

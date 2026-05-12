@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCompose, useI18n, useDrafts, getCdnImageUrl, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds } from '@bsky/app';
+import { useCompose, useI18n, useDrafts, getCdnImageUrl, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds, formatThreadgateSummary, buildThreadgateRules } from '@bsky/app';
 import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app';
-import type { BskyClient, PostView, AIConfig } from '@bsky/core';
+import type { BskyClient, PostView, AIConfig, ListView } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 import { WidgetModal } from './WidgetModal.js';
@@ -70,7 +70,14 @@ function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string 
 
 export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
   const { t } = useI18n();
-  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, goHome);
+  const handlePosted = useCallback((uris?: string[]) => {
+    if (uris && uris.length > 0) {
+      goTo({ type: 'thread', uri: uris[0] });
+    } else {
+      goHome();
+    }
+  }, [goTo, goHome]);
+  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
 
@@ -90,9 +97,35 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [showPolishModal, setShowPolishModal] = useState(false);
   const [draftSaveHint, setDraftSaveHint] = useState(false);
+  const [showThreadgate, setShowThreadgate] = useState(false);
+  const [selectedThreadgate, setSelectedThreadgate] = useState<string>('everyone');
+  const [selectedListUri, setSelectedListUri] = useState('');
+  const [userLists, setUserLists] = useState<ListView[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileTargetPostId, setFileTargetPostId] = useState<string | null>(null);
   const [polishTargetPostId, setPolishTargetPostId] = useState<string | null>(null);
+  const threadgateOptions = [
+    { value: 'everyone', label: t('compose.everyone') },
+    { value: 'nobody', label: t('compose.nobody') },
+    { value: 'mentioned', label: t('compose.onlyMentioned') },
+    { value: 'followers', label: t('compose.onlyFollowers') },
+    { value: 'following', label: t('compose.onlyFollowing') },
+    { value: 'list', label: t('compose.onlyLists') },
+  ];
+
+  const selectedThreadgateRules = buildThreadgateRules(selectedThreadgate, selectedThreadgate === 'list' ? selectedListUri : undefined);
+
+  // Sync threadgate rules to useCompose
+  useEffect(() => {
+    setThreadgateRules(selectedThreadgateRules);
+  }, [selectedThreadgate, selectedListUri, setThreadgateRules]);
+
+  // Fetch user lists when selecting list mode
+  useEffect(() => {
+    if (selectedThreadgate === 'list') {
+      client.getLists(client.getHandle()).then(r => setUserLists(r.lists)).catch(() => {});
+    }
+  }, [selectedThreadgate, client]);
 
   // Keep polish target in sync: default to first non-empty post, or first post
   useEffect(() => {
@@ -567,6 +600,69 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
               className="w-full px-3 py-2 rounded-lg border border-dashed border-border text-text-secondary hover:text-primary hover:border-primary transition-colors text-sm flex items-center justify-center gap-1">
               <Icon name="plus" size={14} /> {t('compose.addPost')}
             </button>
+          )}
+
+          {/* Threadgate selector — only for original posts and quotes (not replies) */}
+          {!isReply && (
+            <div className="border border-border rounded-lg bg-surface">
+              <button
+                type="button"
+                onClick={() => setShowThreadgate(!showThreadgate)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <span className="flex items-center gap-1"><Icon name="corner-down-right" size={14} /> {t('compose.replyRestriction')}</span>
+                <Icon name="chevron-down" size={14} className={`transition-transform ${showThreadgate ? 'rotate-180' : ''}`} />
+              </button>
+              {showThreadgate && (
+                <div className="px-3 pb-3 space-y-1.5 border-t border-border pt-2">
+                  <p className="text-xs text-text-secondary mb-1">{t('compose.replyRestriction')}</p>
+                  {threadgateOptions.map(opt => (
+                    <label key={opt.value} className="flex items-start gap-2 py-1 cursor-pointer hover:bg-surface/50 rounded px-2 transition-colors">
+                      <input
+                        type="radio"
+                        name="compose-threadgate"
+                        value={opt.value}
+                        checked={selectedThreadgate === opt.value}
+                        onChange={() => { setSelectedThreadgate(opt.value); if (opt.value !== 'list') setSelectedListUri(''); }}
+                        className="accent-primary mt-0.5"
+                      />
+                      <span className="text-sm text-text-primary leading-5">{opt.label}</span>
+                    </label>
+                  ))}
+                  {selectedThreadgate === 'list' && (
+                    <div className="ml-6 pl-2 border-l-2 border-border space-y-1 max-h-40 overflow-y-auto">
+                      {userLists.length === 0 ? (
+                        <p className="text-xs text-text-secondary py-1">{t('compose.noLists')}</p>
+                      ) : (
+                        userLists.map(lst => (
+                          <label key={lst.uri} className="flex items-start gap-2 py-0.5 cursor-pointer hover:bg-surface/50 rounded px-2 transition-colors">
+                            <input
+                              type="radio"
+                              name="compose-threadgate-list"
+                              value={lst.uri}
+                              checked={selectedListUri === lst.uri}
+                              onChange={() => setSelectedListUri(lst.uri)}
+                              className="accent-primary mt-0.5"
+                            />
+                            <span className="text-sm text-text-primary leading-5">{lst.name}</span>
+                            <span className="text-xs text-text-secondary leading-5 ml-auto">{lst.listItemCount ?? 0}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  )}
+                  {selectedThreadgate !== 'everyone' && selectedThreadgateRules && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                      {t('thread.replyRestricted', { rule: formatThreadgateSummary(selectedThreadgateRules, 
+                        selectedThreadgate === 'list' && selectedListUri 
+                          ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }]
+                          : undefined
+                      )})}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Error */}
