@@ -22,3 +22,8 @@ export function checkForPwaUpdate(): void {
   _registration?.update();
   setTimeout(() => { _ignoreNextUpdate = false; }, 3000);
 }
+
+/** Manual check from About page — does NOT set _ignoreNextUpdate so the event fires. */
+export function checkForPwaUpdateManual(): void {
+  _registration?.update();
+}

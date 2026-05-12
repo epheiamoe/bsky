@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
-import { checkForPwaUpdate } from '../services/pwa.js';
+import { checkForPwaUpdateManual } from '../services/pwa.js';
 
 interface AboutPageProps {
   goBack: () => void;
@@ -35,7 +35,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
       window.removeEventListener('pwa-update-available', onUpdate);
     };
     window.addEventListener('pwa-update-available', onUpdate);
-    checkForPwaUpdate();
+    checkForPwaUpdateManual();
     // If no update found within a reasonable time, show "up to date"
     setTimeout(() => {
       window.removeEventListener('pwa-update-available', onUpdate);
