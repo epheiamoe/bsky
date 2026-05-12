@@ -10,6 +10,7 @@
 | **时间线** | ✅ | ✅ | 虚拟滚动 + IntersectionObserver 自动加载 |
 | **讨论串** | ✅ | ✅ | 讨论源 + 回复树 + 嵌套回复 + 引用预览 + 回复展开 |
 | **发帖/回复** | ✅ | ✅ | 文本 300 字符 + 帖子串(多帖顺序发布) + 图片/视频上传(最多 4 图/1 视频, 2MB/100MB) + ALT + 引用 |
+| **回复限制 (Threadgate)** | ✅ | ✅ | `app.bsky.feed.threadgate` — nobody/mentioned/followers/following/lists (含列表选择器); PWA: Compose 折叠面板 + ThreadView badge + ThreadgateEditor; TUI: g 键 + R 键 dialog; AI: create_post 参数 + 回复前检查 |
 | **点赞** | ✅ | ✅ | TUI: `l` 键, PWA: 按钮 |
 | **转发/引用** | ✅ | ✅ | TUI: `r` 键 → 转发/引用选择, PWA: 下拉菜单 |
 | **通知** | ✅ | ✅ | 交互式通知（点击/Enter 查看帖子） |

@@ -121,6 +121,19 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `d` / `D` | Delete cursor post (only if own) — with [Y/N] confirmation |
 | `y` | Yank URI — copies `@handle uri bsky.app/...` to stderr (5s display) |
 | `f` / `F` | Translate cursor line text via AI |
+| `R` | Change reply restriction on own root post (opens threadgate dialog) |
+
+### Threadgate Dialog (when open)
+
+| Key | Action |
+|-----|--------|
+| `e` / `E` | Everyone (anyone can reply) |
+| `n` / `N` | Nobody can reply |
+| `m` / `M` | Only mentioned users |
+| `f` / `F` | Only followers |
+| `w` / `W` | Only people you follow |
+| `y` / `Y` | Confirm selection |
+| `n` / `N` / `Esc` | Cancel |
 
 ### Repost Confirmation Dialog (when open)
 
@@ -129,7 +142,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `y` / `Y` | Confirm repost |
 | `n` / `N` | Cancel repost |
 
-**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 d:删除 f:翻译`
+**Footer hint**: `h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 d:删除 f:翻译 R:回复限制`
 
 **Note**: `t` is GLOBAL (`goHome`) and NOT available for thread-local translation. Use `f` for translation.
 
@@ -230,6 +243,7 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 | `P` | Add new post to thread |
 | `X` | Remove current post from thread |
 | `f` / `F` | Polish: enter polish requirement input mode |
+| `g` | Cycle reply restriction: everyone → nobody → mentioned → followers → following (original posts/quotes only, hidden for replies) |
 | `Tab` | Cycle post index (multi-post only) |
 
 ### Media Path Input Mode (image or video)
@@ -262,7 +276,7 @@ Keyboard focus is delegated to `TextInput` (via `onSubmit`). Global shortcuts ar
 | `C` | Copy result to clipboard (stderr) |
 | `Esc` | Dismiss result |
 
-**Footer hint**: `Enter:发送 · Esc:取消 · i:媒体 · D:草稿 · f:润色 · P:加帖 · X:删帖`
+**Footer hint**: `Enter:发送 · Esc:取消 · i:媒体 · D:草稿 · f:润色 · g:回复限制 · P:加帖 · X:删帖`
 
 ---
 

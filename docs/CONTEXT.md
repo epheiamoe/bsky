@@ -25,7 +25,7 @@
 
 ## 版本
 
-**v0.10.8** — 图片灯箱 Hero 动画最终修复 + 文档化。`sourceRects: DOMRect[]` 数组存储每张图片的 grid 位置，退出动画正确飞回当前图片位置。`useEffect` 加 `if (open)` guard 防止关闭时重置 `current`。`AnimatePresence mode="wait"` 加回图片切换滑动动画。点击穿透 / 飞走 / 打不开 三问题全部修复。Animation System 文档 `docs/ANIMATIONS.md`。framer-motion v12.38.0。
+**v0.12.0** — 回复限制（Threadgate）支持。`app.bsky.feed.threadgate` 全链路实现：Core 类型+Client 方法 → App hooks+工具函数 → PWA Compose/ThreadView/ThreadgateEditor → TUI g/R 键 → AI create_post 参数+回复前检查。发帖后自动导航到新帖子。`break-all` → `break-words` 解决单词断裂。`sourceRects: DOMRect[]` 数组存储每张图片的 grid 位置，退出动画正确飞回当前图片位置。`useEffect` 加 `if (open)` guard 防止关闭时重置 `current`。`AnimatePresence mode="wait"` 加回图片切换滑动动画。点击穿透 / 飞走 / 打不开 三问题全部修复。Animation System 文档 `docs/ANIMATIONS.md`。framer-motion v12.38.0。
 
 ## 项目状态
 

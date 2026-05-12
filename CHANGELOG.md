@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] — 2026-05-12
+
+### Added
+
+- **Threadgate (reply restriction) support**: Full reply-gating via `app.bsky.feed.threadgate` record.
+  - `@bsky/core`: `ThreadgateRule` union type (`mentionRule`/`followerRule`/`followingRule`/`listRule`), `ThreadgateRecord`, `ThreadgateView`; `putThreadgate(uri, rules)` and `deleteThreadgate(uri)` client methods.
+  - `@bsky/app`: `useCompose.threadgateRules` state + auto threadgate creation after posting; `useThread.threadgate` parsed from API response; `formatThreadgateSummary`, `buildThreadgateRules`, `rulesToThreadgateType`, `getThreadgateDisplayKey` utilities.
+  - **PWA ComposePage**: Collapsible "Who can reply?" section with radio options (everyone/nobody/mentioned/followers/following/lists). List picker expands to fetch user's lists via `client.getLists()`. Hidden when replying. SVG icons throughout.
+  - **PWA ThreadView**: Yellow restriction badge shown above action bar when threadgate exists (all posts, not just own). "Change reply restriction" button (`message-square-off` SVG icon) next to delete button on own posts. `ThreadgateEditor` modal with same radio options + list picker.
+  - **TUI**: `g` key cycles restriction modes in compose; `R` key opens threadgate dialog in thread view; restriction text shown on focused posts.
+  - **AI tools**: `create_post` accepts optional `threadgate` parameter. Before replying, checks target post's threadgate and returns graceful error if restricted. After original/quote posting, creates threadgate record.
+  - **AI thread view**: `get_post_thread` flat format now appends `[reply restriction: ...]` line to root post.
+  - **i18n**: 6 display keys (`nobody`/`followers`/`following`/`mentioned`/`list`/`multiple`) in en/zh/ja with proper full sentences.
+- **Post-publish navigation**: `useCompose.onSuccess` now passes created URI array → `ComposePage`/TUI `App.tsx` navigate to the new post's thread page.
+- **SVG icon**: `message-square-off.svg` (Lucide) for "change reply restriction" button.
+
+### Changed
+
+- **Post text wrapping**: `break-all` → `break-words` on all post text elements (ThreadView, PostCard). Words no longer broken mid-syllable; long links only break when they overflow the container. Code/URI technical content retains `break-all`.
+- **Threadgate badge**: No longer restricted to own posts — shows for any post with restrictions.
+- **Threadgate display**: Replaced `'Replies: {rule}'` template with 6 unique i18n keys yielding full sentences like "此帖子仅限关注者可回复" / "Only followers can reply".
+- **Radio alignment**: `flex items-start` + `mt-0.5` on radio inputs + `leading-5` on labels across ThreadgateEditor and ComposePage threadgate selectors.
+
+### Fixed
+
+- **Threadgate badge not showing on other users' posts**: Removed `focused.handle === client.getHandle()` gate.
+- **Confusing display text**: `getThreadgateDisplayKey()` returns structured i18n key instead of raw summary text.
+- **No navigation after posting**: `onSuccess` callback now receives `createdUris` → auto-navigate to new thread.
+
 ## [0.11.0] — 2026-05-12
 
 ### Added
