@@ -57,6 +57,20 @@ export function createAuthStore(): AuthStore {
     restoreSession(session: CreateSessionResponse, pdsUrl: string) {
       const c = new BskyClient();
       c.restoreSession(session, pdsUrl);
+
+      // When JWT refresh fails (token expired + refresh unreachable),
+      // the client nulls its session. This callback propagates that
+      // to the auth store so the UI can show the login page immediately
+      // instead of throwing "Not authenticated" on the next API call.
+      c._onSessionExpired = () => {
+        if (store.client !== c) return;
+        store.client = null;
+        store.session = null;
+        store.pdsUrl = null;
+        store.error = 'session_expired';
+        store._notify();
+      };
+
       store.session = session;
       store.pdsUrl = pdsUrl;
       store.client = c;
@@ -64,6 +78,7 @@ export function createAuthStore(): AuthStore {
         store.profile = p;
         store._notify();
       }).catch(() => {
+        if (store.client !== c) return;
         if (!c.isAuthenticated()) {
           store.client = null;
           store.session = null;

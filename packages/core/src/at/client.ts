@@ -78,6 +78,8 @@ export class BskyClient {
   private chatKy: KyInstance;
   private _withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void>;
   private _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
+  /** Called when a JWT refresh attempt fails and the session becomes invalid. Auth store hooks into this to reset UI state. */
+  _onSessionExpired?: () => void;
 
   constructor(options?: { pdsUrl?: string }) {
     const entryPds = options?.pdsUrl ?? BSKY_SERVICE;
@@ -108,6 +110,7 @@ export class BskyClient {
                     return null;
                   }
                   self.session = null;
+                  self._onSessionExpired?.();
                   return null;
                 })();
                 self._refreshPromise.finally(() => { self._refreshPromise = null; });
