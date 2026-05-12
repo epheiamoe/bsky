@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useThread, useI18n } from '@bsky/app';
-import type { BskyClient, AIConfig } from '@bsky/core';
+import { useThread, useI18n, formatThreadgateSummary, getThreadgateDisplayKey, buildThreadgateRules } from '@bsky/app';
+import type { BskyClient, AIConfig, ThreadgateRule } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
 
 interface UnifiedThreadViewProps {
@@ -19,7 +19,7 @@ interface UnifiedThreadViewProps {
 }
 
 export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, cols, isBookmarked, toggleBookmark, aiConfig, targetLang, translateMode }: UnifiedThreadViewProps) {
-  const { flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted, expandReplies } = useThread(client, uri);
+  const { flatLines, loading, error, focusedIndex, focused, themeUri, likePost, repostPost, isLiked, isReposted, expandReplies, threadgate } = useThread(client, uri);
 
   // Cursor = arrow movement target (highlighted in replies); focused = current post (only changes on Enter/h)
   const [cursorIndex, setCursorIndex] = useState(0);
@@ -37,6 +37,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
   const [repostDialog, setRepostDialog] = useState<{ uri: string; handle: string; phase: 'choice' | 'confirm' } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [threadgateDialog, setThreadgateDialog] = useState<{ phase: 'choice' | 'confirm'; selected?: string } | null>(null);
   const [localLikeCounts, setLocalLikeCounts] = useState<Record<string, number>>({});
   const [yankedUri, setYankedUri] = useState<string | null>(null);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
@@ -70,6 +71,32 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       if (input === 'y' || input === 'Y') { client?.deletePost(deleteConfirm).then(() => { setDeleteConfirm(null); refreshThread(uri); }).catch(() => setDeleteConfirm(null)); return; }
       if (input === 'n' || input === 'N' || key.escape) { setDeleteConfirm(null); return; }
       return;
+    }
+
+    if (threadgateDialog) {
+      if (threadgateDialog.phase === 'choice') {
+        if (input === 'e' || input === 'E') { setThreadgateDialog({ ...threadgateDialog, selected: 'everyone', phase: 'confirm' }); return; }
+        if (input === 'n' || input === 'N') { setThreadgateDialog({ ...threadgateDialog, selected: 'nobody', phase: 'confirm' }); return; }
+        if (input === 'm' || input === 'M') { setThreadgateDialog({ ...threadgateDialog, selected: 'mentioned', phase: 'confirm' }); return; }
+        if (input === 'f' || input === 'F') { setThreadgateDialog({ ...threadgateDialog, selected: 'followers', phase: 'confirm' }); return; }
+        if (input === 'w' || input === 'W') { setThreadgateDialog({ ...threadgateDialog, selected: 'following', phase: 'confirm' }); return; }
+        if (key.escape) { setThreadgateDialog(null); return; }
+        return;
+      }
+      if (threadgateDialog.phase === 'confirm') {
+        if (input === 'y' || input === 'Y') {
+          const rules = buildThreadgateRules(threadgateDialog.selected!);
+          if (rules === null) {
+            client?.deleteThreadgate(focusedUri!).catch(() => { setThreadgateDialog(null); });
+          } else {
+            client?.putThreadgate(focusedUri!, rules).catch(() => { setThreadgateDialog(null); });
+          }
+          setThreadgateDialog(null);
+          return;
+        }
+        if (input === 'n' || input === 'N' || key.escape) { setThreadgateDialog(null); return; }
+        return;
+      }
     }
 
     if (repostDialog) {
@@ -124,6 +151,7 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       if (input === 'l' || input === 'L') { void handleLike(cursorLine.uri, cursorLine.rkey); return; }
       if (input === 'r') { setRepostDialog({ uri: cursorLine.uri, handle: cursorLine.handle, phase: 'choice' }); return; }
       if (input === 'c' || input === 'C') { goTo({ type: 'compose', replyTo: cursorLine.uri }); return; }
+      if (input === 'R' && focused?.isRoot && client?.getHandle && focused.handle === client.getHandle()) { setThreadgateDialog({ phase: 'choice' }); return; }
       if (input === 'v') { void toggleBookmark(cursorLine.uri, cursorLine.cid); return; }
       if (input === 'd' || input === 'D') {
         if (client && cursorLine.handle === client.getHandle()) {
@@ -250,6 +278,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         <Box flexDirection="column" marginTop={0}>
           <Box><Text dimColor>{isTheme ? '── ' + t('thread.rootPost') + ' ──' : '── ' + t('thread.currentPost') + ' ──'}</Text></Box>
           {renderPostBody(focused, '#1e40af')}
+          {threadgate && focused?.isRoot && (
+            <Box>
+              <Text color="yellow">{'🔒 '}{t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}</Text>
+              {client?.getHandle && focused.handle === client.getHandle() && <Text dimColor>{' [R] '}{t('thread.changeReplyRestriction')}</Text>}
+            </Box>
+          )}
           <Box>
             <Text color={isFollowingFocused ? 'green' : 'yellow'}>{isFollowingFocused ? '✅ ' + t('profile.following') : '【u】 ' + t('profile.follow') + ' @' + focused.handle}</Text>
           </Box>
@@ -341,6 +375,24 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         <Box flexDirection="column" borderStyle="double" borderColor="red" paddingX={1} marginTop={0}>
           <Text bold color="red">🗑 {t('thread.confirmDelete')}</Text>
           <Box><Text color="green">[Y] {t('action.confirm')}</Text><Text>{'  '}</Text><Text color="red">[N/Esc] {t('action.cancel')}</Text></Box>
+        </Box>
+      )}
+
+      {/* ── Threadgate dialog ── */}
+      {threadgateDialog && (
+        <Box flexDirection="column" borderStyle="double" borderColor="cyan" paddingX={1} marginTop={0}>
+          {threadgateDialog.phase === 'choice' ? (
+            <Box flexDirection="column">
+              <Text bold color="cyan">{t('thread.changeReplyRestriction')}</Text>
+              <Box><Text color="green">[e] {t('compose.everyone')}  [n] {t('compose.nobody')}  [m] {t('compose.onlyMentioned')}  [f] {t('compose.onlyFollowers')}  [w] {t('compose.onlyFollowing')}</Text></Box>
+              <Box><Text dimColor>{'[Esc] '}{t('action.cancel')}</Text></Box>
+            </Box>
+          ) : (
+            <Box flexDirection="column">
+              <Text bold color="cyan">{t('thread.changeReplyRestriction')}: {threadgateDialog.selected === 'everyone' ? t('compose.everyone') : threadgateDialog.selected === 'nobody' ? t('compose.nobody') : threadgateDialog.selected === 'mentioned' ? t('compose.onlyMentioned') : threadgateDialog.selected === 'followers' ? t('compose.onlyFollowers') : t('compose.onlyFollowing')}</Text>
+              <Box><Text color="green">[Y] {t('action.confirm')}</Text><Text>{'  '}</Text><Text color="red">[N/Esc] {t('action.cancel')}</Text></Box>
+            </Box>
+          )}
         </Box>
       )}
 

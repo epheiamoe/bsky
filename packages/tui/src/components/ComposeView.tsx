@@ -28,6 +28,7 @@ interface ComposeViewProps {
   setPolishRequirement?: (v: string) => void;
   altReqText?: string;
   setAltReqText?: (v: string) => void;
+  threadgateMode?: string;
 }
 
 export function ComposeView({
@@ -39,10 +40,18 @@ export function ComposeView({
   polishResult, polishError, polishPhase,
   polishRequirement, setPolishRequirement,
   altReqText, setAltReqText,
+  threadgateMode,
 }: ComposeViewProps) {
   const { t } = useI18n();
   const isReply = !!replyTo;
   const activePost = posts[activePostIdx] ?? posts[0];
+  const MODE_I18N: Record<string, string> = {
+    everyone: 'compose.everyone',
+    nobody: 'compose.nobody',
+    mentioned: 'compose.onlyMentioned',
+    followers: 'compose.onlyFollowers',
+    following: 'compose.onlyFollowing',
+  };
 
   return (
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="yellow" paddingX={2} paddingY={1}>
@@ -51,6 +60,9 @@ export function ComposeView({
         <Text bold color="yellow">
           {isReply ? '✏️ ' + t('compose.titleReply') : posts.length > 1 ? '✏️ ' + t('compose.threadTitle') : '✏️ ' + t('compose.title')}
         </Text>
+        {!isReply && threadgateMode && threadgateMode !== 'everyone' && (
+          <Text color="yellow">{' 🔒'}{t(MODE_I18N[threadgateMode]!)}</Text>
+        )}
         <Text dimColor>
           {mode === 'savePrompt' ? ' ' + t('compose.draftSavePrompt') :
            mode === 'drafts' ? ' ' + t('compose.draftListHeader') :

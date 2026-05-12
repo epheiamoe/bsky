@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
@@ -102,7 +102,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [threadKey, setThreadKey] = useState(0);
 
   // Compose
-  const compose = useCompose(client, goBack, () => { goHome(); });
+  const compose = useCompose(client, goBack, (uris) => {
+    if (uris && uris.length > 0) {
+      goTo({ type: 'thread', uri: uris[0]! });
+    } else {
+      goHome();
+    }
+  });
   const [composePostIdx, setComposePostIdx] = useState(0);
   const [composeMedia, setComposeMedia] = useState<ComposeMedia[]>([]);
   const [imagePathInput, setImagePathInput] = useState<string | null>(null);
@@ -111,6 +117,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [draftListOpen, setDraftListOpen] = useState(false);
   const [draftListIdx, setDraftListIdx] = useState(0);
   const [draftSavePrompt, setDraftSavePrompt] = useState(false);
+  const [threadgateMode, setThreadgateMode] = useState<string>('everyone');
   // Polish
   const [polishPhase, setPolishPhase] = useState<'idle' | 'req' | 'loading' | 'result'>('idle');
   const [polishRequirement, setPolishRequirement] = useState('');
@@ -189,6 +196,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const draft = drafts.find(d => d.id === dId);
         if (draft) compose.loadFromDraft(draft.posts, draft.replyTo, draft.quoteUri);
       }
+      setThreadgateMode('everyone');
     }
   }, [currentView.type]);
 
@@ -480,6 +488,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (composePostIdx >= compose.posts.length - 1) setComposePostIdx(i => Math.max(0, i - 1));
         return;
       }
+      if ((input === 'g' || input === 'G') && !compose.replyTo) {
+        const cycle = ['everyone', 'nobody', 'mentioned', 'followers', 'following'];
+        const idx = Math.max(0, cycle.indexOf(threadgateMode));
+        const next = cycle[(idx + 1) % cycle.length]!;
+        setThreadgateMode(next);
+        compose.setThreadgateRules(buildThreadgateRules(next));
+        return;
+      }
       return;
     }
 
@@ -690,6 +706,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             setPolishRequirement={setPolishRequirement}
             altReqText={altReqText}
             setAltReqText={setAltReqText}
+            threadgateMode={threadgateMode}
           />
         );
       case 'profile':
