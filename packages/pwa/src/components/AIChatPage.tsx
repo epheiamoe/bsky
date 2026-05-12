@@ -198,12 +198,24 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const [pendingFile, setPendingFile] = useState<{ file: File; preview: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
 
   // Scroll refs — user-controlled
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // Keep container height synced with visual viewport on mobile (keyboard safe)
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const el = chatContainerRef.current;
+    if (!vv || !el) return;
+    const update = () => { el.style.height = `${vv.height - 48}px`; };
+    update();
+    vv.addEventListener('resize', update);
+    return () => vv.removeEventListener('resize', update);
+  }, []);
 
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
@@ -425,7 +437,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div className="h-[calc(100dvh-3rem)] flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
+    <div ref={chatContainerRef} className="h-[calc(100dvh-3rem)] flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
