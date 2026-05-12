@@ -2,7 +2,7 @@
 
 **Your Bluesky, supercharged.**  
 A dual-interface social client — terminal for the keyboard lovers, browser for everyone else.  
-Pure front-end. Zero servers. AI-powered, privacy-first.
+Pure front-end. Zero servers. AI that reaches beyond Bluesky — web search, Wikipedia, any URL. Privacy-first.
 
 <div align="center">
 
@@ -13,6 +13,26 @@ Pure front-end. Zero servers. AI-powered, privacy-first.
 ---
 
 ## ✨ Features
+
+### 🤖 AI Chat — The Core
+
+![AI Chat](assets/illustration/AI-chat-1.png)
+
+Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
+
+### 🌍 AI Beyond Bluesky — Web Search Built In
+
+> **No API keys required. No configuration. Just works.**
+
+Your AI isn't locked inside Bluesky. Three built-in tools bridge it to the open web at zero cost:
+
+| Tool | What it does | Key needed? |
+|------|-------------|:-----------:|
+| **`search_web_ddg`** | DuckDuckGo web search with jina.ai reader — get summarized answers and full pages | ✗ None |
+| **`search_wikipedia`** | Direct Wikipedia API with auto-redirect and fuzzy matching. Multi-language support. | ✗ None |
+| **`fetch_web_markdown`** | Fetch any URL and extract clean Markdown — documentation, blog posts, any public page | ✗ None |
+
+Ask the AI _"what's new in AT Protocol?"_, _"summarize this GitHub README"_, or _"look up this term on Wikipedia"_ — it handles the rest.
 
 ### 📰 Timeline & Threads
 
@@ -27,14 +47,6 @@ Browse Following, Discover, and custom feeds. Dive into threaded conversations w
 ![Lists](assets/illustration/lists.png)
 
 Create curated lists for custom feeds, or moderation lists to mute in bulk. Manage members, browse list timelines, remove and add on the fly. Visit `#/lists` for your collections.
-
----
-
-### 🤖 AI Chat
-
-![AI Chat](assets/illustration/AI-chat-1.png)
-
-Streaming responses with visible thinking. 33 tools bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
 
 ---
 
@@ -117,4 +129,4 @@ Business logic lives once. TUI and PWA share the same hooks. 4 packages, 1 codeb
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.10.5** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.12.2** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)

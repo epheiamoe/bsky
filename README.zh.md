@@ -2,7 +2,7 @@
 
 **你的 Bluesky，AI 加持。**  
 双界面社交客户端——终端给键盘党，浏览器给所有人。  
-纯前端，零服务器，隐私优先。
+纯前端，零服务器。AI 不止于 Bluesky——网页搜索、维基百科、任意 URL，尽在对话中。隐私优先。
 
 <div align="center">
 
@@ -13,6 +13,26 @@
 ---
 
 ## ✨ 功能一览
+
+### 🤖 AI 对话 — 核心能力
+
+![AI 对话](assets/illustration/AI-chat-1.png)
+
+流式输出，思考过程可见。**33 个工具**桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需点击确认。自带 API Key，数据不经过我们的服务器。
+
+### 🌍 AI 超脱 Bluesky — 内置网页搜索
+
+> **无需任何密钥。无需配置。开箱即用。**
+
+你的 AI 不会被锁在 Bluesky 里。三个内置工具让它零成本接入开放互联网：
+
+| 工具 | 功能 | 需要密钥？ |
+|------|------|:--------:|
+| **`search_web_ddg`** | DuckDuckGo 网页搜索 + jina.ai 阅读器——获取摘要和完整页面内容 | ✗ 无需 |
+| **`search_wikipedia`** | 直接调用 Wikipedia API，自动重定向和模糊匹配，支持多语言 | ✗ 无需 |
+| **`fetch_web_markdown`** | 抓取任意 URL 并提取干净的 Markdown——文档、博客、任何公开页面 | ✗ 无需 |
+
+问 AI「AT Protocol 有什么新动态？」「帮我总结这个 GitHub README」「查一下 Wikipedia 上的这个词条」——剩下的事交给它。
 
 ### 📰 时间线 & 讨论串
 
@@ -27,14 +47,6 @@
 ![列表](assets/illustration/lists.png)
 
 创建精选列表用于定制信息流，创建管理列表用于批量静音。随时管理成员、浏览列表帖文流。`#/lists` 查看你的收藏。
-
----
-
-### 🤖 AI 对话
-
-![AI 对话](assets/illustration/AI-chat-1.png)
-
-流式输出，思考过程可见。36 个工具桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需点击确认。自带 API Key，数据不经过我们的服务器。
 
 ---
 
@@ -117,4 +129,4 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.10.5** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.12.2** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
