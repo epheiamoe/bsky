@@ -29,6 +29,7 @@ Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Mono
 - The ONLY place for local secrets is `.env` (gitignored) and `AGENTS.local.md` (gitignored)
 - Test files MUST use `process.env.VARIABLE_NAME` — never hardcoded values
 - All bluesky handles used in examples should be generic like `user.bsky.social`
+- **ALWAYS commit atomically** — each commit is one logical change (a new package, a fix, a refactor). Never group unrelated changes. Stage specific files with `git add <path>` after review; never `git add -A` blindly. If CHANGELOG spans multiple changes, commit its additions with the relevant feature commit or save it for last.
 
 ## Quick Start
 
@@ -158,11 +159,8 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 ## Pages Functions
 
 - **Functions directory**: `packages/pwa/functions/` — auto-discovered by Cloudflare Pages
-- **Current functions**: `/api/proxy` (DDG Instant Answer API CORS proxy)
+- **Current functions**: `/api/search` (DDG Lite search proxy — optional, silently degraded if not deployed)
 - **Adding a new function**: Create `packages/pwa/functions/{route}.js` with `export async function onRequest(context) { ... }`
-- **Documentation**: Every new Pages Function MUST be documented in:
-  1. `docs/PAGES_FUNCTION.md` — full specification (purpose, code, usage, conventions)
-  2. This section in `AGENTS.md` — brief summary of what exists
 - **Local testing**: Use `npx wrangler pages dev dist` (NOT `pnpm dev` — Vite doesn't serve Pages Functions)
 
 ## Build & Deploy
@@ -171,8 +169,8 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 Two-step deploy: preview → test → production. No direct production deploys.
 
 ```bash
-# 0. Commit so About page shows correct hash
-git add -A && git commit -m "..."
+# 0. Commit (atomically! — see Critical Safety Rules) so About page shows correct hash
+git add <path> && git commit -m "..."
 
 # 1. Build all packages
 pnpm -r build
@@ -187,7 +185,7 @@ npx wrangler pages deploy dist --project-name ai-bsky --branch=master
 # → Production: https://ai-bsky.pages.dev
 
 # Quick full workflow:
-# git add -A && git commit -m "..." && pnpm -r build && cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
+# git add <path> && git commit -m "..." && pnpm -r build && cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
 # [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=master
 ```
 

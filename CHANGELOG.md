@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] — 2026-05-12
+
+### Added
+
+- **`@bsky/ddg-search` package**: Pure-function DuckDuckGo Lite HTML parser (`parseDDGLite`, `extractRealUrl`, `formatResultsAsMarkdown`). Zero external dependencies.
+- **`fetchViaJina()` shared utility**: `packages/core/src/ai/fetchViaJina.ts` — shared jina.ai Reader fetch, used by `fetch_web_markdown` and `search_web_ddg`.
+- **`search_web_ddg` tool**: Replaces `instant_answer`. Three-tier fallback: jina.ai Reader (DDG search → Markdown) → DDG Lite direct fetch + `parseDDGLite` (TUI) or `/api/search` proxy (PWA) → graceful empty. No API key needed.
+- **Multi-platform DDG Lite search proxy**: `functions/api/search.js` (Cloudflare), `api/search.php` (PHP), `api/search.js` (Vercel), `netlify/functions/search.js` (Netlify), `scripts/search-server.mjs` (Node.js dev).
+- **Cursor pagination for all tools**: 11 paginated tools now expose optional `cursor` parameter (AI can paginate).
+- **`actor="me"` support**: Extended to `get_author_feed`, `get_connections`, `get_suggested_follows`, `get_lists` (was only `get_profile`).
+
+### Changed
+
+- **Tool count reduced: 38 → 33**. 4 merges:
+  - `get_post_thread` + `get_post_thread_flat` + `get_post_subtree` → `get_post_thread(format)`
+  - `get_likes` + `get_reposted_by` → `get_post_interactions(type)`
+  - `get_follows` + `get_followers` → `get_connections(direction)`
+  - `add_to_list` + `remove_from_list` → `edit_list_members(action)`
+- **All 33 tool descriptions rewritten**: "when/what/how" style — use cases, handle/DID conventions, return structure, cursor pagination.
+- **`buildToolDescription` updated**: `edit_list_members` uses `action`-based confirmation text.
+- **FormatToolResult updated**: Feed parsers match simplified output format; tool name branches updated for merges.
+
+### Fixed
+
+- **ThinkingCard/ToolCard scroll**: `overflow-y-auto` with `max-h-[600px]` now properly scrollable. Scroll pass-through at boundary — when content reaches bottom, wheel scroll propagates to chat container.
+- **Feed tool UI display**: `formatToolResult` parsers for `get_timeline`/`get_author_feed`/`get_feed` now use flat `{author, text}` format instead of nested `{post: {author: {handle}, record: {text}}}`.
+- **`get_author_feed` missing `author` field**: Handler now includes `author` in output.
+
+### Removed
+
+- **`instant_answer` tool**: Redundant with `search_wikipedia` + new `search_web_ddg`.
+- **DDG Instant Answer proxy**: All proxy files (`functions/api/proxy.js`, `api/proxy.php`, `api/proxy.js`, `netlify/functions/proxy.js`, `scripts/proxy-server.mjs`) replaced with DDG Lite search proxies.
+- **`docs/PAGES_FUNCTION.md`**: Replaced by DEPlOY.md multi-platform section.
+- **`docs/DDG_INSTANT_ANSWER_DEBUG.md`**: No longer relevant.
+- **UI body truncation**: Removed 2000-char truncation on search/wiki/thread/fetch tool card bodies (scrollable now).
+
 ## [0.10.5] — 2026-05-11
 
 ### Changed

@@ -179,6 +179,18 @@ Hash-based SPA routing (`useHashRouter.ts`):
 
 ---
 
+## `packages/ddg-search` — DuckDuckGo HTML Parser
+
+**Exports** (`src/index.ts`):
+- `parseDDGLite(html)` — Parse DDG Lite HTML search results page into `SearchResult[]`
+- `extractRealUrl(url)` — Extract real URL from DDG redirect (`//duckduckgo.com/l/?uddg=...`)
+- `formatResultsAsMarkdown(query, results)` — Format `SearchResult[]` as `{heading, content}` JSON
+- `SearchResult` — `{ title, url, description }` interface
+
+**Zero dependencies.** Pure functions only. Used by `@bsky/core`'s `search_web_ddg` AI tool as fallback when jina.ai is unavailable.
+
+---
+
 ## `contracts/` — Shared Definitions
 
 | File | Content |
