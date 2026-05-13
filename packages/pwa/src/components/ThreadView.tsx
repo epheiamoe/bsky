@@ -257,10 +257,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               <ImageGrid
                 images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
                 imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                  const m = cdnUrl.match(/\/plain\/(did:[^/]+)\/([^@]+)/);
+                  const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
                   if (!m) throw new Error('Could not parse image URL');
-                  const [, did, cid] = m;
-                  const data = await client.downloadBlob(did!, cid!);
+                  const did = decodeURIComponent(m[1]!);
+                  const cid = decodeURIComponent(m[2]!);
+                  const data = await client.downloadBlob(did, cid);
                   let mime = 'image/jpeg';
                   if (data.length >= 4) {
                     if (data[0] === 0x89 && data[1] === 0x50) mime = 'image/png';

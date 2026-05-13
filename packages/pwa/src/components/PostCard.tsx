@@ -489,10 +489,11 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           </p>
           {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
             // Parse DID + CID from CDN URL: /img/feed_fullsize/plain/did:plc:xxx/cid@jpeg
-            const m = cdnUrl.match(/\/plain\/(did:[^/]+)\/([^@]+)/);
+            const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
             if (!m) throw new Error('Could not parse image URL');
-            const [, did, cid] = m;
-            const data = await client.downloadBlob(did!, cid!);
+            const did = decodeURIComponent(m[1]!);
+            const cid = decodeURIComponent(m[2]!);
+            const data = await client.downloadBlob(did, cid);
             // Detect mime from magic bytes (same as tools.ts detectMimeType)
             let mime = 'image/jpeg';
             if (data.length >= 4) {
