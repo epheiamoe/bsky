@@ -24,6 +24,7 @@ interface FeedTimelineProps {
   isReposted?: (uri: string) => boolean;
   likePost?: (uri: string, cid?: string) => void;
   repostPost?: (uri: string, cid?: string) => void;
+  imageDescConfig?: import('@bsky/core').AIConfig;
 }
 
 function SkeletonCard() {
@@ -46,7 +47,7 @@ const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 // Module-level cache: post.uri → measured pixel height (survives mount/unmount)
 const _heightCache = new Map<string, number>();
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig }: FeedTimelineProps) {
   const { t } = useI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -162,6 +163,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
+                  imageDescConfig={imageDescConfig}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

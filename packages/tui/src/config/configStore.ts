@@ -25,6 +25,7 @@ export interface TuiConfig {
     aiChat: string;
     translate: string;
     polish: string;
+    imageDescription: string;
   };
   /** Custom emojis for DM reactions */
   dmEmojis?: string[];
@@ -46,6 +47,7 @@ export const DEFAULT_TUI_CONFIG: TuiConfig = {
     aiChat: '',
     translate: '',
     polish: '',
+    imageDescription: '',
   },
 };
 

@@ -17,6 +17,7 @@ interface SearchPageProps {
   goTo: (v: AppView) => void;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
+  imageDescConfig?: import('@bsky/core').AIConfig;
 }
 
 const TABS: { key: SearchTab; labelKey: string }[] = [
@@ -30,7 +31,7 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange }: SearchPageProps) {
+export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig }: SearchPageProps) {
   const { t } = useI18n();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
   const [input, setInput] = useState(initialQuery ?? '');
@@ -159,9 +160,10 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                   }}
                 >
                   {isPostsTab ? (
-                    <PostCard post={item}
-                      onClick={() => goTo({ type: 'thread', uri: item.uri })} goTo={goTo}
-                    >
+              <PostCard post={item}
+                onClick={() => goTo({ type: 'thread', uri: item.uri })} goTo={goTo}
+                imageDescConfig={imageDescConfig}
+              >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostCard>
                   ) : tab === 'users' ? (

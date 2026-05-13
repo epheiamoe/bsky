@@ -23,6 +23,7 @@ interface ThreadViewProps {
   targetLang: string;
   translateMode: 'simple' | 'json';
   translateConfig?: AIConfig;
+  imageDescConfig?: AIConfig;
 }
 
 function Spinner() {
@@ -33,7 +34,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -316,11 +317,12 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   key={line.uri || line.rkey}
                   style={{ marginLeft: Math.min((line.depth - 1) * 20, 60) }}
                 >
-                    <PostCard
-                      line={line}
-                      onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
-                      goTo={goTo}
-                    >
+            <PostCard
+              line={line}
+              onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+              goTo={goTo}
+              imageDescConfig={imageDescConfig}
+            >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                     </PostCard>
                 </div>

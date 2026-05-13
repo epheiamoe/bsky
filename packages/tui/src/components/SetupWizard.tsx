@@ -54,7 +54,7 @@ export function SetupWizard({ onComplete }: SetupWizardProps) {
   const [isCustomModel, setIsCustomModel] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [langIdx, setLangIdx] = useState(0);
-  const [scenarioModels, setScenarioModels] = useState<{ aiChat: string; translate: string; polish: string }>({ aiChat: '', translate: '', polish: '' });
+  const [scenarioModels, setScenarioModels] = useState<{ aiChat: string; translate: string; polish: string; imageDescription: string }>({ aiChat: '', translate: '', polish: '', imageDescription: '' });
   const [scenarioFocus, setScenarioFocus] = useState(0);
 
   const selectedProvider = PROVIDERS[providerIdx]!;

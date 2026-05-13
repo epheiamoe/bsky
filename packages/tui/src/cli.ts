@@ -50,6 +50,7 @@ export interface AppConfig {
     aiChat: string;
     translate: string;
     polish: string;
+    imageDescription: string;
   };
 }
 

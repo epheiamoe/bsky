@@ -19,6 +19,7 @@ interface ProfilePageProps {
   targetLang: string;
   translateMode: 'simple' | 'json';
   translateConfig?: AIConfig;
+  imageDescConfig?: AIConfig;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
 }
@@ -29,7 +30,7 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -473,6 +474,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
                   repostBy={repostReasons[post.uri]}
+                  imageDescConfig={imageDescConfig}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

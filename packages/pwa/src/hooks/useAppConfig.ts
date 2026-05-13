@@ -18,6 +18,8 @@ export interface AppConfig {
     aiChat: string;
     translate: string;
     polish: string;
+    /** Vision model override for generating ALT text on images. Only vision-capable models. */
+    imageDescription: string;
   };
   /** Enabled widget IDs (right panel) */
   enabledWidgets: string[];
@@ -42,6 +44,7 @@ const DEFAULT_CONFIG: AppConfig = {
     aiChat: '',
     translate: '',
     polish: '',
+    imageDescription: '',
   },
   enabledWidgets: [],
 };

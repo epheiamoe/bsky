@@ -108,6 +108,7 @@ export function App() {
     aiChat: resolveScenarioConfig(appConfig.scenarioModels?.aiChat || ''),
     translate: resolveScenarioConfig(appConfig.scenarioModels?.translate || ''),
     polish: resolveScenarioConfig(appConfig.scenarioModels?.polish || ''),
+    imageDescription: resolveScenarioConfig(appConfig.scenarioModels?.imageDescription || ''),
   }), [resolveScenarioConfig, appConfig.scenarioModels]);
 
   const effectiveAiConfig = useMemo(() => ({
@@ -313,6 +314,7 @@ export function App() {
             isReposted={postActions.isReposted}
             likePost={postActions.likePost}
             repostPost={postActions.repostPost}
+            imageDescConfig={scenarioModels.imageDescription}
           />
         );
       case 'thread':
@@ -326,6 +328,7 @@ export function App() {
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
             translateConfig={scenarioModels.translate}
+            imageDescConfig={scenarioModels.imageDescription}
           />
         );
       case 'compose':
@@ -354,6 +357,7 @@ export function App() {
             targetLang={appConfig.targetLang}
             translateMode={appConfig.translateMode}
             translateConfig={scenarioModels.translate}
+            imageDescConfig={scenarioModels.imageDescription}
             initialScrollTop={profileScrollTopRef.current}
             onScrollTopChange={(top) => { profileScrollTopRef.current = top; }}
           />
@@ -374,8 +378,7 @@ export function App() {
             initialTab={(currentView as { searchTab?: SearchTab }).searchTab}
             goBack={goBack}
             goTo={goTo}
-            initialScrollTop={searchScrollTopRef.current}
-            onScrollTopChange={(top) => { searchScrollTopRef.current = top; }}
+            imageDescConfig={scenarioModels.imageDescription}
           />
         );
       case 'aiChat': {
@@ -399,6 +402,7 @@ export function App() {
             client={client} goBack={goBack} goTo={goTo}
             initialScrollTop={bookmarksScrollTopRef.current}
             onScrollTopChange={(top) => { bookmarksScrollTopRef.current = top; }}
+            imageDescConfig={scenarioModels.imageDescription}
           />
         );
       case 'lists':

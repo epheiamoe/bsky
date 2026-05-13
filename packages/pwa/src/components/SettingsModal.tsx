@@ -47,6 +47,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     aiChat: config.scenarioModels?.aiChat || '',
     translate: config.scenarioModels?.translate || '',
     polish: config.scenarioModels?.polish || '',
+    imageDescription: config.scenarioModels?.imageDescription || '',
   });
 
   // Detect current provider from baseUrl
@@ -318,8 +319,13 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
           {tab === 'scenario' && (
             <>
               <p className="text-text-secondary text-xs">Assign models to different scenarios. Leave blank to use the default AI model.</p>
-              {(['aiChat', 'translate', 'polish'] as const).map(scenario => {
-                const label = scenario === 'aiChat' ? 'AI Chat' : scenario === 'translate' ? 'Translation' : 'Draft Polish';
+              {(['aiChat', 'translate', 'polish', 'imageDescription'] as const).map(scenario => {
+                const isImageDesc = scenario === 'imageDescription';
+                const label = scenario === 'aiChat' ? 'AI Chat' : scenario === 'translate' ? 'Translation' : scenario === 'polish' ? 'Draft Polish' : 'Image ALT (vision required)';
+                // For image description, only show vision-capable models
+                const options = isImageDesc
+                  ? PROVIDERS.flatMap(p => p.models.filter(m => m.vision).map(m => ({ p, m })))
+                  : PROVIDERS.flatMap(p => p.models.map(m => ({ p, m })));
                 return (
                   <div key={scenario}>
                     <label className="text-xs text-text-secondary mb-1 block">{label}</label>
@@ -330,10 +336,11 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                         className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
                         <option value="">Same as default</option>
-                        {PROVIDERS.map(p =>
-                          p.models.map(m => (
-                            <option key={`${p.id}/${m.id}`} value={`${p.id}/${m.id}`}>{p.label} / {m.label}</option>
-                          ))
+                        {options.map(({ p, m }) => (
+                          <option key={`${p.id}/${m.id}`} value={`${p.id}/${m.id}`}>{p.label} / {m.label}</option>
+                        ))}
+                        {isImageDesc && options.length === 0 && (
+                          <option value="" disabled>— No vision-capable models available —</option>
                         )}
                       </select>
                     </div>

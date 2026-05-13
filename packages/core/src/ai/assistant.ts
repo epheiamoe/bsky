@@ -7,6 +7,8 @@ import {
   PF_POLISH_USER,
   P_AUTO_TITLE_SYSTEM,
   PF_AUTO_TITLE_USER,
+  P_ALT_DESCRIPTION_SYSTEM,
+  PF_ALT_DESCRIPTION_USER,
 } from './prompts.js';
 import { cleanBaseUrl, shouldSendThinkingParam } from './providers.js';
 
@@ -864,4 +866,73 @@ export async function generateChatTitle(
   } catch {
     return firstUserMsg.slice(0, 50);
   }
+}
+
+/**
+ * Generate an accessibility-focused image description using a vision-capable model.
+ * Fetches the image from a CDN URL, converts to base64, and sends to the LLM
+ * with a multimodal message format. Used for ALT text generation on Bluesky post images.
+ */
+export async function describeImage(
+  config: AIConfig,
+  cdnUrl: string,
+  existingAlt?: string,
+): Promise<string> {
+  // Fetch image from public CDN (no auth needed)
+  const res = await fetch(cdnUrl);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  const data = new Uint8Array(buffer);
+
+  // Detect mime type from magic bytes
+  let mimeType = 'image/jpeg';
+  if (data.length >= 4) {
+    if (data[0] === 0x89 && data[1] === 0x50) mimeType = 'image/png';
+    else if (data[0] === 0x47 && data[1] === 0x49) mimeType = 'image/gif';
+    else if (data[0] === 0xff && data[1] === 0xd8) mimeType = 'image/jpeg';
+  }
+
+  // Base64 encode (cross-platform: Node.js Buffer or browser btoa)
+  let base64: string;
+  if (typeof Buffer !== 'undefined') {
+    base64 = Buffer.from(data).toString('base64');
+  } else {
+    let binary = '';
+    for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]!);
+    base64 = btoa(binary);
+  }
+  const dataUrl = `data:${mimeType};base64,${base64}`;
+
+  const body = {
+    model: config.model,
+    messages: [
+      { role: 'system', content: P_ALT_DESCRIPTION_SYSTEM },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: PF_ALT_DESCRIPTION_USER(existingAlt) },
+          { type: 'image_url', image_url: { url: dataUrl, detail: 'auto' } },
+        ],
+      },
+    ],
+    temperature: 0.3,
+    max_tokens: 300,
+    stream: false,
+  };
+
+  const url = `${cleanBaseUrl(config.baseUrl)}/v1/chat/completions`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Image description API error ${response.status}: ${errText.slice(0, 200)}`);
+  }
+
+  const data_ = await response.json() as any;
+  const content = data_?.choices?.[0]?.message?.content ?? '';
+  return content.trim().slice(0, 500);
 }
