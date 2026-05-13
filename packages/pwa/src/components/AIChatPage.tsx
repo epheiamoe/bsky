@@ -657,7 +657,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             >
               <Icon name="upload" size={16} />
             </button>
-            <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+            <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" aria-label="Import chat" />
             {/* Import toast */}
             {importError && (
               <div role="alert" className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
@@ -831,7 +831,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             </div>
           )}
           <div className="flex items-end gap-2 max-w-3xl mx-auto">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" aria-label={t('a11y.uploadImage')} />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}

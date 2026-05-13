@@ -84,7 +84,7 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
                 <div className="w-full h-full bg-primary/10 flex items-center justify-center text-text-secondary text-sm">{t('profile.banner')}</div>
               )}
             </div>
-            <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleFileChange(setBannerFile, setBannerPreview)} className="hidden" />
+            <input ref={bannerInputRef} type="file" accept="image/*" onChange={handleFileChange(setBannerFile, setBannerPreview)} className="hidden" aria-label="Banner upload" />
             <button onClick={() => bannerInputRef.current?.click()} className="absolute bottom-2 right-2 px-3 py-1 bg-black/50 text-white text-xs rounded-full hover:bg-black/70 transition-colors">
               {t('profile.change')}
             </button>
@@ -98,31 +98,31 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
                 <span className="text-white text-2xl font-bold">{profile.displayName?.[0] ?? profile.handle[0]}</span>
               )}
             </div>
-            <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleFileChange(setAvatarFile, setAvatarPreview)} className="hidden" />
+            <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleFileChange(setAvatarFile, setAvatarPreview)} className="hidden" aria-label="Avatar upload" />
             <button onClick={() => avatarInputRef.current?.click()} className="text-primary text-sm hover:underline">
               {t('profile.change')}
             </button>
           </div>
 
           <div>
-            <label className="text-sm text-text-secondary mb-1 block">{t('profile.displayName')}</label>
+            <label htmlFor="profile-display-name" className="text-sm text-text-secondary mb-1 block">{t('profile.displayName')}</label>
             <input
               value={displayName}
               onChange={e => setDisplayName(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-border bg-white dark:bg-[#1A1A1A] text-text-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-              placeholder={profile.handle}
+              id="profile-display-name" placeholder={profile.handle}
               maxLength={64}
             />
           </div>
 
           <div>
-            <label className="text-sm text-text-secondary mb-1 block">{t('profile.description')}</label>
+            <label htmlFor="profile-description" className="text-sm text-text-secondary mb-1 block">{t('profile.description')}</label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               rows={4}
               className="w-full px-3 py-2 rounded-lg border border-border bg-white dark:bg-[#1A1A1A] text-text-primary focus:outline-none focus:ring-2 focus:ring-primary text-sm resize-none"
-              placeholder={t('dm.placeholder')}
+              id="profile-description" placeholder={t('dm.placeholder')}
               maxLength={2560}
             />
           </div>

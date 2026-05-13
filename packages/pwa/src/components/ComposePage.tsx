@@ -587,7 +587,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             );
           })}
 
-          <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" />
+          <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileSelect} className="hidden" aria-label="Add media" />
 
           {/* Compression info */}
           {compressInfo && (

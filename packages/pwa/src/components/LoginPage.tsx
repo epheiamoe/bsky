@@ -142,24 +142,24 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">{t('login.handleLabel')}</label>
+            <label htmlFor="login-handle" className="block text-xs font-medium text-text-secondary mb-1">{t('login.handleLabel')}</label>
             <input
               type="text"
               value={handle}
               onChange={e => setHandle(e.target.value)}
-              placeholder={t('login.handlePlaceholder')}
+              id="login-handle" aria-describedby="login-error" aria-invalid={displayError ? 'true' : undefined} placeholder={t('login.handlePlaceholder')}
               autoComplete="username"
               disabled={submitting}
               className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">{t('login.password')}</label>
+            <label htmlFor="login-password" className="block text-xs font-medium text-text-secondary mb-1">{t('login.password')}</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              autoComplete="current-password"
+              id="login-password" aria-describedby="login-error" aria-invalid={displayError ? 'true' : undefined} autoComplete="current-password"
               disabled={submitting}
               className="w-full px-4 py-3 rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
@@ -179,12 +179,12 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
 
           {/* PDS Host */}
           <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-            <label className="block text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">{t('login.pdsLabel')}</label>
+            <label htmlFor="login-pds-url" className="block text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">{t('login.pdsLabel')}</label>
             <input
               type="text"
               value={pdsUrl}
               onChange={e => setPdsUrl(e.target.value)}
-              placeholder={`${t('login.pdsHint')}`}
+              id="login-pds-url" placeholder={`${t('login.pdsHint')}`}
               disabled={submitting}
               className="w-full px-3 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/40 text-amber-900 dark:text-amber-100 placeholder:text-amber-400/50 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50"
             />
@@ -194,7 +194,7 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
           </div>
 
           {displayError && (
-            <div role="alert" className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+            <div id="login-error" role="alert" className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
               <p>{displayError}</p>
               {errorLog && (
                 <button

@@ -56,6 +56,7 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
       <div className="relative inline-flex items-center">
         <button
           onClick={(e) => { e.stopPropagation(); setRepopup(!repopup); }}
+          aria-expanded={repopup}
           className={`hover:text-green-500 transition-colors flex items-center gap-0.5 btn-press ${isR ? 'text-green-500' : ''}`}
           title={isR ? t('action.reposted') : t('action.repost')}
           aria-pressed={isR}

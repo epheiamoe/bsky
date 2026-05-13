@@ -296,7 +296,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
               {focused.handle === client.getHandle() && (
                 <>
-                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')}><Icon name="message-square-off" size={18} /></button>
+                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
                   <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
                 </>
               )}

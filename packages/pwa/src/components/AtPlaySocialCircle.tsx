@@ -236,7 +236,7 @@ export function AtPlaySocialCircle({ client, goBack, goTo }: AtPlaySocialCircleP
               <span>{phaseLabel}</span>
             </div>
             {state.progress.total > 0 && (
-              <div className="mt-2 h-1 bg-surface rounded-full overflow-hidden">
+              <div className="mt-2 h-1 bg-surface rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round((state.progress.current / state.progress.total) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label={t('a11y.analyzing')}>
                 <div
                   className="h-full bg-primary rounded-full transition-all duration-300"
                   style={{ width: `${(state.progress.current / state.progress.total) * 100}%` }}

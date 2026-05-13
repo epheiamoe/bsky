@@ -25,6 +25,9 @@ export function ThinkingCard({ content, expanded, onToggle, compact }: ThinkingC
   return (
     <div
       onClick={onToggle}
+      role="button"
+      aria-expanded={expanded}
+      tabIndex={0}
       className={`relative rounded-xl border border-border overflow-hidden cursor-pointer transition-all duration-200 hover:border-white/10 ${
         compact ? 'mb-1.5' : ''
       } ${expanded ? 'border-purple-500/30' : ''}`}

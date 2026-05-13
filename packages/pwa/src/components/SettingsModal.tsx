@@ -181,7 +181,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 placeholder="App Password"
                 className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
               />
-              {loginMsg && <p className={`text-xs ${loginMsg === 'ok' ? 'text-green-500' : 'text-red-500'}`}>{loginMsg === 'ok' ? <><Icon name="badge-check" size={14} /> {t('settings.updated')}</> : loginMsg}</p>}
+              {loginMsg && <p id="settings-login-error" className={`text-xs ${loginMsg === 'ok' ? 'text-green-500' : 'text-red-500'}`}>{loginMsg === 'ok' ? <><Icon name="badge-check" size={14} /> {t('settings.updated')}</> : loginMsg}</p>}
               <button
                 onClick={handleRelogin}
                 disabled={!handle.trim() || !password.trim()}
@@ -204,9 +204,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
               <p className="text-text-secondary text-xs">{t('settings.aiDesc')}</p>
               {/* Provider selector */}
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.provider') || 'Provider'}</label>
+                <label htmlFor="settings-provider" className="text-xs text-text-secondary mb-1 block">{t('settings.provider') || 'Provider'}</label>
                 <select
-                  value={currentProvider?.id || '__custom__'}
+                  id="settings-provider" value={currentProvider?.id || '__custom__'}
                   onChange={handleProviderChange}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
@@ -218,28 +218,28 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
               </div>
               {/* API Key */}
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.apiKey')}</label>
+                <label htmlFor="settings-api-key" className="text-xs text-text-secondary mb-1 block">{t('settings.apiKey')}</label>
                 <input
-                  type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
+                  type="password"                   id="settings-api-key" value={apiKey} onChange={e => setApiKey(e.target.value)}
                   placeholder="sk-..."
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               {/* Base URL */}
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.baseUrl')}</label>
+                <label htmlFor="settings-base-url" className="text-xs text-text-secondary mb-1 block">{t('settings.baseUrl')}</label>
                 <input
-                  type="text" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}
+                  type="text"                   id="settings-base-url" value={baseUrl} onChange={e => setBaseUrl(e.target.value)}
                   placeholder="https://api.deepseek.com"
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               {/* Model selector */}
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.model')}</label>
+                <label htmlFor="settings-model" className="text-xs text-text-secondary mb-1 block">{t('settings.model')}</label>
                 {currentProvider ? (
                   <select
-                    value={isCustom ? '__custom__' : model}
+                        id="settings-model" value={isCustom ? '__custom__' : model}
                     onChange={handleModelChange}
                     className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
@@ -251,7 +251,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 ) : (
                   <input
                     type="text" value={model} onChange={e => setModel(e.target.value)}
-                    placeholder="model-id"
+                    id="settings-model" placeholder="model-id"
                     className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 )}
@@ -327,10 +327,10 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   : PROVIDERS.flatMap(p => p.models.map(m => ({ p, m })));
                 return (
                   <div key={scenario}>
-                    <label className="text-xs text-text-secondary mb-1 block">{t(labelKey)}</label>
+                    <label htmlFor={`settings-scenario-${scenario}`} className="text-xs text-text-secondary mb-1 block">{t(labelKey)}</label>
                     <div className="flex gap-2">
                       <select
-                        value={scenarioModels[scenario]}
+                        id={`settings-scenario-${scenario}`} value={scenarioModels[scenario]}
                         onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
                         className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
@@ -350,11 +350,11 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 );
               })}
               <div className="border-t border-border pt-3 mt-2">
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.customPrompt')}</label>
+                <label htmlFor="settings-custom-prompt" className="text-xs text-text-secondary mb-1 block">{t('settings.customPrompt')}</label>
                 <textarea
                   value={customSystemPrompt}
                   onChange={e => setCustomSystemPrompt(e.target.value)}
-                  placeholder={t('settings.customPromptPlaceholder')}
+                  id="settings-custom-prompt" placeholder={t('settings.customPromptPlaceholder')}
                   rows={4}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
@@ -371,10 +371,10 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
           {tab === 'general' && (
             <>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.targetLang')}</label>
+                <label htmlFor="settings-target-lang" className="text-xs text-text-secondary mb-1 block">{t('settings.targetLang')}</label>
                 <select
                   value={targetLang}
-                  onChange={e => setTargetLang(e.target.value)}
+                  id="settings-target-lang" onChange={e => setTargetLang(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {LANG_OPTIONS.map(o => (
@@ -383,9 +383,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 </select>
               </div>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">{t('settings.translateMode')}</label>
+                <label htmlFor="settings-translate-mode" className="text-xs text-text-secondary mb-1 block">{t('settings.translateMode')}</label>
                 <select
-                  value={config.translateMode ?? 'simple'}
+                  id="settings-translate-mode" value={config.translateMode ?? 'simple'}
                   onChange={e => {
                     const updated = { ...config, translateMode: e.target.value as 'simple' | 'json' };
                     updateAppConfig(updated);
@@ -398,10 +398,10 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 </select>
               </div>
               <div>
-                <label className="text-xs text-text-secondary mb-1 block">UI Language</label>
+                <label htmlFor="settings-locale" className="text-xs text-text-secondary mb-1 block">UI Language</label>
                 <select
                   value={locale}
-                  onChange={e => { const l = e.target.value as typeof locale; setLocale(l); document.documentElement.lang = l; }}
+                  id="settings-locale" onChange={e => { const l = e.target.value as typeof locale; setLocale(l); document.documentElement.lang = l; }}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {availableLocales.map((l: Locale) => (

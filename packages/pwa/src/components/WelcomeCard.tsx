@@ -79,6 +79,7 @@ export function WelcomeCard({ onGoToSettings, onSkip }: WelcomeCardProps) {
               <button
                 onClick={() => setExpanded(expanded === p.name ? null : p.name)}
                 className="w-full text-left px-4 py-3 flex items-center justify-between"
+                aria-expanded={expanded === p.name}
               >
                 <div>
                   <span className="text-text-primary font-medium text-sm">{p.name}</span>
