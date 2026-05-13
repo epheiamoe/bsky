@@ -1,8 +1,8 @@
 # @epheiamoe/bsky-mcp
 
-**MCP server for Bluesky AT Protocol** — 33 tools bridging Bluesky to external AI clients (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf).
+**MCP server for Bluesky AT Protocol** — 33 tools that let any MCP-compatible AI client (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf, OpenCode) interact with Bluesky.
 
-> Powered by [ai-bsky](https://github.com/epheiamoe/bsky). Zero UI. Pure Node.js stdio transport.
+> Source: [github.com/epheiamoe/bsky](https://github.com/epheiamoe/bsky) · Zero UI · Pure Node.js stdio transport
 
 ---
 
@@ -14,6 +14,8 @@ npm install -g @epheiamoe/bsky-mcp
 npx @epheiamoe/bsky-mcp
 ```
 
+---
+
 ## Setup
 
 ### 1. Get a Bluesky App Password
@@ -22,11 +24,11 @@ Go to [Settings > App Passwords](https://bsky.app/settings/app-passwords) and cr
 
 ### 2. Configure your MCP client
 
-#### OpenCode (simplest — auto-loads from project `.env`)
+Pick your client below. All configs follow the same pattern: pass `BSKY_HANDLE` and `BSKY_APP_PASSWORD` as environment variables.
 
-If you're using this from the [ai-bsky](https://github.com/epheiamoe/bsky) repository, the included `opencode.jsonc` already uses the launcher script `scripts/start-mcp.mjs` that reads your `.env` file. No manual env var setup needed.
+#### OpenCode
 
-For other projects, add to your `opencode.jsonc`:
+Add to your `opencode.json` or `opencode.jsonc`:
 
 ```jsonc
 {
@@ -46,7 +48,7 @@ For other projects, add to your `opencode.jsonc`:
 }
 ```
 
-Or use `{env:VAR}` references if you prefer managing credentials via system environment.
+> **Tip:** If you're developing in the [ai-bsky](https://github.com/epheiamoe/bsky) repository, the included `opencode.jsonc` already configures this for you via `scripts/start-mcp.mjs` (auto-loads `.env`).
 
 #### Claude Desktop
 
@@ -129,18 +131,6 @@ Install the MCP extension for your editor, then add the server configuration ref
 
 ---
 
-## Architecture
-
-```
-@bsky/core (BskyClient + 33 tools)
-    └── @epheiamoe/bsky-mcp (MCP stdio server)
-            └── External MCP clients (Claude, ChatGPT, etc.)
-```
-
-Shares the same business logic as [ai-bsky](https://github.com/epheiamoe/bsky). Same tools, same `BskyClient`, different consumption channel.
-
----
-
 ## License
 
-[MIT](../../LICENSE)
+[MIT](https://github.com/epheiamoe/bsky/blob/master/LICENSE)

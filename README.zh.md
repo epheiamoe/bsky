@@ -2,13 +2,14 @@
 
 **你的 Bluesky，AI 加持。**  
 双界面社交客户端——终端给键盘党，浏览器给所有人。  
-纯前端，零服务器。AI 不止于 Bluesky——网页搜索、维基百科、任意 URL，尽在对话中。隐私优先。
+纯前端，零服务器。AI 不止于 Bluesky——网页搜索、维基百科、任意 URL，尽在对话中。  
+内置 [**MCP 服务器**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) 供外部 AI 客户端使用。隐私优先。
 
 支持第三方PDS。
 
 <div align="center">
 
-[**打开网页版**](https://ai-bsky.pages.dev) · [**源代码**](https://github.com/epheiamoe/bsky)
+[**打开网页版**](https://ai-bsky.pages.dev) · [**MCP 服务器 (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**源代码**](https://github.com/epheiamoe/bsky)
 
 </div>
 
@@ -109,6 +110,21 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 或直接访问 **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** —— 在浏览器内登录，无需 `.env`。
 
+### MCP 服务器（供 AI 客户端使用）
+
+```bash
+pnpm install && pnpm -r build          # 首次构建
+cd packages/mcp && pnpm build          # 构建 MCP 服务器
+BSKY_HANDLE=... BSKY_APP_PASSWORD=... node dist/index.js
+```
+
+或从 npm 全局安装：
+
+```bash
+npm install -g @epheiamoe/bsky-mcp
+BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
+```
+
 ---
 
 ## 🔒 隐私
@@ -121,10 +137,12 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 ```
 @bsky/core ──→ @bsky/app ──→ @bsky/tui  (Ink · 终端)
-                          └─→ @bsky/pwa  (React · 浏览器)
+   │                     └─→ @bsky/pwa  (React · 浏览器)
+   │
+   └── @epheiamoe/bsky-mcp (npm: 供外部 AI 客户端使用的 MCP 服务器)
 ```
 
-业务逻辑只写一次。TUI 和 PWA 共享同一套 hooks。4 个包，一份代码，零重复。
+业务逻辑只写一次。TUI、PWA 和 MCP 共享同一核心。5 个包，一份代码，零重复。
 
 ---
 
@@ -132,4 +150,4 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.12.2** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.13.0** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

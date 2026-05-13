@@ -2,13 +2,14 @@
 
 **Your Bluesky, supercharged.**  
 A dual-interface social client — terminal for the keyboard lovers, browser for everyone else.  
-Pure front-end. Zero servers. AI that reaches beyond Bluesky — web search, Wikipedia, any URL. Privacy-first.
+Pure front-end. Zero servers. AI that reaches beyond Bluesky — web search, Wikipedia, any URL.  
+Includes an [**MCP server**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) for external AI clients. Privacy-first.
 
 Supports third-party PDS.
 
 <div align="center">
 
-[**Open Web App**](https://ai-bsky.pages.dev) · [**View Source**](https://github.com/epheiamoe/bsky)
+[**Open Web App**](https://ai-bsky.pages.dev) · [**MCP Server (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**View Source**](https://github.com/epheiamoe/bsky)
 
 </div>
 
@@ -109,6 +110,21 @@ cd packages/pwa && pnpm dev     # → http://localhost:5173
 
 Or visit **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** — login in-browser, no `.env` needed.
 
+### MCP Server (for AI clients)
+
+```bash
+pnpm install && pnpm -r build          # first time only
+cd packages/mcp && pnpm build          # build MCP server
+BSKY_HANDLE=... BSKY_APP_PASSWORD=... node dist/index.js
+```
+
+Or install globally from npm:
+
+```bash
+npm install -g @epheiamoe/bsky-mcp
+BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
+```
+
 ---
 
 ## 🔒 Privacy
@@ -121,10 +137,12 @@ Everything runs in your browser. Your Bluesky credentials, API keys, and convers
 
 ```
 @bsky/core ──→ @bsky/app ──→ @bsky/tui  (Ink · terminal)
-                          └─→ @bsky/pwa  (React · browser)
+   │                     └─→ @bsky/pwa  (React · browser)
+   │
+   └── @epheiamoe/bsky-mcp (npm: MCP server for external AI clients)
 ```
 
-Business logic lives once. TUI and PWA share the same hooks. 4 packages, 1 codebase, zero duplication.
+Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 codebase, zero duplication.
 
 ---
 
@@ -132,4 +150,4 @@ Business logic lives once. TUI and PWA share the same hooks. 4 packages, 1 codeb
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.12.2** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.13.0** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
