@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -73,7 +73,7 @@ export function Modal({ open, onClose, children, variant = 'center', containerCl
         >
           <motion.div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={onClose}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}
             aria-hidden="true"
           />
           {variant === 'bottom-sheet' ? (
@@ -94,7 +94,7 @@ export function Modal({ open, onClose, children, variant = 'center', containerCl
           ) : (
             <div
               className={`absolute inset-0 flex items-center justify-center p-4 ${containerClass}`}
-              onClick={onClose}
+              onClick={(e: React.MouseEvent) => { e.stopPropagation(); onClose(); }}
             >
               <motion.div
                 ref={dialogRef}
