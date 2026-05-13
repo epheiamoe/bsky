@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import { getAppConfig } from '../hooks/useAppConfig.js';
 import { getSession } from '../hooks/useSessionPersistence.js';
-import type { BskyClient } from '@bsky/core';
+import type { BskyClient, PostView } from '@bsky/core';
 
 interface TestResult {
   name: string;
@@ -11,7 +11,11 @@ interface TestResult {
   duration?: number;
 }
 
-export function DiagnosticPage({ client, goBack }: { client: BskyClient | null; goBack: () => void }) {
+export function DiagnosticPage({ client, goBack, posts }: {
+  client: BskyClient | null;
+  goBack: () => void;
+  posts: PostView[];
+}) {
   const { t } = useI18n();
   const [results, setResults] = useState<TestResult[]>([]);
   const [running, setRunning] = useState(false);
@@ -28,45 +32,32 @@ export function DiagnosticPage({ client, goBack }: { client: BskyClient | null; 
   const jwt = session?.accessJwt ?? '';
   const imageDescModel = cfg.scenarioModels?.imageDescription || '(off)';
 
-  // Fetch one image URL from timeline
-  const [imageInfo, setImageInfo] = useState<{ url: string; did: string; cid: string; alt: string } | null>(null);
-
-  useEffect(() => {
-    if (!client) return;
-    (async () => {
-      try {
-        const timeline = await (client as any).publicKy.get('app.bsky.feed.getTimeline', {
-          searchParams: { limit: 10 },
-        }).json();
-        for (const item of timeline?.feed ?? []) {
-          const post = item.post;
-          const embeds = (post as any).embed;
-          if (!embeds) continue;
-          const images = embeds.images ?? embeds?.media?.images;
-          if (!images?.[0]) continue;
-          const img = images[0];
-          const did = (post as any).author?.did ?? '';
-          // Try fullsize first, then construct CDN URL
-          let url: string;
-          if ((img as any).fullsize) {
-            url = (img as any).fullsize;
-          } else {
-            const cid = (img as any).image?.ref?.$link ?? (img as any).cid ?? '';
-            const mime = (img as any).image?.mimeType ?? (img as any).mimeType ?? 'image/jpeg';
-            const ext = mime?.includes('gif') ? 'gif' : mime?.split('/')[1] || 'jpeg';
-            url = `https://cdn.bsky.app/img/feed_fullsize/plain/${encodeURIComponent(did)}/${encodeURIComponent(cid)}@${ext}`;
-          }
-          // Extract DID + CID from URL
-          const m = url.match(/\/plain\/([^/]+)\/([^@]+)/);
-          const parsedDid = m ? decodeURIComponent(m[1]!) : did;
-          const parsedCid = m ? decodeURIComponent(m[2]!) : '';
-          const alt = img.alt ?? '';
-          setImageInfo({ url, did: parsedDid, cid: parsedCid, alt });
-          break;
-        }
-      } catch (e) { /* no images found */ }
-    })();
-  }, [client]);
+  // Scan already-loaded posts for an image (no separate API call)
+  const imageInfo = useMemo(() => {
+    for (const post of posts) {
+      const embeds = (post as any).embed;
+      if (!embeds) continue;
+      const images = embeds.images ?? embeds?.media?.images;
+      if (!images?.[0]) continue;
+      const img = images[0];
+      const did = (post as any).author?.did ?? '';
+      let url: string;
+      if ((img as any).fullsize) {
+        url = (img as any).fullsize;
+      } else {
+        const cid = (img as any).image?.ref?.$link ?? (img as any).cid ?? '';
+        const mime = (img as any).image?.mimeType ?? (img as any).mimeType ?? 'image/jpeg';
+        const ext = mime?.includes('gif') ? 'gif' : mime?.split('/')[1] || 'jpeg';
+        url = `https://cdn.bsky.app/img/feed_fullsize/plain/${encodeURIComponent(did)}/${encodeURIComponent(cid)}@${ext}`;
+      }
+      const m = url.match(/\/plain\/([^/]+)\/([^@]+)/);
+      const parsedDid = m ? decodeURIComponent(m[1]!) : did;
+      const parsedCid = m ? decodeURIComponent(m[2]!) : '';
+      const alt = img.alt ?? '';
+      return { url, did: parsedDid, cid: parsedCid, alt };
+    }
+    return null;
+  }, [posts]);
 
   const runTests = useCallback(async () => {
     if (!imageInfo || running) return;
@@ -192,7 +183,7 @@ export function DiagnosticPage({ client, goBack }: { client: BskyClient | null; 
             {imageInfo.alt && <div><span className="text-text-secondary">ALT:</span> <span className="text-text-primary">{imageInfo.alt}</span></div>}
           </div>
         ) : client ? (
-          <div className="p-3 rounded-lg border border-border bg-surface/50 text-text-secondary text-xs">Searching timeline for an image...</div>
+          <div className="p-3 rounded-lg border border-border bg-surface/50 text-text-secondary text-xs">No images found in timeline. Load more posts first.</div>
         ) : (
           <div className="p-3 rounded-lg border border-border bg-surface/50 text-text-secondary text-xs">Not logged in.</div>
         )}

@@ -438,7 +438,7 @@ export function App() {
       case 'about':
         return <AboutPage goBack={goBack} />;
       case 'diagnostic':
-        return <DiagnosticPage client={client} goBack={goBack} />;
+        return <DiagnosticPage client={client} goBack={goBack} posts={timeline.posts} />;
       case 'atplay':
         return <AtPlayPage client={client} goBack={goBack} goTo={goTo} />;
       case 'atplaySocialCircle':
