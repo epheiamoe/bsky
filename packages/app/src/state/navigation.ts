@@ -15,6 +15,7 @@ export type AppView =
   | { type: 'lists'; actor?: string }
   | { type: 'listDetail'; uri: string; tab?: 'posts' | 'members' }
   | { type: 'about' }
+  | { type: 'diagnostic' }
   | { type: 'atplay' }
   | { type: 'atplaySocialCircle' };
 

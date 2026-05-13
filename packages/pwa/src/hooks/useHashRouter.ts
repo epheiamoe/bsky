@@ -132,6 +132,8 @@ function parseHash(): AppView {
     }
     case '/components':
       return { type: 'components' };
+    case '/diagnostic':
+      return { type: 'diagnostic' };
     case '/about':
       return { type: 'about' };
     case '/atplay':
@@ -214,6 +216,8 @@ function encodeView(view: AppView): string {
       return `#/dm?conv=${encodeURIComponent(view.conversationId)}`;
     case 'components':
       return '#/components';
+    case 'diagnostic':
+      return '#/diagnostic';
     case 'about':
       return '#/about';
     case 'atplay':
