@@ -78,6 +78,7 @@ export class BskyClient {
   private publicKy: KyInstance;
   private chatKy: KyInstance;
   private _withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void>;
+  private _authHook: (request: Request) => Promise<Request>;
   private _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
   /** Called when a JWT refresh attempt fails and the session becomes invalid. Auth store hooks into this to reset UI state. */
   _onSessionExpired?: () => void;
@@ -86,6 +87,13 @@ export class BskyClient {
     const entryPds = options?.pdsUrl ?? BSKY_SERVICE;
     this.pdsUrl = entryPds;
     const self = this;
+
+    this._authHook = async (request) => {
+      if (self.session) {
+        request.headers.set('Authorization', `Bearer ${self.session.accessJwt}`);
+      }
+      return request;
+    };
 
     this._withRefresh = async (request, _options, response) => {
       if (!response.ok) {
@@ -135,7 +143,7 @@ export class BskyClient {
       prefixUrl: entryPds + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [this._withRefresh] },
+      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
     this.publicKy = ky.create({
       prefixUrl: PUBLIC_API + '/xrpc',
@@ -146,7 +154,7 @@ export class BskyClient {
       prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [this._withRefresh] },
+      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
   }
 
@@ -220,7 +228,7 @@ export class BskyClient {
       prefixUrl: this.pdsUrl + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [this._withRefresh] },
+      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
 
     return res;
@@ -667,7 +675,7 @@ export class BskyClient {
       prefixUrl: this.pdsUrl + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-      hooks: { afterResponse: [this._withRefresh] },
+      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
   }
 
