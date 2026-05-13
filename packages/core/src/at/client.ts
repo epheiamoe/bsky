@@ -98,7 +98,7 @@ export class BskyClient {
     this._withRefresh = async (request, _options, response) => {
       if (!response.ok) {
         const body = await response.clone().text();
-        if (response.status === 400 && self.session) {
+        if ((response.status === 400 || response.status === 401) && self.session) {
           try {
             const err = JSON.parse(body);
             if (err.error === 'ExpiredToken' || err.error === 'InvalidToken') {
@@ -159,7 +159,7 @@ export class BskyClient {
   }
 
   private getAuthHeaders(): Record<string, string> {
-    if (!this.session) throw new Error('Not authenticated. Call login() first.');
+    if (!this.session) return {};
     return { Authorization: `Bearer ${this.session.accessJwt}` };
   }
 
