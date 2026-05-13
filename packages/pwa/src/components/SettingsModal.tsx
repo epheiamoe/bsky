@@ -344,6 +344,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                         )}
                       </select>
                     </div>
+                    {isImageDesc && (
+                      <p className="text-[10px] text-text-secondary mt-1">Use AI to generate ALT text for images that lack it. Only vision-capable models are eligible.</p>
+                    )}
                   </div>
                 );
               })}

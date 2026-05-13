@@ -198,7 +198,6 @@ function ImageGrid({ images, imageDescCallback }: {
 
   const handleGenerateAlt = async (i: number, img: ImageData) => {
     if (!imageDescCallback || altPopup?.aiLoading) return;
-    // Check module-level cache
     const cached = _altCache.get(img.url);
     if (cached) {
       setAltPopup(prev => prev ? { ...prev, aiText: cached, aiLoading: false } : null);
@@ -207,10 +206,21 @@ function ImageGrid({ images, imageDescCallback }: {
     setAltPopup(prev => prev ? { ...prev, aiLoading: true, aiError: undefined } : null);
     try {
       const result = await imageDescCallback(i, img.url, img.alt);
+      if (!result || !result.trim()) {
+        setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: t('a11y.altErrorEmptyResponse') } : null);
+        return;
+      }
       _altCache.set(img.url, result);
       setAltPopup(prev => prev ? { ...prev, aiText: result, aiLoading: false } : null);
     } catch (e) {
-      setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: e instanceof Error ? e.message : t('common.error') } : null);
+      const msg = e instanceof Error ? e.message : String(e);
+      // Map common errors to user-friendly messages
+      let friendly = msg;
+      if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('Invalid API')) friendly = t('a11y.altErrorAuth');
+      else if (msg.includes('Failed to fetch image') || msg.includes('network')) friendly = t('a11y.altErrorNetwork');
+      else if (msg.includes('does not support') || msg.includes('vision')) friendly = t('a11y.altErrorNoVision');
+      else if (msg.length > 80) friendly = msg.slice(0, 80) + '…';
+      setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: friendly } : null);
     }
   };
 
@@ -259,19 +269,21 @@ function ImageGrid({ images, imageDescCallback }: {
                     setLightbox(i);
                   }}
                 />
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenPopup(i, img);
-                  }}
-                  className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
-                  title={img.alt || t('a11y.altNoOriginal')}
-                >
-                  <svg width="24" height="14" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
-                    <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">{img.alt?.trim() ? 'ALT' : 'ALT?'}</text>
-                  </svg>
-                </button>
+                {(imageDescCallback || hasAlt) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenPopup(i, img);
+                    }}
+                    className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
+                    title={img.alt || t('a11y.altNoOriginal')}
+                  >
+                    <svg width="24" height="14" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
+                      <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">{img.alt?.trim() ? 'ALT' : 'ALT?'}</text>
+                    </svg>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -314,7 +326,7 @@ function ImageGrid({ images, imageDescCallback }: {
             {/* Generate button — only show if callback is available */}
             {imageDescCallback && (
               <button
-                onClick={() => handleGenerateAlt(altPopup.index, images[altPopup.index]!)}
+                onClick={(e) => { e.stopPropagation(); handleGenerateAlt(altPopup.index, images[altPopup.index]!); }}
                 disabled={altPopup.aiLoading}
                 className="w-full py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-medium transition-colors disabled:opacity-50"
               >
