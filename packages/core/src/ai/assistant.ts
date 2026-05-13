@@ -877,6 +877,7 @@ export async function describeImage(
   config: AIConfig,
   downloadFn: () => Promise<Uint8Array>,
   existingAlt?: string,
+  targetLang?: string,
 ): Promise<string> {
   const data = await downloadFn();
 
@@ -899,7 +900,7 @@ export async function describeImage(
   const body = {
     model: config.model,
     messages: [
-      { role: 'system', content: P_ALT_DESCRIPTION_SYSTEM },
+      { role: 'system', content: P_ALT_DESCRIPTION_SYSTEM(targetLang) },
       {
         role: 'user',
         content: [

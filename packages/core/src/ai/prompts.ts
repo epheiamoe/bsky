@@ -227,13 +227,12 @@ export function PF_AUTO_TITLE_USER(firstUserMsg: string, firstAiReply: string): 
   return `用户：${firstUserMsg}\n\nAI回复：${firstAiReply}`;
 }
 
-/** System prompt for image description — used by describeImage() for ALT text generation */
-export const P_ALT_DESCRIPTION_SYSTEM = `You are an accessibility assistant. Describe this image concisely for visually impaired users. Include key visual elements, text content, mood/atmosphere, and relevant context. Keep under 500 characters. Return ONLY the description text — no prefix, no "This image shows...", no markdown.`;
+/** System prompt for AI ALT — used by describeImage() for image description generation */
+export function P_ALT_DESCRIPTION_SYSTEM(targetLang?: string): string {
+  const lang = targetLang && targetLang !== 'en' ? ` Write the description in ${targetLang === 'zh' ? 'Chinese (中文)' : targetLang === 'ja' ? 'Japanese (日本語)' : targetLang}.` : '';
+  return `You are an accessibility assistant. Describe this image concisely for visually impaired users. Include key visual elements, text content, mood/atmosphere, and relevant context. Keep under 500 characters. Return ONLY the description text — no prefix, no "This image shows...", no markdown.${lang}`;
+}
 
-/**
- * User prompt for image description. Passes existing ALT text (if any) for improvement or reference.
- * If existingAlt is empty/undefined, asks for a fresh description.
- */
 export function PF_ALT_DESCRIPTION_USER(existingAlt?: string): string {
   if (existingAlt && existingAlt.trim()) {
     return `The current ALT text for this image is:\n\n"${existingAlt.trim()}"\n\nPlease provide an improved or alternative description. Keep the same concise style.`;

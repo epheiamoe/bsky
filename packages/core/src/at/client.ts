@@ -634,11 +634,9 @@ export class BskyClient {
   }
 
   async downloadBlob(did: string, cid: string): Promise<Uint8Array> {
-    const blobUrl = `${this.pdsUrl}/xrpc/com.atproto.sync.getBlob`;
-    const res = await ky.get(blobUrl, {
+    const res = await this.ky.get('com.atproto.sync.getBlob', {
       searchParams: { did, cid },
       timeout: 30000,
-      ...(this.session ? { headers: this.getAuthHeaders() } : {}),
     });
     return new Uint8Array(await res.arrayBuffer());
   }

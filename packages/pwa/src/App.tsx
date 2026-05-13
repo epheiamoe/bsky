@@ -319,6 +319,7 @@ export function App() {
             likePost={postActions.likePost}
             repostPost={postActions.repostPost}
             imageDescConfig={scenarioModels.imageDescription}
+            imageDescLang={appConfig.targetLang}
           />
         );
       case 'thread':
@@ -333,6 +334,7 @@ export function App() {
             translateMode={appConfig.translateMode}
             translateConfig={scenarioModels.translate}
             imageDescConfig={scenarioModels.imageDescription}
+            imageDescLang={appConfig.targetLang}
           />
         );
       case 'compose':
@@ -362,6 +364,7 @@ export function App() {
             translateMode={appConfig.translateMode}
             translateConfig={scenarioModels.translate}
             imageDescConfig={scenarioModels.imageDescription}
+            imageDescLang={appConfig.targetLang}
             initialScrollTop={profileScrollTopRef.current}
             onScrollTopChange={(top) => { profileScrollTopRef.current = top; }}
           />
@@ -383,6 +386,7 @@ export function App() {
             goBack={goBack}
             goTo={goTo}
             imageDescConfig={scenarioModels.imageDescription}
+            imageDescLang={appConfig.targetLang}
           />
         );
       case 'aiChat': {
@@ -407,6 +411,7 @@ export function App() {
             initialScrollTop={bookmarksScrollTopRef.current}
             onScrollTopChange={(top) => { bookmarksScrollTopRef.current = top; }}
             imageDescConfig={scenarioModels.imageDescription}
+            imageDescLang={appConfig.targetLang}
           />
         );
       case 'lists':

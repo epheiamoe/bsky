@@ -25,6 +25,7 @@ interface ThreadViewProps {
   translateMode: 'simple' | 'json';
   translateConfig?: AIConfig;
   imageDescConfig?: AIConfig;
+  imageDescLang?: string;
 }
 
 function Spinner() {
@@ -35,7 +36,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -259,7 +260,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
                   const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
                   if (!m) throw new Error('Could not parse image URL');
-                  return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt);
+                  return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
                 } : undefined}
               />
             )}
@@ -330,6 +331,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
               goTo={goTo}
               imageDescConfig={imageDescConfig}
+              imageDescLang={imageDescLang}
               client={client}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />

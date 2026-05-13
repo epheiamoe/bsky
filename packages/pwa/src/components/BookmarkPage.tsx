@@ -13,9 +13,10 @@ interface BookmarkPageProps {
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
   imageDescConfig?: import('@bsky/core').AIConfig;
+  imageDescLang?: string;
 }
 
-export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig }: BookmarkPageProps) {
+export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang }: BookmarkPageProps) {
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
@@ -76,6 +77,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     onClick={() => goTo({ type: 'thread', uri: post.uri })}
                     goTo={goTo}
                     imageDescConfig={imageDescConfig}
+                    imageDescLang={imageDescLang}
                     client={client}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />

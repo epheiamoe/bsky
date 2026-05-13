@@ -6,6 +6,7 @@ import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { describeImage } from '@bsky/core';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
+import { Modal } from './Modal.js';
 import { VideoCard } from './VideoCard.js';
 import type { VideoData } from './VideoCard.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
@@ -290,48 +291,42 @@ function ImageGrid({ images, imageDescCallback }: {
           </div>
         )}
       </div>
-      {altPopup && (
-        <>
-          <div className="fixed inset-0 bg-black/40 z-[9998]" onClick={() => setAltPopup(null)} />
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[9999] bg-white dark:bg-[#1A1A1A] border border-border rounded-lg p-4 max-w-[360px] w-[calc(100%-2rem)] shadow-2xl" role="dialog" aria-modal="true" aria-label={t('compose.altLabel')}>
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-xs text-text-secondary font-semibold tracking-wide">{t('compose.altLabel')}</span>
-              <button onClick={() => setAltPopup(null)} className="text-text-secondary hover:text-text-primary" aria-label={t('a11y.close')}>
-                <Icon name="x" size={16} />
-              </button>
-            </div>
-            {/* Original ALT */}
-            {altPopup.text.trim() ? (
-              <div className="mb-2">
-                <p className="text-[10px] text-text-secondary font-medium mb-0.5">{t('a11y.altOriginal')}</p>
-                <p className="text-sm text-text-primary whitespace-pre-wrap break-words leading-relaxed">{altPopup.text}</p>
-              </div>
-            ) : (
-              <p className="text-sm text-text-secondary italic mb-2">{t('a11y.altNoOriginal')}</p>
-            )}
-            {/* AI-generated description */}
-            {altPopup.aiText && (
-              <div className="mb-2 p-2 rounded bg-surface/50 border border-border">
-                <p className="text-[10px] text-text-secondary font-medium mb-0.5">{t('a11y.altAIResult')}</p>
-                <p className="text-sm text-text-primary whitespace-pre-wrap break-words leading-relaxed">{altPopup.aiText}</p>
-              </div>
-            )}
-            {altPopup.aiError && (
-              <p className="text-xs text-red-500 mb-2">{t('a11y.altError')}: {altPopup.aiError}</p>
-            )}
-            {/* Generate button — only show if callback is available */}
-            {imageDescCallback && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleGenerateAlt(altPopup.index, images[altPopup.index]!); }}
-                disabled={altPopup.aiLoading}
-                className="w-full py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-xs font-medium transition-colors disabled:opacity-50"
-              >
-                {altPopup.aiLoading ? t('a11y.altGenerating') : altPopup.aiText ? t('a11y.altRegenerate') : t('a11y.altGenerate')}
-              </button>
-            )}
+      <Modal open={!!altPopup} onClose={() => setAltPopup(null)} titleId="alt-popup-title">
+        <div className="px-5 py-4">
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <h2 id="alt-popup-title" className="text-sm font-semibold text-text-primary">{t('compose.altLabel')}</h2>
           </div>
-        </>
-      )}
+          {/* Original ALT */}
+          {altPopup?.text?.trim() ? (
+            <div className="mb-3">
+              <p className="text-[10px] text-text-secondary font-medium mb-0.5">{t('a11y.altOriginal')}</p>
+              <p className="text-sm text-text-primary whitespace-pre-wrap break-words leading-relaxed">{altPopup.text}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-text-secondary italic mb-3">{t('a11y.altNoOriginal')}</p>
+          )}
+          {/* AI-generated description */}
+          {altPopup?.aiText && (
+            <div className="mb-3 p-2 rounded bg-surface/50 border border-border">
+              <p className="text-[10px] text-text-secondary font-medium mb-0.5">{t('a11y.altAIResult')}</p>
+              <p className="text-sm text-text-primary whitespace-pre-wrap break-words leading-relaxed">{altPopup.aiText}</p>
+            </div>
+          )}
+          {altPopup?.aiError && (
+            <p className="text-xs text-red-500 mb-3">{altPopup.aiError}</p>
+          )}
+          {/* Generate button */}
+          {imageDescCallback && (
+            <button
+              onClick={() => handleGenerateAlt(altPopup!.index, images[altPopup!.index]!)}
+              disabled={altPopup?.aiLoading}
+              className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {altPopup?.aiLoading ? t('a11y.altGenerating') : altPopup?.aiText ? t('a11y.altRegenerate') : t('a11y.altGenerate')}
+            </button>
+          )}
+        </div>
+      </Modal>
       <ImageLightboxDialog
         open={lightbox !== null && lightboxRects !== null}
         images={images}
@@ -352,6 +347,8 @@ interface PostCardBaseProps {
   repostBy?: string;
   /** If set, enables AI-generated ALT text via callback in ImageGrid */
   imageDescConfig?: AIConfig;
+  /** Target language for AI ALT description (same as translate target lang) */
+  imageDescLang?: string;
   /** Client for downloading image blobs (same path as view_image) */
   client?: BskyClient | null;
 }
@@ -368,7 +365,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, client }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -488,7 +485,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             if (!m) throw new Error('Could not parse image URL');
             const did = decodeURIComponent(m[1]!);
             const cid = decodeURIComponent(m[2]!);
-            return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt);
+            return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
           } : undefined} />}
           {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
           {externalLink && (
