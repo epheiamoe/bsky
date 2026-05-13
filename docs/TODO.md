@@ -67,7 +67,8 @@
 | **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |
 | **WCAG 1.4.1 合规** | N/A | ✅ | PostActionsRow aria-pressed + 加粗计数; 所有横幅 role="alert"/"status"; 连接文本标签 |
 | **屏幕阅读器支持** | N/A | ✅ | 语义HTML(landmark/label/list), ARIA(aria-pressed/expanded/current/live), 焦点管理(Modal trap/skip-link), 动态lang/title |
-| **AI ALT 图像描述** | N/A | ✅ | 设置→场景→AI ALT选视觉模型, describeImage(downloadFn, targetLang), alt badge显示+Modal弹窗+缓存 |
+| **AI ALT 图像描述** | N/A | ✅ | 设置→场景→AI ALT选视觉模型, describeImage(downloadFn, targetLang), alt badge显示+Modal弹窗+缓存, 429重试+bsky.social回退 |
+| **WCAG 4.1.2 表单+状态** | N/A | ✅ | htmlFor/id标签关联(14对), aria-expanded(6), aria-describedby, aria-invalid, role=progressbar, hidden input aria-label(5) |
 | **MCP Server** | ✅ | ✅ | 已完成 v0.13.0 |
 
 ## 图例

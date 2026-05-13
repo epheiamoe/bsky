@@ -619,4 +619,26 @@ await new Promise((resolve, reject) => {
 1. Portal 解决 CSS 问题（`fixed` 在 `transform` 内相对定位），React Fiber 树解决事件问题——两正交问题
 2. 调试时先隔离错误来源——诊断页面正确区分了 CDN CORS vs. LLM API CORS vs. PDS JWT 过期
 
+### Lesson 55: beforeRequest hook centralizes auth — eliminates per-method boilerplate
+
+**问题**：42 个方法各自手动调用 `headers: this.getAuthHeaders()`。`downloadBlob` 切换到 `this.ky` 时遗漏该行 → 所有 blob 请求无认证头 → PDS 返回 400。
+
+**修复**：为所有 `this.ky` 和 `this.chatKy` 实例新增 `beforeRequest` 钩子（`_authHook`）——当 `this.session` 存在时自动注入 `Authorization: Bearer <jwt>`。4 个 `ky.create` 调用点均已注册。未来无需任何方法手动传递认证头。
+
+**教训**：
+1. **集中化的 beforeRequest hook 比 42 个手动 auth 调用更安全**——单点控制，不会遗漏。与现有的 `afterResponse`（`_withRefresh`）钩子形成对称架构：beforeRequest 注入 JWT，afterResponse 刷新 JWT
+2. **ky.extend() 保留钩子**——`downloadBlob` 的 bsky.social 回退使用 `this.ky.extend({ prefixUrl: ... })` 创建临时实例，继承 `_authHook` 和 `_withRefresh`
+3. **`this.session` 可能为 null**——`_authHook` 仅在 session 存在时注入，`getAuthHeaders()` 返回 `{}` 而非抛出异常。登录时的竞态条件（旧代码在 `login()` 完成前调用 `getAuthHeaders()`）现已消除
+
+### Lesson 56: 429 rate-limit retry needs exponential backoff — not just UI feedback
+
+**问题**：Mistral Tier 1 限速严格（~1 req/s）。AI ALT 每次生成 2 条请求（blob + vision API），连续快速点击 → 429。错误提示不足，用户困惑。
+
+**修复**：PostCard `handleGenerateAlt` 新增 429 检测 + 指数退避重试循环（1s→2s→4s→8s，最多 4 次）。等待期间显示「达到速率限制，正在重试（2/4）」。仅 429 触发重试——其他错误直接显示。
+
+**教训**：
+1. **429 应在客户端重试，而非抛给用户**——服务器明确告知何时可重试（Retry-After header，或使用指数退避作为安全回退）
+2. **指数退避是 API 速率限制的标准模式**——起始 1 秒，每次加倍，最多 4 次（总等待 15 秒）
+3. **不要对非 429 错误重试**——401、400 等不会因等待而自愈
+
 ## 架构升级（v0.13.1）

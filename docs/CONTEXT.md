@@ -26,7 +26,7 @@
 
 ## 版本
 
-**v0.13.1** — 综合无障碍提升：屏幕阅读器支持（WCAG 语义 HTML + ARIA + 焦点管理）+ 色弱友好调色板 + **AI ALT 图像描述生成**（视觉模型为图片生成替代文本）。Modal 改为 createPortal + stopPropagation。downloadBlob 改为 this.ky（自动 JWT 刷新）。设置场景 Tab 国际化。33 个 a11y i18n 键 + 10 个场景 i18n 键 + 7 个 AI ALT 键。PostCard 回调模式：describeImage(downloadFn) 与 view_image 共享同一 PDS 下载路径。
+**v0.13.1** — 综合无障碍提升：WCAG 4.1.1（语义 HTML）+ 4.1.2（表单标签关联、aria-expanded/describedby/invalid/progressbar）+ 1.4.1（颜色+状态双重编码）+ 色弱友好调色板 + **AI ALT 图像描述生成**。_authHook 自动注入 Authorization。downloadBlob bsky.social 代理回退 + 429 指数退避重试。Modal createPortal + stopPropagation。设置场景 Tab 国际化。
 
 **v0.13.0** — MCP 服务器。`@epheiamoe/bsky-mcp` 包（npm 发布）通过 Model Context Protocol 将 33 个 Bluesky 工具暴露给外部 AI 客户端（OpenCode、Claude Desktop、VS Code 等）。esbuild 自包含构建（96 KB），零 UI，纯 Node.js stdio 传输。已通过 OpenCode 测试 8 个工具 7 个类别。启动器脚本 `scripts/start-mcp.mjs` 在启动 MCP 服务器前从 `.env` 加载凭据。
 
