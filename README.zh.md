@@ -103,6 +103,12 @@
 
 ---
 
+## 🔒 隐私
+
+一切在你的浏览器中运行。你的 Bluesky 凭据、API Key 和对话内容不会接触任何外部服务器。所有请求直接从你的设备发往 Bluesky 或你选择的 AI 提供商。无需信任，无从泄露。
+
+---
+
 ## 🚀 快速开始
 
 ### 终端（TUI）
@@ -136,12 +142,6 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... node dist/index.js
 npm install -g @epheiamoe/bsky-mcp
 BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 ```
-
----
-
-## 🔒 隐私
-
-一切在你的浏览器中运行。你的 Bluesky 凭据、API Key 和对话内容不会接触任何外部服务器。所有请求直接从你的设备发往 Bluesky 或你选择的 AI 提供商。无需信任，无从泄露。
 
 ---
 

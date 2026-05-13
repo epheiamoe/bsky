@@ -103,6 +103,12 @@ Built for everyone — screen reader users, color-blind users, and AI agents.
 
 ---
 
+## 🔒 Privacy
+
+Everything runs in your browser. Your Bluesky credentials, API keys, and conversations never touch our servers. Every request goes directly from your device to Bluesky or the AI provider you choose. Nothing to trust — nothing to leak.
+
+---
+
 ## 🚀 Quick Start
 
 ### Terminal (TUI)
@@ -136,12 +142,6 @@ Or install globally from npm:
 npm install -g @epheiamoe/bsky-mcp
 BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 ```
-
----
-
-## 🔒 Privacy
-
-Everything runs in your browser. Your Bluesky credentials, API keys, and conversations never touch our servers. Every request goes directly from your device to Bluesky or the AI provider you choose. Nothing to trust — nothing to leak.
 
 ---
 
