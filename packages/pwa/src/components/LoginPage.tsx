@@ -117,7 +117,7 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4 animate-fadeIn">
       {showLog && errorLog && (
         <LoginErrorModal log={errorLog} onClose={() => setShowLog(false)} />
       )}
@@ -194,7 +194,7 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
           </div>
 
           {displayError && (
-            <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+            <div role="alert" className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
               <p>{displayError}</p>
               {errorLog && (
                 <button

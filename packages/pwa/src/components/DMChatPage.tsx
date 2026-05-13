@@ -383,7 +383,7 @@ function EmojiConfigPanel({ allEmojis, loading, selected, expandedKey, onToggle,
       className="fixed inset-0 z-[9999] bg-black/40 flex items-center justify-center p-4 animate-fadeIn"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-[#0A0A0A] rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col animate-slideUp">
+      <div className="bg-background rounded-2xl border border-border shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col animate-slideUp">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
           <h2 className="text-sm font-semibold text-text-primary">{t('dm.emojiConfig')}</h2>

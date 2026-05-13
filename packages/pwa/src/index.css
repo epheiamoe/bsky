@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  --color-background: #FFFFFF;
   --color-primary: #00A5E0;
   --color-primary-hover: #0095C9;
   --color-surface: #F8F9FA;
@@ -12,6 +13,7 @@
 }
 
 .dark {
+  --color-background: #0A0A0A;
   --color-primary: #00A5E0;
   --color-primary-hover: #00B5F0;
   --color-surface: #121212;
@@ -135,7 +137,66 @@ body {
 .dark ::-webkit-scrollbar-thumb { background: #27272A; border-radius: 4px; }
 .dark ::-webkit-scrollbar-thumb:hover { background: #3a3a3e; }
 
-/* ── Animation utilities ── */
+/* ── CVD-friendly color palette ── */
+/* Replaces red→magenta, green→teal, yellow→amber so all three remain
+   distinguishable under deuteranopia, protanopia, and tritanopia.
+   WCAG 1.4.1 ensures color is never the only differentiator. */
+.cvd {
+  /* Magenta replaces Red (like, error, destructive) */
+  --cvd-r-text: #C2185B;
+  --cvd-r-bg: #FCE4EC;
+  --cvd-r-border: #F48FB1;
+  --cvd-r-strong: #AD1457;
+
+  /* Teal replaces Green (repost, success, connected) */
+  --cvd-g-text: #00897B;
+  --cvd-g-bg: #E0F2F1;
+  --cvd-g-border: #80CBC4;
+  --cvd-g-strong: #00695C;
+
+  /* Amber replaces Yellow (bookmark, warning, attention) */
+  --cvd-y-text: #E65100;
+  --cvd-y-bg: #FFF3E0;
+  --cvd-y-border: #FFB74D;
+  --cvd-y-strong: #BF360C;
+}
+
+/* ── CVD: Red → Magenta overrides ── */
+.cvd .text-red-500, .cvd .text-red-600, .cvd .text-red-700 { color: var(--cvd-r-text); }
+.cvd .bg-red-50, .cvd .bg-red-100 { background-color: var(--cvd-r-bg); }
+.cvd .bg-red-500 { background-color: var(--cvd-r-strong); }
+.cvd .border-red-200, .cvd .border-red-300, .cvd .border-red-400,
+.cvd .border-red-500, .cvd .border-red-800 { border-color: var(--cvd-r-border); }
+.cvd .hover\:text-red-500:hover, .cvd .hover\:text-red-600:hover { color: var(--cvd-r-text); }
+.cvd .hover\:bg-red-50:hover { background-color: var(--cvd-r-bg); }
+.cvd .hover\:bg-red-600:hover { background-color: var(--cvd-r-strong); }
+.cvd .hover\:border-red-300:hover { border-color: var(--cvd-r-border); }
+
+/* ── CVD: Green → Teal overrides ── */
+.cvd .text-green-500, .cvd .text-green-600 { color: var(--cvd-g-text); }
+.cvd .bg-green-500 { background-color: var(--cvd-g-strong); }
+.cvd .border-green-500 { border-color: var(--cvd-g-border); }
+.cvd .hover\:text-green-500:hover { color: var(--cvd-g-text); }
+.cvd .hover\:bg-green-500\/10:hover { background-color: color-mix(in srgb, var(--cvd-g-text) 10%, transparent); }
+.cvd .hover\:bg-green-600:hover { background-color: var(--cvd-g-strong); }
+
+/* ── CVD: Yellow → Amber overrides ── */
+.cvd .text-yellow-500, .cvd .text-yellow-600, .cvd .text-yellow-800 { color: var(--cvd-y-text); }
+.cvd .bg-yellow-50 { background-color: var(--cvd-y-bg); }
+.cvd .bg-yellow-500 { background-color: var(--cvd-y-strong); }
+.cvd .border-yellow-200, .cvd .border-yellow-400, .cvd .border-yellow-500 { border-color: var(--cvd-y-border); }
+.cvd .hover\:text-yellow-500:hover { color: var(--cvd-y-text); }
+
+/* ── CVD + Dark mode overrides ── */
+.dark.cvd .text-red-400, .dark.cvd .text-red-600 { color: var(--cvd-r-border); }
+.dark.cvd .bg-red-900\/20, .dark.cvd .bg-red-900\/20 { background-color: color-mix(in srgb, var(--cvd-r-text) 20%, transparent); }
+.dark.cvd .border-red-800 { border-color: color-mix(in srgb, var(--cvd-r-text) 30%, transparent); }
+.dark.cvd .text-green-400 { color: var(--cvd-g-border); }
+.dark.cvd .text-yellow-400 { color: var(--cvd-y-border); }
+.dark.cvd .bg-yellow-900\/20 { background-color: color-mix(in srgb, var(--cvd-y-text) 20%, transparent); }
+.dark.cvd .border-yellow-800 { border-color: color-mix(in srgb, var(--cvd-y-text) 30%, transparent); }
+.dark.cvd .hover\:bg-red-900\/20:hover { background-color: color-mix(in srgb, var(--cvd-r-text) 20%, transparent); }
+.dark.cvd .hover\:bg-yellow-900\/20:hover { background-color: color-mix(in srgb, var(--cvd-y-text) 20%, transparent); }
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

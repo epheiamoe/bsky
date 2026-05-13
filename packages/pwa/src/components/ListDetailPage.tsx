@@ -168,7 +168,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
       )}
 
       {error && (
-        <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+        <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
@@ -182,7 +182,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
       ) : (
         <>
           {/* Tab bar */}
-          <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] border-b border-border flex">
+          <div className="sticky top-0 z-10 bg-background border-b border-border flex">
             <button onClick={() => setTab('posts')}
               className={`flex-1 text-center py-3 text-sm font-medium transition-colors relative ${
                 tab === 'posts' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'

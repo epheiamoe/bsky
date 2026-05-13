@@ -101,7 +101,7 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
   );
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -122,7 +122,7 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
       </div>
 
       {error && (
-        <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+        <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
           {error}
         </div>
       )}

@@ -380,7 +380,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const polishPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="min-h-[100dvh] bg-background animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
           <button onClick={handleBack} className="text-sm text-text-secondary hover:text-text-primary transition-colors">{t('action.cancel')}</button>
@@ -413,7 +413,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       <main className="max-w-content mx-auto px-4 py-4">
         {/* Draft save hint */}
         {draftSaveHint && (
-          <div className="mb-4 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
+          <div role="alert" className="mb-4 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
             <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">{t('compose.draftSaveHint')}</p>
             <div className="flex gap-2">
               <button onClick={confirmSaveDraft} className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-hover transition-colors">
@@ -589,7 +589,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
           {/* Compression info */}
           {compressInfo && (
-            <div className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5">
+            <div role="status" className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5">
               {t('compose.imageCompressed')}: {compressInfo}
             </div>
           )}
@@ -667,7 +667,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
           {/* Error */}
           {error && (
-            <div className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{error}</div>
+            <div role="alert" className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{error}</div>
           )}
         </form>
       </main>

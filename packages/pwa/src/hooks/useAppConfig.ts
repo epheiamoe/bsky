@@ -7,6 +7,8 @@ export interface AppConfig {
   targetLang: string;
   translateMode: 'simple' | 'json';
   darkMode: boolean;
+  /** CVD-friendly color palette — replaces red/green/yellow with magenta/teal/amber */
+  cvdMode: boolean;
   thinkingEnabled: boolean;
   visionEnabled: boolean;
   /** Per-provider API keys. Key = provider ID (e.g., 'deepseek', 'mistral') */
@@ -32,6 +34,7 @@ const DEFAULT_CONFIG: AppConfig = {
   targetLang: 'zh',
   translateMode: 'simple',
   darkMode: false,
+  cvdMode: false,
   thinkingEnabled: true,
   visionEnabled: false,
   apiKeys: {},

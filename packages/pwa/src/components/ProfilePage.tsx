@@ -102,7 +102,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   // ── Loading ──
   if (loading) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-background animate-fadeIn">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -111,7 +111,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   // ── Not found ──
   if (!profile) {
     return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-white dark:bg-[#0A0A0A] px-4 animate-fadeIn">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background px-4 animate-fadeIn">
         <button
           onClick={goBack}
           className="text-text-secondary hover:text-text-primary transition-colors text-lg mb-4"
@@ -130,7 +130,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     const isFollowers = followList === 'followers';
     const count = isFollowers ? profile.followersCount : profile.followsCount;
     return (
-      <div className="flex flex-col h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+      <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
         <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={closeFollowList}
@@ -203,7 +203,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   // ── Main profile view ──
   return (
-    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
       {/* Header bar */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
         <button
@@ -382,7 +382,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
         </div>
 
         {/* Tab bar */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] border-b border-border mt-4 flex">
+        <div className="sticky top-0 z-10 bg-background border-b border-border mt-4 flex">
           <button
             onClick={() => setTab('posts')}
             className={`flex-1 text-center py-3 text-sm font-medium transition-colors relative ${
@@ -431,7 +431,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
         {/* Error */}
         {error && (
-          <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+          <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
             {error}
           </div>
         )}

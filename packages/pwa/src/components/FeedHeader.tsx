@@ -33,7 +33,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
 
   return (
     <>
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#0A0A0A] px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0 gap-2">
+      <div className="sticky top-0 z-10 bg-background px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0 gap-2">
         <div className="relative inline-flex items-center gap-1">
           <span className="text-lg font-bold text-text-primary">
             <Icon name="home" size={16} /> {t('nav.feed')}{currentFeedUri ? ' - ' + getFeedLabel(currentFeedUri) : ''}

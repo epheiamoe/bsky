@@ -161,9 +161,11 @@ export function App() {
     }, (props) => React.createElement(AIChatWidget, props));
   }, []);
 
-  // ── Sync dark mode on mount ──
+  // ── Sync dark mode + CVD mode on mount ──
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', getAppConfig().darkMode);
+    const cfg = getAppConfig();
+    document.documentElement.classList.toggle('dark', cfg.darkMode);
+    document.documentElement.classList.toggle('cvd', cfg.cvdMode);
   }, []);
 
   // ── Track last active feed URI for sidebar/home navigation ──
@@ -240,7 +242,7 @@ export function App() {
   // ── Loading ──
   if (authLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-white dark:bg-[#0A0A0A] gap-3">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-background gap-3">
         <Icon name="astroid-as-AI-Button" size={32} className="text-primary" />
         <p className="text-text-secondary text-sm animate-pulse">{t('login.connecting')}</p>
       </div>
@@ -438,7 +440,7 @@ export function App() {
       {renderView()}
     </Layout>
     {updateAvailable && (
-      <div className="fixed bottom-4 right-4 z-[9999] bg-green-500 text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-slideUp">
+      <div role="status" className="fixed bottom-4 right-4 z-[9999] bg-green-500 text-white text-sm px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 animate-slideUp">
         <span>{t('about.updateAvailable')}</span>
         <button
           onClick={() => window.location.reload()}

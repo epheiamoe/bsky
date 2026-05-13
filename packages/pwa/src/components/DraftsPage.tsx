@@ -44,7 +44,7 @@ export function DraftsPage({ client, goBack, goTo }: DraftsPageProps) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="min-h-[100dvh] bg-background animate-fadeIn">
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
@@ -94,7 +94,7 @@ export function DraftsPage({ client, goBack, goTo }: DraftsPageProps) {
                         <span className="text-xs text-text-secondary">{t('drafts.replyPreview')}</span>
                       )}
                       {draft.syncStatus === 'local' && (
-                        <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-1.5 py-0.5 rounded">
+                        <span role="status" className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 px-1.5 py-0.5 rounded">
                           {t('drafts.notSynced')}
                         </span>
                       )}

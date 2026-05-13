@@ -156,7 +156,7 @@ export function Layout({
   };
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] text-text-primary font-sans">
+    <div className="min-h-[100dvh] bg-background text-text-primary font-sans">
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center gap-3 w-full">
@@ -183,12 +183,17 @@ export function Layout({
           {handle && (
             <span className="text-text-secondary text-xs hidden sm:inline">@{handle}</span>
           )}
-          <span
-            className={`w-2 h-2 rounded-full flex-shrink-0 ${
-              authenticated ? 'bg-green-500' : 'bg-gray-400'
-            }`}
-            title={authenticated ? t('status.connected') : t('status.disconnected')}
-          />
+          <span className="flex items-center gap-1 flex-shrink-0">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                authenticated ? 'bg-green-500' : 'bg-gray-400'
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-[10px] text-text-secondary hidden sm:inline">
+              {authenticated ? t('status.connected') : t('status.disconnected')}
+            </span>
+          </span>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={onSettingsOpen}
@@ -235,7 +240,7 @@ export function Layout({
           >
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
             <motion.div
-              className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-[#0A0A0A] border-r border-border shadow-lg"
+              className="absolute left-0 top-0 h-full w-64 bg-background border-r border-border shadow-lg"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}

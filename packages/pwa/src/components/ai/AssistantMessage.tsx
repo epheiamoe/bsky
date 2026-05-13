@@ -27,7 +27,7 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
         isError
           ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
           : 'bg-surface border-border'
-      } ${compact ? 'px-2.5 py-1.5 max-w-[90%]' : 'px-3 py-2 max-w-[85%]'}`}>
+      } ${compact ? 'px-2.5 py-1.5 max-w-[90%]' : 'px-3 py-2 max-w-[85%]'}`} role={isError ? 'alert' : undefined}>
         <div className={`text-text-primary markdown-body ${compact ? 'text-[13px]' : 'text-sm'}`}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>

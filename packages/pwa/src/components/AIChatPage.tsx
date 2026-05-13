@@ -438,7 +438,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div ref={chatContainerRef} className="h-[calc(100dvh-3rem)] flex bg-white dark:bg-[#0A0A0A] font-sans animate-fadeIn">
+    <div ref={chatContainerRef} className="h-[calc(100dvh-3rem)] flex bg-background font-sans animate-fadeIn">
       {/* Mobile sidebar overlay with slide animation */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -595,7 +595,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       {/* Main chat area */}
       <main className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border bg-white dark:bg-[#0A0A0A] flex-shrink-0">
+        <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border bg-background flex-shrink-0">
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary p-1 transition-colors"
@@ -660,10 +660,10 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
             {/* Import toast */}
             {importError && (
-              <div className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
+              <div role="alert" className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
             )}
             {importSuccess && (
-              <div className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
+              <div role="status" className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
             )}
           </div>
           {contextUri && (
@@ -822,7 +822,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         </div>
 
         {/* Input area */}
-        <div className="border-t border-border bg-white dark:bg-[#0A0A0A] px-4 py-3">
+        <div className="border-t border-border bg-background px-4 py-3">
           {pendingFile && (
             <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2">
               <img src={pendingFile.preview} alt="" className="w-12 h-12 object-cover rounded border border-border" />

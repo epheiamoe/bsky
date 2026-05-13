@@ -174,7 +174,7 @@ export function ListsPage({ client, goBack, goTo, actor, initialScrollTop, onScr
       )}
 
       {error && (
-        <div className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+        <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
           {error}
         </div>
       )}

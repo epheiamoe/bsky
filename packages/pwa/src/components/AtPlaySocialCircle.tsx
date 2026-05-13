@@ -249,7 +249,7 @@ export function AtPlaySocialCircle({ client, goBack, goTo }: AtPlaySocialCircleP
         {/* ── Error ── */}
         {state.status === 'error' && (
           <div className="px-4 pb-4">
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
+            <div role="alert" className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">
               {state.error}
             </div>
           </div>

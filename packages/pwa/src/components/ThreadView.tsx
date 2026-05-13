@@ -126,7 +126,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   if (loading) return <Spinner />;
 
   return (
-    <div className="min-h-[100dvh] bg-white dark:bg-[#0A0A0A] animate-fadeIn">
+    <div className="min-h-[100dvh] bg-background animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center gap-3">
           <button
@@ -273,7 +273,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             )}
             {/* Threadgate restriction badge */}
             {threadgate && threadgate.rules !== undefined && (
-              <div className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+              <div role="alert" className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
                 <Icon name="corner-down-right" size={12} />
                 {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
               </div>

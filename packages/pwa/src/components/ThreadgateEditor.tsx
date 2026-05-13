@@ -104,7 +104,7 @@ export function ThreadgateEditor({ client, postUri, currentRules, listInfo, onCl
             </div>
           )}
           {error && (
-            <div className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-2 py-1.5">{error}</div>
+            <div role="alert" className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-2 py-1.5">{error}</div>
           )}
         </div>
         <div className="flex items-center justify-end gap-2 p-4 border-t border-border">

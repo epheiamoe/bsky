@@ -52,7 +52,7 @@ import { parseAtUri } from './types.js';
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
 const CHAT_API = 'https://api.bsky.chat';
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.13.1';
 
 export interface LoginErrorDetail {
   status: number;

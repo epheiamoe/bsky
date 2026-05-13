@@ -349,6 +349,7 @@ const zh: LocaleMessages = {
   'settings.translateModeSimple': '简单 — 仅显示译文',
   'settings.translateModeJson': 'JSON — 显示源语言 + 译文',
   'settings.darkMode': '深色模式',
+  'settings.cvdMode': '色弱友好调色板',
   'settings.saveGeneral': '保存通用设置',
   'settings.updated': '已更新凭证',
   'settings.updateFailed': '更新失败',
@@ -361,6 +362,8 @@ const zh: LocaleMessages = {
   'theme.light': '亮色模式',
   'theme.switchDark': '切换暗色模式',
   'theme.switchLight': '切换亮色模式',
+  'theme.cvdOn': '开启色弱友好调色板',
+  'theme.cvdOff': '关闭色弱友好调色板',
 
   // ── Common ──
   'common.loading': '加载中…',
