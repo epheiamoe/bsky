@@ -102,7 +102,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div role="list" className="flex-1 overflow-y-auto">
         {loading && convos.length === 0 && (
           <div className="p-6 text-center text-text-secondary animate-pulse">{t('common.loading')}</div>
         )}
@@ -113,7 +113,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
         {convos.map((convo) => {
           const memberHandle = getMemberHandle(convo);
           return (
-          <div key={convo.id} className="flex items-center px-4 py-3 border-b border-border hover:bg-surface transition-colors">
+          <div key={convo.id} role="listitem" className="flex items-center px-4 py-3 border-b border-border hover:bg-surface transition-colors">
             {/* Avatar — clickable for profile */}
             <div
               className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mr-3"

@@ -327,9 +327,9 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
           {/* Display name + handle */}
           <div className="mb-3">
-            <h2 className="text-2xl font-bold text-text-primary">
+            <h1 className="text-2xl font-bold text-text-primary">
               {profile.displayName || profile.handle}
-            </h2>
+            </h1>
             <p className="text-text-secondary text-sm">
               @{profile.handle}
             </p>

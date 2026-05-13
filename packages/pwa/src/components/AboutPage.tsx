@@ -52,7 +52,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
         <h1 className="font-semibold text-text-primary text-sm">{t('nav.about')}</h1>
       </header>
 
-      <main className="max-w-content mx-auto p-6">
+      <div className="max-w-content mx-auto p-6">
         <div className="rounded-xl border border-border bg-surface/50 p-6 space-y-4">
           <div className="text-center">
             <Icon name="astroid-as-AI-Button" size={32} />
@@ -129,7 +129,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
             )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

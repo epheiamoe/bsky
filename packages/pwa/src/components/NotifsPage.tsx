@@ -132,15 +132,16 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : notifications.length > 0 ? (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const n = notifications[vi.index]!;
               return (
                 <div
                   key={n.uri}
-                  data-index={vi.index}
-                  ref={(el) => measureAndCache(el, n)}
+            data-index={vi.index}
+            role="listitem"
+            ref={(el) => measureAndCache(el, n)}
                   style={{
                     position: 'absolute', top: 0, left: 0, width: '100%',
                     transform: `translateY(${vi.start}px)`,

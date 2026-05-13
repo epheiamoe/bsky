@@ -144,6 +144,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                     maxLength={300}
                     autoFocus
                     placeholder={t('lists.descPlaceholder')}
+          aria-label={t('a11y.listDesc')}
                   />
                 ) : (
                   <div className="flex-1">

@@ -37,9 +37,9 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
           </button>
           <h1 className="font-semibold text-text-primary text-sm">组件</h1>
         </header>
-        <main className="max-w-content mx-auto p-4">
+        <div className="max-w-content mx-auto p-4">
           <p className="text-text-secondary text-sm">No widgets registered.</p>
-        </main>
+        </div>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
         <h1 className="font-semibold text-text-primary text-sm">组件</h1>
       </header>
 
-      <main className="max-w-content mx-auto p-4">
+      <div className="max-w-content mx-auto p-4">
         {allWidgets.filter(w => enabledIds.includes(w.id)).map((w, idx, arr) => (
           <div key={w.id} className="mb-4 border border-border rounded-xl p-4 bg-surface/50">
             <div className="flex items-center justify-between mb-2">
@@ -137,7 +137,7 @@ export function ComponentsPage({ goBack, goTo, client }: ComponentsPageProps) {
             </div>
           </>
         )}
-      </main>
+      </div>
     </div>
   );
 }

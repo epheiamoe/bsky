@@ -161,11 +161,12 @@ export function App() {
     }, (props) => React.createElement(AIChatWidget, props));
   }, []);
 
-  // ── Sync dark mode + CVD mode on mount ──
+  // ── Sync dark mode + CVD mode + lang on mount ──
   useEffect(() => {
     const cfg = getAppConfig();
     document.documentElement.classList.toggle('dark', cfg.darkMode);
     document.documentElement.classList.toggle('cvd', cfg.cvdMode);
+    document.documentElement.lang = cfg.targetLang || 'en';
   }, []);
 
   // ── Track last active feed URI for sidebar/home navigation ──
@@ -181,6 +182,27 @@ export function App() {
   useEffect(() => {
     if (currentView.type !== 'aiChat' && currentView.type !== 'components') {
       setViewContext(currentView);
+    }
+  }, [currentView]);
+
+  // ── Update page title based on current view ──
+  useEffect(() => {
+    const base = 'Bluesky Client';
+    switch (currentView.type) {
+      case 'feed': document.title = `${base} — Feed`; break;
+      case 'thread': document.title = `${base} — Thread`; break;
+      case 'profile': document.title = `${base} — Profile`; break;
+      case 'search': document.title = `${base} — Search`; break;
+      case 'notifications': document.title = `${base} — Notifications`; break;
+      case 'bookmarks': document.title = `${base} — Bookmarks`; break;
+      case 'aiChat': document.title = `${base} — AI Chat`; break;
+      case 'compose': document.title = `${base} — Compose`; break;
+      case 'drafts': document.title = `${base} — Drafts`; break;
+      case 'lists': document.title = `${base} — Lists`; break;
+      case 'about': document.title = `${base} — About`; break;
+      case 'components': document.title = `${base} — Components`; break;
+      case 'atplay': document.title = `${base} — AT Play`; break;
+      default: document.title = base;
     }
   }, [currentView]);
 

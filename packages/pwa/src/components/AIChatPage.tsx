@@ -593,7 +593,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       </aside>
 
       {/* Main chat area */}
-      <main className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border bg-background flex-shrink-0">
           <button
@@ -844,8 +844,9 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={t('ai.placeholder')}
-              disabled={loading}
+          placeholder={t('ai.placeholder')}
+          aria-label={t('a11y.aiInput')}
+          disabled={loading}
               rows={1}
               className="flex-1 resize-none rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 max-h-32"
               style={{ minHeight: '42px' }}
@@ -873,7 +874,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             )}
           </div>
         </div>
-      </main>
+      </div>
         {/* Repair toast — shown when a previously corrupted conversation was auto-fixed */}
         {wasRepaired && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-4 py-3 rounded-xl shadow-lg z-[100] flex items-center gap-3 animate-slideUp max-w-[90%]">

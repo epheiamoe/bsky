@@ -392,7 +392,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                 <label className="text-xs text-text-secondary mb-1 block">UI Language</label>
                 <select
                   value={locale}
-                  onChange={e => setLocale(e.target.value as typeof locale)}
+                  onChange={e => { const l = e.target.value as typeof locale; setLocale(l); document.documentElement.lang = l; }}
                   className="w-full px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {availableLocales.map((l: Locale) => (

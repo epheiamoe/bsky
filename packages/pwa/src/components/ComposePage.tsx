@@ -410,7 +410,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         </div>
       </header>
 
-      <main className="max-w-content mx-auto px-4 py-4">
+      <div className="max-w-content mx-auto px-4 py-4">
         {/* Draft save hint */}
         {draftSaveHint && (
           <div role="alert" className="mb-4 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4">
@@ -525,13 +525,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                     )}
                   </div>
 
-                  <textarea
-                    value={post.text}
-                    onChange={e => setPostText(post.id, e.target.value)}
-                    onFocus={() => setPolishTargetPostId(post.id)}
-                    rows={3} maxLength={300}
-                    placeholder={t('compose.placeholder')}
-                    disabled={submitting}
+        <textarea
+          value={post.text}
+          onChange={e => setPostText(post.id, e.target.value)}
+          onFocus={() => setPolishTargetPostId(post.id)}
+          rows={3}
+          maxLength={300}
+          placeholder={t('compose.placeholder')}
+          aria-label={t('a11y.composeInput')}
+          disabled={submitting}
                     className="w-full px-3 py-2 rounded border border-border bg-white dark:bg-[#1A1A1A] text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 resize-none text-sm leading-relaxed"
                   />
 
@@ -670,7 +672,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             <div role="alert" className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">{error}</div>
           )}
         </form>
-      </main>
+      </div>
 
       {showPolishModal && polishConfig && polishPost && (
         <WidgetModal

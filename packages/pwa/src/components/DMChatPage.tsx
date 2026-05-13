@@ -334,6 +334,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           rows={1}
           placeholder={t('dm.placeholder')}
+          aria-label={t('a11y.dmInput')}
           className="flex-1 px-3 py-2 rounded-xl border border-border bg-white dark:bg-[#1A1A1A] text-text-primary placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm leading-relaxed max-h-32"
         />
         <button

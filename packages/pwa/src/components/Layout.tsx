@@ -158,7 +158,7 @@ export function Layout({
   return (
     <div className="min-h-[100dvh] bg-background text-text-primary font-sans">
       {/* ── Header ── */}
-      <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
+      <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border" aria-label={t('a11y.mainNav')}>
         <div className="flex items-center gap-3 w-full">
           {/* Hamburger (mobile) */}
           <button
@@ -275,15 +275,15 @@ export function Layout({
 
       <div className="flex">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0">
+        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0" aria-label={t('a11y.sidebar')}>
           <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} />
         </aside>
 
-        <main className="flex-1 max-w-content mx-auto w-full min-h-[calc(100dvh-3rem)]">
+        <main id="main-content" tabIndex={-1} className="flex-1 max-w-content mx-auto w-full min-h-[calc(100dvh-3rem)]">
           {children}
         </main>
 
-        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100dvh-3rem)] sticky top-12 border-l border-border flex-shrink-0">
+        <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100dvh-3rem)] sticky top-12 border-l border-border flex-shrink-0" aria-label={t('a11y.widgetPanel')}>
           <WidgetPanel
             viewType={currentView.type}
             enabledIds={enabledIds}

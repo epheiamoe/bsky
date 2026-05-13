@@ -69,9 +69,9 @@ export function DraftsPage({ client, goBack, goTo }: DraftsPageProps) {
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : drafts.length > 0 ? (
-        <div>
+        <div role="list">
           {drafts.map((draft, i) => (
-            <div key={draft.id} className={`border-b border-border animate-slideUp stagger-${(i % 6) + 1}`}>
+            <div key={draft.id} role="listitem" className={`border-b border-border animate-slideUp stagger-${(i % 6) + 1}`}>
               <button
                 onClick={() => goTo({ type: 'compose', draftId: draft.id })}
                 className="w-full text-left px-4 py-3 hover:bg-surface transition-colors"

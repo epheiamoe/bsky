@@ -32,7 +32,7 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmC
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
   return (
-    <nav className="flex flex-col py-4 px-3 gap-1 flex-1">
+    <nav className="flex flex-col py-4 px-3 gap-1 flex-1" aria-label="Main">
       {SIDEBAR_TABS.map((tab) => {
         const isActive = tab.type === 'profile'
           ? currentView.type === 'profile'

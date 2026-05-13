@@ -128,6 +128,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         )}
 
         <div
+          role="list"
           style={{
             height: `${virtualizer.getTotalSize()}px`,
             width: '100%',
@@ -155,6 +156,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   }
                 }}
                 data-index={virtualItem.index}
+                role="listitem"
               >
                 <PostCard
                   post={post}

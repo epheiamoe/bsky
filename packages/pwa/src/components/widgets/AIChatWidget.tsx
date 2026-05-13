@@ -195,6 +195,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('ai.placeholder')}
+            aria-label={t('a11y.aiInput')}
             disabled={loading}
             rows={1}
             className="flex-1 resize-none rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 px-3 py-1.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 max-h-16"

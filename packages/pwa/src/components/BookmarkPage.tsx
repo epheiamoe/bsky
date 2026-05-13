@@ -53,7 +53,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : bookmarks.length > 0 ? (
-        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const post = bookmarks[vi.index]!;
@@ -66,8 +66,9 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     position: 'absolute', top: 0, left: 0,
                     transform: `translateY(${vi.start}px)`, width: '100%',
                   }}
-                  className="relative group"
-                >
+            className="relative group"
+            role="listitem"
+          >
                   <PostCard
                     post={post}
                     onClick={() => goTo({ type: 'thread', uri: post.uri })}
