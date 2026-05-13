@@ -99,7 +99,7 @@
 - **色弱友好调色板**：可选 `.cvd` 模式将 红/绿/黄 映射为 品红/蓝绿/琥珀，覆盖三类色觉缺陷
 - **AI ALT — 图像替代文本**：使用视觉模型为图片生成 ALT 描述。覆盖动态流、帖子详情、资料页、搜索、书签
 
-<img src="assets/illustration/AI-alt.png" alt="" aria-hidden="true" width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
+![AI ALT](assets/illustration/AI-alt.png)
 
 ---
 
