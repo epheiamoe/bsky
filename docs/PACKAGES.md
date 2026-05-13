@@ -179,6 +179,43 @@ Hash-based SPA routing (`useHashRouter.ts`):
 
 ---
 
+## `packages/mcp` — MCP Server (npm: `@epheiamoe/bsky-mcp`)
+
+**Not part of the monorepo build chain** — this package is a standalone npm distribution. Depends on `@bsky/core` at dev time only (bundled via esbuild at build time).
+
+**Exports**: None (it's a CLI tool, not a library).
+
+**Key files**:
+
+| File | Purpose |
+|------|---------|
+| `src/server.ts` | MCP stdio server: `Server` + `StdioServerTransport` + request handlers (`ListToolsRequestSchema`, `CallToolRequestSchema`) |
+| `src/tools.ts` | Tool mapping: `createTools(client)` → MCP schema + handler wrapper + write gating |
+| `src/config.ts` | Env var loading: `BSKY_HANDLE`, `BSKY_APP_PASSWORD`, `BSKY_PDS`, `BSKY_ENABLE_WRITE` |
+| `src/index.ts` | CLI entry point |
+| `esbuild.config.mjs` | Bundle config: bundles `@bsky/core` + `@bsky/ddg-search`, externalizes `@modelcontextprotocol/sdk`/`dotenv`/`ky` |
+
+**Dependencies** (runtime): `@modelcontextprotocol/sdk`, `dotenv`, `ky`.
+**Dependencies** (dev): `@bsky/core` (workspace:*, bundled at build), `esbuild`, `typescript`.
+
+**Architecture**:
+```
+@bsky/core (BskyClient + 33 tools)  ←  bundled at build (esbuild)
+    └── @epheiamoe/bsky-mcp (MCP stdio server)
+            └── External MCP clients (OpenCode, Claude Desktop, VS Code, etc.)
+```
+
+**Scripts**:
+```bash
+cd packages/mcp
+pnpm build         # esbuild → dist/index.js (96 KB, self-contained)
+npm publish        # publish to npm registry
+```
+
+See `docs/MCP.md` for full implementation record, lessons, and test results.
+
+---
+
 ## `packages/ddg-search` — DuckDuckGo HTML Parser
 
 **Exports** (`src/index.ts`):

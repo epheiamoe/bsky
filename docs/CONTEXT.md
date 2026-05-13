@@ -10,7 +10,8 @@
 4. **`docs/ARCHITECTURE.md`** — 系统架构
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
-7. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
+7. **`docs/MCP.md`** — MCP 服务器实现记录（架构/教训/限制/测试）
+8. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
 8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
 9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
 10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
@@ -25,7 +26,7 @@
 
 ## 版本
 
-**v0.12.0** — 回复限制（Threadgate）支持。`app.bsky.feed.threadgate` 全链路实现：Core 类型+Client 方法 → App hooks+工具函数 → PWA Compose/ThreadView/ThreadgateEditor → TUI g/R 键 → AI create_post 参数+回复前检查。发帖后自动导航到新帖子。`break-all` → `break-words` 解决单词断裂。`sourceRects: DOMRect[]` 数组存储每张图片的 grid 位置，退出动画正确飞回当前图片位置。`useEffect` 加 `if (open)` guard 防止关闭时重置 `current`。`AnimatePresence mode="wait"` 加回图片切换滑动动画。点击穿透 / 飞走 / 打不开 三问题全部修复。Animation System 文档 `docs/ANIMATIONS.md`。framer-motion v12.38.0。
+**v0.13.0** — MCP 服务器。`@epheiamoe/bsky-mcp` 包（npm 发布）通过 Model Context Protocol 将 33 个 Bluesky 工具暴露给外部 AI 客户端（OpenCode、Claude Desktop、VS Code 等）。esbuild 自包含构建（96 KB），零 UI，纯 Node.js stdio 传输。已通过 OpenCode 测试 8 个工具 7 个类别。启动器脚本 `scripts/start-mcp.mjs` 在启动 MCP 服务器前从 `.env` 加载凭据。
 
 ## 项目状态
 

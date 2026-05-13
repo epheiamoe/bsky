@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] — 2026-05-13
+
+### Added
+
+- **MCP Server (`@epheiamoe/bsky-mcp`)**: New package `packages/mcp` — exposes all 33 Bluesky AI tools to external MCP clients (OpenCode, Claude Desktop, VS Code, Cursor, Windsurf) via the Model Context Protocol.
+  - **33 tools**: 27 read (timeline, search, profiles, lists, threads, notifications, web search, Wikipedia) + 6 write (create post, like, repost, follow, lists) gated by `BSKY_ENABLE_WRITE=true`.
+  - **Zero UI, zero React** — depends on `@bsky/core` at dev time only (bundled via esbuild).
+  - **Self-contained**: esbuild bundles `@bsky/core` + `@bsky/ddg-search` into a single 96 KB `dist/index.js`. Only 3 runtime npm deps (`@modelcontextprotocol/sdk`, `dotenv`, `ky`).
+  - **Published to npm**: `npm install -g @epheiamoe/bsky-mcp` → `bsky-mcp` command available globally.
+  - **OpenCode integration**: `opencode.jsonc` + `scripts/start-mcp.mjs` launcher auto-loads `.env` credentials. Tested with 8 tools across 7 categories.
+- **OpenCode project config**: `opencode.jsonc` at repo root with bsky MCP server definition. Uses launcher script `scripts/start-mcp.mjs` to load `.env` before starting the MCP subprocess.
+
+### Changed
+
+- **Architecture diagram** updated: `@epheiamoe/bsky-mcp` branches directly from `@bsky/core` (bypasses `@bsky/app` — no UI layer needed).
+- **README** now highlights AI web search tools (search_web_ddg, search_wikipedia, fetch_web_markdown) — all zero API key, zero configuration.
+
+### Docs
+
+- **`docs/MCP.md`**: Full implementation record — architecture, build pipeline, handler adapter, write gating, OpenCode integration, test results, 6 lessons, future work.
+- **`docs/archive/MCP_PLAN.md`**: Original planning document (archived after implementation).
+- **`docs/PACKAGES.md`**: Added `@epheiamoe/bsky-mcp` section.
+- **`docs/ARCHITECTURE.md`**: Updated dependency flow diagram with MCP branch.
+- **`docs/CONTEXT.md`**: v0.13.0 version entry + MCP docs link.
+
 ## [0.12.2] — 2026-05-12
 
 ### Fixed

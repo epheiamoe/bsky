@@ -22,6 +22,32 @@ Go to [Settings > App Passwords](https://bsky.app/settings/app-passwords) and cr
 
 ### 2. Configure your MCP client
 
+#### OpenCode (simplest — auto-loads from project `.env`)
+
+If you're using this from the [ai-bsky](https://github.com/epheiamoe/bsky) repository, the included `opencode.jsonc` already uses the launcher script `scripts/start-mcp.mjs` that reads your `.env` file. No manual env var setup needed.
+
+For other projects, add to your `opencode.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "bsky": {
+      "type": "local",
+      "command": ["npx", "-y", "@epheiamoe/bsky-mcp"],
+      "enabled": true,
+      "environment": {
+        "BSKY_HANDLE": "your-handle.bsky.social",
+        "BSKY_APP_PASSWORD": "xxxx-xxxx-xxxx-xxxx",
+        "BSKY_ENABLE_WRITE": "true"
+      }
+    }
+  }
+}
+```
+
+Or use `{env:VAR}` references if you prefer managing credentials via system environment.
+
 #### Claude Desktop
 
 Edit `claude_desktop_config.json`:

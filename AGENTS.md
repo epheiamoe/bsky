@@ -11,14 +11,16 @@
 
 ## Project Overview
 
-Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Monorepo with 4 packages.
+Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Monorepo with 5 packages (4 buildable + 1 npm).
 
 ```
 @bsky/core ──→ @bsky/app ──→ @bsky/tui (terminal)
-                          └─→ @bsky/pwa (browser)
+   │                      └─→ @bsky/pwa (browser)
+   │
+   └── @epheiamoe/bsky-mcp (npm: MCP server for external AI clients)
 ```
 
-**Golden rule**: Business logic lives ONCE in `core` + `app`. TUI and PWA only write render layers.
+**Golden rule**: Business logic lives ONCE in `core` + `app`. TUI, PWA, and MCP only write render/transport layers.
 
 ## Critical Safety Rules
 
@@ -43,6 +45,9 @@ cd packages/tui && npx tsx src/cli.ts
 # PWA
 cd packages/pwa && pnpm dev     # http://localhost:5173
 
+# MCP Server (local dev)
+cd packages/mcp && pnpm build   # → dist/index.js
+
 # Tests (real API calls, no mocks)
 cd packages/core && npx vitest run --config vitest.config.ts
 ```
@@ -59,7 +64,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | 6 | `docs/PWA_GUIDE.md` | PWA architecture, component mapping, deployment |
 | 7 | `docs/AI_SYSTEM.md` | AI integration: tools, streaming, translation |
 | 8 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
-| 9 | `docs/DM.md` | DM private messaging docs |
+| 9 | `docs/MCP.md` | MCP server implementation record, lessons, test results |
+| 10 | `docs/DM.md` | DM private messaging docs |
 | 10 | `docs/SCROLL.md` | Virtual scroll + scroll restoration spec |
 | 11 | `docs/SCROLL_DEBUG.md` | Scroll loss postmortem — root cause analysis, failed approaches, final fix |
 | 11 | `docs/LESSONS.md` | Key lessons from each session |

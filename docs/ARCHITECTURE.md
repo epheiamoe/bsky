@@ -68,12 +68,13 @@ bsky/
 │ core     │  BskyClient | AIAssistant | 33 tools | types
 └────┬─────┘
      │
-┌────▼─────┐
-│ @bsky/   │  React hooks + 纯 stores (PWA 可直接复用)
-│ app      │  useAuth | useNavigation | useTimeline | useThread
-│          │  useAIChat | useChatHistory | useTranslation
-│          │  useBookmarks | ChatStorage interface | FileChatStorage
-└────┬─────┘
+     ├──────────────────────────────────────┐
+     │                                      │
+┌────▼─────┐                          ┌─────▼──────┐
+│ @bsky/   │  React hooks + 纯 stores │ @epheiamoe/ │  MCP stdio server
+│ app      │  useAuth | useTimeline   │ bsky-mcp    │  33 tools → external AI
+│          │  useAIChat | hooks       │             │  npm published
+└────┬─────┘                          └─────────────┘
      │
      ├──────────────────────────┐
      │                          │
