@@ -3,13 +3,8 @@
   "mcp": {
     "bsky": {
       "type": "local",
-      "command": ["npx", "-y", "@epheiamoe/bsky-mcp"],
-      "enabled": true,
-      "environment": {
-        "BSKY_HANDLE": "{env:BLUESKY_HANDLE}",
-        "BSKY_APP_PASSWORD": "{env:BLUESKY_APP_PASSWORD}",
-        "BSKY_ENABLE_WRITE": "true"
-      }
+      "command": ["node", "scripts/start-mcp.mjs"],
+      "enabled": true
     }
   }
 }
