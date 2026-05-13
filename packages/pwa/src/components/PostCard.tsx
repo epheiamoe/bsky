@@ -205,19 +205,29 @@ function ImageGrid({ images, imageDescCallback }: {
       return;
     }
     setAltPopup(prev => prev ? { ...prev, aiLoading: true, aiError: undefined } : null);
-    try {
-      const result = await imageDescCallback(i, img.url, img.alt);
-      if (!result || !result.trim()) {
-        setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: t('a11y.altErrorEmptyResponse') } : null);
+    const MAX_RETRIES = 4;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await imageDescCallback(i, img.url, img.alt);
+        if (!result || !result.trim()) {
+          setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: t('a11y.altErrorEmptyResponse') } : null);
+          return;
+        }
+        _altCache.set(img.url, result);
+        setAltPopup(prev => prev ? { ...prev, aiText: result, aiLoading: false, aiError: undefined } : null);
+        return;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        const is429 = msg.includes('429');
+        if (is429 && attempt < MAX_RETRIES) {
+          setAltPopup(prev => prev ? { ...prev, aiLoading: true, aiError: t('a11y.altRateLimited', { attempt, max: MAX_RETRIES }) } : null);
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+          continue;
+        }
+        const friendly = msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
+        setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: friendly } : null);
         return;
       }
-      _altCache.set(img.url, result);
-      setAltPopup(prev => prev ? { ...prev, aiText: result, aiLoading: false } : null);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      // Map common errors to user-friendly messages
-      const friendly = msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
-      setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: friendly } : null);
     }
   };
 

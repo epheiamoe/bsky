@@ -642,17 +642,17 @@ export class BskyClient {
   }
 
   async downloadBlob(did: string, cid: string): Promise<Uint8Array> {
+    // Try bsky.social proxy first — handles cross-shard blobs, most common case
     try {
-      const res = await this.ky.get('com.atproto.sync.getBlob', {
+      const proxyKy = this.ky.extend({ prefixUrl: 'https://bsky.social/xrpc' });
+      const res = await proxyKy.get('com.atproto.sync.getBlob', {
         searchParams: { did, cid },
         timeout: 30000,
       });
       return new Uint8Array(await res.arrayBuffer());
     } catch {
-      // PDS shard cannot serve this blob (cross-shard, RepoNotFound, etc.)
-      // Fall back to bsky.social proxy which routes to the correct shard
-      const fallbackKy = this.ky.extend({ prefixUrl: 'https://bsky.social/xrpc' });
-      const res = await fallbackKy.get('com.atproto.sync.getBlob', {
+      // Fall back to direct PDS (works for same-shard blobs)
+      const res = await this.ky.get('com.atproto.sync.getBlob', {
         searchParams: { did, cid },
         timeout: 30000,
       });

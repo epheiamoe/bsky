@@ -362,6 +362,7 @@ const en: LocaleMessages = {
   'a11y.altOriginal': 'Original ALT',
   'a11y.altNoOriginal': 'No ALT text provided',
   'a11y.altRegenerate': 'Regenerate',
+  'a11y.altRateLimited': 'Rate limited — retrying ({attempt}/{max})',
   'a11y.altError': 'Failed to generate description',
   'a11y.altErrorAuth': 'Authentication failed. Check your API key.',
   'a11y.altErrorNetwork': 'Network error. Check your connection.',

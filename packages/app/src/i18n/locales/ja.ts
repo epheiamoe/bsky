@@ -362,6 +362,7 @@ const ja: LocaleMessages = {
   'a11y.altOriginal': '元のALT',
   'a11y.altNoOriginal': 'ALTテキストなし',
   'a11y.altRegenerate': '再生成',
+  'a11y.altRateLimited': 'レート制限 — リトライ中（{attempt}/{max}）',
   'a11y.altError': '説明の生成に失敗しました',
   'a11y.altErrorAuth': '認証に失敗しました。APIキーを確認してください。',
   'a11y.altErrorNetwork': 'ネットワークエラー。接続を確認してください。',

@@ -403,6 +403,7 @@ const zh: LocaleMessages = {
   'a11y.altOriginal': '原始 ALT',
   'a11y.altNoOriginal': '未提供 ALT 文字',
   'a11y.altRegenerate': '重新生成',
+  'a11y.altRateLimited': '达到速率限制，正在重试（{attempt}/{max}）',
   'a11y.altError': '生成描述失败',
   'a11y.altErrorAuth': '认证失败。请检查您的 API Key 是否正确。',
   'a11y.altErrorNetwork': '网络错误。请检查网络连接。',
