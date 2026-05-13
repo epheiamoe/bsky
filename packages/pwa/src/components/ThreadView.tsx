@@ -281,12 +281,12 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             {/* Unified action row + extras */}
             <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
               <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-              {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors"><Icon name="languages" size={18} /></button>}
-              <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors"><Icon name="copy" size={18} /></button>
-              <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')}><Icon name="badge-info" size={18} /></button>
+              {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
+              <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
+              <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
               {focused.handle === client.getHandle() && (
                 <>
-                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')}><Icon name="message-square-off" size={18} /></button>
+                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')}><Icon name="message-square-off" size={18} /></button>
                   <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
                 </>
               )}
@@ -380,7 +380,7 @@ function PostInfoModal({ open, post, onClose }: { open: boolean; post: PostView;
       <div className="max-w-lg" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-base font-bold text-text-primary">{t('post.info')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5" aria-label={t('a11y.close')}><Icon name="x" size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>

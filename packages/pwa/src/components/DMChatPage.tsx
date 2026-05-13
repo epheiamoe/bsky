@@ -156,7 +156,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
     <div className="flex flex-col h-full animate-fadeIn">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Back">
+        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('a11y.back')}>
           <Icon name="arrow-big-left" size={20} />
         </button>
         <div
@@ -179,7 +179,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
             <Icon name="bell" size={16} filled={!convo.muted} />
           </button>
         )}
-        <button onClick={() => refresh()} className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Refresh">
+        <button onClick={() => refresh()} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('action.refresh')}>
           <Icon name="refresh-cw" size={16} />
         </button>
       </div>
@@ -234,7 +234,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                       onClick={() => handleDelete(msgView.id)}
                       disabled={deleting === msgView.id}
                       className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 rounded-full p-0.5 shadow text-red-500 hover:text-red-600"
-                      aria-label="Delete message"
+                      aria-label={t('a11y.deleteMessage')}
                     >
                       <Icon name="trash-2" size={12} />
                     </button>
@@ -263,7 +263,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                   <button
                     onClick={() => handleReactionClick(msgView.id)}
                     className="text-xs px-1.5 py-0.5 rounded-full bg-surface border border-border text-text-secondary hover:bg-primary/10 transition-colors"
-                    aria-label="Add reaction"
+                    aria-label={t('a11y.addReaction')}
                   >
                     <Icon name="smile" size={14} />
                   </button>
@@ -291,7 +291,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
                     <button
                       onClick={() => { setActiveReactionMsgId(null); setShowEmojiConfig(true); }}
                       className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/10 text-primary transition-colors"
-                      title="Configure quick emojis"
+                      title={t('a11y.configureEmojis')}
                     >
                       <Icon name="plus" size={14} />
                     </button>

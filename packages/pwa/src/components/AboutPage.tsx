@@ -46,7 +46,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
   return (
     <div className="min-h-[100dvh] bg-background animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border px-4 h-12 flex items-center">
-        <button onClick={goBack} className="text-text-secondary hover:text-text-primary mr-3">
+        <button onClick={goBack} className="text-text-secondary hover:text-text-primary mr-3" aria-label={t('a11y.back')}>
           <Icon name="arrow-big-left" size={20} />
         </button>
         <h1 className="font-semibold text-text-primary text-sm">{t('nav.about')}</h1>
@@ -80,7 +80,7 @@ const buildTime = typeof __BUILD_TIME__ !== 'undefined'
               <p className="text-text-secondary text-xs font-medium uppercase tracking-wider">{t('about.commit')}</p>
               <div className="flex items-center gap-2 mt-1">
                 <code className="text-text-primary text-xs break-all bg-surface border border-border rounded px-2 py-1 inline-block max-w-full">{commitHash}</code>
-                <button onClick={() => navigator.clipboard.writeText(commitHash)} className="shrink-0 text-text-secondary hover:text-primary transition-colors" title="Copy commit hash">
+                <button onClick={() => navigator.clipboard.writeText(commitHash)} className="shrink-0 text-text-secondary hover:text-primary transition-colors" title={t('a11y.copyCommitHash')}>
                   <Icon name="copy" size={14} />
                 </button>
               </div>

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 interface VideoData {
@@ -9,6 +10,7 @@ interface VideoData {
 }
 
 export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: VideoData) {
+  const { t } = useI18n();
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -117,7 +119,7 @@ export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: Video
           <button
             onClick={handlePlay}
             className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
-            aria-label="Play video"
+            aria-label={t('a11y.playVideo')}
           >
             <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg hover:bg-white transition-colors">
               <Icon name="video" size={24} className="text-gray-800 ml-1" />

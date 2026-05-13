@@ -157,6 +157,8 @@ export function Layout({
 
   return (
     <div className="min-h-[100dvh] bg-background text-text-primary font-sans">
+      {/* Screen reader announcement region for view transitions and AI agents */}
+      <div aria-live="polite" className="sr-only" aria-atomic="true" />
       {/* ── Header ── */}
       <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border" aria-label={t('a11y.mainNav')}>
         <div className="flex items-center gap-3 w-full">

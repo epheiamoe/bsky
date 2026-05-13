@@ -141,7 +141,7 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
       <div className="relative bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
           <h2 className="text-lg font-semibold text-text-primary">{t('feed.configureFeeds')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1"><Icon name="x" size={16} /></button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1" aria-label={t('a11y.close')}><Icon name="x" size={16} /></button>
         </div>
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           <div>

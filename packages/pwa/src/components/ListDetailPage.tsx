@@ -117,7 +117,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                 {isOwnList && !editingName && (
                   <button onClick={() => { setEditName(list.name); setEditingName(true); }}
                     className="text-text-secondary/40 hover:text-primary transition-colors shrink-0"
-                    title="Edit name" aria-label="Edit name">
+                    title={t('a11y.editName')} aria-label={t('a11y.editName')}>
                     <Icon name="pencil" size={14} />
                   </button>
                 )}
@@ -158,7 +158,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                 {isOwnList && !editingDesc && (
                   <button onClick={() => { setEditDesc(list.description || ''); setEditingDesc(true); }}
                     className="text-text-secondary/40 hover:text-primary transition-colors shrink-0 mt-0.5"
-                    title="Edit description" aria-label="Edit description">
+                    title={t('a11y.editDescription')} aria-label={t('a11y.editDescription')}>
                     <Icon name="pencil" size={14} />
                   </button>
                 )}

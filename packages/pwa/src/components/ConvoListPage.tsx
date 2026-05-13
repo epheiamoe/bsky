@@ -87,7 +87,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
     <div className="flex flex-col h-full animate-fadeIn">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label="Back">
+        <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('a11y.back')}>
           <Icon name="arrow-big-left" size={20} />
         </button>
         <span className="text-lg font-semibold text-text-primary flex-1">{t('nav.dm')}</span>
@@ -95,7 +95,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
           onClick={handleRefresh}
           disabled={refreshing || loading}
           className={`text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50 ${refreshing ? 'animate-spin' : ''}`}
-          aria-label="Refresh"
+          aria-label={t('action.refresh')}
         >
           <Icon name="refresh-cw" size={18} />
         </button>

@@ -107,6 +107,7 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary transition-colors text-lg"
+            aria-label={t('a11y.back')}
           >
             <Icon name="arrow-big-left" size={20} />
           </button>

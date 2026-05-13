@@ -147,7 +147,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
       <div className="bg-white dark:bg-[#121212] rounded-xl shadow-xl border border-border w-full max-w-md max-h-[80vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border sticky top-0 bg-white dark:bg-[#121212] z-10">
           <h2 className="text-lg font-semibold text-text-primary">{t('settings.title')}</h2>
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1"><Icon name="x" size={16} /></button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary text-xl leading-none p-1" aria-label={t('a11y.close')}><Icon name="x" size={16} /></button>
         </div>
 
         <div className="flex border-b border-border">

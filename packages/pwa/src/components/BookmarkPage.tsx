@@ -28,6 +28,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary transition-colors"
+            aria-label={t('a11y.back')}
           >
             <Icon name="arrow-big-left" size={20} />
           </button>

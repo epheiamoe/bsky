@@ -95,7 +95,7 @@ export function PostActionsRow({ client, goTo, post, showBookmark, isBookmarked,
         </button>
       )}
       {/* AI Analysis */}
-      <button onClick={(e) => { e.stopPropagation(); openAIAnalysis(goTo, client, post.uri); }} className="hover:text-purple-500 transition-colors btn-press" title="AI Analysis">
+      <button onClick={(e) => { e.stopPropagation(); openAIAnalysis(goTo, client, post.uri); }} className="hover:text-purple-500 transition-colors btn-press" title={t('a11y.aiAnalysis')}>
         <Icon name="astroid-as-AI-Button" size={18} />
       </button>
     </div>

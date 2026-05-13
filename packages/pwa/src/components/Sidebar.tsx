@@ -52,6 +52,7 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmC
                 ? 'bg-primary/10 text-primary font-semibold border-primary'
                 : 'text-text-secondary hover:bg-surface border-transparent'
             }`}
+            aria-current={isActive ? 'page' : undefined}
           >
             <Icon name={tab.icon} size={20} className="mr-2" />
             <span className="flex-1">{t(tab.key)}</span>

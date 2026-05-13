@@ -66,7 +66,7 @@ export function EditProfileModal({ client, profile, onClose, onSaved }: EditProf
     <Modal open onClose={onClose} variant="bottom-sheet">
       <div className="bg-background rounded-t-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <button onClick={onClose} className="text-text-secondary hover:text-text-primary"><Icon name="arrow-big-left" size={20} /></button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary" aria-label={t('a11y.back')}><Icon name="arrow-big-left" size={20} /></button>
           <span className="font-semibold text-text-primary">{t('profile.editProfile')}</span>
           <button onClick={handleSave} disabled={saving} className="text-primary font-semibold text-sm disabled:opacity-50">
             {saving ? t('common.loading') : t('dm.send')}
