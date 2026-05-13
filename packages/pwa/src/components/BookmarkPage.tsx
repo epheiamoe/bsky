@@ -76,7 +76,6 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     onClick={() => goTo({ type: 'thread', uri: post.uri })}
                     goTo={goTo}
                     imageDescConfig={imageDescConfig}
-                    client={client}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
                   </PostCard>

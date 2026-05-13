@@ -256,19 +256,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             {focused.imageDetails?.length > 0 && (
               <ImageGrid
                 images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                  const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                  if (!m) throw new Error('Could not parse image URL');
-                  const did = decodeURIComponent(m[1]!);
-                  const cid = decodeURIComponent(m[2]!);
-                  const data = await client.downloadBlob(did, cid);
-                  let mime = 'image/jpeg';
-                  if (data.length >= 4) {
-                    if (data[0] === 0x89 && data[1] === 0x50) mime = 'image/png';
-                    else if (data[0] === 0x47 && data[1] === 0x49) mime = 'image/gif';
-                  }
-                  return describeImage(imageDescConfig, data, mime, alt);
-                } : undefined}
+                imageDescCallback={imageDescConfig ? (index, cdnUrl, alt) => describeImage(imageDescConfig, cdnUrl, alt) : undefined}
               />
             )}
             {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
@@ -338,7 +326,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
               goTo={goTo}
               imageDescConfig={imageDescConfig}
-              client={client}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                     </PostCard>

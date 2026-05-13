@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import type { PostView, AIConfig, BskyClient } from '@bsky/core';
+import type { PostView, AIConfig } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
@@ -352,8 +352,6 @@ interface PostCardBaseProps {
   repostBy?: string;
   /** If set, enables AI-generated ALT text via callback in ImageGrid */
   imageDescConfig?: AIConfig;
-  /** Client for downloading image blobs (needed for AI ALT generation) */
-  client?: BskyClient | null;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -368,7 +366,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, client }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -483,21 +481,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
             {linkifyText(text)}
           </p>
-          {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-            // Parse DID + CID from CDN URL: /img/feed_fullsize/plain/did:plc:xxx/cid@jpeg
-            const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-            if (!m) throw new Error('Could not parse image URL');
-            const did = decodeURIComponent(m[1]!);
-            const cid = decodeURIComponent(m[2]!);
-            const data = await client.downloadBlob(did, cid);
-            // Detect mime from magic bytes (same as tools.ts detectMimeType)
-            let mime = 'image/jpeg';
-            if (data.length >= 4) {
-              if (data[0] === 0x89 && data[1] === 0x50) mime = 'image/png';
-              else if (data[0] === 0x47 && data[1] === 0x49) mime = 'image/gif';
-            }
-            return describeImage(imageDescConfig, data, mime, alt);
-          } : undefined} />}
+          {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig ? (index, cdnUrl, alt) => describeImage(imageDescConfig, cdnUrl, alt) : undefined} />}
           {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
           {externalLink && (
             <a

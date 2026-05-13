@@ -870,26 +870,31 @@ export async function generateChatTitle(
 
 /**
  * Generate an accessibility-focused image description using a vision-capable model.
- * Takes raw image bytes (already downloaded, e.g. via BskyClient.downloadBlob)
- * and sends to the LLM with a multimodal message format.
- * Used for ALT text generation on Bluesky post images.
- *
- * Image download is caller's responsibility — this separates network concerns
- * (PDS vs CDN, CORS, third-party PDS) from the vision API call.
+ * Fetches the image from its URL (CDN or otherwise), converts to base64, and sends
+ * to the LLM with a multimodal message format.
  */
 export async function describeImage(
   config: AIConfig,
-  imageData: Uint8Array,
-  mimeType: string,
+  imageUrl: string,
   existingAlt?: string,
 ): Promise<string> {
-  // Base64 encode (cross-platform: Node.js Buffer or browser btoa)
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error(`Image download failed: HTTP ${res.status}`);
+  const buffer = await res.arrayBuffer();
+  const data = new Uint8Array(buffer);
+
+  let mimeType = 'image/jpeg';
+  if (data.length >= 4) {
+    if (data[0] === 0x89 && data[1] === 0x50) mimeType = 'image/png';
+    else if (data[0] === 0x47 && data[1] === 0x49) mimeType = 'image/gif';
+  }
+
   let base64: string;
   if (typeof Buffer !== 'undefined') {
-    base64 = Buffer.from(imageData).toString('base64');
+    base64 = Buffer.from(data).toString('base64');
   } else {
     let binary = '';
-    for (let i = 0; i < imageData.length; i++) binary += String.fromCharCode(imageData[i]!);
+    for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]!);
     base64 = btoa(binary);
   }
   const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -923,7 +928,7 @@ export async function describeImage(
     throw new Error(`Image description API error ${response.status}: ${errText.slice(0, 200)}`);
   }
 
-  const data = await response.json() as any;
-  const content = data?.choices?.[0]?.message?.content ?? '';
+  const respData = await response.json() as any;
+  const content = respData?.choices?.[0]?.message?.content ?? '';
   return content.trim().slice(0, 500);
 }

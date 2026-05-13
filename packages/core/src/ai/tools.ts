@@ -621,7 +621,15 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
           mimeType = upload.mimeType;
           alt = alt || upload.alt;
         } else if (p.did && p.cid) {
-          data = await client.downloadBlob(p.did as string, p.cid as string);
+          try {
+            data = await client.downloadBlob(p.did as string, p.cid as string);
+          } catch {
+            // PDS blob fetch failed (cross-PDS, rate limit, etc.) — fall back to CDN
+            const cdnUrl = `https://cdn.bsky.app/img/feed_fullsize/plain/${encodeURIComponent(p.did as string)}/${encodeURIComponent(p.cid as string)}@jpeg`;
+            const res = await fetch(cdnUrl);
+            if (!res.ok) throw new Error(`Image not available via PDS or CDN — HTTP ${res.status}`);
+            data = new Uint8Array(await res.arrayBuffer());
+          }
           mimeType = detectMimeType(data);
         } else {
           return JSON.stringify({ error: 'Provide either did+cid (for post images) or uploadIndex (for chat-uploaded images)' });

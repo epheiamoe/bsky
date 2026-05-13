@@ -164,7 +164,6 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
                   imageDescConfig={imageDescConfig}
-                  client={client}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>
