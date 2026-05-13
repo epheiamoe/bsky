@@ -215,13 +215,7 @@ function ImageGrid({ images, imageDescCallback }: {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       // Map common errors to user-friendly messages
-      let friendly = msg;
-      if (msg.startsWith('MISSING_API_KEY:')) {
-        friendly = t('a11y.altErrorNoKey', { model: msg.slice('MISSING_API_KEY:'.length) });
-      } else if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('Invalid API')) friendly = t('a11y.altErrorAuth');
-      else if (msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('Network')) friendly = t('a11y.altErrorNetwork');
-      else if (msg.includes('vision') || msg.includes('multimodal')) friendly = t('a11y.altErrorNoVision');
-      else if (msg.length > 80) friendly = msg.slice(0, 80) + '…';
+      const friendly = msg.length > 120 ? msg.slice(0, 120) + '…' : msg;
       setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: friendly } : null);
     }
   };

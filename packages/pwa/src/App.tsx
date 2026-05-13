@@ -108,7 +108,9 @@ export function App() {
     aiChat: resolveScenarioConfig(appConfig.scenarioModels?.aiChat || ''),
     translate: resolveScenarioConfig(appConfig.scenarioModels?.translate || ''),
     polish: resolveScenarioConfig(appConfig.scenarioModels?.polish || ''),
-    imageDescription: resolveScenarioConfig(appConfig.scenarioModels?.imageDescription || ''),
+    imageDescription: appConfig.scenarioModels?.imageDescription
+      ? resolveScenarioConfig(appConfig.scenarioModels.imageDescription)
+      : undefined,
   }), [resolveScenarioConfig, appConfig.scenarioModels]);
 
   const effectiveAiConfig = useMemo(() => ({

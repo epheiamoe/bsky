@@ -883,11 +883,6 @@ export async function describeImage(
   mimeType: string,
   existingAlt?: string,
 ): Promise<string> {
-  // Pre-check: missing API key gives clear error instead of confusing network failure
-  if (!config.apiKey || !config.apiKey.trim()) {
-    throw new Error(`MISSING_API_KEY:${config.model}`);
-  }
-
   // Base64 encode (cross-platform: Node.js Buffer or browser btoa)
   let base64: string;
   if (typeof Buffer !== 'undefined') {
