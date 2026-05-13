@@ -163,6 +163,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
               <PostCard post={item}
                 onClick={() => goTo({ type: 'thread', uri: item.uri })} goTo={goTo}
                 imageDescConfig={imageDescConfig}
+                client={client}
               >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostCard>

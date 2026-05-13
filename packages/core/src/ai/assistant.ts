@@ -870,18 +870,15 @@ export async function generateChatTitle(
 
 /**
  * Generate an accessibility-focused image description using a vision-capable model.
- * Fetches the image from its URL (CDN or otherwise), converts to base64, and sends
- * to the LLM with a multimodal message format.
+ * The caller provides a download function (e.g. BskyClient.downloadBlob) — this
+ * keeps image fetching in the same path as view_image and avoids CDN CORS issues.
  */
 export async function describeImage(
   config: AIConfig,
-  imageUrl: string,
+  downloadFn: () => Promise<Uint8Array>,
   existingAlt?: string,
 ): Promise<string> {
-  const res = await fetch(imageUrl);
-  if (!res.ok) throw new Error(`Image download failed: HTTP ${res.status}`);
-  const buffer = await res.arrayBuffer();
-  const data = new Uint8Array(buffer);
+  const data = await downloadFn();
 
   let mimeType = 'image/jpeg';
   if (data.length >= 4) {
