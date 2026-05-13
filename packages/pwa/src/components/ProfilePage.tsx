@@ -475,6 +475,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   goTo={goTo}
                   repostBy={repostReasons[post.uri]}
                   imageDescConfig={imageDescConfig}
+                  client={client}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

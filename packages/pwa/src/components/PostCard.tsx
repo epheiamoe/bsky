@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
-import type { PostView, AIConfig } from '@bsky/core';
+import type { PostView, AIConfig, BskyClient } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
@@ -216,9 +216,9 @@ function ImageGrid({ images, imageDescCallback }: {
       const msg = e instanceof Error ? e.message : String(e);
       // Map common errors to user-friendly messages
       let friendly = msg;
-      if (msg.includes('401') || msg.includes('Unauthorized') || msg.includes('Invalid API')) friendly = t('a11y.altErrorAuth');
-      else if (msg.includes('Failed to fetch image') || msg.includes('network')) friendly = t('a11y.altErrorNetwork');
-      else if (msg.includes('does not support') || msg.includes('vision')) friendly = t('a11y.altErrorNoVision');
+      if (msg.includes('401') || msg.includes('403') || msg.includes('Unauthorized') || msg.includes('Invalid API')) friendly = t('a11y.altErrorAuth');
+      else if (msg.includes('Failed to fetch') || msg.includes('network') || msg.includes('Network')) friendly = t('a11y.altErrorNetwork');
+      else if (msg.includes('vision') || msg.includes('multimodal')) friendly = t('a11y.altErrorNoVision');
       else if (msg.length > 80) friendly = msg.slice(0, 80) + '…';
       setAltPopup(prev => prev ? { ...prev, aiLoading: false, aiError: friendly } : null);
     }
@@ -356,6 +356,8 @@ interface PostCardBaseProps {
   repostBy?: string;
   /** If set, enables AI-generated ALT text via callback in ImageGrid */
   imageDescConfig?: AIConfig;
+  /** Client for downloading image blobs (needed for AI ALT generation) */
+  client?: BskyClient | null;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -370,7 +372,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, client }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -485,7 +487,20 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
             {linkifyText(text)}
           </p>
-          {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig ? (index, cdnUrl, alt) => describeImage(imageDescConfig, cdnUrl, alt) : undefined} />}
+          {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+            // Parse DID + CID from CDN URL: /img/feed_fullsize/plain/did:plc:xxx/cid@jpeg
+            const m = cdnUrl.match(/\/plain\/(did:[^/]+)\/([^@]+)/);
+            if (!m) throw new Error('Could not parse image URL');
+            const [, did, cid] = m;
+            const data = await client.downloadBlob(did!, cid!);
+            // Detect mime from magic bytes (same as tools.ts detectMimeType)
+            let mime = 'image/jpeg';
+            if (data.length >= 4) {
+              if (data[0] === 0x89 && data[1] === 0x50) mime = 'image/png';
+              else if (data[0] === 0x47 && data[1] === 0x49) mime = 'image/gif';
+            }
+            return describeImage(imageDescConfig, data, mime, alt);
+          } : undefined} />}
           {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
           {externalLink && (
             <a

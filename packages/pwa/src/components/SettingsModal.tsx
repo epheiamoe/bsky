@@ -318,34 +318,33 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
 
           {tab === 'scenario' && (
             <>
-              <p className="text-text-secondary text-xs">Assign models to different scenarios. Leave blank to use the default AI model.</p>
+              <p className="text-text-secondary text-xs">{t('settings.scenarioDesc')}</p>
               {(['aiChat', 'translate', 'polish', 'imageDescription'] as const).map(scenario => {
                 const isImageDesc = scenario === 'imageDescription';
-                const label = scenario === 'aiChat' ? 'AI Chat' : scenario === 'translate' ? 'Translation' : scenario === 'polish' ? 'Draft Polish' : 'Image ALT (vision required)';
-                // For image description, only show vision-capable models
+                const labelKey = scenario === 'aiChat' ? 'settings.scenario.aiChat' : scenario === 'translate' ? 'settings.scenario.translate' : scenario === 'polish' ? 'settings.scenario.polish' : 'settings.scenario.imageDescription';
                 const options = isImageDesc
                   ? PROVIDERS.flatMap(p => p.models.filter(m => m.vision).map(m => ({ p, m })))
                   : PROVIDERS.flatMap(p => p.models.map(m => ({ p, m })));
                 return (
                   <div key={scenario}>
-                    <label className="text-xs text-text-secondary mb-1 block">{label}</label>
+                    <label className="text-xs text-text-secondary mb-1 block">{t(labelKey)}</label>
                     <div className="flex gap-2">
                       <select
                         value={scenarioModels[scenario]}
                         onChange={e => setScenarioModels(prev => ({ ...prev, [scenario]: e.target.value }))}
                         className="flex-1 px-3 py-2 rounded-lg border border-border bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                       >
-                        <option value="">Same as default</option>
+                        <option value="">{isImageDesc ? t('settings.scenario.imageAltOff') : t('settings.scenario.sameAsDefault')}</option>
                         {options.map(({ p, m }) => (
                           <option key={`${p.id}/${m.id}`} value={`${p.id}/${m.id}`}>{p.label} / {m.label}</option>
                         ))}
                         {isImageDesc && options.length === 0 && (
-                          <option value="" disabled>— No vision-capable models available —</option>
+                          <option value="" disabled>— {t('settings.scenario.noVisionModels')} —</option>
                         )}
                       </select>
                     </div>
                     {isImageDesc && (
-                      <p className="text-[10px] text-text-secondary mt-1">Use AI to generate ALT text for images that lack it. Only vision-capable models are eligible.</p>
+                      <p className="text-[10px] text-text-secondary mt-1">{t('settings.scenario.imageAltDesc')}</p>
                     )}
                   </div>
                 );

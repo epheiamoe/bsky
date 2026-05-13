@@ -2,6 +2,7 @@ import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
+import { describeImage } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
@@ -253,7 +254,21 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               </div>
             )}
             {focused.imageDetails?.length > 0 && (
-              <ImageGrid images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))} />
+              <ImageGrid
+                images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                  const m = cdnUrl.match(/\/plain\/(did:[^/]+)\/([^@]+)/);
+                  if (!m) throw new Error('Could not parse image URL');
+                  const [, did, cid] = m;
+                  const data = await client.downloadBlob(did!, cid!);
+                  let mime = 'image/jpeg';
+                  if (data.length >= 4) {
+                    if (data[0] === 0x89 && data[1] === 0x50) mime = 'image/png';
+                    else if (data[0] === 0x47 && data[1] === 0x49) mime = 'image/gif';
+                  }
+                  return describeImage(imageDescConfig, data, mime, alt);
+                } : undefined}
+              />
             )}
             {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
               <VideoCard
@@ -322,6 +337,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
               goTo={goTo}
               imageDescConfig={imageDescConfig}
+              client={client}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                     </PostCard>
