@@ -127,6 +127,18 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 ---
 
+## 🦯 无障碍支持
+
+为所有人打造——屏幕阅读器用户、色弱用户、AI 代理。
+
+- **屏幕阅读器语义**：规范的地标标签、列表角色、每个交互元素的 `aria-label`，动态 `<html lang>` 和页面标题
+- **色弱友好调色板**：可选 `.cvd` 模式将 红/绿/黄 映射为 品红/蓝绿/琥珀，覆盖三类色觉缺陷
+- **AI ALT — 图像替代文本**：使用视觉模型为图片生成 ALT 描述。覆盖动态流、帖子详情、资料页、搜索、书签
+
+<img src="assets/illustration/AI-alt.png" alt="AI ALT 功能演示：一张狗狗照片带有 ALT 徽章。点击打开弹窗，显示「原始 ALT：一只狗站在草地上」。下方显示「AI 生成描述：一只金毛犬站在绿色草地上，背景是蓝天白云，它正朝着镜头开心地看。」以及重新生成按钮。" width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
+
+---
+
 ## 🔒 隐私
 
 一切在你的浏览器中运行。你的 Bluesky 凭据、API Key 和对话内容不会接触任何外部服务器。所有请求直接从你的设备发往 Bluesky 或你选择的 AI 提供商。无需信任，无从泄露。
@@ -150,4 +162,4 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.13.0** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.13.1** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

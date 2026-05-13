@@ -127,6 +127,18 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 ---
 
+## 🦯 Accessibility
+
+Built for everyone — screen reader users, color-blind users, and AI agents.
+
+- **Screen reader semantics**: proper landmarks, list roles, `aria-label` on every interactive element, dynamic `<html lang>` and page titles
+- **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types
+- **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks.
+
+<img src="assets/illustration/AI-alt.png" alt="AI ALT feature: a photo of a dog with ALT badge. Clicking opens a modal showing 'Original ALT: A dog standing on grass'. Below, 'AI-generated description: A golden retriever standing on green grass under a clear blue sky, looking at the camera with a happy expression.' with a Regenerate button." width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
+
+---
+
 ## 🔒 Privacy
 
 Everything runs in your browser. Your Bluesky credentials, API keys, and conversations never touch our servers. Every request goes directly from your device to Bluesky or the AI provider you choose. Nothing to trust — nothing to leak.
@@ -150,4 +162,4 @@ Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.13.0** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.13.1** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
