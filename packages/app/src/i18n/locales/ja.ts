@@ -367,6 +367,7 @@ const ja: LocaleMessages = {
   'a11y.altErrorNetwork': 'ネットワークエラー。接続を確認してください。',
   'a11y.altErrorNoVision': '選択されたモデルはビジョンに対応していません。ビジョン対応モデルを選択してください。',
   'a11y.altErrorEmptyResponse': 'AIが空の応答を返しました。もう一度お試しください。',
+  'a11y.altErrorNoKey': '{model} のAPIキーが設定されていません。設定→AIで追加してください。',
   'a11y.pageFeed': 'フィード',
   'a11y.pageProfile': 'プロフィール',
   'a11y.pageThread': 'スレッド',

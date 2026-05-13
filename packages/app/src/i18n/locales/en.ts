@@ -367,6 +367,7 @@ const en: LocaleMessages = {
   'a11y.altErrorNetwork': 'Network error. Check your connection.',
   'a11y.altErrorNoVision': 'The selected model does not support vision. Choose a vision-capable model.',
   'a11y.altErrorEmptyResponse': 'The AI returned an empty response. Try again.',
+  'a11y.altErrorNoKey': 'No API key configured for {model}. Add it in Settings → AI.',
   'a11y.pageFeed': 'Feed',
   'a11y.pageProfile': 'Profile page',
   'a11y.pageThread': 'Thread page',

@@ -408,6 +408,7 @@ const zh: LocaleMessages = {
   'a11y.altErrorNetwork': '网络错误。请检查网络连接。',
   'a11y.altErrorNoVision': '所选模型不支持视觉功能。请选择支持视觉的模型。',
   'a11y.altErrorEmptyResponse': 'AI 返回了空响应。请重试。',
+  'a11y.altErrorNoKey': '未配置 {model} 的 API Key。请在设置→AI中添加。',
   'a11y.pageFeed': '动态页',
   'a11y.pageProfile': '资料页',
   'a11y.pageThread': '帖子详情页',
