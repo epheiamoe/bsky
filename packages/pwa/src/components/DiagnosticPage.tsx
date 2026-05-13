@@ -20,10 +20,10 @@ export function DiagnosticPage({ client, goBack }: { client: BskyClient | null; 
   const updateResult = (name: string, update: Partial<TestResult>) =>
     setResults(prev => prev.map(r => r.name === name ? { ...r, ...update } : r));
 
-  // Collect session data
+  // Session info via client API
   const session = getSession();
   const cfg = getAppConfig();
-  const handle = session?.handle ?? '(not logged in)';
+  const handle = client?.getHandle?.() ?? '(not logged in)';
   const pdsUrl = client?.pdsUrl ?? '(unknown)';
   const jwt = session?.accessJwt ?? '';
   const imageDescModel = cfg.scenarioModels?.imageDescription || '(off)';
@@ -35,7 +35,7 @@ export function DiagnosticPage({ client, goBack }: { client: BskyClient | null; 
     if (!client) return;
     (async () => {
       try {
-        const timeline = await (client as any).ky.get('app.bsky.feed.getTimeline', {
+        const timeline = await (client as any).publicKy.get('app.bsky.feed.getTimeline', {
           searchParams: { limit: 10 },
         }).json();
         for (const item of timeline?.feed ?? []) {
