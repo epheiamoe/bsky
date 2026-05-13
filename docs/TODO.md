@@ -65,6 +65,9 @@
 | **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩, TUI: sharp, PWA: Canvas API |
 | **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |
 | **WCAG 1.4.1 合规** | N/A | ✅ | PostActionsRow aria-pressed + 加粗计数; 所有横幅 role="alert"/"status"; 连接文本标签 |
+| **屏幕阅读器支持** | N/A | ✅ | 语义HTML(landmark/label/list), ARIA(aria-pressed/expanded/current/live), 焦点管理(Modal trap/skip-link), 动态lang/title |
+| **AI ALT 图像描述** | N/A | ✅ | 设置→场景→AI ALT选视觉模型, describeImage(downloadFn, targetLang), alt badge显示+Modal弹窗+缓存 |
+| **MCP Server** | ✅ | ✅ | 已完成 v0.13.0 |
 
 ## 图例
 

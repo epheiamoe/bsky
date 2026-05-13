@@ -9,19 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **AI ALT — AI image description generation**: Configurable in Settings → Scenario → AI ALT. Uses a vision-capable model to generate ALT text for images. Only vision-capable models are eligible in the dropdown. Language follows the Translation & AI ALT Language setting.
+  - **ImageGrid**: ALT badge now visible on all images when configured (ALT or ALT?). Tooltip-style popup replaced with proper Modal. Module-level cache by CDN URL for cross-view dedup.
+  - **describeImage()** in `@bsky/core`: accepts a `downloadFn` callback (caller provides BskyClient.downloadBlob) — same PDS download path as `view_image`, with `withRefresh` JWT auto-refresh. Supports `targetLang` parameter for locale-aware descriptions.
+  - **6 scenario i18n keys**: `settings.scenarioDesc`, `settings.scenario.{aiChat,translate,polish,imageDescription}`, `settings.scenario.{sameAsDefault,noVisionModels,imageAltDesc,imageAltOff}`.
 - **CVD-friendly color palette**: Settings → General toggle remaps red→magenta, green→teal, yellow→amber for color vision deficiency (deuteranopia, protanopia, tritanopia). `.cvd` class on `<html>`, 32 CSS override rules, `.dark.cvd` combinator for dark mode.
 - **`--color-background` CSS variable**: 24 `bg-white dark:bg-[#0A0A0A]` → `bg-background` across 16 component files. Enables future themes without touching components.
+- **33 a11y i18n keys**: screen reader + AI agent support — landmark labels, button names, error messages, loading states, page announcements.
+- **10 scenario i18n keys**: full localization of the previously hardcoded Scenario tab.
+- **Diagnostic page** (`#/diagnostic`): tests CDN fetch, PDS getBlob, bsky.social getBlob, and LLM API error CORS.
 
 ### Fixed
 
-- **PostActionsRow WCAG 1.4.1**: `aria-pressed` on like/repost/bookmark buttons; repost count bold when active; i18n-ized `title` attributes.
-- **Connectivity dot**: 8px color-only dot → dot + visible "Connected"/"Disconnected" text.
-- **Error/warning/success banners**: `role="alert"` added to 11 error + 4 warning banners; `role="status"` to 2 success toasts across 15+ component files.
+- **WCAG Semantics (Phase 1)**: Removed nested `<main>` from 5 pages (invalid HTML). Added `aria-label` to Layout header, both `<aside>` elements, Sidebar `<nav>`. Added `role="list"/"listitem"` to 6 virtual-scroll components. Dynamic `<html lang>` on locale change. `aria-label` on 5 textareas. Skip-to-content link in index.html. Modal `role="dialog"` with focus trap, Tab cycling, and focus save/restore. Dynamic `document.title` per view. `h2`→`h1` for ProfilePage display name.
+- **WCAG 1.4.1 (Phase 2)**: `aria-pressed` on PostActionsRow like/repost/bookmark buttons. Repost count `font-bold` when active (repost has no filled icon variant). `aria-label` on 28 icon-only buttons (back, close, translate, copy, info, threadgate, delete, refresh). 11 hardcoded English `aria-label`/`title` strings i18n-ized. `aria-current="page"` on active sidebar navigation. `aria-live="polite"` region for view announcements. Connectivity dot → dot + visible text label. `role="alert"` on 11 error + 4 warning banners; `role="status"` on 2 success toasts across 15+ component files.
+- **downloadBlob**: Switched from raw `ky.get()` (no `withRefresh`) to `this.ky.get()` — eliminates expired JWT errors on blob downloads. Same path as all other authenticated API calls.
+- **Modal**: Uses `createPortal(document.body)` to escape virtual scroll `transform` containers. Backdrop/outer-wrapper clicks call `e.stopPropagation()` to prevent React fiber tree propagation to parent `onClick` handlers.
+- **view_image**: Added CDN fallback when PDS `downloadBlob` fails (cross-shard blob 400).
+
+### Changed
+
+- `describeImage` signature: `(config, downloadFn, existingAlt?, targetLang?)` — caller handles download (same pattern as `view_image`), targetLang from AppConfig controls output language.
+- `P_ALT_DESCRIPTION_SYSTEM` changed from `const` to function — accepts `targetLang` for locale-aware prompt.
+- **ALT popup** → `Modal` component — proper focus trap, Escape key, stable viewport positioning, no scroll-following.
+- **Settings→Scenario tab** fully i18n-ized — was entirely hardcoded English.
+- `settings.targetLang` renamed to `Translation & AI ALT Language`.
+- Image ALT dropdown first option shows "Off" instead of "Same as default" for clarity.
 
 ### i18n
 
-- **28 missing keys restored** to `en.ts` + `ja.ts`: all settings/theme/common keys (were showing raw key names for English/Japanese UI).
-- **New CVD keys**: `settings.cvdMode`, `theme.cvdOn`, `theme.cvdOff` in all 3 locales.
+- **28 missing settings/theme/common keys** restored to `en.ts` + `ja.ts`.
+- **New CVD keys**: `settings.cvdMode`, `theme.cvdOn`, `theme.cvdOff`.
+- **New a11y keys**: 33 screen-reader + AI agent support keys (`a11y.*`).
+- **New scenario keys**: 10 scenario tab i18n keys.
+- **New AI ALT keys**: 7 ALT generation keys (`a11y.alt*`) + 4 error-specific keys.
+- **`post.imageAlt` + `post.imageCount`** added to `en.ts` + `ja.ts` (were missing).
+- **`settings.targetLang`** renamed across all 3 locales.
 
 ## [0.13.0] — 2026-05-13
 

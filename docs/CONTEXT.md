@@ -26,7 +26,7 @@
 
 ## 版本
 
-**v0.13.1** — 色弱友好主题 + WCAG 1.4.1 合规。`settings.cvdMode` 切换 → `.cvd` class 将红/绿/黄替换为品红/蓝绿/琥珀（三类色觉缺陷均可区分）。PostActionsRow 新增 `aria-pressed` + 转发已激活时加粗计数 + i18n 标题。15+ 组件横幅新增 `role="alert"/"status"`。连接状态圆点改为文本标签。28 个缺失的 en/ja i18n 键已恢复。
+**v0.13.1** — 综合无障碍提升：屏幕阅读器支持（WCAG 语义 HTML + ARIA + 焦点管理）+ 色弱友好调色板 + **AI ALT 图像描述生成**（视觉模型为图片生成替代文本）。Modal 改为 createPortal + stopPropagation。downloadBlob 改为 this.ky（自动 JWT 刷新）。设置场景 Tab 国际化。33 个 a11y i18n 键 + 10 个场景 i18n 键 + 7 个 AI ALT 键。PostCard 回调模式：describeImage(downloadFn) 与 view_image 共享同一 PDS 下载路径。
 
 **v0.13.0** — MCP 服务器。`@epheiamoe/bsky-mcp` 包（npm 发布）通过 Model Context Protocol 将 33 个 Bluesky 工具暴露给外部 AI 客户端（OpenCode、Claude Desktop、VS Code 等）。esbuild 自包含构建（96 KB），零 UI，纯 Node.js stdio 传输。已通过 OpenCode 测试 8 个工具 7 个类别。启动器脚本 `scripts/start-mcp.mjs` 在启动 MCP 服务器前从 `.env` 加载凭据。
 

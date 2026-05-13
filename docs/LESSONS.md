@@ -596,17 +596,27 @@ await new Promise((resolve, reject) => {
 4. **深色模式组合选择器在 CSS 中为 `.dark.cvd`**（两个 class 均作用于 `<html>`），而非 `.cvd .dark`。`.dark` 和 `.cvd` 是平级的，都会影响同一个元素。
 5. **i18n 键缺失导致运行时显示原始键名**：当 UI 语言设为英语或日语时，28 个缺失的设置/主题/通用键显示为 `settings.title`、`theme.switchDark` 等原始文本。只有 `zh.ts` 存在这些键。即使缺失，React 也不会产生控制台错误——UI 仅静默显示原始键文本。在合并前进行键审计至关重要。
 
-## 架构升级（本次会话新增）
 
-| 组件 | 位置 | 说明 |
-|------|------|------|
-| `100dvh` 替换 `100vh` | 全部 24 处 | `min-h-screen`→`min-h-[100dvh]`，`h-[calc(100vh)]`→`h-[calc(100dvh)]` |
-| `overscroll-behavior` | `index.css` | `html { overscroll-behavior: none }` |
-| `safe-area-inset-bottom` | `index.css` | `body { padding-bottom: env(safe-area-inset-bottom) }` |
-| `settingsOpen` 提升到 App | `App.tsx` / `Layout.tsx` | WelcomeCard "去设置"能正常打开设置弹窗 |
-| 登录错误日志 | `LoginPage.tsx` + 多文件 | 详细错误面板 + 一键复制 |
-| autoSave 写队列 | `useAIChat.ts` | `saveQueueRef` Promise 链串行化 IndexedDB 写入 |
+### Lesson 53: PDS blob download needs `this.ky` (JWT auto-refresh)
 
-## 版本
+**问题**：`BskyClient.downloadBlob()` 使用原始 `ky.get(url, { headers: this.getAuthHeaders() })` — 不经过 `this.ky`（带 `withRefresh` hook 的 `ky.create` 实例）。从 localStorage 恢复的 session JWT 可能已过期，`downloadBlob` 直接失败返回 400 ExpiredToken，无自动刷新。
 
-**v0.10.0** — 零密钥知识查询（instant_answer + search_wikipedia）+ Pages Function 代理 + 38 个 AI 工具
+**修复**：`downloadBlob` 改用 `this.ky.get('com.atproto.sync.getBlob', { searchParams })`。`this.ky` 的 `afterResponse` hook 在 401/400 上触发 `withRefresh` → 刷新 JWT → 重试请求。与所有其他 XRPC 调用共享同一路径。
+
+**教训**：
+1. 所有认证请求必须通过 `this.ky` — 不可用原始 `ky.get()` 手动加 auth header
+2. CDN（`cdn.bsky.app`）对 `<img>` 可用，但不支持 `fetch()` CORS
+
+### Lesson 54: React events bubble through fiber tree, not DOM — Modal portal + propagation
+
+**问题**：ALT Modal 使用 `createPortal(document.body)` 后，点击背景仍触发 PostCard 的 `onClick` → 导航。
+
+**根因**：React 合成事件沿 **Fiber 树**（组件层级）冒泡，非 DOM 树。Portal 解决 CSS 包含块问题，不解决事件冒泡。
+
+**修复**：Modal 背景 + 居中包装器的点击均调用 `e.stopPropagation()`。
+
+**教训**：
+1. Portal 解决 CSS 问题（`fixed` 在 `transform` 内相对定位），React Fiber 树解决事件问题——两正交问题
+2. 调试时先隔离错误来源——诊断页面正确区分了 CDN CORS vs. LLM API CORS vs. PDS JWT 过期
+
+## 架构升级（v0.13.1）
