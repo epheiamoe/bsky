@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] — 2026-05-13
+
+### Added
+
+- **CVD-friendly color palette**: Settings → General toggle remaps red→magenta, green→teal, yellow→amber for color vision deficiency (deuteranopia, protanopia, tritanopia). `.cvd` class on `<html>`, 32 CSS override rules, `.dark.cvd` combinator for dark mode.
+- **`--color-background` CSS variable**: 24 `bg-white dark:bg-[#0A0A0A]` → `bg-background` across 16 component files. Enables future themes without touching components.
+
+### Fixed
+
+- **PostActionsRow WCAG 1.4.1**: `aria-pressed` on like/repost/bookmark buttons; repost count bold when active; i18n-ized `title` attributes.
+- **Connectivity dot**: 8px color-only dot → dot + visible "Connected"/"Disconnected" text.
+- **Error/warning/success banners**: `role="alert"` added to 11 error + 4 warning banners; `role="status"` to 2 success toasts across 15+ component files.
+
+### i18n
+
+- **28 missing keys restored** to `en.ts` + `ja.ts`: all settings/theme/common keys (were showing raw key names for English/Japanese UI).
+- **New CVD keys**: `settings.cvdMode`, `theme.cvdOn`, `theme.cvdOff` in all 3 locales.
+
 ## [0.13.0] — 2026-05-13
 
 ### Added

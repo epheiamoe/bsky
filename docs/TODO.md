@@ -63,6 +63,8 @@
 | **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral, per-provider API keys, per-scenario model config |
 | **思考/视觉模式** | ✅ | ✅ | 从 ModelInfo 自动派生，自定义模型手动设置 |
 | **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩, TUI: sharp, PWA: Canvas API |
+| **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |
+| **WCAG 1.4.1 合规** | N/A | ✅ | PostActionsRow aria-pressed + 加粗计数; 所有横幅 role="alert"/"status"; 连接文本标签 |
 
 ## 图例
 

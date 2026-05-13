@@ -98,7 +98,9 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - **PWA routing**: `useHashRouter()` — `history.pushState` + `popstate`, format `#/view?param=value`
 - **PWA timeline**: `useTimeline` held at App.tsx level (persists across navigation), virtual scroll via `@tanstack/react-virtual`
 - **Images**: Bluesky CDN `cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}@{ext}`. (Old PDS blob endpoint required JWT; CDN serves inline, works in `<img>` and OSC 8 terminals.)
-- **Tailwind**: Colors use CSS variables (`var(--color-primary)`). `@apply` doesn't work with opacity modifiers on CSS variables — use plain CSS instead.
+- **Tailwind**: Colors use CSS variables (`var(--color-primary)`). `@apply` doesn't work with opacity modifiers on CSS variables — use plain CSS instead. The `--color-background` variable replaces all `bg-white dark:bg-[#0A0A0A]` patterns — use `bg-background` for page/chrome backgrounds.
+- **CVD-friendly palette**: `.cvd` class on `<html>` maps red→magenta (`#C2185B`), green→teal (`#00897B`), yellow→amber (`#E65100`). Toggle in Settings → General. 32 CSS override rules target Tailwind's `text-red-*`/`text-green-*`/`text-yellow-*` classes. Dark mode combo handled via `.dark.cvd`. When adding new color-dependent UI, ensure a non-color cue exists (text, icon, font-bold, aria-pressed) — do NOT rely on red/green/yellow alone.
+- **WCAG 1.4.1 compliance**: PostActionsRow uses `aria-pressed` + bold count for repost; error banners use `role="alert"`; success toasts use `role="status"`. All new toggle buttons MUST include `aria-pressed`. All new error/success banners MUST include `role`.
 - **PWA stubs**: `fs`, `os`, `path` are stubbed via Vite alias (FileChatStorage's Node imports that are never called in browser)
 - **ChatStorage interface**: TUI uses `FileChatStorage` (JSON files), PWA uses `IndexedDBChatStorage` (IndexedDB). Write operations go through `ChatService` (module-level singleton, debounced, empty guard)
 - **Keyboard shortcuts**: Full reference at `docs/KEYBOARD.md`. When adding NEW shortcuts, you MUST:

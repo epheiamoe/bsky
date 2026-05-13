@@ -580,6 +580,22 @@ await new Promise((resolve, reject) => {
 
 **教训**：异步 I/O 竞态不能靠"写入后检查"解决——写入本身不可逆。必须用 Promise 链（写队列）保证顺序，并在写入前做版本校验。
 
+### Lesson 52: CVD-friendly color palette architecture
+
+**问题**：DESIGN.md 声称 100% WCAG 2.1 AA 合规，但 PostActionsRow 用纯颜色（红/绿/黄）区分 like/repost/bookmark 状态；连接状态圆点为 8px 纯颜色；零 `role="alert"` 属性。颜色是色觉缺陷用户的唯一信息源。
+
+**解决**：
+- **阶段 A**（始终生效）：修复 WCAG 1.4.1 违规。PostActionsRow 为所有 3 个按钮新增 `aria-pressed`；repost 已激活时计数文字加粗（无 filled 图标变体）；title 属性国际化（`action.like/liked` 等）。连接状态圆点改为圆点 + 可见文本"已连接/未连接"。15+ 个组件中新增 `role="alert"`（错误/警告横幅）和 `role="status"`（成功 toast 和草稿标签）。
+- **阶段 B**（可选切换）：新增 `.cvd` class，用 CSS 变量将 Tailwind 的红/绿/黄工具类映射为品红（`#C2185B`）/ 蓝绿（`#00897B`）/ 琥珀（`#E65100`）——三种色觉缺陷类型均可区分的色觉安全三元组。32 条 CSS 覆盖规则处理 `.cvd` 和 `.dark.cvd` 组合。`cvdMode: boolean` 存储在 `AppConfig` 中，App.tsx 挂载时同步，设置弹窗中提供复选框。
+- **基础设施**：新增 `--color-background` CSS 变量，替换 16 个组件文件中的 24 处 `bg-white dark:bg-[#0A0A0A]` → `bg-background`。实现无需逐个组件修改的主题切换。
+
+**教训**：
+1. **色觉友好的 UI 需要双重编码**：不应仅用颜色传达信息，也不应仅依赖调色板切换。正确的做法是两步：非颜色线索（加粗、`aria-pressed`、文本标签）+ 调色板作为额外保障。
+2. **CSS 变量使主题切换架构面向未来**：在引入 `--color-background` 前，所有页面背景色以 `bg-white dark:bg-[#0A0A0A]` 硬编码。现在任何新主题（高对比度、暖色/冷色模式）都可以通过仅修改 `index.css` 实现——无需重新触碰任何组件。
+3. **`.cvd .text-red-500` 在不使用 `!important` 的情况下覆盖 Tailwind 工具类**，因为 `.cvd .text-red-500` 的特异性（0 2 0）高于 Tailwind 生成的（0 1 0）。无需使用 `!important`。
+4. **深色模式组合选择器在 CSS 中为 `.dark.cvd`**（两个 class 均作用于 `<html>`），而非 `.cvd .dark`。`.dark` 和 `.cvd` 是平级的，都会影响同一个元素。
+5. **i18n 键缺失导致运行时显示原始键名**：当 UI 语言设为英语或日语时，28 个缺失的设置/主题/通用键显示为 `settings.title`、`theme.switchDark` 等原始文本。只有 `zh.ts` 存在这些键。即使缺失，React 也不会产生控制台错误——UI 仅静默显示原始键文本。在合并前进行键审计至关重要。
+
 ## 架构升级（本次会话新增）
 
 | 组件 | 位置 | 说明 |

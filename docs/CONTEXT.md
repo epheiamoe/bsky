@@ -26,6 +26,8 @@
 
 ## 版本
 
+**v0.13.1** — 色弱友好主题 + WCAG 1.4.1 合规。`settings.cvdMode` 切换 → `.cvd` class 将红/绿/黄替换为品红/蓝绿/琥珀（三类色觉缺陷均可区分）。PostActionsRow 新增 `aria-pressed` + 转发已激活时加粗计数 + i18n 标题。15+ 组件横幅新增 `role="alert"/"status"`。连接状态圆点改为文本标签。28 个缺失的 en/ja i18n 键已恢复。
+
 **v0.13.0** — MCP 服务器。`@epheiamoe/bsky-mcp` 包（npm 发布）通过 Model Context Protocol 将 33 个 Bluesky 工具暴露给外部 AI 客户端（OpenCode、Claude Desktop、VS Code 等）。esbuild 自包含构建（96 KB），零 UI，纯 Node.js stdio 传输。已通过 OpenCode 测试 8 个工具 7 个类别。启动器脚本 `scripts/start-mcp.mjs` 在启动 MCP 服务器前从 `.env` 加载凭据。
 
 ## 项目状态
