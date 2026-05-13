@@ -135,7 +135,7 @@ Built for everyone — screen reader users, color-blind users, and AI agents.
 - **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types
 - **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks.
 
-<img src="assets/illustration/AI-alt.png" alt="AI ALT feature: a photo of a dog with ALT badge. Clicking opens a modal showing 'Original ALT: A dog standing on grass'. Below, 'AI-generated description: A golden retriever standing on green grass under a clear blue sky, looking at the camera with a happy expression.' with a Regenerate button." width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
+<img src="assets/illustration/AI-alt.png" alt="" aria-hidden="true" width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
 
 ---
 
