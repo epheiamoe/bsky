@@ -91,6 +91,18 @@ First time here? A guided welcome card walks you through AI key setup — with s
 
 ---
 
+## 🦯 Accessibility
+
+Built for everyone — screen reader users, color-blind users, and AI agents.
+
+- **Screen reader semantics**: proper landmarks, list roles, `aria-label` on every interactive element, dynamic `<html lang>` and page titles
+- **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types
+- **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks.
+
+<img src="assets/illustration/AI-alt.png" alt="" aria-hidden="true" width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
+
+---
+
 ## 🚀 Quick Start
 
 ### Terminal (TUI)
@@ -124,18 +136,6 @@ Or install globally from npm:
 npm install -g @epheiamoe/bsky-mcp
 BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 ```
-
----
-
-## 🦯 Accessibility
-
-Built for everyone — screen reader users, color-blind users, and AI agents.
-
-- **Screen reader semantics**: proper landmarks, list roles, `aria-label` on every interactive element, dynamic `<html lang>` and page titles
-- **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types
-- **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks.
-
-<img src="assets/illustration/AI-alt.png" alt="" aria-hidden="true" width="100%" style="max-width:800px;border-radius:12px;border:1px solid var(--color-border)" />
 
 ---
 
