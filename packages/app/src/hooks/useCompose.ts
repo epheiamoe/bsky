@@ -48,7 +48,6 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
   }, []);
 
   const setPostText = useCallback((id: string, text: string) => {
-    if (text.length > 300) text = text.slice(0, 300);
     setPosts(prev => prev.map(p => p.id === id ? { ...p, text } : p));
   }, []);
 
@@ -64,7 +63,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     quoteUri,
   }), [posts, replyTo, quoteUri]);
 
-  const submit = useCallback(async (mediaMap?: Map<string, ComposeMedia[]>) => {
+  const submit = useCallback(async (mediaMap?: Map<string, ComposeMedia[]>, quoteMap?: Map<string, string>) => {
     if (!client || posts.length === 0) return;
     const nonEmptyPosts = posts.filter(p => p.text.trim());
     if (nonEmptyPosts.length === 0) return;
@@ -107,9 +106,9 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
           };
         }
 
-        // Embed: only for first post (quoteUri or media)
+        // Embed: per-post quote via quoteMap, or first post gets navigation quoteUri
         const isFirstPost = i === 0;
-        const effectiveQuoteUri = isFirstPost ? quoteUri : undefined;
+        const effectiveQuoteUri = quoteMap?.get(post.id) ?? (isFirstPost ? quoteUri : undefined);
         const media = mediaMap?.get(post.id);
         const video = media?.find(m => m.type === 'video');
         const images = media?.filter(m => m.type === 'image');
