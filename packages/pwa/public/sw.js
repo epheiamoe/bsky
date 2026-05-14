@@ -1,4 +1,5 @@
 // Bluesky Client PWA — Service Worker
+// SW_COMMIT: __COMMIT_HASH__
 const CACHE_NAME = 'bsky-v3';
 const IMG_CACHE = 'bsky-img-v1';
 const FONT_CACHE = 'bsky-font-v1';

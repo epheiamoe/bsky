@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { readFileSync, writeFileSync } from 'fs';
 import { execSync } from 'child_process';
 import pkg from './package.json' with { type: 'json' };
 
@@ -9,7 +10,16 @@ const commitDesc = execSync('git log --format=%s -1').toString().trim();
 const buildTime = new Date().toISOString();
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), {
+    name: 'sw-version',
+    closeBundle() {
+      const swPath = resolve(__dirname, 'dist/sw.js');
+      try {
+        const content = readFileSync(swPath, 'utf-8');
+        writeFileSync(swPath, content.replace('__COMMIT_HASH__', commitHash));
+      } catch { /* sw.js may not exist in dev */ }
+    },
+  }],
   base: './',
   resolve: {
     alias: {
