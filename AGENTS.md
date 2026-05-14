@@ -154,7 +154,13 @@ The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both U
 - **Pure functions** (exported for AI tool reuse): `generateSocialGraphMermaid()`, `buildSocialCircleShareText()`, `INTERACTION_WEIGHTS`
 - **No AI dependency for MVP**: Pure computation only. AI integration planned for v0.8.x.
 - **PWA only**: No TUI implementation yet.
-- **Compose pre-fill API**: Any page can call `goTo({ type: 'compose', initialText: '...' })` to navigate to compose with pre-filled text. Reusable across all features.
+- **Compose textarea**: Uses transparent textarea + background mirror div for red marking on 300+ char overflow. No `maxLength`, no `text.slice(0, 300)`. Char counter turns red with `+{N}` when over limit. Textarea has `bg-transparent focus:outline-none` (subtle X-style).
+- **Per-post quote in threads**: `postQuoteUris: Map<postId, uri>` — each thread post can independently quote a different AT URI. The `quoteMap` param in `useCompose.submit(mediaMap, quoteMap)`. Always use `submit(mediaMap, quoteMap)` where quoteMap can be undefined.
+- **Session persistence**: `AuthStore.restoreSession()` must capture `c.session` after getProfile resolves (JWT may have refreshed). App save effect gated on `profile` + reads `client.session` (canonical source). See auth.ts line 78.
+- **Single image aspect-ratio**: Container width computed via JS in `useEffect` (avoiding CSS `fit-content` circular dependency). Max ratio clamped 0.5–2 (1:2 portrait ~ 2:1 landscape). Left-aligned via `flex items-start`.
+- **Shared extractEmbeds**: ALL embed extraction goes through `@bsky/app` shared utils: `extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`. NEVER inline extraction in consumers. Single source of truth at `packages/app/src/utils/extractEmbeds.ts`.
+- **Upload progress modal**: Step-level progress (media/posting/done/error), not per-file percentage. State: `SubmitProgress { phase, current, total, message }`.
+- **Reply compose**: Fetches parent chain via `getPostThread(replyTo, 3, 0)`. Displays replyToPost + ancestors using ThreadView discussion source style (`opacity-60 bg-surface/20 rounded-xl`). Old `@handle` text replaced by card.
 - **Data limitations**: Only incoming interactions analyzed. Reply authors not resolved. Default 50-post window (adjustable 30-100).
 - **Share to Bluesky**: Button at results bottom → locale-aware text (3 languages) → compose pre-fill.
 - **Key files**: `packages/app/src/hooks/useSocialCircle.ts`, `packages/pwa/src/components/AtPlaySocialCircle.tsx`, `packages/pwa/src/components/AtPlayPage.tsx`, `docs/ATPLAY.md`
@@ -200,6 +206,10 @@ npx wrangler pages deploy dist --project-name ai-bsky --branch=master
 ```
 
 For deployment on other platforms (VPS/PHP, Vercel, Netlify, Node.js), see `DEPLOY.md`.
+
+- **ImageGrid**: Extracted to `packages/pwa/src/components/ImageGrid.tsx`. Standalone component used by both PostCard and ThreadView. Contains lightbox, ALT popup, single-image aspect-ratio mode, grid mode. Module-level `_altCache` is inside this component.
+- **extractEmbeds shared utils**: ALL embed extraction goes through `packages/app/src/utils/extractEmbeds.ts`. Functions: `extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`, `extractHasGif`, `extractEmbeds`. Never inline extraction logic in consumer components.
+- **Compose redesign patterns**: Textarea uses transparent overlay + mirror div for 300+ char red marking. Per-post quote via `postQuoteUris Map`. Upload progress via `SubmitProgress { phase, current, total, message }` state. Reply uses `getPostThread(replyTo, 3, 0)` to fetch parent chain.
 
 ## Environment
 

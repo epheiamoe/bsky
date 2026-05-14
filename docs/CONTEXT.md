@@ -26,6 +26,8 @@
 
 ## 版本
 
+**v0.13.2** — 发帖页重构（自动增高 textarea、300+红色标记、淡化输入框、帖子串独立引用、回复讨论源样式、引用卡片 PostCard 样式、动画、上传进度弹窗）。Session 持久化修复（JWT 刷新后更新 auth store）。单图宽高比模式（设置切换 + 左对齐 + 容器适应内容 + 1:2~2:1 限制）。`ImageGrid` 独立组件 + `extractEmbeds` 共享工具库（删除 4 份副本，-260 行）。
+
 **v0.13.1** — 综合无障碍提升：WCAG 4.1.1（语义 HTML）+ 4.1.2（表单标签关联、aria-expanded/describedby/invalid/progressbar）+ 1.4.1（颜色+状态双重编码）+ 色弱友好调色板 + **AI ALT 图像描述生成**。_authHook 自动注入 Authorization。downloadBlob bsky.social 代理回退 + 429 指数退避重试。Modal createPortal + stopPropagation。设置场景 Tab 国际化。
 
 **v0.13.0** — MCP 服务器。`@epheiamoe/bsky-mcp` 包（npm 发布）通过 Model Context Protocol 将 33 个 Bluesky 工具暴露给外部 AI 客户端（OpenCode、Claude Desktop、VS Code 等）。esbuild 自包含构建（96 KB），零 UI，纯 Node.js stdio 传输。已通过 OpenCode 测试 8 个工具 7 个类别。启动器脚本 `scripts/start-mcp.mjs` 在启动 MCP 服务器前从 `.env` 加载凭据。
@@ -297,6 +299,18 @@
 **修复**：将 `withRefresh` 存储为 `this._withRefresh` 实例属性，重建 `this.ky` 时传入同一引用。
 **教训**：闭包引用在对象重建时必须作为实例属性保存，而非局部变量。
 
+### 46. AuthStore.restoreSession() 不捕获 JWT 刷新后的 token
+**根因**：`store.session` 设为旧 token 后 `_withRefresh` 成功刷新了 `client.session`，但 `store.session` 从未更新。
+**修复**：`auth.ts` 的 `.then()` 中加 `store.session = c.session`；`App.tsx` 保存效果用 `profile` 守卫 + 从 `client.session` 读取（权威源）。
+
+### 47. 发帖页 300 字符截断改为红色标记
+**根因**：`textarea maxLength={300}` + `text.slice(0, 300)` 硬截断用户输入。
+**修复**：移除 `maxLength` 和 `slice`，使用透明 textarea + 背景镜像 div 渲染前 300 字正常、超出部分红色。
+
+### 48. `fit-content` + `overflow: hidden` 循环依赖导致容器宽高异常
+**根因**：CSS `width: fit-content` + 子节点 `maxWidth: 100%` 形成循环依赖，浏览器无法正确计算容器尺寸。
+**修复**：放弃 CSS 方案，改用 JS `useEffect` 在图片加载后根据 `imgAspectRatio`、`maxHeight`、父容器宽度精确计算容器尺寸，直接设置 `width`。
+
 ---
 
 ## 🔑 关键架构模式
@@ -377,6 +391,18 @@ if (embed?.$type === 'app.bsky.embed.record#view') {
 const embed = post.record.embed; // 只有 {uri, cid}
 ```
 
+### 共享图片/视频/引用提取（v0.13.2）
+所有 embed 提取逻辑集中在 `packages/app/src/utils/extractEmbeds.ts`：
+```
+extractImages(post)      → ExtractImage[]     // handle #view + recordWithMedia
+extractVideo(post)       → ExtractVideo | null
+extractExternalLink(post)→ ExtractExternalLink | null
+extractQuotedPost(post)  → ExtractQuotedPost | null
+extractHasGif(post)      → boolean
+extractEmbeds(post)      → { images, video, external, hasGif }
+```
+4 个消费者全部调用共享函数，不支持内联提取。新增 embed 格式处理只需改一个文件。
+
 ### 导航 + 默认 feed
 ```typescript
 // PWA useHashRouter.ts
@@ -424,6 +450,8 @@ cd packages/core && npx vitest run --config vitest.config.ts
 24. 涉及重复数据时使用 PDS 层 API（`listRecords`）而非 AppView（`getList`），因为 AppView 会去重。见 LESSONS.md Lesson 13
 25. 构建时注入的元数据（commit hash）必须在 commit 之后构建，否则 About 页面显示旧 hash。流程：commit → build → deploy
 26. 新增 `requiresWrite` AI 工具时必须同步添加 `buildToolDescription` case，否则确认弹窗显示原始 JSON
+27. 所有 embed 提取使用 `@bsky/app` 的共享 `extractImages`/`extractVideo`/`extractExternalLink`/`extractQuotedPost`，禁止任何消费者内联实现
+28. 单图宽高比容器用 JS 计算尺寸（`useEffect`）而非 CSS `fit-content`/`aspect-ratio`，避免循环依赖
 
 ## 关键文件速查
 

@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.2] — 2026-05-14
+
+### Added
+
+- **Compose page redesign (8 features)**:
+  - **Auto-growing textarea**: `scrollHeight`-based resize, no fixed height. `min-height: 56px`.
+  - **300+ char red overlay marking**: Transparent textarea + background mirror div. First 300 chars normal, overflow in `<span class="text-red-500">`. No hard truncation — `maxLength={300}` and `text.slice(0, 300)` removed from `useCompose.ts`.
+  - **Subtle X-style input**: `bg-transparent focus:outline-none` — no border, no background, no focus ring. Parent card provides structural boundary.
+  - **Per-post quote in threads (`postQuoteUris: Map<postId, uri>`)**: Each thread post can independently quote a different AT URI via inline input field. Submit passes `quoteMap` to `useCompose.submit()`.
+  - **Reply shows parent post (discussion source)**: Fetches full parent chain via `getPostThread(replyTo, 3, 0)`. Displays `replyToPost` + ancestors using ThreadView discussion source style (`opacity-60 bg-surface/20 rounded-xl`).
+  - **Quote card PostCard style**: `rounded-xl p-3 bg-surface`, `w-4 h-4` avatar, `w-16 h-16` thumbs, hover effects, click-to-navigate.
+  - **Animations**: `animate-slideUp` on new thread posts, `animate-fadeIn` on quote/reply previews, `transition-all` on cards and banners.
+  - **Upload progress modal**: Step-level progress bar with phase transitions (media/posting/error), spinner/checkmark/cross icons.
+- **Session persistence fix**: `AuthStore.restoreSession()` now updates `store.session = c.session` after JWT refresh completes. `App.tsx` save effect gated on `profile` + reads from `client.session` (canonical source). Prevents stale token overwrite on browser reopen.
+- **Single image aspect-ratio mode**: New `singleImageFill` setting (default true = fixed-height crop). When disabled, single images render at natural aspect ratio, capped at max 1:2 (portrait) / 2:1 (landscape) with left-aligned layout. Container width computed from JS to shrink-wrap content.
+- **ImageGrid extracted to own component**: Removed from `PostCard.tsx` (was ~210 lines inlined). Now `packages/pwa/src/components/ImageGrid.tsx` — standalone component with lightbox, ALT popup, single-image mode, grid mode.
+- **Shared extractEmbeds utils**: `packages/app/src/utils/extractEmbeds.ts` — 6 pure functions (`extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`, `extractHasGif`, `extractEmbeds`). Handles both `post.record.embed` (stored) and `(post as any).embed` (resolved `#view`) formats.
+
+### Removed (~260 lines of duplicated code)
+
+| Location | Removed | Lines |
+|----------|---------|-------|
+| `PostCard.tsx` | `extractEmbeds()` + `extractQuotedPost()` | 55 |
+| `useThread.ts` | `getImageDetails()` + `getQuotedPost()` + `getVideoInfo()` + `getExternalLink()` | 120 |
+| `PostItem.tsx` (TUI) | inline `extract()` + video/quote parsing | 35 |
+| `ComposePage.tsx` | `extractQuotePreviews()` | 28 |
+
+### i18n
+
+- **`settings.singleImageFill`** in en/zh/ja — "Fill single images (higher density)"
+- **10 compose keys** in en/zh/ja: `compose.overLimit`, `compose.uploadProgress`, `compose.postProgress`, `compose.posted`, `compose.viewPost`, `compose.addQuote`, `compose.quotePlaceholder`, `compose.quoteInvalid`, `compose.quoteRemove`
+
 ## [0.13.1] — 2026-05-13
 
 ### Added

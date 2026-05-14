@@ -9,7 +9,7 @@
 | **登录/认证** | ✅ | ✅ | TUI: .env + bsky-tui.config.json, PWA: localStorage session + JWT auto-refresh |
 | **时间线** | ✅ | ✅ | 虚拟滚动 + IntersectionObserver 自动加载 |
 | **讨论串** | ✅ | ✅ | 讨论源 + 回复树 + 嵌套回复 + 引用预览 + 回复展开 |
-| **发帖/回复** | ✅ | ✅ | 文本 300 字符 + 帖子串(多帖顺序发布) + 图片/视频上传(最多 4 图/1 视频, 2MB/100MB) + ALT + 引用 |
+| **发帖/回复** | ✅ | ✅ | 自动增高 textarea + 300字红色标记(非截断) + 淡化X风格输入框 + 帖子串独立引用 + 回复讨论源样式 + 引用卡片PostCard样式 + 动画 + 上传进度弹窗 |
 | **回复限制 (Threadgate)** | ✅ | ✅ | `app.bsky.feed.threadgate` — nobody/mentioned/followers/following/lists (含列表选择器); PWA: Compose 折叠面板 + ThreadView badge + ThreadgateEditor; TUI: g 键 + R 键 dialog; AI: create_post 参数 + 回复前检查 |
 | **点赞** | ✅ | ✅ | TUI: `l` 键, PWA: 按钮 |
 | **转发/引用** | ✅ | ✅ | TUI: `r` 键 → 转发/引用选择, PWA: 下拉菜单 |
@@ -30,7 +30,8 @@
 | **首次设置向导** | ✅ | N/A | TUI: 提供商/模型下拉选择, 写 .env + bsky-tui.config.json |
 | **深色/浅色主题** | N/A | ✅ | CSS 变量 + localStorage |
 | **PWA 安装** | N/A | ✅ | manifest.json + Service Worker |
-| **图片显示** | ✅ | ✅ | CDN URL 渲染, PWA: 灯箱 portal + ALT SVG 徽章 + 固定定位浮窗; TUI: OSC 8 链接 + ALT 文字完整显示 |
+| **图片显示** | ✅ | ✅ | CDN URL 渲染, PWA: 灯箱 portal + ALT SVG 徽章 + 固定定位浮窗; TUI: OSC 8 链接 + ALT 文字完整显示; 单图可选原始宽高比模式 |
+| **共享 extractEmbeds** | ✅ | ✅ | v0.13.2: extractImages/extractVideo/extractExternalLink/extractQuotedPost 集中在 @bsky/app，4 个消费者共享，删除 260 行重复代码 |
 | **视频贴** | ✅ | ✅ | PWA: VideoCard (hls.js), TUI: OSC 8 视频链接 |
 | **ALT 文本** | ✅ | ✅ | 上传时输入 + 提交前缺失警告; PWA: SVG 徽章 + 浮窗; TUI: 图片链接下完整显示 |
 | **头像显示** | ✅ | ✅ | PWA: `<img>` + 字母 fallback |
@@ -70,6 +71,7 @@
 | **AI ALT 图像描述** | N/A | ✅ | 设置→场景→AI ALT选视觉模型, describeImage(downloadFn, targetLang), alt badge显示+Modal弹窗+缓存, 429重试+bsky.social回退 |
 | **WCAG 4.1.2 表单+状态** | N/A | ✅ | htmlFor/id标签关联(14对), aria-expanded(6), aria-describedby, aria-invalid, role=progressbar, hidden input aria-label(5) |
 | **MCP Server** | ✅ | ✅ | 已完成 v0.13.0 |
+| **Session 持久化修复** | N/A | ✅ | v0.13.2: auth.ts 捕获 JWT 刷新后 token，App.tsx profile guard |
 
 ## 图例
 
