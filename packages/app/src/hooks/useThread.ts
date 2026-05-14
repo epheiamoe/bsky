@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { ThreadViewPost, NotFoundPost as NFP, PostView, ThreadgateRule, ListViewBasic } from '@bsky/core';
-import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from '../utils/imageUrl.js';
+import { extractImages, extractVideo, extractExternalLink, extractQuotedPost } from '../utils/extractEmbeds.js';
 import { isPostLiked, isPostReposted, likePost, repostPost, seedPostViewers } from './usePostActions.js';
 
 export interface FlatLine {
@@ -175,7 +175,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
 
     const rkey = post.uri.split('/').pop() ?? '';
     const isRoot = d === 0;
-    const vid = getVideoInfo(post);
+    const vid = extractVideo(post);
 
     lines.push({
       depth: d,
@@ -187,14 +187,14 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
       displayName: post.author.displayName ?? post.author.handle,
       authorAvatar: post.author.avatar,
       hasReplies: !!node.replies && node.replies.length > 0,
-      imageDetails: getImageDetails(post),
-      externalLink: getExternalLink(post),
-      quotedPost: getQuotedPost(post),
-      hasVideo: vid.hasVideo,
-      videoThumbnailUrl: vid.thumbnailUrl,
-      videoPlaylistUrl: vid.playlistUrl,
-      videoAlt: vid.alt,
-      videoAspectRatio: vid.aspectRatio,
+      imageDetails: extractImages(post),
+      externalLink: extractExternalLink(post),
+      quotedPost: extractQuotedPost(post) ?? undefined,
+      hasVideo: vid !== null,
+      videoThumbnailUrl: vid?.thumbnailUrl,
+      videoPlaylistUrl: vid?.playlistUrl,
+      videoAlt: vid?.alt,
+      videoAspectRatio: vid?.aspectRatio,
       isRoot,
       isTruncation: false,
       likeCount: post.likeCount ?? 0,
@@ -229,121 +229,4 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
 
   walk(thread, 0);
   return lines;
-}
-
-function getQuotedPost(post: PostView): FlatLine['quotedPost'] {
-  // Read from the API-resolved top-level embed (has full author/value/embeds),
-  // NOT from post.record.embed (stored format with only uri+cid)
-  const embed = (post as any).embed as {
-    $type?: string;
-    record?: {
-      uri?: string;
-      cid?: string;
-      author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-      value?: { text?: string; createdAt?: string };
-      embeds?: Array<{
-        $type?: string;
-        images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-        external?: { uri: string; title: string; description: string };
-      }>;
-    };
-    media?: Record<string, unknown>;
-  } | undefined;
-
-  if (!embed) return undefined;
-
-  const isRecord = embed.$type === 'app.bsky.embed.record#view' || embed.$type === 'app.bsky.embed.record';
-  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia#view' || embed.$type === 'app.bsky.embed.recordWithMedia';
-  if (!isRecord && !isRecordWithMedia) return undefined;
-
-  // For resolved #view format, record is always single-nested
-  const rec = embed.record;
-  if (!rec?.uri) return undefined;
-
-  const quotedImageDetails: Array<{ url: string; alt: string }> = [];
-  let quotedExternalLink: FlatLine['externalLink'] | null = null;
-
-  if (rec.embeds?.[0]) {
-    const e = rec.embeds[0]!;
-    if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
-      const did = rec.author?.did ?? '';
-      for (const img of e.images) {
-        const url = (img as any).fullsize || getCdnImageUrl(did, (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
-        if (url) quotedImageDetails.push({ url, alt: (img as any).alt || '' });
-      }
-    } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
-      quotedExternalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
-    }
-  }
-
-  return {
-    uri: rec.uri,
-    cid: rec.cid ?? '',
-    text: rec.value?.text ?? '',
-    handle: rec.author?.handle ?? '',
-    displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
-    authorAvatar: rec.author?.avatar,
-    imageDetails: quotedImageDetails,
-    externalLink: quotedExternalLink,
-  };
-}
-
-function getVideoInfo(post: PostView): { hasVideo: boolean; thumbnailUrl?: string; playlistUrl?: string; alt?: string; aspectRatio?: { width: number; height: number } } {
-  const embed = post.record.embed as { $type?: string; aspectRatio?: { width: number; height: number }; alt?: string } | undefined;
-  if (embed?.$type !== 'app.bsky.embed.video') return { hasVideo: false };
-
-  const viewEmbed = (post as any).embed as {
-    $type?: string;
-    thumbnail?: string;
-    playlist?: string;
-    cid?: string;
-  } | undefined;
-
-  return {
-    hasVideo: true,
-    thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, viewEmbed?.cid ?? ''),
-    playlistUrl: viewEmbed?.playlist || getVideoPlaylistUrl(post.author.did, viewEmbed?.cid ?? ''),
-    alt: embed.alt,
-    aspectRatio: embed.aspectRatio,
-  };
-}
-
-function getImageDetails(post: PostView): Array<{ url: string; alt: string }> {
-  const details: Array<{ url: string; alt: string }> = [];
-  const embed = post.record.embed as {
-    $type?: string;
-    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
-  } | undefined;
-
-  const collect = (e: typeof embed) => {
-    if (!e) return;
-    if (e.$type === 'app.bsky.embed.images' && e.images) {
-      for (const img of e.images) {
-        details.push({
-          url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
-          alt: img.alt || '',
-        });
-      }
-    } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
-      collect(e.media);
-    }
-  };
-  collect(embed);
-  return details;
-}
-
-function getExternalLink(post: PostView): FlatLine['externalLink'] {
-  const embed = post.record.embed as {
-    $type?: string;
-    external?: { uri: string; title: string; description: string };
-  } | undefined;
-  if (embed?.$type === 'app.bsky.embed.external' && embed.external) {
-    return {
-      uri: embed.external.uri,
-      title: embed.external.title,
-      description: embed.external.description,
-    };
-  }
-  return null;
 }

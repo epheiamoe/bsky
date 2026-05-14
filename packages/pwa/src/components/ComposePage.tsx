@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useCompose, useI18n, useDrafts, getCdnImageUrl, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds, formatThreadgateSummary, buildThreadgateRules } from '@bsky/app';
+import { useCompose, useI18n, useDrafts, extractImages, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds, formatThreadgateSummary, buildThreadgateRules } from '@bsky/app';
 import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app';
 import type { BskyClient, PostView, AIConfig, ListView } from '@bsky/core';
 import { Icon } from './Icon.js';
@@ -54,28 +54,6 @@ interface SubmitProgress {
   total: number;
   message: string;
   error?: string;
-}
-
-function extractQuotePreviews(post: PostView): Array<{ url: string; alt: string }> {
-  const images: Array<{ url: string; alt: string }> = [];
-  const embed = post.record.embed;
-  if (!embed) return images;
-  if (embed.$type === 'app.bsky.embed.images') {
-    for (const img of embed.images) {
-      images.push({
-        url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
-        alt: img.alt,
-      });
-    }
-  } else if (embed.$type === 'app.bsky.embed.recordWithMedia' && embed.media.$type === 'app.bsky.embed.images') {
-    for (const img of embed.media.images) {
-      images.push({
-        url: getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
-        alt: img.alt,
-      });
-    }
-  }
-  return images;
 }
 
 export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
@@ -219,7 +197,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           authorHandle: post.author.handle,
           authorAvatar: post.author.avatar,
           text: post.record.text,
-          images: extractQuotePreviews(post),
+            images: extractImages(post),
           indexedAt: post.indexedAt ?? '',
         }));
       } else {

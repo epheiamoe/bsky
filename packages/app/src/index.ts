@@ -47,6 +47,8 @@ export { useConvoList, markConvoRead } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
+export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';
+export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost } from './utils/extractEmbeds.js';
 export { formatThreadgateSummary, buildThreadgateRules, rulesToThreadgateType, getThreadgateDisplayKey } from './utils/formatThreadgate.js';
 export { useI18n } from './i18n/index.js';
 export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';

@@ -1,145 +1,21 @@
 import React from 'react';
 import type { PostView, AIConfig, BskyClient } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
-import { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
+import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
+import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { describeImage } from '@bsky/core';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 import { VideoCard } from './VideoCard.js';
-import type { VideoData } from './VideoCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
-
-interface ExternalLink {
-  uri: string;
-  title: string;
-  description: string;
-}
-
-interface QuotedPostData {
-  uri: string;
-  cid: string;
-  text: string;
-  handle: string;
-  displayName: string;
-  authorAvatar?: string;
-  imageDetails: Array<{ url: string; alt: string }>;
-  externalLink: ExternalLink | null;
-}
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
   if (!reply) return null;
   if (reply.root.uri === reply.parent.uri) return 1;
   return '2+';
-}
-
-function extractEmbeds(post: PostView): { images: ImageData[]; external: ExternalLink | null; video: VideoData | null; hasGif: boolean } {
-  const images: ImageData[] = [];
-  let external: ExternalLink | null = null;
-  let video: VideoData | null = null;
-  let hasGif = false;
-  const embed = post.record.embed as {
-    $type?: string;
-    images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-    media?: { $type?: string; images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }> };
-    external?: { uri: string; title: string; description: string };
-    video?: { ref: { $link: string }; mimeType: string };
-    aspectRatio?: { width: number; height: number };
-    alt?: string;
-  } | undefined;
-  if (!embed) return { images, external, video, hasGif };
-
-  if (embed.$type === 'app.bsky.embed.video') {
-    const viewEmbed = (post as any).embed as { thumbnail?: string; playlist?: string; cid?: string } | undefined;
-    const cid = viewEmbed?.cid ?? embed.video?.ref?.$link ?? '';
-    video = {
-      thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
-      playlistUrl: viewEmbed?.playlist || getVideoPlaylistUrl(post.author.did, cid),
-      alt: embed.alt,
-      aspectRatio: embed.aspectRatio,
-    };
-    return { images, external, video, hasGif };
-  }
-
-  const collectImages = (e: typeof embed) => {
-    if (!e) return;
-    if ((e.$type === 'app.bsky.embed.images' || e.$type === 'app.bsky.embed.images#view') && e.images) {
-      for (const img of e.images) {
-        const mime = img.image?.mimeType || (img as any).mimeType || '';
-        if (mime.includes('gif')) hasGif = true;
-        images.push({
-          url: (img as any).fullsize || getCdnImageUrl(post.author.did, img.image.ref.$link, img.image.mimeType),
-          alt: img.alt || '',
-        });
-      }
-    } else if (e.$type === 'app.bsky.embed.recordWithMedia' && e.media) {
-      collectImages(e.media);
-    }
-  };
-  collectImages(embed);
-
-  if (embed.$type === 'app.bsky.embed.external' && embed.external) {
-    external = {
-      uri: embed.external.uri,
-      title: embed.external.title,
-      description: embed.external.description,
-    };
-  }
-
-  return { images, external, video, hasGif };
-}
-
-function extractQuotedPost(post: PostView): QuotedPostData | undefined {
-  const embed = (post as any).embed as {
-    $type?: string;
-    record?: {
-      uri?: string;
-      cid?: string;
-      author?: { did?: string; handle?: string; displayName?: string; avatar?: string };
-      value?: { text?: string; createdAt?: string };
-      embeds?: Array<{
-        $type?: string;
-        images?: Array<{ image: { ref: { $link: string }; mimeType: string }; alt: string }>;
-        external?: { uri: string; title: string; description: string };
-      }>;
-    };
-  } | undefined;
-  if (!embed) return undefined;
-
-  const isRecord = embed.$type === 'app.bsky.embed.record#view' || embed.$type === 'app.bsky.embed.record';
-  const isRecordWithMedia = embed.$type === 'app.bsky.embed.recordWithMedia#view' || embed.$type === 'app.bsky.embed.recordWithMedia';
-  if (!isRecord && !isRecordWithMedia) return undefined;
-
-  const rec = embed.record;
-  if (!rec?.uri) return undefined;
-
-  const imageDetails: Array<{ url: string; alt: string }> = [];
-  let externalLink: ExternalLink | null = null;
-
-  if (rec.embeds?.[0]) {
-    const e = rec.embeds[0]!;
-    if ((e.$type === 'app.bsky.embed.images#view' || e.$type === 'app.bsky.embed.images') && e.images) {
-      for (const img of e.images) {
-        const url = (img as any).fullsize || getCdnImageUrl(rec.author?.did ?? '', (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
-        if (url) imageDetails.push({ url, alt: (img as any).alt || '' });
-      }
-    } else if ((e.$type === 'app.bsky.embed.external#view' || e.$type === 'app.bsky.embed.external') && e.external) {
-      externalLink = { uri: e.external.uri, title: e.external.title, description: e.external.description };
-    }
-  }
-
-  return {
-    uri: rec.uri,
-    cid: rec.cid ?? '',
-    text: rec.value?.text ?? '',
-    handle: rec.author?.handle ?? '',
-    displayName: rec.author?.displayName ?? rec.author?.handle ?? '',
-    authorAvatar: rec.author?.avatar,
-    imageDetails,
-    externalLink,
-  };
 }
 
 function avatarLetter(name: string): string {
@@ -217,10 +93,10 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let replyCount: number | undefined;
   let hasImages = false;
   let images: ImageData[] = [];
-  let externalLink: ExternalLink | null = null;
+  let externalLink: ExtractExternalLink | null = null;
   let avatarUrl: string | undefined;
-  let quotedPost: FlatLine['quotedPost'];
-  let video: VideoData | null = null;
+  let quotedPost: ExtractQuotedPost | null;
+  let video: ExtractVideo | null = null;
   let hasVideo = false;
   const replyDepth = post ? getReplyDepth(post) : null;
 
@@ -256,13 +132,13 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     if (line.externalLink) {
       externalLink = line.externalLink;
     }
-    quotedPost = line.quotedPost;
+    quotedPost = (line.quotedPost as ExtractQuotedPost | undefined) ?? null;
     hasVideo = line.hasVideo;
     if (hasVideo && line.videoThumbnailUrl && line.videoPlaylistUrl) {
       video = {
-        thumbnailUrl: line.videoThumbnailUrl,
-        playlistUrl: line.videoPlaylistUrl,
-        alt: line.videoAlt,
+        thumbnailUrl: line.videoThumbnailUrl!,
+        playlistUrl: line.videoPlaylistUrl!,
+        alt: line.videoAlt ?? '',
         aspectRatio: line.videoAspectRatio,
       };
     }
