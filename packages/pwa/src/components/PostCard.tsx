@@ -186,16 +186,54 @@ export function linkifyText(text: string): React.ReactNode[] {
 // Module-level cache for AI-generated ALT text (key = cdnUrl)
 const _altCache = new Map<string, string>();
 
-function ImageGrid({ images, imageDescCallback }: {
+function ImageGrid({ images, imageDescCallback, singleImageFill }: {
   images: ImageData[];
   imageDescCallback?: (index: number, cdnUrl: string, existingAlt?: string) => Promise<string>;
+  singleImageFill?: boolean;
 }) {
   const { t } = useI18n();
   const [lightbox, setLightbox] = useState<number | null>(null);
   const [lightboxRects, setLightboxRects] = useState<DOMRect[] | null>(null);
   const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string; aiText?: string; aiLoading: boolean; aiError?: string } | null>(null);
+  const [imgAspectRatio, setImgAspectRatio] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const fillMode = singleImageFill ?? true;
+
+  const handleImgClick = useCallback((e: React.MouseEvent<HTMLImageElement>, i: number) => {
+    e.stopPropagation();
+    const allImgs = gridRef.current?.querySelectorAll<HTMLImageElement>('img');
+    if (!allImgs) {
+      // Single image mode: use the clicked element's rect
+      const rect = e.currentTarget.getBoundingClientRect();
+      setLightboxRects([rect]);
+      const el = e.currentTarget;
+      if (el.naturalWidth && el.naturalHeight) {
+        setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
+      } else {
+        setNaturalAspectRatio(rect.width / rect.height || 1);
+      }
+      setLightbox(i);
+      return;
+    }
+    const rects = Array.from(allImgs).map(img => img.getBoundingClientRect());
+    setLightboxRects(rects);
+    const el = e.currentTarget;
+    if (el.naturalWidth && el.naturalHeight) {
+      setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
+    } else {
+      setNaturalAspectRatio(rects[i]?.width / rects[i]?.height || 1);
+    }
+    setLightbox(i);
+  }, []);
+
+  const grid = (() => {
+    const n = images.length;
+    if (n === 1) return 'grid-cols-1';
+    if (n === 2) return 'grid-cols-2 gap-[2px]';
+    if (n === 3) return 'grid-cols-2 gap-[2px]';
+    return 'grid-cols-2 gap-[2px]';
+  })();
 
   const handleGenerateAlt = async (i: number, img: ImageData) => {
     if (!imageDescCallback || altPopup?.aiLoading) return;
@@ -239,68 +277,77 @@ function ImageGrid({ images, imageDescCallback }: {
     }
   };
 
-  const grid = (() => {
-    const n = images.length;
-    if (n === 1) return 'grid-cols-1';
-    if (n === 2) return 'grid-cols-2 gap-[2px]';
-    if (n === 3) return 'grid-cols-2 gap-[2px]';
-    return 'grid-cols-2 gap-[2px]';
-  })();
-
   return (
     <>
-      <div className="mt-2 rounded-xl overflow-hidden border border-border">
-        <div ref={gridRef} className={`grid ${grid}`}>
-          {images.map((img, i) => {
-            const spanFull = images.length === 3 && i === 2;
-            const hasAlt = !!img.alt?.trim();
-            return (
-              <div key={i} className="relative">
-                <img
-                  src={img.url}
-                  alt={img.alt || t('post.imageAlt', { n: i + 1 })}
-                  width="800" height="600"
-                  className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const allImgs = gridRef.current?.querySelectorAll<HTMLImageElement>('img');
-                    if (!allImgs) return;
-                    const rects = Array.from(allImgs).map(img => img.getBoundingClientRect());
-                    setLightboxRects(rects);
-                    const el = e.currentTarget;
-                    if (el.naturalWidth && el.naturalHeight) {
-                      setNaturalAspectRatio(el.naturalWidth / el.naturalHeight);
-                    } else {
-                      setNaturalAspectRatio(rects[i]?.width / rects[i]?.height || 1);
-                    }
-                    setLightbox(i);
-                  }}
-                />
-                {(imageDescCallback || hasAlt) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenPopup(i, img);
-                    }}
-                    className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
-                    title={img.alt || t('a11y.altNoOriginal')}
-                  >
-                    <svg width="24" height="14" viewBox="0 0 24 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
-                      <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">{img.alt?.trim() ? 'ALT' : 'ALT?'}</text>
-                    </svg>
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {images.length > 4 && (
-          <div className="text-center text-xs text-text-secondary py-1.5 bg-surface">
-            +{images.length - 4} {t('post.imageCount', { n: images.length - 4 })}
+      {images.length === 1 && !fillMode ? (
+        <div className="mt-2 rounded-xl overflow-hidden border border-border bg-black/5">
+          <div ref={gridRef as React.RefObject<HTMLDivElement>} style={imgAspectRatio ? { aspectRatio: String(imgAspectRatio), maxHeight: 'min(70vh, 600px)' } : {}}>
+            {images.map((img, i) => {
+              const hasAlt = !!img.alt?.trim();
+              return (
+                <div key={i} className="relative w-full h-full">
+                  <img
+                    src={img.url}
+                    alt={img.alt || t('post.imageAlt', { n: i + 1 })}
+                    onLoad={(e) => setImgAspectRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+                    className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={(e) => handleImgClick(e, i)}
+                  />
+                  {(imageDescCallback || hasAlt) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleOpenPopup(i, img); }}
+                      className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
+                      title={img.alt || t('a11y.altNoOriginal')}
+                    >
+                      <svg width="24" height="14" viewBox="0 0 24 14" fill="none">
+                        <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
+                        <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">{hasAlt ? 'ALT' : 'ALT?'}</text>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mt-2 rounded-xl overflow-hidden border border-border">
+          <div ref={gridRef} className={`grid ${grid}`}>
+            {images.map((img, i) => {
+              const spanFull = images.length === 3 && i === 2;
+              const hasAlt = !!img.alt?.trim();
+              return (
+                <div key={i} className="relative">
+                  <img
+                    src={img.url}
+                    alt={img.alt || t('post.imageAlt', { n: i + 1 })}
+                    width="800" height="600"
+                    className={`w-full h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity ${spanFull ? 'col-span-2 h-40' : ''}`}
+                    onClick={(e) => handleImgClick(e, i)}
+                  />
+                  {(imageDescCallback || hasAlt) && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleOpenPopup(i, img); }}
+                      className="absolute bottom-1 left-1 bg-black/70 rounded-md px-1.5 py-0.5 hover:bg-black/85 transition-colors z-10"
+                      title={img.alt || t('a11y.altNoOriginal')}
+                    >
+                      <svg width="24" height="14" viewBox="0 0 24 14" fill="none">
+                        <rect width="24" height="14" rx="3" fill="white" fillOpacity="0.9" />
+                        <text x="12" y="10" textAnchor="middle" fontSize="8" fontWeight="bold" fill="#374151">{hasAlt ? 'ALT' : 'ALT?'}</text>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {images.length > 4 && (
+            <div className="text-center text-xs text-text-secondary py-1.5 bg-surface">
+              +{images.length - 4} {t('post.imageCount', { n: images.length - 4 })}
+            </div>
+          )}
+        </div>
+      )}
       <Modal open={!!altPopup} onClose={() => setAltPopup(null)} titleId="alt-popup-title">
         <div className="px-5 py-4">
           <div className="flex items-start justify-between gap-2 mb-3">
@@ -361,6 +408,8 @@ interface PostCardBaseProps {
   imageDescLang?: string;
   /** Client for downloading image blobs (same path as view_image) */
   client?: BskyClient | null;
+  /** Fill single images to fixed height (true) or show at original aspect ratio (false) */
+  singleImageFill?: boolean;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -375,7 +424,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client, singleImageFill }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -490,7 +539,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
             {linkifyText(text)}
           </p>
-          {hasImages && <ImageGrid images={images} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+          {hasImages && <ImageGrid images={images} singleImageFill={singleImageFill} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
             const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
             if (!m) throw new Error('Could not parse image URL');
             const did = decodeURIComponent(m[1]!);

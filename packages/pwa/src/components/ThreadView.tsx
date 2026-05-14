@@ -26,6 +26,7 @@ interface ThreadViewProps {
   translateConfig?: AIConfig;
   imageDescConfig?: AIConfig;
   imageDescLang?: string;
+  singleImageFill?: boolean;
 }
 
 function Spinner() {
@@ -36,7 +37,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -261,7 +262,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
                   if (!m) throw new Error('Could not parse image URL');
                   return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                } : undefined}
+                }                 : undefined}
+                singleImageFill={singleImageFill}
               />
             )}
             {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
@@ -332,6 +334,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               goTo={goTo}
               imageDescConfig={imageDescConfig}
               imageDescLang={imageDescLang}
+              singleImageFill={singleImageFill}
               client={client}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />

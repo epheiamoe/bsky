@@ -90,6 +90,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const [targetLang, setTargetLang] = useState(config.targetLang);
   const [darkMode, setDarkMode] = useState(config.darkMode);
   const [cvdMode, setCvdMode] = useState(config.cvdMode);
+  const [singleImageFill, setSingleImageFill] = useState(config.singleImageFill);
 
   if (!open) return null;
 
@@ -129,7 +130,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   };
 
   const saveGeneral = () => {
-    const updated = { ...config, targetLang, darkMode, cvdMode };
+    const updated = { ...config, targetLang, darkMode, cvdMode, singleImageFill };
     updateAppConfig(updated);
     onConfigChange(updated);
     document.documentElement.classList.toggle('dark', darkMode);
@@ -426,6 +427,15 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
                   className="w-4 h-4 accent-primary"
                 />
                 <span className="text-sm text-text-primary">{t('settings.cvdMode')}</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={singleImageFill}
+                  onChange={e => setSingleImageFill(e.target.checked)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-sm text-text-primary">{t('settings.singleImageFill')}</span>
               </label>
               <button
                 onClick={saveGeneral}

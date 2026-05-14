@@ -368,6 +368,7 @@ const zh: LocaleMessages = {
   'settings.translateModeJson': 'JSON — 显示源语言 + 译文',
   'settings.darkMode': '深色模式',
   'settings.cvdMode': '色弱友好调色板',
+  'settings.singleImageFill': '单张图片填满（更高信息密度）',
   'settings.saveGeneral': '保存通用设置',
   'settings.updated': '已更新凭证',
   'settings.updateFailed': '更新失败',

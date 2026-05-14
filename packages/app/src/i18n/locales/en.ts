@@ -328,6 +328,7 @@ const en: LocaleMessages = {
   'settings.translateModeJson': 'JSON — source + translation',
   'settings.darkMode': 'Dark Mode',
   'settings.cvdMode': 'CVD-Friendly Palette',
+  'settings.singleImageFill': 'Fill single images (higher density)',
   'settings.saveGeneral': 'Save General Settings',
   'settings.updated': 'Credentials updated',
   'settings.updateFailed': 'Update failed',

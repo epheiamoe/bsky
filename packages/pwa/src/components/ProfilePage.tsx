@@ -21,6 +21,7 @@ interface ProfilePageProps {
   translateConfig?: AIConfig;
   imageDescConfig?: AIConfig;
   imageDescLang?: string;
+  singleImageFill?: boolean;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
 }
@@ -31,7 +32,7 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
   const { t } = useI18n();
   const {
     profile, loading, error,
@@ -477,6 +478,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   repostBy={repostReasons[post.uri]}
                   imageDescConfig={imageDescConfig}
                   imageDescLang={imageDescLang}
+                  singleImageFill={singleImageFill}
                   client={client}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />

@@ -328,6 +328,7 @@ const ja: LocaleMessages = {
   'settings.translateModeJson': 'JSON — 原文 + 翻訳',
   'settings.darkMode': 'ダークモード',
   'settings.cvdMode': '色覚サポートパレット',
+  'settings.singleImageFill': '単一画像を埋める（高情報密度）',
   'settings.saveGeneral': '一般設定を保存',
   'settings.updated': '認証情報を更新しました',
   'settings.updateFailed': '更新に失敗しました',

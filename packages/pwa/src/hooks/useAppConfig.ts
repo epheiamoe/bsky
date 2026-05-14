@@ -9,6 +9,8 @@ export interface AppConfig {
   darkMode: boolean;
   /** CVD-friendly color palette — replaces red/green/yellow with magenta/teal/amber */
   cvdMode: boolean;
+  /** Fill single images to fixed height (true) or show at original aspect ratio (false) */
+  singleImageFill: boolean;
   thinkingEnabled: boolean;
   visionEnabled: boolean;
   /** Per-provider API keys. Key = provider ID (e.g., 'deepseek', 'mistral') */
@@ -37,6 +39,7 @@ const DEFAULT_CONFIG: AppConfig = {
   translateMode: 'simple',
   darkMode: false,
   cvdMode: false,
+  singleImageFill: true,
   thinkingEnabled: true,
   visionEnabled: false,
   apiKeys: {},
