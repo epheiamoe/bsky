@@ -7,7 +7,7 @@ import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
 import { truncateName, linkifyText } from './PostCard.js';
-import { ImageGrid } from './PostCard.js';
+import { ImageGrid } from './ImageGrid.js';
 import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
