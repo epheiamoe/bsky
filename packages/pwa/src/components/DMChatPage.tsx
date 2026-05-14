@@ -40,33 +40,32 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
     loadConvo(conversationId, true).then(() => { markRead(); markConvoRead(conversationId); });
   }, [conversationId]);
 
-  // New message: auto-scroll if at bottom, increment badge if away
   useEffect(() => {
     const currentLastMsg = messages[messages.length - 1];
     const currentLastId = currentLastMsg?.id || null;
-    const lengthChanged = messages.length !== prevMsgCountRef.current;
 
-    if (!lengthChanged) {
+    // loadOlder / reaction → last message unchanged → skip
+    if (currentLastId === lastMsgIdRef.current) {
       prevMsgCountRef.current = messages.length;
-      lastMsgIdRef.current = currentLastId;
       return;
     }
 
+    const countDecreased = messages.length < prevMsgCountRef.current;
     prevMsgCountRef.current = messages.length;
-
-    // loadOlder prepends → last message unchanged → skip
-    if (currentLastId === lastMsgIdRef.current) return;
     lastMsgIdRef.current = currentLastId;
+
+    // deletion → skip
+    if (countDecreased) return;
 
     if (!currentLastMsg || !('sender' in currentLastMsg)) return;
 
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
     const isOwn = currentLastMsg.sender.did === did;
 
-    if (isOwn) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      setNewMsgBadge(0);
-    } else if (autoScroll) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isOwn || autoScroll) {
+      el.scrollTop = el.scrollHeight;
       setNewMsgBadge(0);
     } else {
       setNewMsgBadge(prev => prev + 1);
@@ -347,7 +346,8 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
       {newMsgBadge > 0 && (
         <button
           onClick={() => {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+            const el = scrollContainerRef.current;
+            if (el) el.scrollTop = el.scrollHeight;
             setNewMsgBadge(0);
             setAutoScroll(true);
           }}
