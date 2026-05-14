@@ -211,20 +211,6 @@ export function Layout({
             >
               <Icon name={dark ? 'sun' : 'moon'} size={18} />
             </button>
-            <button
-              onClick={onLogout}
-              className="text-text-secondary hover:text-red-500 transition-colors text-xs px-2 py-1 rounded-lg hover:bg-surface hidden md:block"
-            >
-              {t('settings.logout')}
-            </button>
-            <button
-              onClick={() => goTo({ type: 'about' })}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1 hidden md:flex items-center gap-1 text-xs"
-              aria-label={t('nav.about')}
-            >
-              <Icon name="badge-question-mark" size={16} />
-              <span>{t('nav.about')}</span>
-            </button>
           </div>
         </div>
       </header>
@@ -255,21 +241,8 @@ export function Layout({
                 client={client}
                 draftCount={draftCount}
                 dmCount={dmCount}
+                onLogout={() => { onLogout(); setSidebarOpen(false); }}
               />
-              <div className="absolute bottom-0 left-0 right-0 border-t border-border p-3 space-y-1">
-                <button
-                  onClick={() => { goTo({ type: 'about' }); setSidebarOpen(false); }}
-                  className="w-full text-left text-sm text-text-secondary hover:text-text-primary transition-colors px-4 py-2 rounded-lg hover:bg-surface"
-                >
-                  {t('nav.about')}
-                </button>
-                <button
-                  onClick={() => { onLogout(); setSidebarOpen(false); }}
-                  className="w-full text-left text-sm text-text-secondary hover:text-red-500 transition-colors px-4 py-2 rounded-lg hover:bg-surface"
-                >
-                  {t('settings.logout')}
-                </button>
-              </div>
             </motion.div>
           </motion.div>
         )}
@@ -277,8 +250,8 @@ export function Layout({
 
       <div className="flex">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0" aria-label={t('a11y.sidebar')}>
-          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} />
+        <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0 overflow-hidden" aria-label={t('a11y.sidebar')}>
+          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} onLogout={onLogout} />
         </aside>
 
         <main id="main-content" tabIndex={-1} className="flex-1 max-w-content mx-auto w-full min-h-[calc(100dvh-3rem)]">
