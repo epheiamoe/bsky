@@ -53,7 +53,7 @@ export function App() {
   BskyClient.buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '(dev)';
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
-  const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession } = useAuth();
+  const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession, profile } = useAuth();
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
   const timeline = useTimeline(client, feedUri);
   const postActions = usePostActions(client);
@@ -227,17 +227,20 @@ export function App() {
 
   // ── Save session when login succeeds ──
   useEffect(() => {
-    if (session && client?.isAuthenticated()) {
-      saveSession({
-        accessJwt: session.accessJwt,
-        refreshJwt: session.refreshJwt,
-        handle: session.handle,
-        did: session.did,
-        pdsUrl: client.pdsUrl,
-      });
+    if (session && client?.isAuthenticated() && profile) {
+      const cs = client.session;
+      if (cs) {
+        saveSession({
+          accessJwt: cs.accessJwt,
+          refreshJwt: cs.refreshJwt,
+          handle: cs.handle,
+          did: cs.did,
+          pdsUrl: client.pdsUrl,
+        });
+      }
       setIsLoggedIn(true);
     }
-  }, [session, client]);
+  }, [session, client, profile]);
 
   // ── Force logout when auth error (session expired after sleep) ──
   useEffect(() => {

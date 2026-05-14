@@ -76,6 +76,7 @@ export function createAuthStore(): AuthStore {
       store.client = c;
       c.getProfile(session.handle).then(p => {
         store.profile = p;
+        store.session = c.session;
         store._notify();
       }).catch(() => {
         if (store.client !== c) return;
