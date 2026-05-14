@@ -105,11 +105,12 @@ export function ImageGrid({ images, imageDescCallback, singleImageFill }: {
     <>
       {images.length === 1 && !fillMode ? (
         <div className="mt-2 rounded-xl overflow-hidden border border-border bg-black/5">
-          <div ref={gridRef as React.RefObject<HTMLDivElement>} className="w-full flex items-center justify-center" style={{ maxHeight: 'min(70vh, 600px)' }}>
+          <div ref={gridRef as React.RefObject<HTMLDivElement>} className="w-full flex items-start">
             {images.map((img, i) => {
               const hasAlt = !!img.alt?.trim();
+              const frac = imgAspectRatio ? Math.min(Math.max(imgAspectRatio, 0.5), 2) : null;
               return (
-                <div key={i} className="relative max-w-full max-h-full">
+                <div key={i} className="relative" style={{ maxWidth: '100%', maxHeight: 'min(70vh, 600px)', ...(frac ? { aspectRatio: String(frac) } : {}) }}>
                   <img
                     src={img.url}
                     alt={img.alt || t('post.imageAlt', { n: i + 1 })}
