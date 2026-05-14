@@ -91,6 +91,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [replyAncestors, setReplyAncestors] = useState<PostView[]>([]);
+  const [replyToPost, setReplyToPost] = useState<PostView | null>(null);
 
   // Pre-fill initial text if provided (from "Share" actions in other pages)
   const initialTextAppliedRef = useRef(false);
@@ -154,7 +155,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     });
   }, [posts]);
 
-  // Initialize replyTo — show @handle + fetch parent ancestors for display
+  // Initialize replyTo — show replyTo post + parent ancestors in discussion source style
   useEffect(() => {
     if (replyTo) {
       setReplyTo(replyTo);
@@ -163,8 +164,11 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         const did = parts[1]!;
         client.getProfile(did).then(profile => setReplyHandle(profile.handle)).catch(() => setReplyHandle(did));
       }
-      // Fetch parent chain for reply ancestor display (req 5)
+      // Fetch post + parent chain for discussion source display
       client.getPostThread(replyTo, 3, 0).then(res => {
+        if (res.thread.$type === 'app.bsky.feed.defs#threadViewPost') {
+          setReplyToPost(res.thread.post);
+        }
         const ancestors: PostView[] = [];
         let current = res.thread;
         while (current.$type === 'app.bsky.feed.defs#threadViewPost' && current.parent) {
@@ -179,6 +183,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       setReplyTo(undefined);
       setReplyHandle(null);
       setReplyAncestors([]);
+      setReplyToPost(null);
     }
   }, [replyTo, client, setReplyTo]);
 
@@ -554,8 +559,8 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         )}
 
         <form id="compose-form" onSubmit={handleSubmit} className="space-y-3">
-          {/* ── Reply: display parent ancestors in discussion source style (req 5) ── */}
-          {replyAncestors.length > 0 && (
+          {/* ── Reply: display replyTo post + ancestors in discussion source style (req 5) ── */}
+          {(replyToPost || replyAncestors.length > 0) && (
             <div className="space-y-1 animate-fadeIn">
               <p className="text-xs text-text-secondary font-medium pl-4">── {t('thread.discussionSource')} ──</p>
               {replyAncestors.map((ancestor, i) => (
@@ -582,13 +587,30 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                   </div>
                 </div>
               ))}
-            </div>
-          )}
-
-          {/* Reply handle indicator */}
-          {replyTo && replyHandle && (
-            <div className="text-sm text-text-secondary bg-surface rounded-lg px-3 py-2 border border-border">
-              {t('compose.replyTo')} <span className="text-primary font-medium">@{replyHandle}</span>
+              {replyToPost && (
+                <div>
+                  <div
+                    onClick={() => goTo({ type: 'thread', uri: replyToPost.uri })}
+                    className="mx-2 px-3 py-2 rounded-xl border border-border bg-surface/20 opacity-60 hover:opacity-100 transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-text-primary">
+                        {replyToPost.author.displayName || replyToPost.author.handle}
+                      </span>
+                      <span className="text-xs text-text-secondary">
+                        @{replyToPost.author.handle}
+                      </span>
+                      <span className="text-xs text-text-secondary">·</span>
+                      <span className="text-xs text-text-secondary">
+                        {formatTime(replyToPost.indexedAt ?? '')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap line-clamp-4">
+                      {replyToPost.record.text}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
