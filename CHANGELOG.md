@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.4] — 2026-05-14
+
+### Added
+
+- **Template-based prompt rendering**: `buildSystemPrompt()` replaces 10 individual `PF_*` function calls. Single `MAIN_TEMPLATE` string contains all fixed content; simple `String.replace` injects all dynamic values in one pass. No external template library. Conditional blocks via `{{#if var}}...{{/if}}` regex.
+- **Project introduction in system prompt**: AI now knows it's "在 AI Bluesky 项目中的 AI 助手，项目地址 github.com/epheiamoe/bsky"，guides users to file issues for software feedback, and uses tools to answer project questions.
+- **Locale-aware default reply language**: `locale` parameter now directly embedded as `{{locale}}` — AI uses UI language as default reply language, "除非用户有额外要求" (unless user requests otherwise).
+
+### Removed
+
+- `P_ASSISTANT_BASE`, `PF_CURRENT_USER`, `PF_PROFILE_CONTEXT`, `PF_POST_CONTEXT`, `PF_ENVIRONMENT`, `PF_LOCALE_HINT`, `P_CONCISE`, `PF_CURRENT_TIME`, `PF_VISION_HINT` — all replaced by `buildSystemPrompt()` + `MAIN_TEMPLATE`.
+
+### Changed
+
+- `prompts.ts` reduced from 241 lines to ~270 lines; structure now: template string → `buildSystemPrompt()` → conditional replace → custom prompt replace
+- `useAIChat.ts` imports `buildSystemPrompt` directly instead of 9 individual prompt functions
+
 ## [0.13.3] — 2026-05-14
 
 ### Added

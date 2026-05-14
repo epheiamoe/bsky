@@ -1,18 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { AIAssistant, createTools } from '@bsky/core';
-import {
-  P_ASSISTANT_BASE,
-  PF_CURRENT_USER,
-  PF_PROFILE_CONTEXT,
-  PF_POST_CONTEXT,
-  PF_ENVIRONMENT,
-  PF_LOCALE_HINT,
-  P_CONCISE,
-  PF_AUTO_ANALYSIS,
-  P_GUIDING_QUESTIONS,
-  PF_VISION_HINT,
-  PF_CURRENT_TIME,
-} from '@bsky/core';
+import { buildSystemPrompt as buildMainPrompt, PF_AUTO_ANALYSIS, P_GUIDING_QUESTIONS } from '@bsky/core';
 import type { AIConfig, BskyClient, ChatMessage, ToolCall } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
 import { saveChat, loadChat } from '../services/chatService.js';
@@ -121,26 +109,17 @@ export function useAIChat(
   const contextRef = useRef<import('../services/chatStorage.js').ChatRecord['context']>(undefined);
 
   const buildSystemPrompt = useCallback((withContext?: string, contextProfile?: string) => {
-    const parts: string[] = [];
-    parts.push(P_ASSISTANT_BASE);
-    if (options?.userHandle || options?.userDisplayName) {
-      const name = options.userDisplayName || options.userHandle || '';
-      parts.push(PF_CURRENT_USER(name, options.userHandle, options?.locale));
-    }
-    if (contextProfile) {
-      parts.push(PF_PROFILE_CONTEXT(contextProfile, options?.userHandle));
-    } else if (withContext) {
-      parts.push(PF_POST_CONTEXT(withContext));
-    }
-    parts.push(PF_ENVIRONMENT(options?.environment || 'pwa'));
-    if (options?.locale) parts.push(PF_LOCALE_HINT(options.locale));
-    parts.push(PF_CURRENT_TIME());
-    parts.push(PF_VISION_HINT(aiConfig.visionEnabled ?? false));
-    parts.push(P_CONCISE);
-    if (aiConfig.customSystemPrompt?.trim()) {
-      parts.push(aiConfig.customSystemPrompt.trim());
-    }
-    return parts.join('');
+    return buildMainPrompt({
+      contextPost:   withContext,
+      contextProfile,
+      currentUser:    options?.userHandle,
+      userHandle:     options?.userHandle,
+      userDisplayName: options?.userDisplayName,
+      environment:    options?.environment || 'pwa',
+      locale:         options?.locale,
+      visionEnabled:  aiConfig.visionEnabled ?? false,
+      customPrompt:   aiConfig.customSystemPrompt,
+    });
   }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment, aiConfig.visionEnabled, aiConfig.customSystemPrompt]);
 
   // Keep chatIdRef in sync

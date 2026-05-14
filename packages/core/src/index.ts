@@ -71,23 +71,17 @@ export type { AIConfig, ChatMessage, ToolCall } from './ai/assistant.js';
 // AI prompts (centralized, single source of truth)
 export {
   LANG_LABELS,
-  P_ASSISTANT_BASE,
-  PF_CURRENT_USER,
-  PF_PROFILE_CONTEXT,
-  PF_POST_CONTEXT,
-  PF_ENVIRONMENT,
-  PF_LOCALE_HINT,
-  P_CONCISE,
-  PF_CURRENT_TIME,
-  PF_VISION_HINT,
+  buildSystemPrompt,
+  PF_AUTO_ANALYSIS,
+  P_GUIDING_QUESTIONS,
   PF_TRANSLATE_SIMPLE,
   PF_TRANSLATE_JSON,
   P_POLISH_SYSTEM,
   PF_POLISH_USER,
-  PF_AUTO_ANALYSIS,
-  P_GUIDING_QUESTIONS,
   P_AUTO_TITLE_SYSTEM,
   PF_AUTO_TITLE_USER,
+  P_ALT_DESCRIPTION_SYSTEM,
+  PF_ALT_DESCRIPTION_USER,
 } from './ai/prompts.js';
 
 // Multi-provider support

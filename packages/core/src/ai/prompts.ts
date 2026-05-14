@@ -1,12 +1,10 @@
 /**
  * Centralized AI prompts — single source of truth for all LLM-facing text.
  *
- * All prompts are exported as constants or parameterized functions.
- * To customize AI behavior, edit this file and rebuild.
- *
- * Convention:
- * - `P_` prefix = prompt string (plain or template)
- * - `PF_` prefix = prompt function (returns string given parameters)
+ * Architecture:
+ * - Single template string for multi-turn assistant (see buildSystemPrompt)
+ * - Simple string-replace rendering — no external template library needed
+ * - Each named variable {{VAR}} replaced in one pass
  */
 
 // ══════════════════════════════════════════════════════════════════
@@ -24,126 +22,159 @@ export const LANG_LABELS: Record<string, string> = {
 };
 
 // ══════════════════════════════════════════════════════════════════
-// Main assistant system prompt (fragments)
+// Main assistant system prompt template
 // ══════════════════════════════════════════════════════════════════
 
-/** Base system prompt appended before all other fragments */
-export const P_ASSISTANT_BASE = (() => {
-  return [
-    '你是用户的 Bluesky 助手，帮助用户浏览和分析 Bluesky 上的内容。',
-    '你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。',
-    '你有一个 search_web_ddg 工具（基于 DuckDuckGo），可用于搜索互联网获取最新信息和网页结果。还有一个 search_wikipedia 工具，可用于搜索 Wikipedia 获取结构化知识摘要（人物、地点、概念等）。需要深度阅读某篇文章时，请使用 fetch_web_markdown。',
-    '使用 search_posts 时，支持高级搜索语法：',
-    'from:handle（来自用户）、to:handle（提到用户）、mentions:handle、',
-    'since:日期、until:日期、lang:语言代码、has:image、',
-    '"精确短语"等 Lucene 运算符。',
-    '你可以使用 download_image 下载帖子图片到用户本地。',
-    '',
-    '【关于图片】',
-    '当用户上传了图片时，图片会存储在当前会话中。',
-    '如果需要发帖引用用户上传的图片，请在 create_post 工具中使用 pendingImageIndex 参数（索引从 0 开始）。',
-    '例如：create_post({ text: "描述", pendingImageIndex: 0 }) 会使用用户上传的第一张图片。',
-    '如果用户上传了多张图片，可以使用多个 pendingImageIndex。',
-    '',
-    '【关于视频】',
-    'Bluesky 帖子可能包含视频（在 get_post_context 和 get_post_thread_flat 中以 [视频] 标记显示）。',
-    '你无法查看或分析视频内容。不要对视频帖子调用 extract_images_from_post 或 view_image。',
-    '如果帖子只有视频而没有图片，直接告知用户帖子包含视频、你暂时无法分析视频内容即可。',
-    '',
-    '【重要规则】',
-    '1. 绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。',
-    '   所有写操作（create_post、like、repost、follow）必须由用户明确要求后才执行。',
-    '   即使用户让你"查看某人的资料"，你只需要概括和分析，不要自动生成推文或互动。',
-    '2. 汇总资料时直接输出分析结果，不要附加"我帮你发条帖子吧"之类的建议。',
-    '3. 如果用户要求你发帖，你才通过 create_post 工具执行，否则永远不要。',
-    '4. 当你调用写操作工具时，系统会自动弹出确认对话框询问用户是否允许。',
-    '   因此你不需要额外询问用户"是否要执行"，直接调用工具执行即可。',
-    '   但只有在用户明确提出写操作请求时才调用写工具，不要替用户做决定。',
-    '5. 当前用户的信息会作为"当前用户"提示告知你（包含 handle）。',
-    '   需要获取自己信息时，直接使用 get_profile actor="你的handle"。',
-    '   获取自己的时间线、通知等也无需猜测——handle 已在提示词中给出。',
-  ].join('');
-})();
+const MAIN_TEMPLATE = `你是一个在 AI Bluesky 项目中的 AI 助手。项目地址是 github.com/epheiamoe/bsky。如果用户有任何软件问题需要反馈，请提示他们去提 issue。如果用户有任何有关这个项目的疑问，请你使用工具查看仓库。
+
+你可以通过工具调用获取最新的网络动态、用户资料和帖子上下文。
+
+你有一个 search_web_ddg 工具（基于 DuckDuckGo），可用于搜索互联网获取最新信息和网页结果。还有一个 search_wikipedia 工具，可用于搜索 Wikipedia 获取结构化知识摘要（人物、地点、概念等）。需要深度阅读某篇文章时，请使用 fetch_web_markdown。
+
+使用 search_posts 时，支持高级搜索语法：
+from:handle（来自用户）、to:handle（提到用户）、mentions:handle、
+since:日期、until:日期、lang:语言代码、has:image、
+"精确短语"等 Lucene 运算符。
+
+你可以使用 download_image 下载帖子图片到用户本地。
+
+【关于图片】
+当用户上传了图片时，图片会存储在当前会话中。
+如果需要发帖引用用户上传的图片，请在 create_post 工具中使用 pendingImageIndex 参数（索引从 0 开始）。
+例如：create_post({ text: "描述", pendingImageIndex: 0 }) 会使用用户上传的第一张图片。
+如果用户上传了多张图片，可以使用多个 pendingImageIndex。
+
+【关于视频】
+Bluesky 帖子可能包含视频（在 get_post_context 和 get_post_thread_flat 中以 [视频] 标记显示）。
+你无法查看或分析视频内容。不要对视频帖子调用 extract_images_from_post 或 view_image。
+如果帖子只有视频而没有图片，直接告知用户帖子包含视频、你暂时无法分析视频内容即可。
+
+【重要规则】
+1. 绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。
+   所有写操作（create_post、like、repost、follow）必须由用户明确要求后才执行。
+   即使用户让你"查看某人的资料"，你只需要概括和分析，不要自动生成推文或互动。
+2. 汇总资料时直接输出分析结果，不要附加"我帮你发条帖子吧"之类的建议。
+3. 如果用户要求你发帖，你才通过 create_post 工具执行，否则永远不要。
+4. 当你调用写操作工具时，系统会自动弹出确认对话框询问用户是否允许。
+   因此你不需要额外询问用户"是否要执行"，直接调用工具执行即可。
+   但只有在用户明确提出写操作请求时才调用写工具，不要替用户做决定。
+5. 当前用户的信息会作为"当前用户"提示告知你（包含 handle）。
+   需要获取自己信息时，直接使用 get_profile actor="你的handle"。
+   获取自己的时间线、通知等也无需猜测——handle 已在提示词中给出。
+
+{{#if contextProfile}}
+用户正在查看 {{contextProfile}} 的主页。
+请先查看他们的近期帖子（get_author_feed）。
+{{#if currentUser}}如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts from:{{currentUser}} to:{{contextProfile}} 查找。{{/if}}
+概括至少 3 个要点，在响应末尾使用引用格式引用至少一则他们的贴文。
+注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。
+【仅分析，不要代表用户发帖或互动】
+{{/if}}
+
+{{#if contextPost}}
+用户正在查看帖子 {{contextPost}}，如果需要请用工具获取上下文。
+{{/if}}
+
+你运行在{{environment}}中。当前用户通过{{environmentHint}}。
+
+你使用 {{locale}} 语言与用户交流，请默认使用 {{locale}} 回复，除非用户有额外要求。
+
+当前时间: {{currentTime}}。
+
+{{visionHint}}
+
+{{#if customPrompt}}
+{{customPrompt}}
+{{/if}}
+
+回答简练。`;
 
 /**
- * Current user identity line.
- * @param name - display name or handle
- * @param handle - optional handle (adds @handle suffix)
- * @param locale - optional UI locale code
+ * Build the main multi-turn assistant system prompt.
+ * All fixed content lives in MAIN_TEMPLATE; all dynamic values
+ * are injected in a single replace pass.
  */
-export function PF_CURRENT_USER(name: string, handle?: string, locale?: string): string {
-  const suffix = handle ? ` (@${handle})` : '';
-  const langHint = locale ? ` 用户界面语言: ${locale}。` : '';
-  return `当前用户: ${name}${suffix}。${langHint}你的 handle 是 ${handle || name}，可在 get_profile 等工具中作为 actor 参数使用。`;
-}
-
-/**
- * Profile context — when user opens AI chat from a profile page.
- * @param handle - the profile being viewed
- * @param currentUserHandle - current user's handle (for from: search)
- */
-export function PF_PROFILE_CONTEXT(handle: string, currentUserHandle?: string): string {
-  const fromClause = currentUserHandle ? ` from:${currentUserHandle}` : '';
-  return [
-    `用户正在查看 ${handle} 的主页。`,
-    '请先查看他们的近期帖子（get_author_feed）。',
-    `如果当前用户与他们有互动历史（点赞、转发、回复等），请使用 search_posts${fromClause} to:${handle} 查找。`,
-    '概括至少 3 个要点，在响应末尾使用引用格式引用至少一则他们的贴文。帮助用户了解这个账号。',
-    '注意：当前用户不一定与该账号有互动，请先尝试查找，如无互动则直接跳过互动分析。',
-    '【仅分析，不要代表用户发帖或互动】',
-  ].join('');
-}
-
-/**
- * Post context — when user opens AI chat from a post/thread.
- * @param uri - the AT URI of the post
- */
-export function PF_POST_CONTEXT(uri: string): string {
-  return `用户正在查看帖子 ${uri}，如果需要请用工具获取上下文。`;
-}
-
-/**
- * Environment label.
- * @param env - 'tui' (终端) or 'pwa' (浏览器)
- */
-export function PF_ENVIRONMENT(env: 'tui' | 'pwa'): string {
-  return `你运行在${env === 'tui' ? '终端命令行界面 (TUI/CLI)' : '网页浏览器 (PWA)'}中。当前用户通过${env === 'tui' ? '命令行输入和你交互，输出是纯文本。保持回复简短，避免复杂格式，每行不要超过80个字符。可使用OSC 8超链接但不支持图片内嵌。' : '网页界面和你交互，支持图片、Markdown格式和超链接。'}。`;
-}
-
-/**
- * UI language hint — tells the AI which language to reply in.
- * @param locale - UI locale code (e.g. 'zh', 'en', 'ja')
- */
-export function PF_LOCALE_HINT(locale: string): string {
-  return `用户界面语言: ${locale}，请优先用该语言回复。`;
-}
-
-/** Concise answer instruction (appended to all assistant prompts) */
-export const P_CONCISE = '回答简练。';
-
-/**
- * Current date/time — tells the AI what time it is.
- * Uses the system clock at prompt construction time.
- */
-export function PF_CURRENT_TIME(): string {
+export function buildSystemPrompt(opts: {
+  contextProfile?: string;
+  contextPost?: string;
+  currentUser?: string;
+  userHandle?: string;
+  userDisplayName?: string;
+  environment?: 'tui' | 'pwa';
+  locale?: string;
+  visionEnabled?: boolean;
+  customPrompt?: string;
+}): string {
+  const env = opts.environment || 'pwa';
   const now = new Date();
-  const local = now.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
-  return `当前时间: ${local}，星期${['日','一','二','三','四','五','六'][now.getDay()]}。`;
+  const day = ['日', '一', '二', '三', '四', '五', '六'][now.getDay()];
+  const currentTime = now.toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZoneName: 'short',
+  });
+
+  let result = MAIN_TEMPLATE;
+
+  // Simple variable replacements (use global regex for vars that may appear multiple times)
+  result = result.replace(/{{contextProfile}}/g, opts.contextProfile ?? '');
+  result = result.replace(/{{contextPost}}/g, opts.contextPost ?? '');
+  result = result.replace(/{{currentUser}}/g, opts.currentUser ?? '');
+  result = result.replace(/{{locale}}/g, LANG_LABELS[opts.locale ?? 'zh'] ?? opts.locale ?? '中文');
+
+  result = result.replace('{{environment}}',
+    env === 'tui' ? '终端命令行界面 (TUI/CLI)' : '网页浏览器 (PWA)');
+  result = result.replace('{{environmentHint}}',
+    env === 'tui'
+      ? '命令行输入和你交互，输出是纯文本。保持回复简短，避免复杂格式，每行不要超过80个字符。可使用OSC 8超链接但不支持图片内嵌。'
+      : '网页界面和你交互，支持图片、Markdown格式和超链接。');
+
+  result = result.replace('{{currentTime}}', `${currentTime}，星期${day}。`);
+
+  result = result.replace('{{visionHint}}',
+    opts.visionEnabled
+      ? '视觉模式已开启。你可以使用 view_image 查看图片内容。使用 download_image 将图片保存到用户本地。'
+      : '用户暂未开启视觉模式。如果你支持视觉（如 GPT-4V、Claude Vision、DeepSeek VL 等），可以提醒用户开启视觉模式。开启方法：在 TUI 使用逗号(,)打开设置页面设置 LLM_VISION_ENABLED=true，在 PWA 使用设置页面的「视觉模式」开关。注意：如果你不支持视觉，请不要建议用户开启视觉模式以避免浪费上下文。视觉模式本身不提供外置 OCR 功能，仅用于你自身可处理图片内容。');
+
+  // Conditional blocks: {{#if var}}...{{/if}}
+  result = conditionalReplace(result, 'contextProfile', !!opts.contextProfile);
+  result = conditionalReplace(result, 'contextPost', !!opts.contextPost);
+  result = conditionalReplace(result, 'customPrompt', !!opts.customPrompt?.trim());
+
+  // Inject custom prompt last (String.replace — not Mustache, safe from user {{}} collision)
+  if (opts.customPrompt?.trim()) {
+    result = result.replace('{{customPrompt}}', opts.customPrompt.trim());
+  }
+
+  return result;
 }
 
-/**
- * Vision mode hint — tells the AI whether vision is enabled.
- * @param enabled - whether the user has enabled vision mode
- */
-export function PF_VISION_HINT(enabled: boolean): string {
-  if (enabled) {
-    return '视觉模式已开启。你可以使用 view_image 查看图片内容。使用 download_image 将图片保存到用户本地。';
-  }
-  return '用户暂未开启视觉模式。如果你支持视觉（如 GPT-4V、Claude Vision、DeepSeek VL 等），可以提醒用户开启视觉模式。开启方法：在 TUI 使用逗号(,)打开设置页面设置 LLM_VISION_ENABLED=true，在 PWA 使用设置页面的「视觉模式」开关。注意：如果你不支持视觉，请不要建议用户开启视觉模式以避免浪费上下文。视觉模式本身不提供外置 OCR 功能，仅用于你自身可处理图片内容。';
+/** Replace {{#if VAR}}...{{/if}} block with content if condition is true, otherwise remove it */
+function conditionalReplace(template: string, varName: string, condition: boolean): string {
+  const regex = new RegExp(`{{#if ${varName}}}([\\s\\S]*?){{\\/if}}`);
+  return template.replace(regex, condition ? '$1' : '');
 }
 
 // ══════════════════════════════════════════════════════════════════
-// Translation prompts
+// Auto-start message for profile context
+// ══════════════════════════════════════════════════════════════════
+
+export function PF_AUTO_ANALYSIS(handle: string): string {
+  return `请分析 @${handle} 的主页，概括他们的近期动态。`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// Fallback guiding questions (when no contextUri, shown in UI)
+// ══════════════════════════════════════════════════════════════════
+
+export const P_GUIDING_QUESTIONS: string[] = [
+  '总结这个讨论',
+  '解释这个讨论',
+  '分析帖子情绪',
+];
+
+// ══════════════════════════════════════════════════════════════════
+// Single-turn prompts (translate / polish / title / ALT)
 // ══════════════════════════════════════════════════════════════════
 
 /**
@@ -169,10 +200,6 @@ export function PF_TRANSLATE_JSON(targetLang: string): string {
   ].join(' ');
 }
 
-// ══════════════════════════════════════════════════════════════════
-// Draft polish / rewrite
-// ══════════════════════════════════════════════════════════════════
-
 /** System prompt for the polish/rewrite assistant */
 export const P_POLISH_SYSTEM = '你是一个文字润色助手，根据用户要求调整以下帖子草稿，只返回润色后的文本。';
 
@@ -180,32 +207,6 @@ export const P_POLISH_SYSTEM = '你是一个文字润色助手，根据用户要
 export function PF_POLISH_USER(requirement: string, draft: string): string {
   return `用户要求：${requirement}\n\n草稿：\n${draft}`;
 }
-
-// ══════════════════════════════════════════════════════════════════
-// Auto-start message for profile context
-// ══════════════════════════════════════════════════════════════════
-
-/**
- * User message automatically sent when AI chat opens from a profile page.
- * @param handle - the profile handle being viewed
- */
-export function PF_AUTO_ANALYSIS(handle: string): string {
-  return `请分析 @${handle} 的主页，概括他们的近期动态。`;
-}
-
-// ══════════════════════════════════════════════════════════════════
-// Fallback guiding questions (when no contextUri, shown in UI)
-// ══════════════════════════════════════════════════════════════════
-
-export const P_GUIDING_QUESTIONS: string[] = [
-  '总结这个讨论',
-  '解释这个讨论',
-  '分析帖子情绪',
-];
-
-// ══════════════════════════════════════════════════════════════════
-// AI chat auto-naming
-// ══════════════════════════════════════════════════════════════════
 
 /**
  * System prompt for auto-generating chat conversation titles.
