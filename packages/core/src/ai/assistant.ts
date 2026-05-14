@@ -338,7 +338,7 @@ export class AIAssistant {
       });
     }
     // Filter out tool messages without tool_call_id (stale from corrupted storage)
-    msgs = msgs.filter(m => m.role !== 'tool' || m.tool_call_id);
+    msgs = msgs.filter(m => m.role !== 'tool' || (typeof m.tool_call_id === 'string' && m.tool_call_id.length > 0));
     if (!this.hasPendingImages || !this.config.visionEnabled) return msgs;
     msgs = [...msgs];
     for (let i = msgs.length - 1; i >= 0; i--) {

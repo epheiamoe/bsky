@@ -394,6 +394,7 @@ const ja: LocaleMessages = {
   // ── Common ──
   'common.loading': '読み込み中...',
   'common.error': 'エラーが発生しました',
+  'common.notFound': '見つかりません',
   'common.unknownPage': '不明なページ',
   'common.rawModeWarning': '端末が raw mode に対応していません。Windows Terminal / iTerm2 で実行してください。',
   'common.back': '戻る',

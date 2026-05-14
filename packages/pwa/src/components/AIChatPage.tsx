@@ -842,11 +842,17 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             </button>
             <textarea
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                if (e.target.value === '') {
+                  const el = e.currentTarget;
+                  el.style.height = 'auto';
+                }
+              }}
               onKeyDown={handleKeyDown}
-          placeholder={t('ai.placeholder')}
-          aria-label={t('a11y.aiInput')}
-          disabled={loading}
+              placeholder={t('ai.placeholder')}
+              aria-label={t('a11y.aiInput')}
+              disabled={loading}
               rows={1}
               className="flex-1 resize-none rounded-lg border border-border bg-surface text-text-primary placeholder:text-text-secondary/50 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 max-h-32"
               style={{ minHeight: '42px' }}

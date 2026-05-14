@@ -8,6 +8,7 @@ import { PostActionsRow } from './PostActionsRow.js';
 import { EditProfileModal } from './EditProfileModal.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 import { Icon } from './Icon.js';
+import { NotFoundCard } from './NotFoundCard.js';
 
 interface ProfilePageProps {
   client: BskyClient;
@@ -113,17 +114,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   // ── Not found ──
   if (!profile) {
-    return (
-      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-background px-4 animate-fadeIn">
-        <button
-          onClick={goBack}
-          className="text-text-secondary hover:text-text-primary transition-colors text-lg mb-4"
-        >
-          ← {t('nav.back')}
-        </button>
-        <p className="text-text-secondary text-lg">{t('profile.notFound')}</p>
-      </div>
-    );
+    return <NotFoundCard message={t('profile.notFound')} goBack={goBack} />;
   }
 
   const initial = (profile.displayName || profile.handle).charAt(0).toUpperCase();

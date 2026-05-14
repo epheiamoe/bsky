@@ -435,6 +435,7 @@ const zh: LocaleMessages = {
   // ── Common ──
   'common.loading': '加载中…',
   'common.error': '发生错误',
+  'common.notFound': '未找到',
   'common.unknownPage': '未知页面',
   'common.rawModeWarning': '当前终端不支持 raw mode。请在 Windows Terminal / iTerm2 中运行。',
   'common.escBack': 'Esc 返回',

@@ -14,6 +14,7 @@ import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { Modal } from './Modal.js';
 import { ThreadgateEditor } from './ThreadgateEditor.js';
+import { NotFoundCard } from './NotFoundCard.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -41,6 +42,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const {
     flatLines,
     loading,
+    error,
     focused,
     threadgate,
     likePost,
@@ -346,10 +348,14 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         )}
 
         {!loading && flatLines.length === 0 && (
-          <div className="text-center py-16 text-text-secondary">
-            <p className="text-4xl mb-3">📭</p>
-            <p>{t('thread.loadFailed')}</p>
-          </div>
+          error ? (
+            <NotFoundCard uri={uri} goBack={goBack} />
+          ) : (
+            <div className="text-center py-16 text-text-secondary">
+              <p className="text-4xl mb-3">📭</p>
+              <p>{t('thread.loadFailed')}</p>
+            </div>
+          )
         )}
       </div>
       {showInfo && focused && getPostView?.(focused.uri) && (

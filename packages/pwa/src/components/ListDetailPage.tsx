@@ -6,6 +6,7 @@ import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Modal } from './Modal.js';
+import { NotFoundCard } from './NotFoundCard.js';
 
 interface ListDetailPageProps {
   client: BskyClient;
@@ -179,7 +180,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : !list ? (
-        <div className="flex items-center justify-center py-16 text-text-secondary text-sm">{t('common.error')}</div>
+        <NotFoundCard goBack={goBack} />
       ) : (
         <>
           {/* Tab bar */}

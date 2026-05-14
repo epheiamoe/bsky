@@ -394,6 +394,7 @@ const en: LocaleMessages = {
   // ── Common ──
   'common.loading': 'Loading...',
   'common.error': 'An error occurred',
+  'common.notFound': 'Not found',
   'common.unknownPage': 'Unknown page',
   'common.rawModeWarning': 'Terminal does not support raw mode. Please run in Windows Terminal / iTerm2.',
   'common.back': 'Back',

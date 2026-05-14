@@ -1,0 +1,76 @@
+{
+  "mcp-服务器": {
+    "docs/MCP.md": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/package.json": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/src/config.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/src/index.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/src/server.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/src/tools.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "scripts/start-mcp.mjs": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "opencode.jsonc": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/ai/tools.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/src/index.ts": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/mcp/esbuild.config.mjs": [
+      [
+        1,
+        999999
+      ]
+    ],
+    "packages/core/package.json": [
+      [
+        1,
+        999999
+      ]
+    ]
+  }
+}

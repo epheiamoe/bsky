@@ -1,10 +1,10 @@
 import React from 'react';
 import type { PostView, AIConfig, BskyClient } from '@bsky/core';
+import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
-import { describeImage } from '@bsky/core';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
 import { VideoCard } from './VideoCard.js';
@@ -26,7 +26,7 @@ export function truncateName(name: string, max = 15): string {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|#[\p{L}\p{N}_]+)/gu;
+const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|#[\p{L}\p{N}_]+|at:\/\/did:[a-z]+:[^\/\s]+\/[a-zA-Z.0-9-]+\/[a-zA-Z0-9~_.-]+)/gu;
 
 export function linkifyText(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -37,7 +37,28 @@ export function linkifyText(text: string): React.ReactNode[] {
       parts.push(text.slice(lastIndex, match.index));
     }
     const token = match[1];
-    if (token.startsWith('@')) {
+    if (token.startsWith('at://')) {
+      try {
+        const parsed = parseAtUri(token);
+        let href: string;
+        switch (parsed.collection) {
+          case 'app.bsky.feed.post':
+            href = `#/thread?uri=${encodeURIComponent(token)}`;
+            break;
+          case 'app.bsky.graph.list':
+            href = `#/list?uri=${encodeURIComponent(token)}`;
+            break;
+          case 'app.bsky.feed.generator':
+            href = `#/feed?feed=${encodeURIComponent(token)}`;
+            break;
+          default:
+            href = `#/profile?actor=${encodeURIComponent(parsed.did)}`;
+        }
+        parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={href} onClick={(e) => e.stopPropagation()}>{token}</a>);
+      } catch {
+        parts.push(<span key={match.index} className="text-text-secondary">{token}</span>);
+      }
+    } else if (token.startsWith('@')) {
       const handle = token.slice(1);
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/profile?actor=${encodeURIComponent(handle)}`} onClick={(e) => e.stopPropagation()}>{token}</a>);
     } else if (token.startsWith('#')) {

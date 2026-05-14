@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.5] — 2026-05-14
+
+### Added
+
+- **at:// link interception**: `linkifyText` in PostCard now matches `at://did:.../collection/rkey` URIs and renders them as clickable links. Routes: `post`→thread, `list`→list detail, `feed.generator`→feed, default→profile via `parseAtUri()`.
+- **NotFoundCard component**: Reusable 404 page with `book-search` SVG icon, back button, and AT URI display. Used by ThreadView, ProfilePage, and ListDetailPage for consistent "not found" states.
+- **i18n `common.notFound`**: `'Not found'` / `'未找到'` / `'見つかりません'` in all 3 locales.
+- **loadMore retry**: `timeline.ts` `loadMore()` now retries once after 1.5s (matching `load()` behavior). Keeps loading spinner during retry — transient PDS 502 errors are silently recovered.
+
+### Fixed
+
+- **Prompt `{{/if}}` residual**: `replaceConditionalBlock` depth tracking now uses `'{{#if '` instead of `openTag` — correctly counts nested conditionals with different variable names. No more orphaned `{{/if}}` in system prompt.
+- **User handle injection**: Template now has `{{userHandle}}` / `{{userDisplayName}}` placeholders in rule 5 ("当前用户: @handle").
+- **Tool call 400 error**: `_buildMessages` filter changed from `m.tool_call_id` to `typeof m.tool_call_id === 'string' && m.tool_call_id.length > 0` — empty string no longer causes orphaned tool_call_id.
+- **AI textarea collapse**: `onChange` resets `el.style.height = 'auto'` when input is cleared after sending.
+- **`replaceConditionalBlock` scan position**: When an inner `{{#if}}` is found, scan advances past its `}}` instead of using `openTag.length` (different variable names have different lengths).
+
+### Removed
+
+- `P_ASSISTANT_BASE`, `PF_CURRENT_USER`, `PF_PROFILE_CONTEXT`, `PF_POST_CONTEXT`, `PF_ENVIRONMENT`, `PF_LOCALE_HINT`, `P_CONCISE`, `PF_CURRENT_TIME`, `PF_VISION_HINT` — all replaced by `buildSystemPrompt()` + `MAIN_TEMPLATE`.
+
 ## [0.13.4] — 2026-05-14
 
 ### Added

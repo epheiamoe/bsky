@@ -58,9 +58,9 @@ Bluesky 帖子可能包含视频（在 get_post_context 和 get_post_thread_flat
 4. 当你调用写操作工具时，系统会自动弹出确认对话框询问用户是否允许。
    因此你不需要额外询问用户"是否要执行"，直接调用工具执行即可。
    但只有在用户明确提出写操作请求时才调用写工具，不要替用户做决定。
-5. 当前用户的信息会作为"当前用户"提示告知你（包含 handle）。
-   需要获取自己信息时，直接使用 get_profile actor="你的handle"。
-   获取自己的时间线、通知等也无需猜测——handle 已在提示词中给出。
+5. 当前用户: {{userDisplayName}} (@{{userHandle}})。
+   需要获取自己信息时，直接使用 get_profile actor="{{userHandle}}"。
+   获取自己的时间线、通知等也无需猜测——@{{userHandle}} 已在提示词中给出。
 
 {{#if contextProfile}}
 用户正在查看 {{contextProfile}} 的主页。
@@ -129,6 +129,9 @@ export function buildSystemPrompt(opts: {
       ? '命令行输入和你交互，输出是纯文本。保持回复简短，避免复杂格式，每行不要超过80个字符。可使用OSC 8超链接但不支持图片内嵌。'
       : '网页界面和你交互，支持图片、Markdown格式和超链接。');
 
+  result = result.replace(/{{userHandle}}/g, opts.userHandle ?? '');
+  result = result.replace(/{{userDisplayName}}/g, opts.userDisplayName ?? '');
+
   result = result.replace('{{currentTime}}', `${currentTime}，星期${day}。`);
 
   result = result.replace('{{visionHint}}',
@@ -136,10 +139,13 @@ export function buildSystemPrompt(opts: {
       ? '视觉模式已开启。你可以使用 view_image 查看图片内容。使用 download_image 将图片保存到用户本地。'
       : '用户暂未开启视觉模式。如果你支持视觉（如 GPT-4V、Claude Vision、DeepSeek VL 等），可以提醒用户开启视觉模式。开启方法：在 TUI 使用逗号(,)打开设置页面设置 LLM_VISION_ENABLED=true，在 PWA 使用设置页面的「视觉模式」开关。注意：如果你不支持视觉，请不要建议用户开启视觉模式以避免浪费上下文。视觉模式本身不提供外置 OCR 功能，仅用于你自身可处理图片内容。');
 
-  // Conditional blocks: {{#if var}}...{{/if}}
-  result = conditionalReplace(result, 'contextProfile', !!opts.contextProfile);
-  result = conditionalReplace(result, 'contextPost', !!opts.contextPost);
-  result = conditionalReplace(result, 'customPrompt', !!opts.customPrompt?.trim());
+  // Conditional blocks: render all {{#if}}...{{/if}} in one pass
+  result = renderConditionals(result, {
+    contextProfile: !!opts.contextProfile,
+    contextPost:    !!opts.contextPost,
+    currentUser:   !!opts.currentUser,
+    customPrompt:  !!opts.customPrompt?.trim(),
+  });
 
   // Inject custom prompt last (String.replace — not Mustache, safe from user {{}} collision)
   if (opts.customPrompt?.trim()) {
@@ -149,10 +155,57 @@ export function buildSystemPrompt(opts: {
   return result;
 }
 
-/** Replace {{#if VAR}}...{{/if}} block with content if condition is true, otherwise remove it */
-function conditionalReplace(template: string, varName: string, condition: boolean): string {
-  const regex = new RegExp(`{{#if ${varName}}}([\\s\\S]*?){{\\/if}}`);
-  return template.replace(regex, condition ? '$1' : '');
+/**
+ * Replace a single {{#if VAR}}...{{/if}} block.
+ * Uses forward depth-scan from openIdx so outer {{/if}} tags
+ * cannot be consumed by inner blocks.
+ */
+function replaceConditionalBlock(
+  template: string,
+  varName: string,
+  condition: boolean,
+): string {
+  const openTag = `{{#if ${varName}}}`;
+  const openIdx = template.indexOf(openTag);
+  if (openIdx === -1) return template;
+
+  const closeTag = '{{/if}}';
+  const scanStart = openIdx + openTag.length;
+  let depth = 1;
+  let scan = scanStart;
+
+  while (scan < template.length) {
+    const ifIdx = template.indexOf('{{#if ', scan);
+    const endIdx = template.indexOf(closeTag, scan);
+
+    if (endIdx === -1) break;
+
+    if (ifIdx !== -1 && ifIdx < endIdx) {
+      depth++;
+      const afterTag = template.indexOf('}}', ifIdx + 7);
+      scan = afterTag !== -1 ? afterTag + 2 : ifIdx + 9; // skip {{#if VAR}}
+    } else {
+      depth--;
+      if (depth === 0) {
+        const before = template.slice(0, openIdx);
+        const content = template.slice(scanStart, endIdx);
+        const after = template.slice(endIdx + closeTag.length);
+        if (!condition) return before + after;
+        return before + content + after;
+      }
+      scan = endIdx + closeTag.length;
+    }
+  }
+  return template;
+}
+
+/** Process all conditional blocks; condition=false removes the whole block */
+function renderConditionals(template: string, vars: Record<string, string | boolean | undefined>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(vars)) {
+    result = replaceConditionalBlock(result, key, !!value);
+  }
+  return result;
 }
 
 // ══════════════════════════════════════════════════════════════════
