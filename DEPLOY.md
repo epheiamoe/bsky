@@ -28,7 +28,7 @@ pnpm -r build
 
 # 2. 部署到 Cloudflare Pages
 cd packages/pwa
-npx wrangler pages deploy dist --project-name ai-bsky --branch=main
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 ```
 
 > Cloudflare 会自动发现 `functions/` 目录，DDG 搜索 fallback 代理自动生效。
@@ -41,8 +41,8 @@ npx wrangler pages deploy dist --project-name ai-bsky --branch=main
 npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
 # → 会生成一个 preview URL，用于测试
 
-# Step 2: 确认无误后部署到生产（--branch=main 更新 production 环境）
-npx wrangler pages deploy dist --project-name ai-bsky --branch=main
+# Step 2: 确认无误后部署到生产（--branch=production 更新 production 环境）
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 # → 更新 ai-bsky.pages.dev
 ```
 

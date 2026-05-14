@@ -196,13 +196,13 @@ cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branc
 # → Preview URL: https://<hash>.ai-bsky.pages.dev
 # → Test here first (share with others, check functionality)
 
-# 3. After testing, deploy to production (--branch=main updates ai-bsky.pages.dev)
-npx wrangler pages deploy dist --project-name ai-bsky --branch=main
+# 3. After testing, deploy to production (--branch=production updates ai-bsky.pages.dev)
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 # → Production: https://ai-bsky.pages.dev
 
 # Quick full workflow:
 # git add <path> && git commit -m "..." && pnpm -r build && cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
-# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=main
+# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 ```
 
 For deployment on other platforms (VPS/PHP, Vercel, Netlify, Node.js), see `DEPLOY.md`.
