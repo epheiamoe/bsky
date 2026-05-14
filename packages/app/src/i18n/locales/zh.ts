@@ -545,6 +545,7 @@ const zh: LocaleMessages = {
   'dm.resolvingQuote': '正在解析引用…',
   'dm.systemMessage': '系统消息',
   'dm.unknown': '未知用户',
+  'dm.newMessages': '{n} 条新消息',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

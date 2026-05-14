@@ -222,6 +222,7 @@ const ja: LocaleMessages = {
   'dm.resolvingQuote': '引用を解決中…',
   'dm.systemMessage': 'システムメッセージ',
   'dm.unknown': '不明なユーザー',
+  'dm.newMessages': '{n}件の新着メッセージ',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

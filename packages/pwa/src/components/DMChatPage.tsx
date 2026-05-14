@@ -31,26 +31,59 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const did = client.getDID();
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [newMsgBadge, setNewMsgBadge] = useState(0);
+  const prevMsgCountRef = useRef(0);
+  const lastMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadConvo(conversationId, true).then(() => { markRead(); markConvoRead(conversationId); });
   }, [conversationId]);
 
+  // New message: auto-scroll if at bottom, increment badge if away
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-    if (isNearBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const currentLastMsg = messages[messages.length - 1];
+    const currentLastId = currentLastMsg?.id || null;
+    const lengthChanged = messages.length !== prevMsgCountRef.current;
+
+    if (!lengthChanged) {
+      prevMsgCountRef.current = messages.length;
+      lastMsgIdRef.current = currentLastId;
+      return;
     }
-  }, [messages]);
+
+    prevMsgCountRef.current = messages.length;
+
+    // loadOlder prepends → last message unchanged → skip
+    if (currentLastId === lastMsgIdRef.current) return;
+    lastMsgIdRef.current = currentLastId;
+
+    if (!currentLastMsg || !('sender' in currentLastMsg)) return;
+
+    const isOwn = currentLastMsg.sender.did === did;
+
+    if (isOwn) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setNewMsgBadge(0);
+    } else if (autoScroll) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      setNewMsgBadge(0);
+    } else {
+      setNewMsgBadge(prev => prev + 1);
+    }
+  }, [messages, autoScroll, did]);
 
   // Scroll-to-top → load older messages
   const loadingOlderRef = useRef(false);
   const handleScroll = useCallback(() => {
     const el = scrollContainerRef.current;
-    if (!el || loading || loadingOlderRef.current) return;
-    if (el.scrollTop < 60) {
+    if (!el) return;
+
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    setAutoScroll(nearBottom);
+    if (nearBottom) setNewMsgBadge(0);
+
+    if (!loading && !loadingOlderRef.current && el.scrollTop < 60) {
       loadingOlderRef.current = true;
       loadOlder().finally(() => { loadingOlderRef.current = false; });
     }
@@ -153,7 +186,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   }, [showEmojiConfig, allEmojis.length, emojiConfigLoading]);
 
   return (
-    <div className="flex flex-col h-full animate-fadeIn">
+    <div className="flex flex-col h-full animate-fadeIn relative">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('a11y.back')}>
@@ -309,6 +342,26 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
         })}
         <div ref={bottomRef} />
       </div>
+
+      {/* New message badge — floater */}
+      {newMsgBadge > 0 && (
+        <button
+          onClick={() => {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setNewMsgBadge(0);
+            setAutoScroll(true);
+          }}
+          className="absolute bottom-16 right-6 w-10 h-10 bg-primary text-white rounded-full shadow-lg flex items-center justify-center animate-slideUp z-50 hover:bg-primary-hover transition-colors"
+          aria-label={t('dm.newMessages', { n: newMsgBadge })}
+        >
+          <Icon name="chevron-down" size={20} />
+          {newMsgBadge > 1 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 font-bold">
+              {newMsgBadge > 99 ? '99+' : newMsgBadge}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* Quote preview */}
       {quotePreview && (

@@ -222,6 +222,7 @@ const en: LocaleMessages = {
   'dm.unknown': 'Unknown User',
   'dm.emojiConfig': 'Customize Quick Emojis',
   'dm.emojiConfigHint': 'Selected {n} emojis. Click to add/remove.',
+  'dm.newMessages': '{n} new messages',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',
