@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { useI18n } from '@bsky/app';
 import { Modal } from './Modal.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
@@ -22,8 +22,24 @@ export function ImageGrid({ images, imageDescCallback, singleImageFill }: {
   const [naturalAspectRatio, setNaturalAspectRatio] = useState(1);
   const [altPopup, setAltPopup] = useState<{ index: number; text: string; aiText?: string; aiLoading: boolean; aiError?: string } | null>(null);
   const [imgAspectRatio, setImgAspectRatio] = useState<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const fillMode = singleImageFill ?? true;
+
+  // When single-image mode discovers aspect ratio, compute container width
+  // so the border/background box wraps only the image (not the full card)
+  useEffect(() => {
+    if (images.length !== 1 || fillMode || !imgAspectRatio) return;
+    const parent = gridRef.current?.parentElement;
+    if (!parent) return;
+    const parentW = parent.clientWidth;
+    const frac = Math.min(Math.max(imgAspectRatio, 0.5), 2);
+    const maxH = Math.min(window.innerHeight * 0.7, 600);
+    let h = parentW / frac;
+    if (h > maxH) { h = maxH; }
+    const w = h * frac;
+    setContainerWidth(Math.min(w, parentW));
+  }, [imgAspectRatio, images.length, fillMode]);
 
   const handleImgClick = useCallback((e: React.MouseEvent<HTMLImageElement>, i: number) => {
     e.stopPropagation();
@@ -104,18 +120,18 @@ export function ImageGrid({ images, imageDescCallback, singleImageFill }: {
   return (
     <>
       {images.length === 1 && !fillMode ? (
-        <div className="mt-2 rounded-xl overflow-hidden border border-border bg-black/5">
-          <div ref={gridRef as React.RefObject<HTMLDivElement>} className="w-full flex items-start">
+        <div className="mt-2 rounded-xl overflow-hidden border border-border bg-black/5" style={containerWidth ? { width: containerWidth, maxWidth: '100%' } : { maxWidth: '100%' }}>
+          <div ref={gridRef as React.RefObject<HTMLDivElement>} className="flex items-start">
             {images.map((img, i) => {
               const hasAlt = !!img.alt?.trim();
               const frac = imgAspectRatio ? Math.min(Math.max(imgAspectRatio, 0.5), 2) : null;
               return (
-                <div key={i} className="relative" style={{ maxWidth: '100%', maxHeight: 'min(70vh, 600px)', ...(frac ? { aspectRatio: String(frac) } : {}) }}>
+                <div key={i} className="relative w-full" style={{ maxHeight: 'min(70vh, 600px)', ...(frac ? { aspectRatio: String(frac) } : {}) }}>
                   <img
                     src={img.url}
                     alt={img.alt || t('post.imageAlt', { n: i + 1 })}
                     onLoad={(e) => setImgAspectRatio(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
-                    className="max-w-full max-h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                    className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={(e) => handleImgClick(e, i)}
                   />
                   {(imageDescCallback || hasAlt) && (
