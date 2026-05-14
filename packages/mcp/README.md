@@ -133,4 +133,4 @@ Install the MCP extension for your editor, then add the server configuration ref
 
 ## License
 
-[MIT](https://github.com/epheiamoe/bsky/blob/master/LICENSE)
+[MIT](https://github.com/epheiamoe/bsky/blob/main/LICENSE)

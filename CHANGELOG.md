@@ -343,7 +343,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **系统提示词**: `P_ASSISTANT_BASE` 新增规则 5（AI 应使用提示词中的 handle 调工具）；`PF_CURRENT_USER` 新增 handle 使用提示 + 界面语言
 - **AI 工具总数**: 36 → 38
 - **`contracts/tools.json`**: 新增 `instant_answer` + `search_wikipedia` + `get_profile` 描述更新
-- **`AGENTS.md`**: 新增 Pages Function 文档规范；Build & Deploy 改为两步流程（`--branch=staging` → `--branch=master`）
+- **`AGENTS.md`**: 新增 Pages Function 文档规范；Build & Deploy 改为两步流程（`--branch=staging` → `--branch=main`）
 - **`AGENTS.local.md`**: 部署流程同步更新
 - **`docs/CONTEXT.md`**: 更新至 v0.10.0，新增文件引用，工具数更新
 - **`docs/PAGES_FUNCTION.md`**: 增加多平台部署章节和本地开发说明
