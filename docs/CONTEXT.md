@@ -26,6 +26,7 @@
 
 ## 版本
 
+**v0.13.3** — 图片查看器缩放/平移（双指捏合、双击缩放至点击位置、手指/鼠标拖动、桌面 Ctrl+滚轮）。`touch-action: none` 防浏览器手势冲突。返回键关闭图片。framer-motion spring 丝滑动画。关闭前自动复位缩放保证退出动画无缝。SW 嵌入 commit hash 修复「检查更新」检测。<br/>
 **v0.13.2** — 发帖页重构（自动增高 textarea、300+红色标记、淡化输入框、帖子串独立引用、回复讨论源样式、引用卡片 PostCard 样式、动画、上传进度弹窗）。Session 持久化修复（JWT 刷新后更新 auth store）。单图宽高比模式（设置切换 + 左对齐 + 容器适应内容 + 1:2~2:1 限制）。`ImageGrid` 独立组件 + `extractEmbeds` 共享工具库（删除 4 份副本，-260 行）。
 
 **v0.13.1** — 综合无障碍提升：WCAG 4.1.1（语义 HTML）+ 4.1.2（表单标签关联、aria-expanded/describedby/invalid/progressbar）+ 1.4.1（颜色+状态双重编码）+ 色弱友好调色板 + **AI ALT 图像描述生成**。_authHook 自动注入 Authorization。downloadBlob bsky.social 代理回退 + 429 指数退避重试。Modal createPortal + stopPropagation。设置场景 Tab 国际化。

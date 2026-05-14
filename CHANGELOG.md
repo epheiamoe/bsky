@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.3] — 2026-05-14
+
+### Added
+
+- **Image lightbox zoom/pan**: Pinch-to-zoom, double-tap zoom-to-point (2.5x), finger pan/drag, desktop Ctrl+scroll zoom, mouse drag pan. `touch-action: none` prevents browser gesture conflicts. Back button closes lightbox via `history.pushState`/`popstate`. Smooth spring animation via framer-motion `motion.div`. Close resets zoom before exit animation for seamless transition.
+
+### Fixed
+
+- **About page "Check for updates"**: `sw.js` now embeds commit hash via Vite `closeBundle` plugin. Browser detects byte change on `reg.update()`, fires `updatefound`, dispatches `pwa-update-available` event.
+
 ## [0.13.2] — 2026-05-14
 
 ### Added
