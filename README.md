@@ -9,7 +9,7 @@ Supports third-party PDS.
 
 <div align="center">
 
-[**Open Web App**](https://ai-bsky.pages.dev) · [**MCP Server (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**View Source**](https://github.com/epheiamoe/bsky)
+[**Open Web App**](https://bsky.epheia.dev) · [**MCP Server (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**View Source**](https://github.com/epheiamoe/bsky)
 
 </div>
 
@@ -69,11 +69,21 @@ One tap to translate any post or thread into your language. Dual-mode: simple pl
 
 ---
 
-### 🎨 Welcome & Setup
+## 🎨 Setup & Onboarding
 
-![Welcome](assets/illustration/welcome-page.png)
+**A welcome experience built with respect, not just functionality.**
 
-First time here? A guided welcome card walks you through AI key setup — with step-by-step instructions for each provider. Skip it and all the core features work out of the box. Your credentials never leave your browser.
+Five guided steps that introduce you to the app's philosophy — from AI transparency to personal identity. Every step is skippable, and you can restart the wizard anytime from Settings.
+
+| Step | Screenshot | What it does |
+|------|-----------|--------------|
+| ① **Welcome + Authorization** | ![Welcome 1](assets/illustration/welcome-1.jpg) | Privacy guarantee, AI permission tiers (Read/Write/Confirm), and an expandable list of all 33 AI tools — full transparency from day one |
+| ② **Pronouns** | ![Welcome 2](assets/illustration/welcome-2.jpg) | Choose how AI addresses you: skip (no pronoun injection), neutral (gender-neutral terms), or custom pronouns. Prevents misgendering at the architectural level — pronouns are injected into every system prompt |
+| ③ **Personalization** | ![Welcome 3](assets/illustration/welcome-3.jpg) | Live toggles for Dark Mode, CVD-friendly palette (red→magenta, green→teal), and AI ALT description generation. Changes take effect immediately — no save button needed |
+| ④ **AI Provider** | ![Welcome 4](assets/illustration/welcome-4.jpg) | Configure DeepSeek, Mistral, or any OpenAI-compatible provider with step-by-step instructions. BYOK (Bring Your Own Key) — no server proxy |
+| ⑤ **Done** | ![Welcome 5](assets/illustration/welcome-5.jpg) | Completion with BYOK privacy card emphasizing your API key stays in your browser, and a path to the full settings panel |
+
+> **Why this matters**: Most AI clients skip consent and identity. This onboarding treats AI agency as a first-class concern — what AI can read, what it needs confirmation for, and how it addresses you. All configurable later in Settings → Account / Settings → AI.
 
 ---
 
@@ -91,13 +101,16 @@ First time here? A guided welcome card walks you through AI key setup — with s
 
 ---
 
-## 🦯 Accessibility
+## 🦯 Accessibility & Human-Centric Design
 
-Built for everyone — screen reader users, color-blind users, and AI agents.
+Built for everyone — regardless of ability, identity, or language.
 
+- **Pronoun respect**: Open-ended pronoun field (never binary) injected into every AI system prompt. Choose skip, neutral, or custom — AI adapts to you, not the other way around
 - **Screen reader semantics**: proper landmarks, list roles, `aria-label` on every interactive element, dynamic `<html lang>` and page titles
-- **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types
-- **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks.
+- **Color-blind friendly palette**: optional `.cvd` mode remaps red/green/yellow → magenta/teal/amber for all CVD types. Toggle at any time with instant feedback
+- **AI ALT — image description**: AI-generated alt text for images using vision models. Works across feed, thread, profile, search, bookmarks
+- **i18n**: 中文 · English · 日本語 — all UI strings, including the setup wizard and system prompts, are fully translated
+- **BYOK privacy**: Your API key stays entirely in your browser. All AI requests go directly from your device to your chosen provider. We never proxy, relay, or store your key
 
 ![AI ALT](assets/illustration/AI-alt.png)
 
@@ -126,7 +139,7 @@ cd packages/tui && npx tsx src/cli.ts
 cd packages/pwa && pnpm dev     # → http://localhost:5173
 ```
 
-Or visit **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** — login in-browser, no `.env` needed.
+Or visit **[bsky.epheia.dev](https://bsky.epheia.dev)** or **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** — login in-browser, no `.env` needed.
 
 ### MCP Server (for AI clients)
 
@@ -162,4 +175,4 @@ Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.13.1** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.13.8** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)

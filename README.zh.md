@@ -9,7 +9,7 @@
 
 <div align="center">
 
-[**打开网页版**](https://ai-bsky.pages.dev) · [**MCP 服务器 (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**源代码**](https://github.com/epheiamoe/bsky)
+[**打开网页版**](https://bsky.epheia.dev) · [**MCP 服务器 (npm)**](https://www.npmjs.com/package/@epheiamoe/bsky-mcp) · [**源代码**](https://github.com/epheiamoe/bsky)
 
 </div>
 
@@ -69,11 +69,21 @@
 
 ---
 
-### 🎨 欢迎引导
+### 🎨 欢迎引导 & 个性化设置
 
-![欢迎引导](assets/illustration/welcome-page.png)
+**一套以尊重为起点的引导体验，不只是功能配置。**
 
-第一次使用？欢迎引导卡片带你几步配置 AI Key——每个提供商都有详细步骤。直接跳过也能用全部核心功能。你的凭据不会离开浏览器。
+五个引导步骤逐步介绍产品理念——从 AI 透明度到个人身份表达。每一步都可跳过，随时可在设置中重新打开引导。
+
+| 步骤 | 截图 | 说明 |
+|------|------|------|
+| ① **欢迎 + 授权说明** | ![欢迎 1](assets/illustration/welcome-1.jpg) | 隐私保证、AI 权限分级（读取/需确认/绝不），以及可展开的全部 33 个 AI 工具清单——从第一天起完全透明 |
+| ② **代词设定** | ![欢迎 2](assets/illustration/welcome-2.jpg) | 选择 AI 如何称呼你：跳过（不注入代词）、中性（使用中性表达）、或自定义代词。在架构层面防止误称——代词注入每次系统提示 |
+| ③ **个性化** | ![欢迎 3](assets/illustration/welcome-3.jpg) | 深色模式、色弱友好调色板、AI 图片描述生成——三个即时生效的开关，无需等待保存 |
+| ④ **AI 提供商** | ![欢迎 4](assets/illustration/welcome-4.jpg) | 配置 DeepSeek、Mistral 或任意 OpenAI 兼容提供商，附逐步引导。BYOK——密钥不经过服务器 |
+| ⑤ **完成** | ![欢迎 5](assets/illustration/welcome-5.jpg) | 完成页显示 BYOK 隐私卡片，强调 API Key 仅在浏览器本地，并可前往完整设置面板 |
+
+> **为什么这很重要**：大多数 AI 客户端跳过了知情同意和身份尊重。这套引导将 AI 代理权限和身份表达作为一等关注——AI 能读什么、什么需要确认、以及如何称呼你。所有设置稍后可在「设置→账号/设置→AI」中调整。
 
 ---
 
@@ -91,13 +101,16 @@
 
 ---
 
-## 🦯 无障碍支持
+## 🦯 无障碍与人文关怀设计
 
-为所有人打造——屏幕阅读器用户、色弱用户、AI 代理。
+为所有人打造——无论能力、身份或语言。
 
+- **代词尊重**：开放式代词输入（非二元，非选择题）注入每次 AI 系统提示。可跳过、使用中性表达或自定义——AI 适应你，而非相反
 - **屏幕阅读器语义**：规范的地标标签、列表角色、每个交互元素的 `aria-label`，动态 `<html lang>` 和页面标题
-- **色弱友好调色板**：可选 `.cvd` 模式将 红/绿/黄 映射为 品红/蓝绿/琥珀，覆盖三类色觉缺陷
+- **色弱友好调色板**：可选 `.cvd` 模式将 红/绿/黄 映射为品红/蓝绿/琥珀，覆盖三类色觉缺陷。随时切换，即时生效
 - **AI ALT — 图像替代文本**：使用视觉模型为图片生成 ALT 描述。覆盖动态流、帖子详情、资料页、搜索、书签
+- **国际化**：中文 · English · 日本語 — 包括设置向导和系统提示在内的所有 UI 字符串均已完整翻译
+- **BYOK 隐私**：你的 API Key 仅在浏览器本地。所有 AI 请求直接从你的设备发往你选择的提供商。我们不会代理、中转或存储你的密钥
 
 ![AI ALT](assets/illustration/AI-alt.png)
 
@@ -126,7 +139,7 @@ cd packages/tui && npx tsx src/cli.ts
 cd packages/pwa && pnpm dev     # → http://localhost:5173
 ```
 
-或直接访问 **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** —— 在浏览器内登录，无需 `.env`。
+或直接访问 **[bsky.epheia.dev](https://bsky.epheia.dev)** 或 **[ai-bsky.pages.dev](https://ai-bsky.pages.dev)** —— 在浏览器内登录，无需 `.env`。
 
 ### MCP 服务器（供 AI 客户端使用）
 
@@ -162,4 +175,4 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.13.1** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.13.8** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
