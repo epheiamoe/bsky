@@ -129,8 +129,10 @@ Everything runs in your browser. Your Bluesky credentials, API keys, and convers
 ```bash
 git clone https://github.com/epheiamoe/bsky.git && cd bsky
 pnpm install && pnpm -r build
-cp .env.example .env   # add your Bluesky handle + App Password
 cd packages/tui && npx tsx src/cli.ts
+# First run launches the interactive Setup Wizard automatically
+# Guides you through: Auth consent → Credentials → AI provider → Pronouns → Done
+# No manual .env editing needed
 ```
 
 ### Browser (PWA)

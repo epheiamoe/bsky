@@ -129,8 +129,10 @@
 ```bash
 git clone https://github.com/epheiamoe/bsky.git && cd bsky
 pnpm install && pnpm -r build
-cp .env.example .env   # 填入你的 Bluesky 账号 + App Password
 cd packages/tui && npx tsx src/cli.ts
+# 首次运行自动启动交互式配置向导
+# 引导完成：授权确认 → 凭据 → AI 提供商 → 代词 → 完成
+# 无需手动编辑 .env
 ```
 
 ### 浏览器（PWA）
