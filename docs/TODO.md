@@ -60,9 +60,9 @@
 | **AT Play 热门灵感** | ⬜ | ⬜ | Future: trending posts + user's top posts + AI content strategy |
 | **资料页简介翻译** | ✅ | ✅ | TUI: f 键, PWA: 🌐 翻译按钮 |
 | **资料页头像/横幅放大** | N/A | ✅ | 点击头像/横幅 → 全屏灯箱 + 下载按钮 |
-| **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral（将弃用）, per-provider API keys, per-scenario model config |
-| **Gemini 适配** | ⬜ | ⬜ | Google Gemini vision models — 替代 Mistral 用于 AI ALT |
-| **Kimi 适配** | ⬜ | ⬜ | Moonshot Kimi — 国产视觉模型，无速率限制问题 |
+| **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral + OpenAI + xAI + Kimi + OpenRouter, per-provider API keys, per-scenario model config |
+| **Gemini 适配** | ⬜ | ⬜ | 未实现；v0.13.9 已改用 OpenAI/xAI/Kimi/OpenRouter |
+| **Kimi 适配** | ✅ | ✅ | Moonshot Kimi — 国产视觉模型，无速率限制问题 (v0.13.9) |
 | **思考/视觉模式** | ✅ | ✅ | 从 ModelInfo 自动派生，自定义模型手动设置 |
 | **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩, TUI: sharp, PWA: Canvas API |
 | **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |

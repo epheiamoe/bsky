@@ -11,19 +11,18 @@
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
 7. **`docs/MCP.md`** — MCP 服务器实现记录
-8. **`docs/AI_SYSTEM.md`** — AI 集成架构（Adapter 模式 + 7 个 Provider）
-8. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
-8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
-9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
-10. **`docs/DDG_INSTANT_ANSWER_DEBUG.md`** — DuckDuckGo API 浏览器空字段问题完整分析文档
+8. **`docs/AI_SYSTEM.md`** — AI 集成架构（ApiAdapter pattern + 7 providers）
+9. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
+10. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
 11. **`DEPLOY.md`** — 面向部署者的多平台部署指南
 12. **`docs/KEYBOARD.md`** — TUI 快捷键
 13. **`docs/DM.md`** — DM 私信公开文档（API/鉴权/模型/教训）
 14. **`docs/SCROLL.md`** — 虚拟滚动 + 滚动恢复规范
-15. **`docs/CHAT_SERVICE.md`** — ChatService 存储架构文档（v0.10.5 重构）
-16. **`CHANGELOG.md`** — 版本历史
-  16. **`packages/core/src/ai/prompts.ts`** — AI 提示词
-  17. **`packages/core/src/ai/tools.ts`** — 33 个 AI 工具定义
+15. **`CHANGELOG.md`** — 版本历史
+16. **`packages/core/src/ai/prompts.ts`** — AI 提示词
+17. **`packages/core/src/ai/tools.ts`** — 33 个 AI 工具定义
+
+> **Note:** Historical documents moved to `docs/archive/`. Reference archived docs (`CHAT_SERVICE.md`, `CHAT_STORAGE.md`, `SCROLL_DEBUG.md`, `SEARCH_REFACTOR_PLAN.md`, `FIX_TOOL_CALL_DISPLAY.md`, `API_CLIENT.md`, `ANIMATIONS.md`, `ENV.md`) only for historical context.
 
 ## 版本
 
@@ -39,7 +38,7 @@
 - **GitHub**: https://github.com/epheiamoe/bsky
 - **PWA 部署**: `cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true`
 - **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
-- **支持多 LLM 提供商**: DeepSeek, Mistral (设置 → Scenario 为不同场景分配不同模型)
+- **支持多 LLM 提供商**: DeepSeek, Mistral, OpenAI, xAI Grok, Kimi, OpenRouter (设置 → Scenario 为不同场景分配不同模型)
 - **默认 LLM**: `deepseek-v4-flash`，翻译默认 zh
 - **左侧导航栏**: Feed / 通知 / 搜索 / 书签 / **列表** / 资料 / AI 对话 / 发帖 / **AT Play** / 组件
 - **右侧组件栏** (lg+ 390px) : 6 widgets — header bar（icon+title+headerButtons+↑+↓+×），widget 纯内容。AI Widget 进入 AI 页面时临时禁用（离开时恢复），headerButtons 支持 open-in-page / new-chat。可通过 AIChatPage 的「Open in Widgets」按钮返回时间线并重新启用

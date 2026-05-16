@@ -4,34 +4,45 @@
 
 ## Context Recovery
 
-> **会话上下文被压缩后，从这里恢复状态**：
+> **会话上下文被压缩后，按此顺序恢复**：
 > 1. `docs/CONTEXT.md` — 版本号、项目状态、关键教训、开发规则
-> 2. `docs/LESSONS.md` — 历次会话的详细教训（56 课）
-> 3. `docs/ARCHITECTURE.md` — 系统架构
+> 2. `docs/ARCHITECTURE.md` — 系统架构、依赖流、关键决策
+> 3. `docs/LESSONS.md` — 历次会话详细教训（56 课）
 
-## Project Overview
+---
 
-Bluesky Client — a dual-UI (TUI + PWA) social client with AI integration. Monorepo with 5 packages (4 buildable + 1 npm).
+## 必读文档索引
 
-```
-@bsky/core ──→ @bsky/app ──→ @bsky/tui (terminal)
-   │                      └─→ @bsky/pwa (browser)
-   │
-   └── @epheiamoe/bsky-mcp (npm: MCP server for external AI clients)
-```
+| 场景 | 文档 | 说明 |
+|------|------|------|
+| **首次接触 / 上下文恢复** | `docs/CONTEXT.md` | 版本、功能状态、48 条关键教训、快速命令 |
+| **系统架构** | `docs/ARCHITECTURE.md` | Monorepo 结构、依赖流、TUI/PWA 差异、关键决策 |
+| **文件清单** | `docs/PACKAGES.md` | 各包完整文件列表 |
+| **Hook 签名** | `docs/HOOKS.md` | 所有 hook 的输入/输出/返回值 |
+| **AI 系统** | `docs/AI_SYSTEM.md` | ApiAdapter 模式、7 个 Provider、33 个工具、流式 SSE |
+| **MCP 服务器** | `docs/MCP.md` | MCP 实现记录、测试路径、npm 发布 |
+| **DM 私信** | `docs/DM.md` | API/鉴权/模型/教训 |
+| **虚拟滚动** | `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范（必须用像素值） |
+| **TUI 快捷键** | `docs/KEYBOARD.md` | 全局/视图快捷键、冲突表、预留键 |
+| **PWA 设计系统** | `docs/DESIGN.md` | 颜色、字体、组件规范 |
+| **PWA 架构** | `docs/PWA_GUIDE.md` | 组件映射、部署、Pages Functions |
+| **AT Play** | `docs/ATPLAY.md` | 社交圈分析数据管线/API/组件 |
+| **第三方 PDS** | `docs/PDS.md` | PDS 发现管线、CORS 处理 |
+| **用户问题** | `docs/USER_ISSUSES.md` | 已知 & 已解决问题日志 |
+| **术语** | `docs/TERMINOLOGY.md` | 主题帖/回复/讨论串等命名规范 |
+| **TUI 工具** | `docs/TUI_UTILS.md` | CJK 文本换行、鼠标追踪 |
+| **功能状态** | `docs/TODO.md` | TUI/PWA 功能完成对照表 |
 
-**Golden rule**: Business logic lives ONCE in `core` + `app`. TUI, PWA, and MCP only write render/transport layers.
+---
 
 ## Critical Safety Rules
 
 - **NEVER** hardcode credentials, handles, DIDs, API keys, or JWTs in ANY committed file
-- **NEVER** write local file paths (like `C:\Users\...` or `/home/...`) in committed files
-- **NEVER** put anything that could identify a real user or account in code or docs
-- **NEVER** add a new UI string or feature text without adding the corresponding i18n keys to ALL 3 locale files (`en.ts`, `zh.ts`, `ja.ts`). Missing i18n keys show as raw key names or `undefined` at runtime. Before merging any UI change, run the 19-key check: verify that `dm.send`, `dm.placeholder`, `action.done`, `settings.provider`, and other new keys exist in all 3 locales.
+- **NEVER** write local file paths in committed files
+- **NEVER** add a UI string without i18n keys in **ALL 3 locales** (`en.ts`, `zh.ts`, `ja.ts`)
 - The ONLY place for local secrets is `.env` (gitignored) and `AGENTS.local.md` (gitignored)
+- **ALWAYS commit atomically** — each commit is one logical change. Stage specific files with `git add <path>`; never `git add -A` blindly
 - Test files MUST use `process.env.VARIABLE_NAME` — never hardcoded values
-- All bluesky handles used in examples should be generic like `user.bsky.social`
-- **ALWAYS commit atomically** — each commit is one logical change (a new package, a fix, a refactor). Never group unrelated changes. Stage specific files with `git add <path>` after review; never `git add -A` blindly. If CHANGELOG spans multiple changes, commit its additions with the relevant feature commit or save it for last.
 
 ## Quick Start
 
@@ -42,180 +53,76 @@ pnpm -r build          # build all packages
 # TUI
 cd packages/tui && npx tsx src/cli.ts
 
-# PWA
+# PWA dev
 cd packages/pwa && pnpm dev     # http://localhost:5173
 
-# MCP Server (local dev)
-cd packages/mcp && pnpm build   # → dist/index.js
+# PWA deploy (staging → test → production)
+cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
+# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 
 # Tests (real API calls, no mocks)
 cd packages/core && npx vitest run --config vitest.config.ts
+
+# TypeScript check all packages
+pnpm -r typecheck
 ```
 
-## Key Files to Read
+## Architecture
 
-| Priority | File | Purpose |
-|----------|------|---------|
-| 1 | `docs/CONTEXT.md` | Context compression recovery — start here after session reset |
-| 2 | `docs/ARCHITECTURE.md` | System architecture, dependency flow, key decisions |
-| 3 | `docs/PACKAGES.md` | Complete file listing for each package |
-| 4 | `docs/HOOKS.md` | All hook signatures and return types |
-| 5 | `docs/DESIGN.md` | PWA design system (colors, typography, components) |
-| 6 | `docs/PWA_GUIDE.md` | PWA architecture, component mapping, deployment |
-| 7 | `docs/AI_SYSTEM.md` | AI integration: tools, streaming, translation |
-| 8 | `docs/KEYBOARD.md` | TUI keyboard shortcuts |
-| 9 | `docs/MCP.md` | MCP server implementation record, lessons, test results |
-| 10 | `docs/DM.md` | DM private messaging docs |
-| 10 | `docs/SCROLL.md` | Virtual scroll + scroll restoration spec |
-| 11 | `docs/SCROLL_DEBUG.md` | Scroll loss postmortem — root cause analysis, failed approaches, final fix |
-| 11 | `docs/LESSONS.md` | Key lessons from each session |
-| 12 | `docs/TODO.md` | Feature status (TUI/PWA checkboxes) |
-| 13 | `docs/USER_ISSUSES.md` | Known & resolved user issues |
-
-## Commands Reference
-
-```bash
-pnpm -r typecheck     # TypeScript check all packages
-pnpm -r build         # Build all packages
-pnpm test             # Run all tests
-pnpm --filter @bsky/core build    # Build core only
-pnpm --filter @bsky/pwa build     # Build PWA → dist/
+```
+@bsky/core ──→ @bsky/app ──→ @bsky/tui (terminal)
+   │                      └─→ @bsky/pwa (browser)
+   │
+   └── @epheiamoe/bsky-mcp (npm: MCP server)
 ```
 
-## Architecture Pattern
+**Golden rule**: Business logic lives ONCE in `core` + `app`. TUI, PWA, and MCP only write render/transport layers.
 
-When adding a new feature:
-1. `@bsky/core` — add API method to BskyClient if needed
+### Adding a new feature
+1. `@bsky/core` — add API method to `BskyClient` if needed
 2. `@bsky/app` — create hook or pure utility
 3. `@bsky/tui` — render with Ink (Text/Box components)
 4. `@bsky/pwa` — render with React DOM + Tailwind
 
-The hooks (`useTimeline`, `useThread`, `useAIChat`, etc.) are the bridge. Both UIs consume the same hooks with the same API.
+## Development Rules (Quick Reference)
 
-## Key Implementation Notes
+1. **i18n**: ALL user-visible strings via `t('key')`. Template: `{n}` (single braces). Add to `en.ts`/`zh.ts`/`ja.ts`
+2. **Keyboard**: New shortcuts MUST check `docs/KEYBOARD.md` conflict tables. Ink fires ALL `useInput` callbacks — guards must be view-specific
+3. **Quoted posts**: ALWAYS read from `(post as any).embed` (API-resolved `#view`), NEVER `post.record.embed`
+4. **Icons**: PWA → `<Icon name="...">` (SVG, `packages/pwa/src/icons/`). TUI → emoji
+5. **Embed extraction**: Use `@bsky/app` shared utils (`extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`). NEVER inline
+6. **Scroll restore**: MUST use pixel values (`scrollTop`), never indices (`scrollToIndex`)
+7. **AI tools**: New `requiresWrite` tool MUST add `buildToolDescription` case
+8. **Commit → Build → Deploy**: Commit before build for correct `__COMMIT_HASH__`
+9. **PDS**: `chatKy` direct to `api.bsky.chat` + session JWT. No PDS proxy (returns 501)
+10. **Widget**: `WidgetPanel` provides header; widget provides content only. All `toggleWidget()` calls persist via `_onWidgetToggle` → `saveAppConfig()`
 
-- **BskyClient**: Two `ky` instances — `this.ky` (bsky.social for writes) and `this.publicKy` (public.api.bsky.app for reads). Auto JWT refresh via `afterResponse` hook.
-- **PWA routing**: `useHashRouter()` — `history.pushState` + `popstate`, format `#/view?param=value`
-- **PWA timeline**: `useTimeline` held at App.tsx level (persists across navigation), virtual scroll via `@tanstack/react-virtual`
-- **Images**: Bluesky CDN `cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}@{ext}`. (Old PDS blob endpoint required JWT; CDN serves inline, works in `<img>` and OSC 8 terminals.)
-- **Tailwind**: Colors use CSS variables (`var(--color-primary)`). `@apply` doesn't work with opacity modifiers on CSS variables — use plain CSS instead. The `--color-background` variable replaces all `bg-white dark:bg-[#0A0A0A]` patterns — use `bg-background` for page/chrome backgrounds.
-- **CVD-friendly palette**: `.cvd` class on `<html>` maps red→magenta (`#C2185B`), green→teal (`#00897B`), yellow→amber (`#E65100`). Toggle in Settings → General. 32 CSS override rules target Tailwind's `text-red-*`/`text-green-*`/`text-yellow-*` classes. Dark mode combo handled via `.dark.cvd`. When adding new color-dependent UI, ensure a non-color cue exists (text, icon, font-bold, aria-pressed) — do NOT rely on red/green/yellow alone.
-- **WCAG 1.4.1 compliance**: PostActionsRow uses `aria-pressed` + bold count for repost; error banners use `role="alert"`; success toasts use `role="status"`. All new toggle buttons MUST include `aria-pressed`. All new error/success banners MUST include `role`.
-- **Screen reader / AI agent support**: Landmark elements (`<header>`, `<nav>`, `<main>`, `<aside>`) must have `aria-label` when multiple of the same type exist. Virtual-scroll lists must use `role="list"/"listitem"`. Textareas must have `aria-label`. Icon-only buttons must have `aria-label`. Form labels must use `htmlFor`/`id` (WCAG 4.1.2). Skip-to-content link in `index.html`. Modal component uses `createPortal(document.body)` + `e.stopPropagation()` on backdrop. Never nest `<main>` inside `<main>`. Dynamic `<html lang>` must update on locale change. Dynamic `document.title` per view. Collapsible elements must use `aria-expanded`. Form errors must use `aria-describedby` + `aria-invalid`. Progress bars must use `role="progressbar"` + `aria-valuenow`. Hidden file inputs must have `aria-label`.
-- **AI ALT — image description generation**: `describeImage(config, downloadFn, existingAlt?, targetLang?)` in `@bsky/core`. Caller provides download callback (e.g. `() => client.downloadBlob(did, cid)`) — same PDS path as `view_image`. `downloadBlob` uses `this.ky` (has `withRefresh` JWT auto-refresh — never use raw `ky.get()` for auth endpoints). `targetLang` passed from AppConfig via `imageDescLang` prop chain: App → view → PostCard → callback → describeImage. ImageGrid renders ALT badge conditionally: always when `imageDescCallback` is set, only when `hasAlt` otherwise. ALT popup uses `<Modal>` component (portal + focus trap). Module-level `_altCache` Map by CDN URL for cross-view dedup. Settings→Scenario→AI ALT select filters by `m.vision`. When adding new image-related UI, ensure DID+CID can be parsed from CDN URL: `/\/plain\/([^/]+)\/([^@]+)/` → `decodeURIComponent()`.
-- **PWA stubs**: `fs`, `os`, `path` are stubbed via Vite alias (FileChatStorage's Node imports that are never called in browser)
-- **ChatStorage interface**: TUI uses `FileChatStorage` (JSON files), PWA uses `IndexedDBChatStorage` (IndexedDB). Write operations go through `ChatService` (module-level singleton, debounced, empty guard)
-- **Keyboard shortcuts**: Full reference at `docs/KEYBOARD.md`. When adding NEW shortcuts, you MUST:
-  1. Check the Global Key Reserve and Conflict tables in `docs/KEYBOARD.md` — DO NOT reuse reserved or already-bound keys
-  2. Update `docs/KEYBOARD.md` with the new binding
-  3. Update the i18n `keys.*` footer hint strings in `packages/app/src/i18n/locales/*.ts`
-  4. Verify no conflicts by checking the key across ALL views (feed, thread, bookmarks, notifications, aiChat, compose, profile, search)
-  Note: Ink fires ALL `useInput` callbacks on every keystroke; 5 handlers coexist. Guards must be view-specific.
-- **Quoted posts (embeds)**: ALWAYS read from `(post as any).embed` (API-resolved top-level embed with `#view` suffix `$type`) — NEVER from `post.record.embed` (stored format, only has `{uri,cid}`). The resolved format has `embed.record.author`, `embed.record.value.text` fully populated. For quoted post image embeds, use `img.fullsize` first (view format), fallback to `img.image.ref.$link` (stored format).
-- **PWA SVG icons**: Use `packages/pwa/src/components/Icon.tsx` — renders lucide-style inline SVG via `import.meta.glob('../icons/*.svg', { ?raw, eager })`. All SVG files in `packages/pwa/src/icons/`. Use `<Icon name="..." size={N} filled />`. Available names: heart, bookmark, repeat, corner-down-right, pen-line, arrow-big-left, trash-2, x, menu, settings, plus, copy, compass, bell, astroid-as-AI-Button, home, camera, file-text, pin, clock, chevron-down, sun, moon, languages, badge-check, badge-alert, badge-info, triangle-alert, at-sign, list, user-plus, users, message-square, etc.
-- **PostActionsRow**: Shared PWA component (`packages/pwa/src/components/PostActionsRow.tsx`) — renders reply+like+repost-quote-popup+bookmark for any post card. Used in ALL views (FeedTimeline, SearchPage, ProfilePage, BookmarkPage, ThreadView). Reads like/repost state from module-level `usePostActions`.
-- **Module-level shared state**: `usePostActions` in `@bsky/app` uses module-level `_liked`/`_reposted` Sets and `_likeCountAdj`/`_repostCountAdj` Maps — single source of truth for like/repost state across ALL views. Both `useThread` (TUI+PWA) and `PostActionsRow` (PWA) read from the same store. Plain functions `likePost(client, uri, cid)`, `isPostLiked(uri)`, `getLikeCount(uri, staticCount)` are importable anywhere without React.
-- **useActiveFeed**: Tracks last active feed URI module-level. `goTo({ type: 'feed' })` resolves to last active or default feed.
-- **useVirtualizedList**: `useVirtualizedList(items, cacheKey, estimateHeight, getItemKey, { initialScrollTop?, onScrollTopChange? })` — creates a virtualizer with height cache + FeedTimeline-style scroll restoration. ScrollTop managed by App.tsx `useRef`s, passed as props. All virtual scroll pages use this unified hook. `useEffect` deps include `items.length` so listener attaches even when the container mounts asynchronously (after loading finishes). See `docs/SCROLL.md` for the rendering pattern and `docs/SCROLL_DEBUG.md` for the root cause analysis.
-- **AI sessions**: URL uses `#/ai?session=uuid` (not `contextUri`). Context stored in `ChatRecord.context` field, injected into system prompt via `PF_POST_CONTEXT`/`PF_PROFILE_CONTEXT`. Sessions created with `crypto.randomUUID()`.
-- **Scroll restoration**: All virtual scroll pages use FeedTimeline path — App.tsx holds `useRef` per page, passes `initialScrollTop`/`onScrollTopChange` as props to `useVirtualizedList`. Scroll position saved in real-time via scroll event → callback → ref update. MUST use pixel values (`scrollTop`), never indices (`scrollToIndex`). See `docs/SCROLL_DEBUG.md` for root cause analysis.
-- **Wiki docs**: `.wiki/` directory contains auto-generated project documentation. These are useful reference material — DO NOT remove them. Consult them as needed for architecture understanding.
+## AI Guidance
 
-## Lists Feature (v0.6.0)
+Built-in AI-readable docs at `/llm.txt`, `/README.md`, `/CHANGELOG.md` (copied to `dist/` during build).
 
-| Layer | Files | Notes |
-|-------|-------|-------|
-| Core | `client.ts` (15 methods), `types.ts` (10 types) | Full CRUD + mute/unmute/block |
-| Hooks | `useLists.ts`, `useListDetail.ts` | CRUD + pagination + membership |
-| PWA | `ListsPage.tsx`, `ListDetailPage.tsx` | Virtual scroll, inline edit, delete with confirm, add-to-list popup |
-| TUI | `App.tsx` (inline + listDetail view) | j/k/Enter/c/e/d/L keys |
-| AI | `tools.ts` (5 tools) | get_lists, get_list_feed, create_list, add_to_list, remove_from_list |
-| Icons | `list.svg`, `user-plus.svg`, `users.svg` | Lucide |
+---
 
-**Key patterns**:
-- AppView `getList` deduplicates `(subject, list)` pairs → don't use it for duplicate detection
-- `remove_from_list` uses `listRecords` (PDS level) instead of `getList` (AppView level) to find ALL matching entries
-- Widget temp disable: save `_order` snapshot before `disableWidget('aiChat')`, restore via `initEnabledWidgets` on exit
-- Delete confirmation: shared modal pattern across ListsPage and ListDetailPage
+## Detailed References (按需查阅)
 
-## Widget System (v0.5.3+)
+以下详细内容已移至独立文档，避免增加上下文负担：
 
-- **WidgetPanel**: Unified header bar (icon+title+headerButtons+↑+↓+×) for ALL widgets
-- **WidgetDefinition**: `headerButtons?: React.ComponentType<{ goTo, onClose }>` — optional header row buttons (e.g., AI widget's open-in-page/new-chat)
-- **AIChatWidget**: Uses module refs (`_widgetCallbacks`) to bridge runtime state to header buttons
-- **Temporary disable**: AI widget auto-disabled on `aiChat` view, restored on exit via `widgetOrderRef`
-- **`_order: string[]`** manages enabled widget order; `_onWidgetToggle` callback persists to localStorage
-
-## AT Play (v0.7.0+)
-
-- **Entry**: Sidebar 🧪 → `#/atplay` (experiment list) → `#/atplay/social-circle`
-- **Architecture**: `@bsky/core` (getRelationships/getActorLikes API) → `@bsky/app` (useSocialCircle hook + pure functions) → `@bsky/pwa` (AtPlayPage + AtPlaySocialCircle)
-- **Social Circle Analysis**: Builds weighted interaction graph from public Bluesky data. Likes=1.5, Reposts=2.0, Replies=3.0. Classifies into core(top5)/extended(next10)/potential layers. Renders Mermaid diagram via dynamic import.
-- **Pure functions** (exported for AI tool reuse): `generateSocialGraphMermaid()`, `buildSocialCircleShareText()`, `INTERACTION_WEIGHTS`
-- **No AI dependency for MVP**: Pure computation only. AI integration planned for v0.8.x.
-- **PWA only**: No TUI implementation yet.
-- **Compose textarea**: Uses transparent textarea + background mirror div for red marking on 300+ char overflow. No `maxLength`, no `text.slice(0, 300)`. Char counter turns red with `+{N}` when over limit. Textarea has `bg-transparent focus:outline-none` (subtle X-style).
-- **Per-post quote in threads**: `postQuoteUris: Map<postId, uri>` — each thread post can independently quote a different AT URI. The `quoteMap` param in `useCompose.submit(mediaMap, quoteMap)`. Always use `submit(mediaMap, quoteMap)` where quoteMap can be undefined.
-- **Session persistence**: `AuthStore.restoreSession()` must capture `c.session` after getProfile resolves (JWT may have refreshed). App save effect gated on `profile` + reads `client.session` (canonical source). See auth.ts line 78.
-- **Single image aspect-ratio**: Container width computed via JS in `useEffect` (avoiding CSS `fit-content` circular dependency). Max ratio clamped 0.5–2 (1:2 portrait ~ 2:1 landscape). Left-aligned via `flex items-start`.
-- **Shared extractEmbeds**: ALL embed extraction goes through `@bsky/app` shared utils: `extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`. NEVER inline extraction in consumers. Single source of truth at `packages/app/src/utils/extractEmbeds.ts`.
-- **Upload progress modal**: Step-level progress (media/posting/done/error), not per-file percentage. State: `SubmitProgress { phase, current, total, message }`.
-- **Reply compose**: Fetches parent chain via `getPostThread(replyTo, 3, 0)`. Displays replyToPost + ancestors using ThreadView discussion source style (`opacity-60 bg-surface/20 rounded-xl`). Old `@handle` text replaced by card.
-- **Data limitations**: Only incoming interactions analyzed. Reply authors not resolved. Default 50-post window (adjustable 30-100).
-- **Share to Bluesky**: Button at results bottom → locale-aware text (3 languages) → compose pre-fill.
-- **Key files**: `packages/app/src/hooks/useSocialCircle.ts`, `packages/pwa/src/components/AtPlaySocialCircle.tsx`, `packages/pwa/src/components/AtPlayPage.tsx`, `docs/ATPLAY.md`
-
-## i18n
-
-- Use `t('key')` for ALL user-visible strings — NEVER hardcode
-- Template interpolation: `{n}` (single braces), NOT `{{n}}` (double braces render as literal `{1}`)
-- 3 locales: `en.ts`, `zh.ts`, `ja.ts` in `packages/app/src/i18n/locales/`
-- PWA: `<Icon name="..." />` for icons; TUI: emoji
-
-## Pages Functions
-
-- **Functions directory**: `packages/pwa/functions/` — auto-discovered by Cloudflare Pages
-- **Current functions**: `/api/search` (DDG Lite search proxy — optional, silently degraded if not deployed)
-- **Adding a new function**: Create `packages/pwa/functions/{route}.js` with `export async function onRequest(context) { ... }`
-- **Local testing**: Use `npx wrangler pages dev dist` (NOT `pnpm dev` — Vite doesn't serve Pages Functions)
-
-## Build & Deploy
-
-**IMPORTANT**: Commit before build for correct `__COMMIT_HASH__`.  
-Two-step deploy: preview → test → production. No direct production deploys.
-
-```bash
-# 0. Commit (atomically! — see Critical Safety Rules) so About page shows correct hash
-git add <path> && git commit -m "..."
-
-# 1. Build all packages
-pnpm -r build
-
-# 2. Deploy to preview (does NOT affect ai-bsky.pages.dev)
-cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
-# → Preview URL: https://<hash>.ai-bsky.pages.dev
-# → Test here first (share with others, check functionality)
-
-# 3. After testing, deploy to production (--branch=production updates ai-bsky.pages.dev)
-npx wrangler pages deploy dist --project-name ai-bsky --branch=production
-# → Production: https://ai-bsky.pages.dev
-
-# Quick full workflow:
-# git add <path> && git commit -m "..." && pnpm -r build && cd packages/pwa && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
-# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
-```
-
-For deployment on other platforms (VPS/PHP, Vercel, Netlify, Node.js), see `DEPLOY.md`.
-
-- **ImageGrid**: Extracted to `packages/pwa/src/components/ImageGrid.tsx`. Standalone component used by both PostCard and ThreadView. Contains lightbox, ALT popup, single-image aspect-ratio mode, grid mode. Module-level `_altCache` is inside this component.
-- **extractEmbeds shared utils**: ALL embed extraction goes through `packages/app/src/utils/extractEmbeds.ts`. Functions: `extractImages`, `extractVideo`, `extractExternalLink`, `extractQuotedPost`, `extractHasGif`, `extractEmbeds`. Never inline extraction logic in consumer components.
-- **Compose redesign patterns**: Textarea uses transparent overlay + mirror div for 300+ char red marking. Per-post quote via `postQuoteUris Map`. Upload progress via `SubmitProgress { phase, current, total, message }` state. Reply uses `getPostThread(replyTo, 3, 0)` to fetch parent chain.
-
-## Environment
-
-- `.env` (gitignored): Bluesky credentials + AI API key (for TUI and tests)
-- `.env.example` (committed): Template showing required variables
-- PWA: No `.env` — credentials entered via login form, persisted in localStorage
+| 主题 | 文档 | 内容 |
+|------|------|------|
+| BskyClient 双 ky 实例、JWT 刷新、PDS 发现 | `docs/ARCHITECTURE.md` | `this.ky` (writes) + `this.publicKy` (reads), `withRefresh` 并发锁 |
+| PWA 路由 | `docs/ARCHITECTURE.md` | `useHashRouter()` — `history.pushState` + `popstate`, `#/view?param=value` |
+| 虚拟滚动 | `docs/SCROLL.md` | `@tanstack/react-virtual` + `useVirtualizedList()` + 像素值恢复 |
+| 图片 CDN | `docs/ARCHITECTURE.md` | `cdn.bsky.app/img/feed_fullsize/plain/{did}/{cid}@{ext}` |
+| Tailwind + CSS 变量 | `docs/DESIGN.md` | `var(--color-primary)`, `--color-background`, CVD palette (`.cvd`) |
+| WCAG 合规 | `docs/ARCHITECTURE.md` | `aria-pressed`, `role="alert"/"status"`, `htmlFor`/`id`, skip-link |
+| AI ALT 图像描述 | `docs/AI_SYSTEM.md` | `describeImage()`, `_altCache`, `imageDescLang` |
+| ChatStorage 工厂 | `docs/ARCHITECTURE.md` | `setChatStorageFactory()` + `IndexedDBChatStorage` (PWA) / `FileChatStorage` (TUI) |
+| PostActionsRow | `docs/ARCHITECTURE.md` | 共享组件，覆盖所有视图 |
+| 模块级状态 | `docs/ARCHITECTURE.md` | `usePostActions`, `useActiveFeed`, `useScrollRestore`, `widgetStore` |
+| AI Sessions | `docs/AI_SYSTEM.md` | `#/ai?session=uuid`, `ChatRecord.context`, `/view` 命令 |
+| Lists Feature | `docs/ARCHITECTURE.md` | v0.6.0, 15 methods, CRUD + mute/unmute/block |
+| Widget System | `docs/ARCHITECTURE.md` | v0.5.3+, 6 widgets, header bar, persistence |
+| AT Play | `docs/ATPLAY.md` | v0.7.0+, Social Circle, Mermaid, pure functions |
 
 ---
 

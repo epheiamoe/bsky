@@ -11,7 +11,7 @@ pnpm preview    # preview production build
 
 ## Deployment
 
-**Live demo**: https://ai-bsky.pages.dev (Cloudflare Pages)
+**Live demo**: https://bsky.epheia.dev / https://ai-bsky.pages.dev (Cloudflare Pages)
 
 ```bash
 # Deploy to Cloudflare Pages

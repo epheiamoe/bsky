@@ -113,52 +113,88 @@ bsky/
 13. **Dual-mode translation (simple/json)** — `translateText()` supports `simple` mode (plain text output) and `json` mode (structured `{translated, source_lang}` output); includes retry with exponential backoff up to 3 attempts for empty content or parse failures
 14. **Shared FlatLine now includes imageUrls, externalLink, authorAvatar** — `FlatLine` interface (used by both TUI and PWA thread views) includes `imageUrls: string[]`, `externalLink: {uri, title, description} | null`, and `authorAvatar?: string` for rich post rendering
 
-## AI Adapter Pattern (v0.13.9+)
+## ApiAdapter Pattern (v0.13.9)
 
-The AI system supports two API shapes via a pluggable adapter architecture:
+The AI system uses a pluggable adapter pattern to support multiple LLM API formats:
+
+### Architecture
 
 ```
-AIAssistant (shared: message management, tool loop, confirmation gate)
-  │
-  └─ ApiAdapter (interface)
-       ├─ buildRequest()       ← Build HTTP request body + URL + headers
-       ├─ parseResponse()      ← Parse non-streaming response
-       └─ createStreamProcessor() ← Factory for StreamProcessor
-            └─ feed(chunkText) → events[]
-            └─ getToolCalls() / getFullContent() / getReasoningContent()
-                 ├─ ChatCompletionsAdapter      ← Existing providers (DeepSeek, Mistral, Kimi, OpenRouter)
-                 └─ ResponsesApiAdapter          ← OpenAI, xAI Grok
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   AIAssistant   │────→│    ApiAdapter        │────→│  HTTP Client    │
+│   (core)        │     │  (adapter.ts)        │     │  (ky/fetch)     │
+└─────────────────┘     └──────────────────────┘     └─────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+┌───────────────┐    ┌─────────────────┐    ┌───────────────┐
+│ ChatCompletions│    │ ResponsesApi    │    │  (future)     │
+│ Adapter        │    │ Adapter         │    │               │
+│ (OpenAI fmt)   │    │ (OpenAI/xAI)    │    │               │
+└───────────────┘    └─────────────────┘    └───────────────┘
 ```
 
-### Current Providers
+### Adapter Interface
 
-| Provider | API Shape | Endpoint | Reasoning | Models |
-|----------|-----------|----------|-----------|--------|
-| DeepSeek | Chat | `/v1/chat/completions` | `reasoning_content` | deepseek-v4-flash/pro |
-| Mistral | Chat | `/v1/chat/completions` | `structured_content` | Small/Pixtral/Medium/Ministral |
-| Kimi (CN) | Chat | `api.moonshot.cn/v1/chat/completions` | `reasoning_content` | K2.6(+video), K2.5 |
-| Kimi (Overseas) | Chat | `api.moonshot.ai/v1/chat/completions` | `reasoning_content` | K2.6(+video), K2.5 |
-| OpenRouter | Chat | `openrouter.ai/v1/chat/completions` | `none` (passthrough) | Custom input |
-| OpenAI | Responses | `api.openai.com/v1/responses` | `reasoning.effort` | GPT-5.5~5-Mini |
-| xAI Grok | Responses | `api.x.ai/v1/responses` | `reasoning.effort` | Grok 4.3~4-Mini |
+```typescript
+interface ApiAdapter {
+  name: string;
+  buildRequest(params: BuildRequestParams): RequestBody;
+  parseResponse(response: unknown): ParsedResponse;
+  createStreamProcessor(): StreamProcessor;
+}
+```
 
-### Provider Config Metadata
+### Supported Adapters
 
-All provider definitions live in `packages/core/src/ai/providers.json`. Each provider specifies:
-- `apiType`: `'chat'` or `'responses'` — selects which adapter to use
-- `reasoningStyle`: `'reasoning_content'` (DeepSeek/Kimi), `'structured_content'` (Mistral), `'none'`
-- Per-model flags: `supportsReasoningEffort`, `video`, `fixedParams` (immutable params like Kimi's `top_p`/`n`/`presence_penalty`)
+| Adapter | API Type | Providers | File |
+|---------|----------|-----------|------|
+| ChatCompletionsAdapter | Chat Completions | DeepSeek, Mistral, Kimi, OpenRouter | `packages/core/src/ai/adapter.ts` |
+| ResponsesApiAdapter | Responses API | OpenAI, xAI Grok | `packages/core/src/ai/responses-adapter.ts` |
+
+### Provider Metadata (v0.13.9)
+
+Providers are configured via `providers.json` with metadata fields:
+
+```typescript
+interface ModelInfo {
+  id: string;
+  name: string;
+  vision?: boolean;
+  thinking?: boolean;
+  video?: boolean;              // Reserved for future video input
+  fixedParams?: Record<string, unknown>;  // Immutable params (e.g., top_p, n)
+  supportsReasoningEffort?: boolean;      // For Responses API reasoning control
+}
+
+interface ProviderInfo {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiType?: 'chat' | 'responses';
+  models: ModelInfo[];
+}
+```
 
 ### Reasoning Effort
 
-Responses API models (OpenAI, xAI) support `reasoning: { effort }` control:
+Responses API models support `reasoningEffort` control (`none`/`low`/`medium`/`high`):
 
-| Value | Use Case |
-|-------|----------|
-| `none` | Disable reasoning, fastest response |
-| `low` | Simple queries, classification |
-| `medium` | Default — balanced quality/latency/cost |
-| `high` | Complex math, multi-step logic, planning |
+```typescript
+// Sent in request body for Responses API
+{
+  reasoning: {
+    effort: "medium"  // or "none", "low", "high"
+  }
+}
+```
 
-Chat Completions models use their respective thinking params:
-- DeepSeek/Kimi: `thinking: { type: "enabled" | "disabled" }`
+Chat Completions models use `thinking: { type: "enabled" | "disabled" }` instead.
+
+### Key Files
+
+- `packages/core/src/ai/adapter.ts` — `ApiAdapter` interface, `ChatCompletionsAdapter`, registration
+- `packages/core/src/ai/responses-adapter.ts` — `ResponsesApiAdapter` + `ResponsesApiStreamProcessor`
+- `packages/core/src/ai/providers.ts` — Provider registry with metadata
+- `packages/core/src/ai/providers.json` — Provider configuration (7 providers)
+- `packages/core/src/index.ts` — Exports adapter types, auto-registers responses adapter

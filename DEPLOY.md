@@ -1,7 +1,7 @@
 # 🦋 Bluesky Client — 部署指南
 
 > 面向部署者。想自己架设这个 AI 增强的 Bluesky 客户端的看这里。
-> 如果你只是使用，直接打开 [ai-bsky.pages.dev](https://ai-bsky.pages.dev) 即可。
+> 如果你只是使用，直接打开 [bsky.epheia.dev](https://bsky.epheia.dev) 或 [ai-bsky.pages.dev](https://ai-bsky.pages.dev) 即可。
 
 ## 概述
 
@@ -43,7 +43,7 @@ npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
 
 # Step 2: 确认无误后部署到生产（--branch=production 更新 production 环境）
 npx wrangler pages deploy dist --project-name ai-bsky --branch=production
-# → 更新 ai-bsky.pages.dev
+# → 更新 bsky.epheia.dev / ai-bsky.pages.dev（两个域名同时有效）
 ```
 
 ---
