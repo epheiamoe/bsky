@@ -22,5 +22,19 @@
       { "id": "mistral-medium-latest", "label": "Mistral Medium (128B)", "thinking": false, "vision": true },
       { "id": "ministral-3b-latest", "label": "Ministral 3B (Fast)", "thinking": false, "vision": false }
     ]
+  },
+  {
+    "id": "openai",
+    "label": "OpenAI",
+    "baseUrl": "https://api.openai.com",
+    "apiType": "responses",
+    "reasoningStyle": "none",
+    "models": [
+      { "id": "gpt-4.1", "label": "GPT-4.1", "thinking": false, "vision": true },
+      { "id": "gpt-4.1-mini", "label": "GPT-4.1 Mini", "thinking": false, "vision": true },
+      { "id": "gpt-4.1-nano", "label": "GPT-4.1 Nano", "thinking": false, "vision": true },
+      { "id": "o3", "label": "o3", "thinking": true, "vision": true },
+      { "id": "o4-mini", "label": "o4-mini", "thinking": true, "vision": true }
+    ]
   }
 ]

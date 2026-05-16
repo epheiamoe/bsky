@@ -70,6 +70,9 @@ export type { AIConfig, ChatMessage, ToolCall } from './ai/adapter.js';
 export { getAdapter, registerAdapter } from './ai/adapter.js';
 export type { ApiAdapter, StreamProcessor } from './ai/adapter.js';
 
+// Adapter implementations (auto-register on import)
+import './ai/responses-adapter.js';
+
 // AI prompts (centralized, single source of truth)
 export {
   LANG_LABELS,
