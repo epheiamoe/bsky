@@ -40,11 +40,8 @@ class ResponsesApiStreamProcessor implements StreamProcessor {
           const delta = parsed.delta || '';
           this.fullContent += delta;
           events.push({ type: 'token', content: delta });
-        } else if (
-          eventType === 'response.reasoning_summary_part_added' ||
-          eventType === 'response.reasoning_part.added'
-        ) {
-          const text = parsed.summary || parsed.delta || '';
+        } else if (eventType === 'response.reasoning_summary_text.delta') {
+          const text = parsed.delta || '';
           this.reasoningContent += text;
           events.push({ type: 'thinking', content: text });
         } else if (eventType === 'response.output_item.added') {
@@ -149,7 +146,6 @@ class ResponsesApiAdapter implements ApiAdapter {
         name: t.definition.name,
         description: t.definition.description,
         parameters: t.definition.inputSchema as Record<string, unknown>,
-        strict: false,
       }));
       body.tool_choice = 'auto';
     }

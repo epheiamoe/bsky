@@ -145,8 +145,12 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         },
       },
       handler: async (p) => {
+        const query = (p.q as string) || '';
+        if (!query.trim()) {
+          return JSON.stringify({ posts: [], total: 0, error: 'Search query is empty.' });
+        }
         const res = await client.searchPosts({
-          q: p.q as string,
+          q: query,
           limit: (p.limit as number) ?? 25,
           sort: p.sort as string | undefined,
           cursor: p.cursor as string | undefined,
@@ -706,7 +710,7 @@ export function createTools(client: BskyClient): ToolDescriptor[] {
         },
       },
       handler: async (p) => {
-        const query = (p.query as string).trim()
+        const query = ((p.query as string) || '').trim()
         if (!query) {
           return JSON.stringify({ heading: '', content: 'Search query is empty.' })
         }
