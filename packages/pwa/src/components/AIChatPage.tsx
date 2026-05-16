@@ -343,6 +343,11 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
 
   const handleStop = useCallback(() => {
     stop();
+    // Also abort sandbox initialization if in progress
+    const sandbox = getGlobalPythonSandbox();
+    if (sandbox instanceof PyodideSandbox) {
+      sandbox.abort();
+    }
   }, [stop]);
 
   // ═══════════════════ Export ═══════════════════

@@ -12,6 +12,22 @@ var CDN_URLS = [
 ];
 
 var pyodide = null;
+var initAborted = false;
+
+function withTimeout(promise, ms, label) {
+  return new Promise(function(resolve, reject) {
+    var timer = setTimeout(function() {
+      reject(new Error(label + ' timed out after ' + ms + 'ms'));
+    }, ms);
+    promise.then(function(result) {
+      clearTimeout(timer);
+      resolve(result);
+    }, function(err) {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
 
 async function loadPyodide() {
   if (pyodide !== null) {
@@ -20,10 +36,15 @@ async function loadPyodide() {
 
   var lastError = null;
   for (var i = 0; i < CDN_URLS.length; i++) {
+    if (initAborted) {
+      throw new Error('Initialization aborted by user');
+    }
     var url = CDN_URLS[i];
     try {
       console.debug('[PyodideWorker] Trying CDN: ' + url);
-      await import(url);
+      self.postMessage({ type: 'initProgress', stage: 'downloading', progress: 0.1, message: 'Downloading Pyodide loader...' });
+      
+      await withTimeout(import(url), 30000, 'Download pyodide.js');
 
       var loadFn = self.loadPyodide || globalThis.loadPyodide;
       if (typeof loadFn !== 'function') {
@@ -33,12 +54,16 @@ async function loadPyodide() {
       var lastSlash = url.lastIndexOf('/');
       var baseUrl = lastSlash > 0 ? url.substring(0, lastSlash + 1) : url + '/';
       console.debug('[PyodideWorker] Base URL: ' + baseUrl);
-      pyodide = await loadFn({ indexURL: baseUrl });
+      self.postMessage({ type: 'initProgress', stage: 'loading', progress: 0.3, message: 'Loading Pyodide WASM runtime...' });
+      
+      pyodide = await withTimeout(loadFn({ indexURL: baseUrl }), 60000, 'Load Pyodide WASM');
       console.debug('[PyodideWorker] Pyodide loaded successfully');
+      self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
       return pyodide;
     } catch (err) {
       lastError = err;
       console.debug('[PyodideWorker] CDN failed: ' + url + ' - ' + String(err));
+      self.postMessage({ type: 'initProgress', stage: 'retry', progress: 0.1, message: 'CDN failed, trying next...' });
     }
   }
 
@@ -79,6 +104,9 @@ self.onmessage = async function(e) {
       var errMsg = err.message !== undefined ? err.message : String(err);
       self.postMessage({ type: 'result', result: { stdout: '', stderr: errMsg, returnValue: null, files: [], success: false, executionTime: 0 }});
     }
+  } else if (msg.type === 'abort') {
+    console.debug('[PyodideWorker] Abort received');
+    initAborted = true;
   } else {
     console.debug('[PyodideWorker] Unknown message: ' + msg.type);
   }
@@ -101,6 +129,8 @@ export class PyodideSandbox implements PythonSandboxEngine {
     reject: (error: Error) => void;
     code: string;
   }> = [];
+  private _initReject: ((error: Error) => void) | null = null;
+  private _onProgress: ((msg: { stage: string; progress: number; message: string }) => void) | null = null;
 
   constructor() {
     console.debug('[Pyodide] Sandbox instance created');
@@ -120,8 +150,7 @@ export class PyodideSandbox implements PythonSandboxEngine {
   }
 
   setOnProgress(callback: (msg: { stage: string; progress: number; message: string }) => void): void {
-    // TODO: implement progress reporting
-    console.debug('[Pyodide] setOnProgress called');
+    this._onProgress = callback;
   }
 
   async *initialize(): AsyncIterable<{ stage: string; progress: number; message: string }> {
@@ -146,6 +175,7 @@ export class PyodideSandbox implements PythonSandboxEngine {
     console.debug('[Pyodide] Starting inline Worker initialization...');
 
     this._initPromise = new Promise<void>((resolve, reject) => {
+      this._initReject = reject;
       try {
         const blob = new Blob([WORKER_CODE], { type: 'application/javascript' });
         const url = URL.createObjectURL(blob);
@@ -155,20 +185,25 @@ export class PyodideSandbox implements PythonSandboxEngine {
         console.debug('[Pyodide] Failed to create Worker:', err);
         this._initFailed = true;
         this._initPromise = null;
+        this._initReject = null;
         reject(new Error('Failed to create Web Worker: ' + String(err)));
         return;
       }
 
       this.worker.onmessage = (e) => {
         const msg = e.data;
-        if (msg.type === 'initComplete') {
+        if (msg.type === 'initProgress') {
+          this._onProgress?.(msg);
+        } else if (msg.type === 'initComplete') {
           console.debug('[Pyodide] Worker init complete');
           this._isReady = true;
+          this._initReject = null;
           resolve();
         } else if (msg.type === 'initError') {
           console.debug('[Pyodide] Worker init error:', msg.error);
           this._initFailed = true;
           this._initPromise = null;
+          this._initReject = null;
           reject(new Error(msg.error));
         } else if (msg.type === 'result') {
           this._handleResult(msg.result);
@@ -180,6 +215,7 @@ export class PyodideSandbox implements PythonSandboxEngine {
         console.debug('[Pyodide] Worker error:', details);
         this._initFailed = true;
         this._initPromise = null;
+        this._initReject = null;
         reject(new Error('Worker error: ' + details));
       };
 
@@ -187,7 +223,6 @@ export class PyodideSandbox implements PythonSandboxEngine {
       this.worker.postMessage({ type: 'init' });
     });
 
-    yield { stage: 'loading', progress: 0.5, message: 'Loading Python runtime...' };
     await this._initPromise;
     yield { stage: 'ready', progress: 1, message: 'Python sandbox ready' };
   }
@@ -239,14 +274,24 @@ export class PyodideSandbox implements PythonSandboxEngine {
     }
   }
 
-  dispose(): void {
-    console.debug('[Pyodide] Disposing sandbox');
+  abort(): void {
+    console.debug('[Pyodide] Aborting sandbox initialization');
     if (this.worker) {
+      this.worker.postMessage({ type: 'abort' });
       this.worker.terminate();
       this.worker = null;
     }
+    if (this._initReject) {
+      this._initReject(new Error('Initialization aborted by user'));
+      this._initReject = null;
+    }
     this._isReady = false;
-    this._initFailed = false;
+    this._initFailed = true;
     this._initPromise = null;
+  }
+
+  dispose(): void {
+    console.debug('[Pyodide] Disposing sandbox');
+    this.abort();
   }
 }

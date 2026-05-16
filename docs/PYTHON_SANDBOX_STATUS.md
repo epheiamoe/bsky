@@ -1,33 +1,37 @@
 # Python Sandbox Status Tracker
 
-## Current State (2025-05-17)
+## Current State (2025-05-17 04:00 CST)
 
 ### Git Status
 - **Branch**: `feat/adapter-pattern`
-- **Stash**: `wip: v0.14.0 python sandbox - broken worker state`
-  - Contains all v0.14.0 work including broken Worker code
-  - 43 modified files + 18 new files
-- **Working tree**: Clean (after stash)
+- **Last Commit**: `f5d3a54` — `feat: v0.14.0 python sandbox - minimal worker with jsdelivr cdn only, fix double slash path`
+- **Stash**: Cleared (all changes committed)
 
-### Problem
-Worker fails immediately with `new Worker(blobUrl, { type: 'module' })`:
-```
-[Pyodide] Worker error: unknown error
-{ message: undefined, filename: undefined, lineno: undefined, colno: undefined, error: undefined }
-```
+### Progress
 
-**Key facts**:
-- Minimal Worker test works: `const testCode = 'self.onmessage = () => self.postMessage("ok")';`
-- So Blob URL + module worker creation works
-- Problem is in WORKER_CODE string content
-- Previously worked with `.js` UMD + `import(url)` + `self.loadPyodide`
+#### ✅ Fixed: Worker creation no longer fails immediately
+- Removed `?.` optional chaining operator from Worker code
+- Reverted to `.js` UMD + `import(url)` + `self.loadPyodide` pattern
+- Changed `const`/`let` → `var`, arrow functions → `function(){}`
 
-### Goal
-Implement a **minimal working** Python sandbox:
-1. Worker initializes successfully
-2. Can execute basic Python code
-3. Returns stdout
-4. No packages, no file scanning, no workspace integration yet
+#### ✅ Fixed: CDN path double slash
+- `baseUrl + '/'` → `baseUrl` (baseUrl already ends with `/`)
+- Removed unpkg fallback (CORS blocked)
+- Only using jsdelivr now
+
+#### ❌ Current Issue: Worker initialization hangs indefinitely
+**Symptom**: After clicking "execute_python", UI shows "等待执行结果..." for minutes with no output.
+
+**Console**: No `[PyodideWorker] ...` logs at all (neither success nor error).
+
+**Hypothesis**: `import(url)` or `loadPyodide()` is hanging silently in the Worker.
+- Pyodide.js UMD loaded via `import()` may take 30-60s to download
+- `loadPyodide({ indexURL })` then downloads ~8MB WASM + stdlib
+- No progress callback in minimal version, so appears "stuck"
+
+**Previous error (before fix)**: `Failed to load '.../full//python_stdlib.zip'`
+- Confirms Pyodide *was* loading but failed on double-slash path
+- Now path is fixed, so it should be downloading (just silently)
 
 ### Architecture
 - `packages/pwa/src/services/pyodide-sandbox.ts` - PyodideSandbox class + WORKER_CODE
@@ -37,33 +41,38 @@ Implement a **minimal working** Python sandbox:
 
 ### Worker Requirements
 - Inline Blob URL Worker (avoids `.ts` MIME issues on CDN)
-- CDN: jsdelivr → unpkg fallback
+- CDN: jsdelivr only (unpkg blocked by CORS)
 - Pyodide v0.25.0
 - Lazy init on first `execute()` call
 - Message types: `init`, `execute`
 
-### CDN URLs (JS UMD format)
+### CDN URL
 ```
 https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js
-https://unpkg.com/pyodide@0.25.0/full/pyodide.js
 ```
 
-### Loading Pattern (known working)
+### Loading Pattern
 ```javascript
-await import(url);
-const loadFn = self.loadPyodide || globalThis.loadPyodide;
-pyodide = await loadFn({ indexURL: baseUrl + '/' });
+await import(url);  // loads UMD script
+var loadFn = self.loadPyodide || globalThis.loadPyodide;
+pyodide = await loadFn({ indexURL: baseUrl });  // baseUrl = '.../v0.25.0/full/'
 ```
 
 ### Next Steps
-1. Implement minimal Worker with ONLY init + execute
-2. Test in browser
-3. Commit immediately
-4. Then add features incrementally
+1. Add timeout + detailed logging to Worker init
+2. Add `loadPyodide` progress callback if available
+3. Consider pre-fetching or caching Pyodide assets
+4. Test with simple `print("hello")`
+5. If still hanging, investigate Classic Worker approach
 
 ## Progress Log
 
 ### 2025-05-17
 - [x] Git stash saved broken state
-- [ ] Create minimal Worker
-- [ ] Test and commit
+- [x] Create minimal Worker (subagent)
+- [x] Fix double slash path
+- [x] Remove unpkg (CORS blocked)
+- [x] Commit: `f5d3a54`
+- [x] Deploy to staging
+- [ ] Fix Worker init hanging
+- [ ] Test Python execution

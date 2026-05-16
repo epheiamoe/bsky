@@ -1,0 +1,13 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/search",
+      "mountPath": "/api",
+      "method": "",
+      "module": [
+        "api/search.js:onRequest"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}
