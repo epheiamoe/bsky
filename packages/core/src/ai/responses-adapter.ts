@@ -14,8 +14,8 @@ import { getModelInfo } from './providers.js';
 // ── Responses API Stream Processor ──
 
 class ResponsesApiStreamProcessor implements StreamProcessor {
-  private toolCallAccum = new Map<string, { id: string; name: string; arguments: string }>();
-  private callIdOrder: string[] = [];
+  private toolCallAccum = new Map<string, { id: string; callId: string; name: string; arguments: string }>();
+  private itemIdOrder: string[] = [];
   private fullContent = '';
   private reasoningContent = '';
   private lastEventType: string | null = null;
@@ -47,23 +47,28 @@ class ResponsesApiStreamProcessor implements StreamProcessor {
         } else if (eventType === 'response.output_item.added') {
           const item = parsed.item || parsed.output_item || {};
           if (item.type === 'function_call') {
-            const callId = item.call_id || item.id || crypto.randomUUID();
-            if (!this.toolCallAccum.has(callId)) {
-              this.toolCallAccum.set(callId, { id: callId, name: item.name || '', arguments: item.arguments || '' });
-              this.callIdOrder.push(callId);
+            const itemId = item.id || crypto.randomUUID();
+            if (!this.toolCallAccum.has(itemId)) {
+              this.toolCallAccum.set(itemId, {
+                id: item.call_id || itemId,
+                callId: item.call_id || '',
+                name: item.name || '',
+                arguments: item.arguments || '',
+              });
+              this.itemIdOrder.push(itemId);
             }
           }
         } else if (eventType === 'response.function_call_arguments.delta') {
-          const callId = parsed.call_id;
+          const itemId = parsed.item_id;
           const delta = parsed.delta || '';
-          if (callId && this.toolCallAccum.has(callId)) {
-            const acc = this.toolCallAccum.get(callId)!;
+          if (itemId && this.toolCallAccum.has(itemId)) {
+            const acc = this.toolCallAccum.get(itemId)!;
             acc.arguments += delta;
           }
         } else if (eventType === 'response.function_call_arguments.done') {
-          const callId = parsed.call_id;
-          if (callId && this.toolCallAccum.has(callId)) {
-            const acc = this.toolCallAccum.get(callId)!;
+          const itemId = parsed.item_id;
+          if (itemId && this.toolCallAccum.has(itemId)) {
+            const acc = this.toolCallAccum.get(itemId)!;
             if (parsed.name) acc.name = parsed.name;
             if (parsed.arguments) acc.arguments = parsed.arguments;
           }
@@ -74,9 +79,13 @@ class ResponsesApiStreamProcessor implements StreamProcessor {
   }
 
   getToolCalls(): Array<{ id: string; name: string; arguments: string }> {
-    return this.callIdOrder
-      .map(id => this.toolCallAccum.get(id)!)
-      .filter(Boolean);
+    return this.itemIdOrder
+      .map(id => {
+        const acc = this.toolCallAccum.get(id);
+        if (!acc) return undefined;
+        return { id: acc.id || acc.callId, name: acc.name, arguments: acc.arguments };
+      })
+      .filter((v): v is { id: string; name: string; arguments: string } => !!v);
   }
 
   getFullContent(): string { return this.fullContent; }
