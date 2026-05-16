@@ -7,6 +7,7 @@ export interface ModelInfo {
   label: string;
   thinking: boolean;
   vision: boolean;
+  video?: boolean;
 }
 
 export interface ProviderInfo {

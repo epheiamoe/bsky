@@ -38,15 +38,36 @@
     ]
   },
   {
+    "id": "openrouter",
+    "label": "OpenRouter",
+    "baseUrl": "https://openrouter.ai",
+    "apiType": "chat",
+    "reasoningStyle": "none",
+    "models": []
+  },
+  {
+    "id": "kimi",
+    "label": "Kimi (Moonshot)",
+    "baseUrl": "https://api.moonshot.cn",
+    "apiType": "chat",
+    "reasoningStyle": "none",
+    "models": [
+      { "id": "kimi-k2.6", "label": "Kimi K2.6", "thinking": true, "vision": true, "video": true },
+      { "id": "kimi-k2.5", "label": "Kimi K2.5", "thinking": true, "vision": true, "video": false }
+    ]
+  },
+  {
     "id": "xai",
     "label": "xAI Grok",
     "baseUrl": "https://api.x.ai",
     "apiType": "responses",
     "reasoningStyle": "none",
     "models": [
-      { "id": "grok-4.3", "label": "Grok 4.3 (旗舰)", "thinking": true, "vision": true },
-      { "id": "grok-4.20-reasoning", "label": "Grok 4.20 (中高端)", "thinking": true, "vision": false },
-      { "id": "grok-4-1-fast-reasoning", "label": "Grok 4.1 Fast (轻量)", "thinking": true, "vision": false }
+      { "id": "grok-4.5", "label": "Grok 4.5 (旗舰推理)", "thinking": true, "vision": true },
+      { "id": "grok-4.3", "label": "Grok 4.3 (中高端全能)", "thinking": true, "vision": true },
+      { "id": "grok-4.1-reasoning", "label": "Grok 4.1 Reasoning (轻量推理)", "thinking": true, "vision": false },
+      { "id": "grok-4-fast", "label": "Grok 4 Fast (高吞吐)", "thinking": false, "vision": true },
+      { "id": "grok-4-mini", "label": "Grok 4 Mini (极速低价)", "thinking": false, "vision": false }
     ]
   }
 ]
