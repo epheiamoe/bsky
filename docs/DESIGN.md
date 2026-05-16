@@ -83,7 +83,7 @@ elevation:
 
 ## Typography
 
-字体栈：**Inter**（推荐） + 系统字体回退，保证跨平台一致性与极佳可读性。
+字体栈：**Inter**（推荐）+ 系统字体回退，保证跨平台一致性与极佳可读性。
 
 层级（Mobile-first）：
 - **H1**（28px / 700）：Feed 标题、Profile 名
@@ -110,6 +110,38 @@ elevation:
 间距尺度：
 - 8px / 16px / 24px / 32px / 48px（倍数递增）
 
+## SettingsPage Layout
+
+设置页采用 `flex flex-col min-h-0` 布局模式，由父级 `flex-1` 控制整体高度：
+
+```html
+<div class="flex flex-col bg-background min-h-0">
+  <!-- Header (sticky) -->
+  <div class="sticky top-0 z-10 bg-background border-b border-border flex-shrink-0">
+    <div class="flex items-center h-12 px-4 gap-3">
+      <span class="text-lg font-semibold text-text-primary">Settings</span>
+    </div>
+    <!-- Tab bar -->
+    <div class="flex px-2 overflow-x-auto scrollbar-none border-b border-border">
+      <!-- tabs -->
+    </div>
+  </div>
+  
+  <!-- Content: flex-1 填充剩余空间，overflow-y-auto 内部滚动 -->
+  <div class="flex-1 overflow-y-auto p-5 space-y-4 max-w-lg mx-auto w-full">
+    <!-- tab content -->
+  </div>
+</div>
+```
+
+**关键规则**：
+- **`min-h-0`**：在 flex 容器中必须显式设置，防止子元素撑开父容器超出视口（CSS flex 默认 `min-height: auto` 的陷阱）
+- **父级 `flex-1` 控制高度**：SettingsPage 作为 `Layout` 的子元素，由 Layout 的 flex 布局分配剩余空间，而不是用 `h-dvh` 硬编码
+- **何时用 `min-h-0` vs `h-dvh`**：
+  - `min-h-0`：作为 flex 子项的页面容器（FeedTimeline、SettingsPage、Sidebar 内部滚动区），由父级 flex 分配高度
+  - `h-dvh`：顶层页面根容器（ProfilePage、SearchPage、AIChatPage），需要直接占满视口高度
+  - 混合模式：`h-dvh md:h-[calc(100dvh-3rem)]` — 移动端全屏，桌面端减去顶部导航栏
+
 ## Elevation & Depth
 
 - Light 模式：柔和投影（`shadow-sm` / `shadow-md`）
@@ -128,7 +160,7 @@ elevation:
 ### 1. Navigation（侧边栏 / 底部 Tab）
 - 图标 + 文字（桌面）/ 纯图标（移动）
 - 当前页高亮：Primary 色块 + 文字加粗
-- **AI** Tab 使用特殊蓝色光效 + “AI” 徽章
+- **AI** Tab 使用特殊蓝色光效 + "AI" 徽章
 
 ### 2. Feed Card（帖子）
 - Avatar（圆形，带在线状态可选）
@@ -148,6 +180,125 @@ elevation:
 ### 6. Modal / Sheet
 - 圆角 12px
 - 毛玻璃背景（backdrop-filter: blur(16px)）
+
+## WelcomeCard Pattern
+
+登录后一次性出现的引导向导，采用 **5 步渐进式披露** 设计：
+
+```
+Step 0: Welcome + Auth (工具权限说明)
+Step 1: Pronouns (代词偏好)
+Step 2: Personalization (深色/色弱/视觉模式)
+Step 3: AI Setup (提供商选择)
+Step 4: Done (完成动画)
+```
+
+**交互设计**：
+- **顶部进度条**：圆点 + 连线指示器，已完成的步骤可点击跳转回退，当前步骤高亮蓝色，未来步骤灰色
+- **AnimatePresence 步骤切换**：`mode="wait"` 确保退出动画完成后再进入下一步
+- **Spring 动画**：`slideVariants` 使用 `{ opacity, x }` 位移动画，切换时内容从右侧滑入、向左侧滑出
+- **渐进式披露**：工具列表默认折叠，点击展开显示全部 33 个工具；Provider 卡片默认收起，点击展开分步教程
+
+**Provider Cards 布局**：
+- 6 个提供商卡片（DeepSeek / OpenAI / xAI Grok / Mistral / OpenRouter / Kimi）
+- 响应式单列布局（移动端）/ 双列网格（桌面端，使用 `grid-cols-2`）
+- 每张卡片：名称 + 描述 + 可展开的步骤列表 + Base URL + 外部链接
+
+## Theme Color Sync
+
+`theme-color` meta 标签动态同步当前主题：
+
+```javascript
+// 3 个同步入口点
+const meta = document.querySelector('meta[name="theme-color"]');
+if (meta) meta.setAttribute('content', isDark ? '#000000' : '#FFFFFF');
+```
+
+- **Dark 模式**：`#000000`
+- **Light 模式**：`#FFFFFF`
+- **触发时机**：
+  1. `App.tsx` init：应用启动时根据 `config.darkMode` 初始化
+  2. `Layout.tsx` effect：深色模式切换时实时更新
+  3. `SettingsModal` / `SettingsPage` / `WelcomeCard` save：用户手动保存设置时同步
+
+## Post Preview Line Count
+
+帖子预览行数通过 **范围滑块（range slider）** 控制，支持三个独立维度：
+
+| 维度 | 默认值 | 范围 | 用途 |
+|------|--------|------|------|
+| `postPreviewLines` | 10 | 4-20 | Feed/搜索/资料页主帖 |
+| `quotedPreviewLines` | 8 | 2-12 | 引用帖（quoted post） |
+| `threadPreviewLines` | 8 | 2-12 | ThreadView 层级帖 |
+
+**实现模式**：
+```tsx
+function PreviewSlider({ label, value, onChange, min, max }) {
+  return (
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="text-sm text-text-primary">{label}</label>
+        <span class="text-sm text-text-secondary font-mono w-8 text-right">{value}</span>
+      </div>
+      <input type="range" min={min} max={max} value={value} 
+             onChange={e => onChange(Number(e.target.value))}
+             class="w-full accent-primary" />
+      <div class="flex justify-between text-[10px] text-text-secondary/50 mt-0.5">
+        <span>{min}</span><span>{max}</span>
+      </div>
+    </div>
+  );
+}
+```
+
+- 实时显示当前数值（等宽字体右对齐）
+- 通过 `-webkit-line-clamp` 应用到正文 `<p>` 元素
+- 设置页独立保存（`savePreview` 按钮），不与其他设置混合同步
+
+## Provider Cards
+
+设置页和 WelcomeCard 共享的**可展开卡片组件模式**：
+
+```tsx
+<motion.div layout className="rounded-xl border border-border overflow-hidden">
+  {/* Header: 始终可见 */}
+  <motion.button 
+    onClick={() => setExpanded(!expanded)}
+    className="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-primary/5"
+    aria-expanded={expanded}
+  >
+    <div>
+      <span className="text-text-primary font-medium text-sm">{name}</span>
+      <span className="text-text-secondary text-xs block">{desc}</span>
+    </div>
+    <motion.div animate={{ rotate: expanded ? 180 : 0 }}>
+      <Icon name="chevron-down" size={16} />
+    </motion.div>
+  </motion.button>
+  
+  {/* Content: AnimatePresence 展开/收起 */}
+  <AnimatePresence>
+    {expanded && (
+      <motion.div
+        initial={{ height: 0, opacity: 0 }}
+        animate={{ height: 'auto', opacity: 1 }}
+        exit={{ height: 0, opacity: 0 }}
+        className="overflow-hidden"
+      >
+        {/* 步骤列表 / API Key 输入 / 链接 */}
+      </motion.div>
+    )}
+  </AnimatePresence>
+</motion.div>
+```
+
+**设计特征**：
+- **Hover 反馈**：`hover:bg-primary/5` 提供微妙的悬停高亮
+- **动画一致性**：所有展开/收起使用统一的 `height + opacity` 组合动画，时长 0.2s
+- **语义化**：`aria-expanded` 标记可访问性状态
+- **应用场景**：
+  - WelcomeCard Step 3：6 个 AI 提供商卡片（静态展示）
+  - SettingsPage AI Tab：提供商选择卡片（含 API Key 输入）
 
 ## CVD-Friendly Palette (色弱友好调色板)
 
@@ -171,7 +322,7 @@ elevation:
 
 - PostActionsRow：`aria-pressed` 属性 + 直接回复已激活计数 `font-bold`（填补直接回复无 filled 图标的空白）
 - 连接状态文本标签替代纯颜色圆点
-- 错误/成功横幅 `role="alert"`/`"status"`
+- 错误/成功横幅 `role="alert"`/"status"
 
 ## Do's and Don'ts
 
@@ -181,12 +332,15 @@ elevation:
 - AI 功能始终使用 Primary 色高亮，让用户一眼识别
 - 深色模式下文字对比度 ≥ 4.5:1
 - 移动端优先设计，所有组件支持触控
+- 使用 `min-h-0` 约束 flex 子元素，防止容器溢出
+- 动态同步 `theme-color` meta 标签到当前主题
 
 **Don't:**
 - 不要使用过多阴影或 Neumorphism 风格（破坏 Bluesky 的极简气质）
 - 不要在 Feed 中堆叠过多信息（单卡最多 3 行预览）
-- 不要强制用户选择主题色（默认天空蓝，提供“跟随系统”选项）
+- 不要强制用户选择主题色（默认天空蓝，提供"跟随系统"选项）
 - 不要在移动端保留桌面三栏布局
+- 不要在 flex 容器中混用 `h-dvh` 和 `flex-1`（二选一，由父级控制高度）
 
 ---
 

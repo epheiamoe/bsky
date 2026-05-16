@@ -6,7 +6,7 @@
 
 1. **`AGENTS.md`** — 架构原则、安全红线、命令参考
 2. **`docs/CONTEXT.md`** — 本文（上下文恢复 + 关键结论 + 教训）
-3. **`docs/LESSONS.md`** — 历次会话详细教训
+3. **`docs/LESSONS.md`** — 历次会话详细教训（56 课完整索引 + 按类别速查 + 根因/修复/教训三段式格式）
 4. **`docs/ARCHITECTURE.md`** — 系统架构（含 v0.13.9 ApiAdapter 模式）
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
