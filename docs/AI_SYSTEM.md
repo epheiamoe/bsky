@@ -13,17 +13,69 @@ AIAssistant.sendMessage(text)        ← packages/core/src/ai/assistant.ts
     │
     ├──▶ addUserMessage(text)
     │
-    ├──▶ makeRequest()                ← POST to {baseUrl}/v1/chat/completions
-    │     │                             with messages[] + tools[]
+    ├──▶ adapter.buildRequest()       ← ApiAdapter (chat or responses)
     │     │
-    │     ├──▶ response has tool_calls?
-    │     │     YES → execute tools → add tool results → goto makeRequest (unlimited, user-controlled)
-    │     │     NO  → return final response
+    │     ├──▶ POST {adapter url}     ← Chat: /v1/chat/completions
+    │     │                             Responses: /v1/responses
+    │     │
+    │     ├──▶ adapter.parseResponse(raw)
+    │     │     ├── has tool_calls?
+    │     │     │   YES → execute tools → add tool results → loop (unlimited)
+    │     │     │   NO  → return final response
     │     │
     │     └──▶ tool execution via toolMap.get(toolName).handler(args)
     │
     └──▶ return { content, toolCallsExecuted, intermediateSteps }
 ```
+
+## ApiAdapter Pattern
+
+**File**: `packages/core/src/ai/adapter.ts` (interface + ChatCompletionsAdapter)
+**File**: `packages/core/src/ai/responses-adapter.ts` (ResponsesApiAdapter)
+
+```typescript
+interface ApiAdapter {
+  readonly apiType: string;
+  buildRequest(config, messages, tools, stream, overrides?): RequestSpec;
+  parseResponse(raw): ParsedResponse;
+  createStreamProcessor(): StreamProcessor;
+}
+
+interface StreamProcessor {
+  feed(chunkText): Array<{ type: 'token' | 'thinking'; content }>;
+  getToolCalls(): Array<{ id, name, arguments }>;
+  getFullContent(): string;
+  getReasoningContent(): string;
+}
+```
+
+Two implementations:
+- **ChatCompletionsAdapter**: POST `/v1/chat/completions`, `{ messages, tools, thinking, ... }`, SSE `data: {choices[0].delta}`
+- **ResponsesApiAdapter**: POST `/v1/responses`, `{ input, instructions, tools, reasoning, ... }`, SSE named events (`response.output_text.delta`, `response.function_call_arguments.delta`, etc.)
+
+## Provider Config
+
+**File**: `packages/core/src/ai/providers.json`
+
+```json
+{
+  "id": "openai",
+  "label": "OpenAI",
+  "baseUrl": "https://api.openai.com",
+  "apiType": "responses",
+  "reasoningStyle": "none",
+  "models": [
+    { "id": "gpt-5.5", "label": "GPT-5.5", "thinking": true, "vision": true, "supportsReasoningEffort": true }
+  ]
+}
+```
+
+Provider-specific features:
+- `apiType`: `'chat'` | `'responses'` — selects adapter
+- `reasoningStyle`: `'reasoning_content'` | `'structured_content'` | `'none'`
+- `ModelInfo.fixedParams`: immutable params (Kimi: `top_p: 0.95`, `n: 1`, etc.)
+- `ModelInfo.supportsReasoningEffort`: enables `reasoning: { effort }` in Responses API
+- `ModelInfo.video`: reserved for future video input support (Kimi K2.6)
 
 ## AIAssistant Class
 
@@ -54,10 +106,12 @@ class AIAssistant {
 ```typescript
 interface AIConfig {
   apiKey: string;
-  baseUrl: string;     // default: 'https://api.deepseek.com'
-  model: string;       // default: 'deepseek-v4-flash'
-  provider?: string;   // 'deepseek' | 'mistral'
+  baseUrl: string;          // default: 'https://api.deepseek.com'
+  model: string;            // default: 'deepseek-v4-flash'
+  provider?: string;        // 'deepseek' | 'mistral' | 'openai' | 'xai' | 'kimi-cn' | 'kimi-overseas' | 'openrouter'
   reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
+  apiType?: 'chat' | 'responses';   // selects ChatCompletionsAdapter or ResponsesApiAdapter
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high';  // for Responses API reasoning models
   thinkingEnabled?: boolean;   // derived from ModelInfo for known models
   visionEnabled?: boolean;     // derived from ModelInfo for known models
 }
@@ -165,17 +219,34 @@ interface StreamChunk {
 }
 ```
 
-### SSE Parser
+### SSE Parser (Chat Completions)
 
 The stream body uses SSE format (`data: ` prefixed lines), parsed manually from the `fetch` response reader. Each line prefixed with `data: ` is a JSON object matching the OpenAI-compatible streaming format (`choices[0].delta`).
 
 ```
 data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"Hello"}}]}
-
-data: {"id":"...","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":" world"}}]}
-
 data: [DONE]
 ```
+
+### SSE Parser (Responses API)
+
+Responses API uses named SSE events with a different format:
+
+```
+event: response.output_text.delta
+data: {"delta":"Hello","type":"response.output_text.delta"}
+
+event: response.function_call_arguments.delta
+data: {"delta":"{\"q\":\"test\"}","item_id":"fc_...","type":"response.function_call_arguments.delta"}
+
+event: response.function_call_arguments.done
+data: {"arguments":"{\"q\":\"test\"}","item_id":"fc_...","type":"response.function_call_arguments.done"}
+
+event: response.completed
+data: { ... full response ... }
+```
+
+Key difference: Chat Completions uses delta chunks with `choices[0].delta.{content,reasoning_content,tool_calls}` while Responses API uses typed events with `event:` + `data:` lines. The `StreamProcessor` abstraction in `responses-adapter.ts` handles both formats.
 
 ### Reasoning Content Preservation
 

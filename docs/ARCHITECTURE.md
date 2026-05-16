@@ -65,7 +65,7 @@ bsky/
 ```
 ┌──────────┐
 │ @bsky/   │  纯 TS, 零 UI 依赖
-│ core     │  BskyClient | AIAssistant | 33 tools | types
+│ core     │  BskyClient | AIAssistant | ApiAdapter | 33 tools | types
 └────┬─────┘
      │
      ├──────────────────────────────────────┐
@@ -112,3 +112,53 @@ bsky/
 12. **Auto JWT refresh via ky afterResponse hook** — `BskyClient` registers an `afterResponse` hook on the ky instance that detects `ExpiredToken`/`InvalidToken` errors (HTTP 400), calls `refreshSession` with the refresh JWT, and retries the original request with the new access token
 13. **Dual-mode translation (simple/json)** — `translateText()` supports `simple` mode (plain text output) and `json` mode (structured `{translated, source_lang}` output); includes retry with exponential backoff up to 3 attempts for empty content or parse failures
 14. **Shared FlatLine now includes imageUrls, externalLink, authorAvatar** — `FlatLine` interface (used by both TUI and PWA thread views) includes `imageUrls: string[]`, `externalLink: {uri, title, description} | null`, and `authorAvatar?: string` for rich post rendering
+
+## AI Adapter Pattern (v0.13.9+)
+
+The AI system supports two API shapes via a pluggable adapter architecture:
+
+```
+AIAssistant (shared: message management, tool loop, confirmation gate)
+  │
+  └─ ApiAdapter (interface)
+       ├─ buildRequest()       ← Build HTTP request body + URL + headers
+       ├─ parseResponse()      ← Parse non-streaming response
+       └─ createStreamProcessor() ← Factory for StreamProcessor
+            └─ feed(chunkText) → events[]
+            └─ getToolCalls() / getFullContent() / getReasoningContent()
+                 ├─ ChatCompletionsAdapter      ← Existing providers (DeepSeek, Mistral, Kimi, OpenRouter)
+                 └─ ResponsesApiAdapter          ← OpenAI, xAI Grok
+```
+
+### Current Providers
+
+| Provider | API Shape | Endpoint | Reasoning | Models |
+|----------|-----------|----------|-----------|--------|
+| DeepSeek | Chat | `/v1/chat/completions` | `reasoning_content` | deepseek-v4-flash/pro |
+| Mistral | Chat | `/v1/chat/completions` | `structured_content` | Small/Pixtral/Medium/Ministral |
+| Kimi (CN) | Chat | `api.moonshot.cn/v1/chat/completions` | `reasoning_content` | K2.6(+video), K2.5 |
+| Kimi (Overseas) | Chat | `api.moonshot.ai/v1/chat/completions` | `reasoning_content` | K2.6(+video), K2.5 |
+| OpenRouter | Chat | `openrouter.ai/v1/chat/completions` | `none` (passthrough) | Custom input |
+| OpenAI | Responses | `api.openai.com/v1/responses` | `reasoning.effort` | GPT-5.5~5-Mini |
+| xAI Grok | Responses | `api.x.ai/v1/responses` | `reasoning.effort` | Grok 4.3~4-Mini |
+
+### Provider Config Metadata
+
+All provider definitions live in `packages/core/src/ai/providers.json`. Each provider specifies:
+- `apiType`: `'chat'` or `'responses'` — selects which adapter to use
+- `reasoningStyle`: `'reasoning_content'` (DeepSeek/Kimi), `'structured_content'` (Mistral), `'none'`
+- Per-model flags: `supportsReasoningEffort`, `video`, `fixedParams` (immutable params like Kimi's `top_p`/`n`/`presence_penalty`)
+
+### Reasoning Effort
+
+Responses API models (OpenAI, xAI) support `reasoning: { effort }` control:
+
+| Value | Use Case |
+|-------|----------|
+| `none` | Disable reasoning, fastest response |
+| `low` | Simple queries, classification |
+| `medium` | Default — balanced quality/latency/cost |
+| `high` | Complex math, multi-step logic, planning |
+
+Chat Completions models use their respective thinking params:
+- DeepSeek/Kimi: `thinking: { type: "enabled" | "disabled" }`

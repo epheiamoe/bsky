@@ -5,7 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.13.5] — 2026-05-14
+## [0.13.9] — 2026-05-16
+
+### Added
+
+- **ApiAdapter pattern**: Extracted `ApiAdapter` interface + `ChatCompletionsAdapter` from `AIAssistant`. Request building, response parsing, and SSE streaming now delegate to adapter. Zero behavior change for existing providers.
+- **ResponsesApiAdapter**: New adapter for OpenAI's `/v1/responses` endpoint. Supports `instructions`+`input` format, `function_call` output items, and streaming events (`response.output_text.delta`, `function_call_arguments.delta/.done`, `reasoning_summary_text.delta`).
+- **New providers**: OpenAI (5 models via Responses API), xAI Grok (4 models via Responses API), Kimi Moonshot CN + Overseas (`api.moonshot.cn`/`api.moonshot.ai`, K2.6+K2.5 via Chat Completions), OpenRouter (custom model input via Chat Completions).
+- **Provider metadata**: `ModelInfo.video`, `fixedParams` (immutable params per model), `supportsReasoningEffort` (for reasoning effort control via Responses API).
+- **Reasoning effort**: `AIConfig.reasoningEffort` field (`none`/`low`/`medium`/`high`). Responses API models with `supportsReasoningEffort` default to `medium`.
+- **Kimi thinking-aware temperature**: K2.6/K2.5 fixed temperature 1.0 (thinking enabled) / 0.6 (disabled). `fixedParams` strip `top_p`, `n`, `presence_penalty`, `frequency_penalty` automatically.
+- **WelcomeCard step 4**: Provider cards for all 6 providers (DeepSeek, OpenAI, xAI Grok, Mistral, OpenRouter, Kimi) with i18n descriptions and setup steps in all 3 locales.
+- **Scenario settings filtering**: Model dropdowns now only show providers with configured API keys.
+- **Per-provider API key isolation**: Switching providers clears API key field if no saved key exists for that provider.
+
+### Fixed
+
+- **xAI Grok tool call arguments**: `ResponsesApiStreamProcessor` used `call_id` as map key for tool call accumulation, but xAI's `.delta`/`.done` events reference by `item_id`. Changed key to `item.id` — arguments now properly accumulate.
+- **Search tool empty-arg crashes**: `search_web_ddg` `.trim()` on undefined → guarded with `((p.query as string) || '').trim()`. `search_posts` empty `q` → returns error JSON instead of 400 API call.
+- **xAI reasoning event names**: Fixed from underscore-separated (`reasoning_summary_part_added`) to dot-separated (`reasoning_summary_text.delta`) matching actual xAI event format. Actual thinking content now displayed.
+- **ResponsesApiAdapter strict param**: Removed `strict: false` (not supported by xAI).
+- **Kimi reasoningStyle**: Corrected from `"none"` to `"reasoning_content"` (uses `reasoning_content` field like DeepSeek).
+- **xAI model names**: Removed non-existent `grok-4.5`. Current models: `grok-4.3`, `grok-4.1-reasoning`, `grok-4-fast`, `grok-4-mini`.
+- **WelcomeCard customTitle**: Removed "Kimi" from "Other providers" list (Kimi now has its own dedicated card). Fixed in all 3 locales.
+
+## [0.13.8] — 2026-05-15
+
+### Added
+
+- **Onboarding overhaul**: WelcomeCard rebuilt as 5-step wizard with progress animation (spring + slide). Steps: Welcome+Auth (with expandable 33-tool list), Pronouns (skip/neutral/custom), Personalization (dark mode, CVD palette, AI ALT — live toggles), AI Setup (i18n provider cards), Done (BYOK privacy card).
+- **Pronoun system**: `userPronouns` field in AppConfig/TuiConfig. Three states: skip (no injection), neutral ("use gender-neutral terms"), custom ("user's pronouns are X"). Settings→Account tab radio+custom input.
+- **Authorization disclosure**: WelcomeCard Step 1 shows R/W/X permission tiers with "Show all tools (33)" expandable list. Settings→AI tab has authorization info card. AI Chat first-time consent banner (localStorage `bsky_ai_consent`).
+- **AI consent**: PWA AIChatPage shows consent banner on first open. TUI AIChatView shows inline consent (Enter to accept). Both respect `bsky_ai_consent` / per-session state.
+- **AIGuidance**: Login page footer enhanced with AI agent authorization note.
+- **System dark mode detection**: First launch reads `prefers-color-scheme` for initial dark mode default.
+- **Settings "Restart Welcome Setup"**: Button in Settings→Account clears welcome flag and re-shows the 5-step wizard (preserves all other settings).
+- **`settings.restartWelcome`**: i18n key in all 3 locales.
+
+### Fixed
+
+- **Prompt injection defense**: `sanitizePronouns()` in prompts.ts strips control chars, limits 50 chars, rejects instruction keywords (ignore/override/system/prompt/reveal etc.) — fallback to `'neutral'`.
+- **i18n gaps**: Added `setup.*` keys (16) to en.ts and ja.ts (were zh.ts only). Added `welcome.personalDesc`, `welcome.darkModeDesc`, `welcome.cvdModeDesc`, `welcome.aiAltDesc` in all 3 locales. Fixed hardcoded `"Continue →"` → `t('welcome.continue')`. Fixed `action.back` → `common.back`.
+- **WelcomeCard provider cards**: Moved from static module-level array to component-internal `useMemo` so `t()` works correctly (was showing English descriptions for all locales).
+
+## [0.13.7] — 2026-05-15
+
+### Added
+
+- **Settings page (`#/settings`)**: Replaced modal-based SettingsModal with a full route page. 5 categorized tabs: Account, AI, Scenario, Display, Post Preview.
+- **Post preview line customization**: `line-clamp-6/3/4` replaced with configurable range sliders in Settings→Post Preview. Defaults: post 10 lines, quoted 8 lines, thread 8 lines. Threaded through all PostCard consumers (6 pages) + ThreadView.
+- **Theme-color sync**: `theme-color` meta tag now dynamically updates on dark/light toggle via 3 entry points (Layout effect, SettingsModal save, App.tsx init). Colors: `#000000` dark, `#FFFFFF` light.
+- **Safe-area padding**: `<main>` now has `pt-[env(safe-area-inset-top)]` for iOS notch/status bar avoidance.
+- **Manifest colors**: `theme_color` and `background_color` → `#000000`.
+- **Settings in sidebar**: Gear icon moved from all tab page headers + desktop header to sidebar (bottom section, above About). Settings uses `replaceState` navigation.
+- **Mobile sidebar scroll fix**: Mobile sidebar overlay `<motion.div>` now has `flex flex-col` so `<Sidebar>` nav items scroll properly on small screens.
+
+### Fixed
+
+- **Theme-color mismatch on iOS PWA**: Status bar was blue (`#00A5E0`) regardless of theme. Now matches background in both modes.
+- **Lazy post edit replyToText not showing**: `useEffect` triggers `loadReplyToText` only when `replyTo` prop changes, not on every render.
+
+## [0.13.6] — 2026-05-15
+
+### Added
+
+- **Mobile-first UI v2**: mobile tab pages (feed, search, aiChat, profile) now have merged headers + bottom tab bar with spring-animated active indicator. Bottom tab navigation uses `replaceState` so back arrow only appears for deep links.
+- **Pull-to-refresh**: Touch-based pull-down gesture with spring scale/rotation indicator (astroid icon) on feed, search, notifications, bookmarks, profile.
+- **Hide-on-scroll**: FeedHeader + MobileTabBar hide/show based on scroll direction. Tab bar uses `translateY(100%)`; header uses `max-h-0` collapsible div. Height fixed at `h-dvh` + `pb-14` to avoid layout recalc jitter.
+- **MobileHeaderCtx**: Context providing `onSidebarOpen`, `onSettingsOpen`, `tabBarHidden`, `setTabBarHidden`, `dmCount` across all tab pages.
+- **Keyboard auto-hide**: Global `focusin`/`focusout` listener hides tab bar when input/textarea focused.
+- **dmCount badge**: 8px red dot on hamburger ☰ buttons when `dmCount > 0`.
+- **AIGuidance**: Login page footer with version + GitHub + llm.txt + README + CHANGELOG links. Uses `<div>` instead of `<footer>` to avoid AI tool filtering.
+- **llm.txt**: Published at `/llm.txt` with full project context + hash route index. `<link rel="llms-txt">` in index.html.
+- **copy-docs.mjs**: Build script copies README.md + CHANGELOG.md to dist/.
+- **Custom domain**: `bsky.epheia.dev` (also `ai-bsky.pages.dev`).
+- **Version**: bumped to 0.13.6
+
+### Fixed
+
+- **Search scroll restoration**: Added missing `initialScrollTop`/`onScrollTopChange` props — was a dead ref, causing scroll position loss on back navigation.
+- **Search history X button**: Added `onMouseDown e.stopPropagation()` to prevent parent `onMouseDown` from triggering search.
+- **useVirtualizedList scroll restoration**: Initial rAF report guarded (`scrollTop > 0` only) + scroll restoration `useEffect` with `didRestore ref`.
+- **DMChatPage**: scroll fix (scrollTop = scrollHeight), layout CSS, new-message badge.
 
 ### Added
 

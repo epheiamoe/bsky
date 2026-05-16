@@ -6,11 +6,12 @@
 
 1. **`AGENTS.md`** — 架构原则、安全红线、命令参考
 2. **`docs/CONTEXT.md`** — 本文（上下文恢复 + 关键结论 + 教训）
-3. **`docs/LESSONS.md`** — 本次会话详细教训（widget 索引、tool_call_id、双重格式化等）
-4. **`docs/ARCHITECTURE.md`** — 系统架构
+3. **`docs/LESSONS.md`** — 历次会话详细教训
+4. **`docs/ARCHITECTURE.md`** — 系统架构（含 v0.13.9 ApiAdapter 模式）
 5. **`docs/PACKAGES.md`** — 各包职责与文件清单
 6. **`docs/HOOKS.md`** — 所有 hook 签名
-7. **`docs/MCP.md`** — MCP 服务器实现记录（架构/教训/限制/测试）
+7. **`docs/MCP.md`** — MCP 服务器实现记录
+8. **`docs/AI_SYSTEM.md`** — AI 集成架构（Adapter 模式 + 7 个 Provider）
 8. **`docs/ATPLAY.md`** — AT Play 实验功能参考（社交圈分析数据管线/API/组件/限制）
 8. **`docs/PDS.md`** — 第三方 PDS 支持文档（架构/计划/实现数据流）
 9. **`docs/PAGES_FUNCTION.md`** — Pages Function 代理架构与规范
@@ -26,10 +27,7 @@
 
 ## 版本
 
-**v0.13.5** — at:// 链接拦截（linkifyText 解析 AT URI 跳转到帖子/列表/Feed/用户）。NotFoundCard 组件统一 404 展示（SVG 图标 + 返回按钮）。loadMore 添加重试（瞬态 502 静默恢复）。修复提示词 `{{/if}}` 残留、handle 注入、工具调用 400 错误、AI textarea 发送后未收起。<br/>
-**v0.13.4** — 模板渲染提示词：`buildSystemPrompt()` 替代 10 个独立 `PF_*` 函数。单一 `MAIN_TEMPLATE` 字符串包含所有固定内容，`String.replace` 一次性注入所有动态值。无外部模板库。条件块通过 `{{#if var}}...{{/if}}` 正则实现。新增项目介绍（AI Bluesky 助手，项目地址，引导提 issue）。UI 语言作为默认回复语言。<br/>
-**v0.13.3** — 图片查看器缩放/平移（双指捏合、双击缩放至点击位置、手指/鼠标拖动、桌面 Ctrl+滚轮）。`touch-action: none` 防浏览器手势冲突。返回键关闭图片。framer-motion spring 丝滑动画。关闭前自动复位缩放保证退出动画无缝。SW 嵌入 commit hash 修复「检查更新」检测。<br/>
-**v0.13.2** — 发帖页重构（自动增高 textarea、300+红色标记、淡化输入框、帖子串独立引用、回复讨论源样式、引用卡片 PostCard 样式、动画、上传进度弹窗）。Session 持久化修复（JWT 刷新后更新 auth store）。单图宽高比模式（设置切换 + 左对齐 + 容器适应内容 + 1:2~2:1 限制）。`ImageGrid` 独立组件 + `extractEmbeds` 共享工具库（删除 4 份副本，-260 行）。
+**v0.13.9** — API Adapter 模式提取：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个 LLM 提供商：OpenAI（Responses API）、xAI Grok（Responses API）、Kimi Moonshot CN/Overseas（Chat Completions）、OpenRouter（自定义模型）。Provider 元数据系统：`fixedParams`（不可变参数）、`supportsReasoningEffort`、`video` 预留。`reasoningEffort` 支持。Welcome 设置页面 6 厂商展示卡。场景设置按密钥过滤。xAI 流式 tool call 参数丢失修复、推理事件名修复。搜索工具空参数保护。Kimi `reasoningStyle` 修复。
 
 **v0.13.1** — 综合无障碍提升：WCAG 4.1.1（语义 HTML）+ 4.1.2（表单标签关联、aria-expanded/describedby/invalid/progressbar）+ 1.4.1（颜色+状态双重编码）+ 色弱友好调色板 + **AI ALT 图像描述生成**。_authHook 自动注入 Authorization。downloadBlob bsky.social 代理回退 + 429 指数退避重试。Modal createPortal + stopPropagation。设置场景 Tab 国际化。
 
@@ -37,7 +35,7 @@
 
 ## 项目状态
 
-- **PWA 在线**: https://ai-bsky.pages.dev
+- **PWA 在线**: https://bsky.epheia.dev / https://ai-bsky.pages.dev
 - **GitHub**: https://github.com/epheiamoe/bsky
 - **PWA 部署**: `cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --commit-dirty=true`
 - **TUI 部署**: `npx tsx packages/tui/src/cli.ts`
@@ -514,8 +512,10 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/core/src/ai/tools.ts` | 33 个 AI 工具定义 |
 | `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
 | `packages/core/src/ai/assistant.ts` | AI 对话引擎 |
+| `packages/core/src/ai/adapter.ts` | ApiAdapter 接口 + ChatCompletionsAdapter + StreamProcessor |
+| `packages/core/src/ai/responses-adapter.ts` | ResponsesApiAdapter + ResponsesApiStreamProcessor |
 | `packages/core/src/ai/providers.ts` | 多提供商注册表 |
-| `packages/core/src/ai/providers.json` | 提供商配置文件 |
+| `packages/core/src/ai/providers.json` | 提供商配置文件（7 个：DeepSeek/Mistral/OpenAI/xAI/Kimi-CN/Kimi-Overseas/OpenRouter） |
 | `packages/app/src/services/chatStorage.ts` | ChatRecord.context 字段 |
 | `packages/pwa/src/components/ListsPage.tsx` | PWA 列表索引页（浏览/创建/删除/加他人到列表） |
 | `packages/pwa/src/components/ListDetailPage.tsx` | PWA 列表详情页（Posts/Members 双 Tab + 内联编辑） |
