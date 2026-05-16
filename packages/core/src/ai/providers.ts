@@ -1,6 +1,4 @@
 // ── Multi-Provider Registry ──
-// Default config lives in providers.json for easy editing.
-// The TS interface ensures type safety; users edit the JSON file.
 
 import providerData from './providers.json';
 
@@ -17,6 +15,7 @@ export interface ProviderInfo {
   baseUrl: string;
   models: ModelInfo[];
   reasoningStyle: 'reasoning_content' | 'structured_content' | 'none';
+  apiType?: 'chat' | 'responses';
 }
 
 export const PROVIDERS: ProviderInfo[] = providerData as ProviderInfo[];
@@ -47,10 +46,9 @@ export function cleanBaseUrl(baseUrl: string): string {
 
 export function isCustomModel(providerId: string, modelId: string): boolean {
   const info = getModelInfo(providerId, modelId);
-  return !info; // If not in the registry, it's a custom model
+  return !info;
 }
 
 export function shouldSendThinkingParam(providerId: string): boolean {
-  // Only DeepSeek uses the non-standard thinking parameter
   return providerId === 'deepseek';
 }
