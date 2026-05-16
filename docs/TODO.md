@@ -51,6 +51,8 @@
 | **组件排序** | ⬜ | ✅ | 侧边栏 + 组件页 chevron-up/down 排序 |
 | **AI Chat 卡片** | ⬜ | ✅ | 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 31 工具格式化) |
 | **AI Chat /view** | ⬜ | ✅ | /view 命令注入当前页面上下文给 AI |
+| **Python 沙箱** | ⬜ | ✅ | execute_python 工具，Pyodide WASM，inline Blob Worker，CDN fallback，工作区文件上传 |
+| **工作区文件管理** | ⬜ | ✅ | 上传/下载/删除任意文件，IndexedDB 持久化 |
 | **AI Chat Widget** | ⬜ | ✅ | 侧边栏 AI 对话（持久化会话 + 折叠卡片 + 新对话/打开按钮） |
 | **关于页面** | ✅ | ✅ | PWA(`#/about`) + TUI(`?` 键)，显示 commit hash 构建时注入 |
 | **推送通知** | N/A | ⬜ | Web Push API |

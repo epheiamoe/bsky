@@ -8,6 +8,7 @@ const en: LocaleMessages = {
   'nav.profile': 'Profile',
   'nav.aiChat': 'AI Chat',
   'ai.repaired': 'This conversation was automatically repaired. Refresh the page to complete the fix.',
+  'ai.sandboxInit': 'Python sandbox is initializing. First use may take up to 60 seconds...',
   'ai.consentTitle': 'AI will act on your behalf',
   'ai.consentDesc': 'AI can read your timeline, search posts, and view profiles. Actions like posting, liking, reposting, and following require your confirmation. AI will never act without your permission.',
   'ai.consentAccept': 'I understand, start chatting',
@@ -37,6 +38,8 @@ const en: LocaleMessages = {
   'action.removeBookmark': 'Remove Bookmark',
   'action.addToList': 'Add to list',
   'action.removeFromList': 'Remove from list',
+  'action.remove': 'Remove',
+  'action.download': 'Download',
   'action.copy': 'Copy',
   'action.copied': 'Copied',
   'action.copyLink': 'Copy Link',
@@ -402,7 +405,7 @@ const en: LocaleMessages = {
   'welcome.kimiStep1': 'Go to platform.kimi.com (CN) or platform.kimi.ai (overseas) to sign up.',
   'welcome.kimiStep2': 'Create an API key in the dashboard.',
   'welcome.kimiStep3': 'Copy the key and paste it in Settings → AI. CN=api.moonshot.cn, Overseas=api.moonshot.ai.',
-  'welcome.customTitle': 'Other providers (Anthropic, Google, Kimi, etc.)',
+  'welcome.customTitle': 'Other providers (Anthropic, Google, etc.)',
   'welcome.customDesc': 'Select "Custom" in Settings → enter any OpenAI-compatible Base URL + API Key.',
   'welcome.finishTitle': "You're all set!",
   'welcome.finishDesc': 'Configure AI provider, set preferences, and explore features anytime in Settings.',
@@ -516,6 +519,13 @@ const en: LocaleMessages = {
   'post.liked': 'Liked',
   'post.reposted': 'Reposted',
   'post.openInBsky': 'View in bsky.app',
+
+  // ── Workspace ──
+  'workspace.title': 'Workspace',
+  'workspace.empty': 'No files in workspace. Upload files from the AI chat input.',
+  'workspace.file': 'file',
+  'workspace.files': 'files',
+  'workspace.open': 'Open workspace',
 };
 
 export default en;

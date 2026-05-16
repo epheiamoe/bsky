@@ -1,11 +1,17 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, useContext } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAIChat, useChatHistory, useI18n, enableWidget, saveChatNow } from '@bsky/app';
+import { getAppConfig } from '../hooks/useAppConfig.js';
 import type { AIChatMessage } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
+import { MobileHeaderCtx } from './Layout.js';
 import { ThinkingCard, ToolCard, UserMessage, AssistantMessage } from './ai/index.js';
+import { WorkspaceModal } from './WorkspaceModal.js';
+import { getDefaultWorkspaceStorage } from '@bsky/app';
+import { PyodideSandbox } from '../services/pyodide-sandbox.js';
+import { setGlobalPythonSandbox, getGlobalPythonSandbox } from '@bsky/core';
 
 // ── Export/Import format conversion utilities ──
 
@@ -121,10 +127,12 @@ interface AIChatPageProps {
   contextUri?: string;
   goTo: (v: import('@bsky/app').AppView) => void;
   goBack: () => void;
+  userDisplayName?: string;
 }
 
-export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack }: AIChatPageProps) {
+export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, userDisplayName }: AIChatPageProps) {
   const { t, locale } = useI18n();
+  const { onSidebarOpen: onAppSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [input, setInput] = useState('');
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
@@ -148,6 +156,8 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     chatId: sessionId,
     stream: true,
     userHandle,
+    userDisplayName,
+    userPronouns: getAppConfig().userPronouns,
     environment: 'pwa',
     locale,
     contextProfile: contextProfile ?? (isProfile ? contextUri : undefined),
@@ -193,19 +203,53 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     return -1;
   }, [messageGroups, loading]);
 
-  const [exportOpen, setExportOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
-  const [pendingFile, setPendingFile] = useState<{ file: File; preview: string } | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ file: File; preview: string; workspaceId?: string } | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
+  const [aiConsent, setAiConsent] = useState(() => localStorage.getItem('bsky_ai_consent') === '1');
+  const [sandboxInit, setSandboxInit] = useState<{ active: boolean; progress: number; message: string }>({ active: false, progress: 0, message: '' });
 
   // Scroll refs — user-controlled
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // Initialize Python sandbox — lazy init, background loading
+  useEffect(() => {
+    const sandbox = new PyodideSandbox();
+    setGlobalPythonSandbox(sandbox);
+    return () => {
+      sandbox.dispose();
+    };
+  }, []);
+
+  // Sync current chat session ID with sandbox for workspace file isolation
+  useEffect(() => {
+    const sandbox = getGlobalPythonSandbox();
+    if (sandbox instanceof PyodideSandbox) {
+      sandbox.setCurrentChatId(sessionId);
+    }
+  }, [sessionId]);
+
+  // Track sandbox initialization progress via callback
+  useEffect(() => {
+    const sandbox = getGlobalPythonSandbox();
+    if (sandbox instanceof PyodideSandbox) {
+      sandbox.setOnProgress((msg) => {
+        if (msg.stage === 'ready') {
+          setSandboxInit({ active: false, progress: 1, message: '' });
+        } else {
+          setSandboxInit({ active: true, progress: msg.progress, message: msg.message });
+        }
+      });
+    }
+  }, []);
 
   // Keep container height synced with visual viewport on mobile (keyboard safe)
   useEffect(() => {
@@ -224,12 +268,35 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     setAutoScroll(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
   }, []);
 
-  // File upload handler
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // File upload handler — supports images (preview) and any file type (workspace)
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.type.startsWith('image/')) {
       setPendingFile({ file, preview: URL.createObjectURL(file) });
+    } else {
+      // Save non-image files to workspace
+      try {
+        const data = new Uint8Array(await file.arrayBuffer());
+        const id = crypto.randomUUID();
+        const storage = getDefaultWorkspaceStorage();
+        await storage.saveFile({
+          id,
+          name: file.name,
+          mimeType: file.type || 'application/octet-stream',
+          size: file.size,
+          data,
+          uploadedAt: new Date().toISOString(),
+          chatId: sessionId,
+        });
+        setPendingFile({ file, preview: '', workspaceId: id });
+        setImportSuccess(`已保存到工作区: ${file.name}`);
+        setTimeout(() => setImportSuccess(null), 3000);
+      } catch (err) {
+        console.error('Failed to save file to workspace:', err);
+        setImportError(`保存到工作区失败: ${file.name}`);
+        setTimeout(() => setImportError(null), 3000);
+      }
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   }, []);
@@ -245,10 +312,17 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       }
     }
     if (pendingFile) {
-      const data = new Uint8Array(await pendingFile.file.arrayBuffer());
-      const idx = addUserImage(data, pendingFile.file.type || 'image/jpeg', '');
-      const ref = `[图片: index=${idx}]`;
-      void send(text + '\n\n' + ref);
+      if (pendingFile.workspaceId) {
+        // Non-image file saved to workspace — reference it in message
+        const ref = `[文件: /workspace/data/${pendingFile.file.name}]`;
+        void send(text + '\n\n' + ref);
+      } else {
+        // Image file — use existing image upload flow
+        const data = new Uint8Array(await pendingFile.file.arrayBuffer());
+        const idx = addUserImage(data, pendingFile.file.type || 'image/jpeg', '');
+        const ref = `[图片: index=${idx}]`;
+        void send(text + '\n\n' + ref);
+      }
       setInput('');
       setPendingFile(null);
     } else {
@@ -297,7 +371,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       const md = visible.map(m => `### ${m.role === 'user' ? 'You' : 'AI'}\n\n${m.content}\n`).join('\n');
       downloadFile(md, 'chat.md', 'text/markdown');
     }
-    setExportOpen(false);
+    setMenuOpen(false);
   }, [messages, aiConfig, contextUri, contextPost, contextProfile]);
 
   // ═══════════════════ Import ═══════════════════
@@ -438,7 +512,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   );
 
   return (
-    <div ref={chatContainerRef} className="h-[calc(100dvh-3rem)] flex bg-background font-sans animate-fadeIn">
+    <div ref={chatContainerRef} className="h-dvh md:h-[calc(100dvh-3rem)] flex bg-background font-sans animate-fadeIn">
       {/* Mobile sidebar overlay with slide animation */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -595,7 +669,15 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       {/* Main chat area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-border bg-background flex-shrink-0">
+        <header className="sticky top-0 z-10 flex items-center gap-1 px-2 py-3 border-b border-border bg-background flex-shrink-0">
+          <button
+            onClick={onAppSidebarOpen}
+            className="md:hidden text-text-secondary hover:text-text-primary p-1 transition-colors relative"
+            aria-label={t('nav.menu')}
+          >
+            <Icon name="menu" size={20} />
+            {dmCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
+          </button>
           <button
             onClick={goBack}
             className="text-text-secondary hover:text-text-primary p-1 transition-colors"
@@ -608,68 +690,81 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
             className="md:hidden text-text-secondary hover:text-text-primary p-1 transition-colors"
             title={t('ai.history')}
           >
-            <Icon name="menu" size={20} />
+            <Icon name="clock" size={20} />
           </button>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-lg"><Icon name="astroid-as-AI-Button" size={18} /></span>
+          <div className="flex items-center gap-1 min-w-0">
             <h1 className="text-base font-semibold text-text-primary truncate">{t('nav.aiChat')}</h1>
-            {messages.length > 0 && (
-              <>
+            {messages.length > 0 ? (
+              <div className="relative">
                 <button
-                  onClick={() => {
-                    const txt = messages
-                      .filter(m => m.role === 'user' || m.role === 'assistant')
-                      .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
-                      .join('\n\n');
-                    navigator.clipboard.writeText(txt).catch(() => {});
-                  }}
-                  className="ml-auto text-text-secondary hover:text-primary transition-colors p-1"
-                  title="Copy transcript"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  className="text-text-secondary hover:text-text-primary transition-colors p-1"
+                  title="More"
+                  aria-label="More"
                 >
-                  <Icon name="copy" size={16} />
+                  <Icon name="ellipsis" size={16} />
                 </button>
-                <div className="relative">
-                  <button onClick={() => setExportOpen(!exportOpen)} className="text-text-secondary hover:text-primary transition-colors p-1" title="Export">
-                    <Icon name="arrow-big-down" size={16} />
-                  </button>
-                  {exportOpen && (
-                    <div className="absolute top-full right-0 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-50 py-1 min-w-[120px]" onClick={e => e.stopPropagation()}>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white dark:bg-[#1a1a2e] border border-border rounded-lg shadow-lg z-50 py-1 min-w-[140px]">
+                      <button
+                        onClick={() => {
+                          const txt = messages
+                            .filter(m => m.role === 'user' || m.role === 'assistant')
+                            .map(m => `[${m.role === 'user' ? '▸' : '🤖'}] ${m.content}`)
+                            .join('\n\n');
+                          navigator.clipboard.writeText(txt).catch(() => {});
+                          setMenuOpen(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors"
+                      >
+                        Copy transcript
+                      </button>
                       {(['json', 'html', 'md'] as const).map(f => (
-                        <button key={f} onClick={() => handleExport(f)} className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors">{f.toUpperCase()}</button>
+                        <button
+                          key={f}
+                          onClick={() => { handleExport(f); setMenuOpen(false); }}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors"
+                        >
+                          Export {f.toUpperCase()}
+                        </button>
                       ))}
+                      <div className="border-t border-border my-1" />
+                      <button
+                        onClick={() => { importFileRef.current?.click(); setMenuOpen(false); }}
+                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors"
+                      >
+                        Import JSON
+                      </button>
                     </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => { enableWidget('aiChat'); goTo({ type: 'feed' }); }}
-                  className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5 hidden lg:flex"
-                  title="Open in Widgets"
-                  aria-label={t('a11y.openInWidgets')}
-                >
-                  <Icon name="arrow-big-right" size={16} />
-                </button>
-              </>
+                  </>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => importFileRef.current?.click()}
+                className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1"
+                title="Import JSON"
+              >
+                <Icon name="upload" size={16} />
+              </button>
             )}
-            <button
-              onClick={() => importFileRef.current?.click()}
-              className="text-text-secondary hover:text-primary transition-colors p-1 ml-0.5"
-              title="Import JSON"
-            >
-              <Icon name="upload" size={16} />
-            </button>
             <input ref={importFileRef} type="file" accept=".json" onChange={handleImport} className="hidden" aria-label="Import chat" />
-            {/* Import toast */}
-            {importError && (
-              <div role="alert" className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
-            )}
-            {importSuccess && (
-              <div role="status" className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
+          </div>
+          <div className="ml-auto flex items-center gap-1">
+            {contextUri && (
+              <span className="text-xs text-text-secondary bg-surface border border-border rounded-full px-2.5 py-0.5 truncate max-w-[200px]">
+                <Icon name="pin" size={14} /> {contextUri.split('/').pop()}
+              </span>
             )}
           </div>
-          {contextUri && (
-            <span className="ml-auto text-xs text-text-secondary bg-surface border border-border rounded-full px-2.5 py-0.5 truncate max-w-[200px]">
-              <Icon name="pin" size={14} /> {contextUri.split('/').pop()}
-            </span>
+          {/* Import toast */}
+          {importError && (
+            <div role="alert" className="fixed bottom-4 right-4 bg-red-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importError}</div>
+          )}
+          {importSuccess && (
+            <div role="status" className="fixed bottom-4 right-4 bg-green-500 text-white text-xs px-3 py-2 rounded-lg shadow-lg z-[100]">{importSuccess}</div>
           )}
         </header>
 
@@ -709,14 +804,41 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         )}
 
         {/* Messages area */}
+        {/* Sandbox initialization banner */}
+        {sandboxInit.active && (
+          <div className="bg-blue-500/10 border-b border-blue-500/20 px-4 py-2 text-sm text-blue-400 flex items-center gap-2 shrink-0"
+               role="status" aria-live="polite">
+            <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>{sandboxInit.message}</span>
+          </div>
+        )}
+
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-1"
+          className="flex-1 overflow-y-auto px-4 pt-4 pb-14 space-y-1"
         >
           {messages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">
-              {guidingQuestions.length > 0 ? (
+              {!aiConsent ? (
+                <div className="max-w-sm space-y-4">
+                  <Icon name="badge-info" size={32} className="text-primary mx-auto" />
+                  <p className="text-base font-semibold text-text-primary">{t('ai.consentTitle')}</p>
+                  <p className="text-sm text-text-secondary leading-relaxed">{t('ai.consentDesc')}</p>
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('bsky_ai_consent', '1');
+                      setAiConsent(true);
+                    }}
+                    className="w-full py-2.5 px-4 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
+                  >
+                    {t('ai.consentAccept')}
+                  </button>
+                </div>
+              ) : guidingQuestions.length > 0 ? (
                 <div className="space-y-3 w-full max-w-sm">
                   <p className="text-text-secondary text-sm mb-4">{t('ai.quickQuestions')}</p>
                   {guidingQuestions.map((q, i) => (
@@ -825,20 +947,35 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         <div className="border-t border-border bg-background px-4 py-3">
           {pendingFile && (
             <div className="max-w-3xl mx-auto mb-2 flex items-center gap-2">
-              <img src={pendingFile.preview} alt="" className="w-12 h-12 object-cover rounded border border-border" />
+              {pendingFile.preview ? (
+                <img src={pendingFile.preview} alt="" className="w-12 h-12 object-cover rounded border border-border" />
+              ) : (
+                <div className="w-12 h-12 rounded border border-border flex items-center justify-center bg-surface">
+                  <Icon name="file-text" size={20} className="text-text-secondary" />
+                </div>
+              )}
               <span className="text-xs text-text-secondary">{pendingFile.file.name} ({Math.round(pendingFile.file.size / 1024)}KB)</span>
-              <button onClick={() => setPendingFile(null)} className="text-xs text-red-500 hover:text-red-400">Remove</button>
+              <button onClick={() => setPendingFile(null)} className="text-xs text-red-500 hover:text-red-400">{t('action.remove') || 'Remove'}</button>
             </div>
           )}
           <div className="flex items-end gap-2 max-w-3xl mx-auto">
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" aria-label={t('a11y.uploadImage')} />
+            <input ref={fileInputRef} type="file" accept="image/*,*/*" onChange={handleFileSelect} className="hidden" aria-label={t('a11y.uploadFile')} />
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={loading}
               className="shrink-0 w-10 h-10 rounded-lg border border-border text-text-secondary hover:text-primary hover:border-primary transition-colors flex items-center justify-center disabled:opacity-50"
-              title={t('a11y.uploadImage')}
+              title={t('a11y.uploadFile') || 'Upload file'}
             >
-              <Icon name="plus" size={20} />
+              <Icon name="paperclip" size={20} />
+            </button>
+            <button
+              onClick={() => setWorkspaceOpen(true)}
+              disabled={loading}
+              className="shrink-0 w-10 h-10 rounded-lg border border-border text-text-secondary hover:text-primary hover:border-primary transition-colors flex items-center justify-center disabled:opacity-50"
+              title={t('workspace.open') || 'Open workspace'}
+              aria-label={t('workspace.open') || 'Open workspace'}
+            >
+              <Icon name="database" size={20} />
             </button>
             <textarea
               value={input}
@@ -881,8 +1018,12 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
           </div>
         </div>
       </div>
-        {/* Repair toast — shown when a previously corrupted conversation was auto-fixed */}
-        {wasRepaired && (
+
+      {/* Workspace Modal */}
+      <WorkspaceModal open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} chatId={sessionId} />
+
+      {/* Repair toast — shown when a previously corrupted conversation was auto-fixed */}
+      {wasRepaired && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs px-4 py-3 rounded-xl shadow-lg z-[100] flex items-center gap-3 animate-slideUp max-w-[90%]">
             <span className="leading-snug">{t('ai.repaired')}</span>
             <button

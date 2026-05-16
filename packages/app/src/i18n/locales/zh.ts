@@ -35,6 +35,8 @@ const zh: LocaleMessages = {
   'action.removeBookmark': '移除书签',
   'action.addToList': '添加到列表',
   'action.removeFromList': '从列表移除',
+  'action.remove': '移除',
+  'action.download': '下载',
   'action.copy': '复制',
   'action.copied': '已复制',
   'action.copyLink': '复制链接',
@@ -286,6 +288,14 @@ const zh: LocaleMessages = {
   'ai.toolCallCard': '工具调用',
   'ai.widgetTitle': 'AI 对话',
   'ai.viewHint': '在受支持的页面使用 /view 让 AI 了解上下文',
+  'ai.sandboxInit': 'Python 沙箱正在初始化，首次使用最多可能需要 60 秒...',
+
+  // ── Workspace ──
+  'workspace.title': '工作区',
+  'workspace.empty': '工作区暂无文件。从 AI 对话输入框上传文件。',
+  'workspace.file': '个文件',
+  'workspace.files': '个文件',
+  'workspace.open': '打开工作区',
 
   // ── Login ──
   'login.title': '欢迎使用 Bluesky 客户端',
@@ -361,7 +371,7 @@ const zh: LocaleMessages = {
   'welcome.kimiStep1': '前往 platform.kimi.com（国内）或 platform.kimi.ai（海外）注册。',
   'welcome.kimiStep2': '在控制台创建 API Key。',
   'welcome.kimiStep3': '复制 Key 粘贴到设置 → AI。国内=api.moonshot.cn，海外=api.moonshot.ai。',
-  'welcome.customTitle': '其他提供商（Anthropic、Google、Kimi 等）',
+  'welcome.customTitle': '其他提供商（Anthropic、Google 等）',
   'welcome.customDesc': '在设置中选择「Custom」，输入任意 OpenAI 兼容的 Base URL + API Key。',
   'welcome.step1': '欢迎',
   'welcome.step2': '授权确认',

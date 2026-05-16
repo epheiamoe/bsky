@@ -27,6 +27,14 @@ export interface AppConfig {
   enabledWidgets: string[];
   /** Custom AI system prompt appended to every AI chat */
   customSystemPrompt?: string;
+  /** User pronouns for AI reference. ''=skip injection, 'neutral'=use neutral terms, any other value=use as-is */
+  userPronouns?: string;
+  /** Post preview line count in feed timeline */
+  postPreviewLines: number;
+  /** Quoted post preview line count */
+  quotedPreviewLines: number;
+  /** Thread post preview line count */
+  threadPreviewLines: number;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -50,12 +58,19 @@ const DEFAULT_CONFIG: AppConfig = {
     imageDescription: '',
   },
   enabledWidgets: [],
+  postPreviewLines: 10,
+  quotedPreviewLines: 8,
+  threadPreviewLines: 8,
 };
 
 export function getAppConfig(): AppConfig {
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
-    if (!raw) return { ...DEFAULT_CONFIG };
+    if (!raw) {
+      // First launch: detect system dark mode preference
+      const prefersDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return { ...DEFAULT_CONFIG, darkMode: prefersDark };
+    }
     return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
   } catch {
     return { ...DEFAULT_CONFIG };

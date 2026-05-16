@@ -12,6 +12,10 @@ export interface WidgetContext {
   client?: BskyClient;
   /** Thread URI for context (thread view) */
   threadUri?: string;
+  /** Current user's handle */
+  userHandle?: string;
+  /** Current user's display name */
+  userDisplayName?: string;
   [key: string]: unknown;
 }
 

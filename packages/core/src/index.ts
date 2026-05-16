@@ -101,3 +101,7 @@ export {
 } from './ai/providers.js';
 export type { ProviderInfo, ModelInfo } from './ai/providers.js';
 export type { LoginErrorDetail } from './at/client.js';
+
+// Python Sandbox
+export type { PythonSandboxEngine, PythonExecutionResult } from './ai/python-sandbox.js';
+export { setGlobalPythonSandbox, getGlobalPythonSandbox } from './ai/python-sandbox.js';

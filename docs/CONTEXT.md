@@ -26,6 +26,8 @@
 
 ## 版本
 
+**v0.14.0** — Python 沙箱 + 工作区：新增 `execute_python` AI 工具（第 34 个工具），在浏览器内运行隔离的 Python 代码（Pyodide WebAssembly）。支持 pandas/numpy/matplotlib 数据分析，用户可上传 CSV/JSON 等文件到工作区供 Python 分析。工作区文件存储在 IndexedDB（PWA）或文件系统（TUI）。实现采用 inline Blob URL Worker（避免 CDN 上 `.ts` 文件的 MIME 类型问题），支持 CDN fallback（jsdelivr → unpkg），60 秒初始化超时，实时进度汇报（downloading/loading/setup/packages）。Python 执行结果在 UI 中以代码卡片化展示（stdout/stderr/CSV表格/图片/JSON树）。
+
 **v0.13.9** — API Adapter 模式提取：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个 LLM 提供商：OpenAI（Responses API）、xAI Grok（Responses API）、Kimi Moonshot CN/Overseas（Chat Completions）、OpenRouter（自定义模型）。Provider 元数据系统：`fixedParams`（不可变参数）、`supportsReasoningEffort`、`video` 预留。`reasoningEffort` 支持。Welcome 设置页面 6 厂商展示卡。场景设置按密钥过滤。xAI 流式 tool call 参数丢失修复、推理事件名修复。搜索工具空参数保护。Kimi `reasoningStyle` 修复。
 
 **v0.13.1** — 综合无障碍提升：WCAG 4.1.1（语义 HTML）+ 4.1.2（表单标签关联、aria-expanded/describedby/invalid/progressbar）+ 1.4.1（颜色+状态双重编码）+ 色弱友好调色板 + **AI ALT 图像描述生成**。_authHook 自动注入 Authorization。downloadBlob bsky.social 代理回退 + 429 指数退避重试。Modal createPortal + stopPropagation。设置场景 Tab 国际化。
@@ -46,6 +48,7 @@
 - **关于页面** `#/about` : PWA+TUI，显示 repo URL / commit hash（Vite 构建时注入 `__COMMIT_HASH__`）/ build time / 描述 / 反馈 / 联系
 - **AI Chat**: 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 人类可读结果), 31 工具格式化, `/view` 命令给 AI 注入当前页面上下文
 - **AI Chat 侧边栏 Widget**: 持久化会话（`_aiChatSessionId`）、折叠卡片、新对话/全页打开按钮
+- **Python 沙箱** (v0.14.0): AI 工具 `execute_python` 在浏览器内运行隔离 Python 代码（Pyodide WASM）。支持 pandas/numpy/matplotlib 数据分析。用户上传文件到工作区（IndexedDB/文件系统），AI 可读取分析。inline Blob URL Worker（避免 `.ts` MIME 问题），CDN fallback（jsdelivr→unpkg），60s 超时，实时进度汇报。结果卡片化展示（代码/输出/表格/图片/JSON）
 - **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 删除 + 静音 + 加载更早
 - **页面动画**: framer-motion v12.38.0 驱动。11 页面 fadeIn 入场、PostCard hover、PostActionsRow 按压反馈、NotifsPage/DraftsPage 交错入场。**Image lightbox**: hero 弹簧动画（sourceRects[current] 位置→居中）、两层 cover→contain 交叉淡入淡出、AnimatePresence mode="wait" 左右滑动切换。**Mobile sidebar**: 左侧滑入（AnimatePresence + spring）+ backdrop-blur-sm。**统一 Modal**: scaleIn/Out + backdrop-blur + Esc 关闭 + bottom-sheet 变体。
 - **滚动**: 像素值恢复（非索引）、AIChatPage requestAnimationFrame 精准滚动、visualViewport 移动键盘适应

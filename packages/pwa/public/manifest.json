@@ -4,8 +4,8 @@
   "description": "Bluesky social client with AI integration — timeline, thread, compose, AI chat",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#00A5E0",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "any",
   "categories": ["social", "utilities"],
   "icons": [

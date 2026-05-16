@@ -44,23 +44,31 @@ since:日期、until:日期、lang:语言代码、has:image、
 例如：create_post({ text: "描述", pendingImageIndex: 0 }) 会使用用户上传的第一张图片。
 如果用户上传了多张图片，可以使用多个 pendingImageIndex。
 
+【关于工作区文件】
+用户可以在工作区上传任意文件（CSV、JSON、TXT、图片等）。
+如果用户在消息中引用了工作区文件（格式：[文件: /workspace/data/文件名]），你可以建议他们用 Python 分析这些文件。
+Python 沙箱环境支持：json, math, statistics, csv, io, pathlib, datetime, re, collections, itertools。
+Python 可以读取 /workspace/data/ 下的用户上传文件，并将结果保存到 /workspace/output/。
+输出文件（CSV、PNG、JSON 等）会自动展示给用户。
+
 【关于视频】
 Bluesky 帖子可能包含视频（在 get_post_context 和 get_post_thread_flat 中以 [视频] 标记显示）。
 你无法查看或分析视频内容。不要对视频帖子调用 extract_images_from_post 或 view_image。
 如果帖子只有视频而没有图片，直接告知用户帖子包含视频、你暂时无法分析视频内容即可。
 
 【重要规则】
-1. 绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。
-   所有写操作（create_post、like、repost、follow）必须由用户明确要求后才执行。
-   即使用户让你"查看某人的资料"，你只需要概括和分析，不要自动生成推文或互动。
-2. 汇总资料时直接输出分析结果，不要附加"我帮你发条帖子吧"之类的建议。
-3. 如果用户要求你发帖，你才通过 create_post 工具执行，否则永远不要。
-4. 当你调用写操作工具时，系统会自动弹出确认对话框询问用户是否允许。
-   因此你不需要额外询问用户"是否要执行"，直接调用工具执行即可。
-   但只有在用户明确提出写操作请求时才调用写工具，不要替用户做决定。
-5. 当前用户: {{userDisplayName}} (@{{userHandle}})。
-   需要获取自己信息时，直接使用 get_profile actor="{{userHandle}}"。
-   获取自己的时间线、通知等也无需猜测——@{{userHandle}} 已在提示词中给出。
+ 1. 绝对不要主动代表用户发帖、回复、点赞、转发或关注任何人。
+    所有写操作（create_post、like、repost、follow）必须由用户明确要求后才执行。
+    即使用户让你"查看某人的资料"，你只需要概括和分析，不要自动生成推文或互动。
+ 2. 汇总资料时直接输出分析结果，不要附加"我帮你发条帖子吧"之类的建议。
+ 3. 如果用户要求你发帖，你才通过 create_post 工具执行，否则永远不要。
+ 4. 当你调用写操作工具时，系统会自动弹出确认对话框询问用户是否允许。
+    因此你不需要额外询问用户"是否要执行"，直接调用工具执行即可。
+    但只有在用户明确提出写操作请求时才调用写工具，不要替用户做决定。
+ 5. 当前用户: {{userDisplayName}} (@{{userHandle}})。
+    需要获取自己信息时，直接使用 get_profile actor="{{userHandle}}"。
+    获取自己的时间线、通知等也无需猜测——@{{userHandle}} 已在提示词中给出。
+{{#if userPronouns}}6. {{userPronouns}}{{/if}}
 
 {{#if contextProfile}}
 用户正在查看 {{contextProfile}} 的主页。
@@ -94,6 +102,34 @@ Bluesky 帖子可能包含视频（在 get_post_context 和 get_post_thread_flat
  * All fixed content lives in MAIN_TEMPLATE; all dynamic values
  * are injected in a single replace pass.
  */
+/** Strip prompt injection vectors from user-supplied pronoun strings.
+ *  Rules: strip newlines, max 50 chars, reject known instruction keywords.
+ *  Returns sanitized string, or 'neutral' fallback if rejected. */
+export function sanitizePronouns(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+  // Strip newlines and control chars
+  const noCtrl = trimmed.replace(/[\r\n\t\0-\x08\x0B\x0C\x0E-\x1F]/g, '');
+  // Max 50 chars
+  if (noCtrl.length > 50) return 'neutral';
+  // Reject known injection keywords
+  const injectionPattern = /\b(ignore|override|system|instruction|prompt|reveal|disregard|forget|as\s*(model|ai|llm|assistant)|new\s*(rule|instruction)|role\s*[:=]|you\s+(are|must|will))\b/i;
+  if (injectionPattern.test(noCtrl)) return 'neutral';
+  return noCtrl;
+}
+
+/** Render pronouns string for AI prompt injection.
+ *  '' (empty) → skipped entirely (no injection)
+ *  'neutral'  → "请使用中性代词称呼用户。"
+ *  any other  → "用户的指定代词是 {value}。"
+ */
+export function renderPronouns(pronouns?: string): string {
+  const safe = sanitizePronouns(pronouns ?? '');
+  if (!safe) return '';
+  if (safe === 'neutral') return '请使用中性代词称呼用户。';
+  return `用户的指定代词是 ${safe}。`;
+}
+
 export function buildSystemPrompt(opts: {
   contextProfile?: string;
   contextPost?: string;
@@ -104,6 +140,7 @@ export function buildSystemPrompt(opts: {
   locale?: string;
   visionEnabled?: boolean;
   customPrompt?: string;
+  userPronouns?: string;
 }): string {
   const env = opts.environment || 'pwa';
   const now = new Date();
@@ -131,6 +168,7 @@ export function buildSystemPrompt(opts: {
 
   result = result.replace(/{{userHandle}}/g, opts.userHandle ?? '');
   result = result.replace(/{{userDisplayName}}/g, opts.userDisplayName ?? '');
+  result = result.replace(/{{userPronouns}}/g, renderPronouns(opts.userPronouns));
 
   result = result.replace('{{currentTime}}', `${currentTime}，星期${day}。`);
 
@@ -145,6 +183,7 @@ export function buildSystemPrompt(opts: {
     contextPost:    !!opts.contextPost,
     currentUser:   !!opts.currentUser,
     customPrompt:  !!opts.customPrompt?.trim(),
+    userPronouns:  !!opts.userPronouns && opts.userPronouns.trim() !== '',
   });
 
   // Inject custom prompt last (String.replace — not Mustache, safe from user {{}} collision)

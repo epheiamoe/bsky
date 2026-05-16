@@ -74,6 +74,78 @@ function toBase64(data: Uint8Array): string {
 
 export function createTools(client: BskyClient): ToolDescriptor[] {
   const tools: ToolDescriptor[] = [
+    // ======================== PYTHON SANDBOX ========================
+    {
+      definition: {
+        name: 'execute_python',
+        description: `Execute Python code in an isolated sandbox environment. Use this for data analysis, batch processing, statistics, plotting, and any complex computation that would be tedious with individual tool calls.
+
+The sandbox has a virtual filesystem:
+- /workspace/data/ — user-uploaded files (read-only)
+- /workspace/output/ — your output files (shown to user)
+- /workspace/temp/ — temporary files (auto-cleaned)
+
+Available standard libraries: json, math, statistics, csv, io, pathlib, datetime, re, collections, itertools, random.
+External libraries (auto-installed on first use): pandas, numpy, matplotlib.
+
+Best practices:
+1. Use print() for brief status messages
+2. Save data results to /workspace/output/ as .csv, .json, or .png
+3. Handle errors gracefully with try/except
+4. Do not use input() — the sandbox has no interactive input
+5. Execution limit: 30 seconds, 256MB memory
+
+Example:
+import pandas as pd
+df = pd.read_csv('/workspace/data/sales.csv')
+summary = df.groupby('category')['revenue'].sum()
+summary.to_csv('/workspace/output/revenue_by_category.csv')
+print(f"Processed {len(df)} rows")`,
+        inputSchema: {
+          type: 'object',
+          properties: {
+            code: { type: 'string', description: 'Python code to execute' },
+          },
+          required: ['code'],
+        },
+      },
+      handler: async (p) => {
+        const { getGlobalPythonSandbox } = await import('./python-sandbox.js');
+        const sandbox = getGlobalPythonSandbox();
+        if (!sandbox) {
+          return JSON.stringify({ error: 'Python 沙箱未初始化。请稍等片刻后重试，或刷新页面。' });
+        }
+        const startTime = Date.now();
+        try {
+          const result = await sandbox.execute(p.code as string);
+          const response: Record<string, unknown> = {
+            stdout: result.stdout,
+            stderr: result.stderr,
+            executionTime: result.executionTime,
+            success: result.success,
+          };
+          if (result.files.length > 0) {
+            response.files = result.files.map(f => ({
+              name: f.name,
+              type: f.type,
+              size: f.size,
+              path: f.path,
+            }));
+          }
+          if (result.returnValue !== null && result.returnValue !== undefined) {
+            response.returnValue = result.returnValue;
+          }
+          return JSON.stringify(response);
+        } catch (err) {
+          return JSON.stringify({
+            error: `Execution failed: ${err instanceof Error ? err.message : String(err)}`,
+            executionTime: Date.now() - startTime,
+            success: false,
+          });
+        }
+      },
+      requiresWrite: false,
+    },
     // ======================== READ TOOLS ========================
     {
       definition: {

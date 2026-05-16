@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
@@ -8,6 +8,8 @@ import type { AppView } from '@bsky/app';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { truncateName } from './PostCard.js';
+import { MobileHeaderCtx } from './Layout.js';
+import { PullToRefresh } from './PullToRefresh.js';
 
 interface SearchPageProps {
   client: BskyClient;
@@ -20,6 +22,8 @@ interface SearchPageProps {
   imageDescConfig?: import('@bsky/core').AIConfig;
   imageDescLang?: string;
   singleImageFill?: boolean;
+  previewLines?: number;
+  quotedPreviewLines?: number;
 }
 
 const TABS: { key: SearchTab; labelKey: string }[] = [
@@ -33,8 +37,9 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill }: SearchPageProps) {
+export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: SearchPageProps) {
   const { t } = useI18n();
+  const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
@@ -81,8 +86,9 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   };
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
+    <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
+        <button onClick={onSidebarOpen} className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none relative" aria-label={t('nav.menu')}><Icon name="menu" size={20} />{dmCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}</button>
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors text-lg shrink-0" aria-label={t('a11y.back')}><Icon name="arrow-big-left" size={20} /></button>
         <h1 className="text-text-primary font-semibold text-lg"><Icon name="compass" size={18} /> {t('search.title')}</h1>
       </div>
@@ -130,7 +136,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
             >
               <Icon name="clock" size={14} className="text-text-secondary/50 shrink-0" />
               <span className="flex-1 text-sm text-text-primary truncate">{q}</span>
-              <button onClick={(e) => { e.stopPropagation(); remove(q); }}
+              <button onMouseDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); remove(q); }}
                 className="text-text-secondary/50 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <Icon name="x" size={14} />
@@ -145,7 +151,9 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : items.length > 0 ? (
-          <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
+        <>
+          <PullToRefresh onRefresh={() => search(input, tab)} scrollRef={scrollRef} />
+          <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto pb-14">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const item = items[vi.index]!;
@@ -168,6 +176,8 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                   imageDescLang={imageDescLang}
                   singleImageFill={singleImageFill}
                 client={client}
+                previewLines={previewLines}
+                quotedPreviewLines={quotedPreviewLines}
               >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostCard>
@@ -205,6 +215,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
             })}
           </div>
         </div>
+        </>
       ) : searched ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 flex-1">
           <p className="text-text-secondary text-sm">{t('search.noResults')}</p>

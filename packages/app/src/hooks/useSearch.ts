@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { PostView, ProfileViewBasic, FeedGeneratorView } from '@bsky/core';
-import { readCache, writeCache, hasCache } from '../stores/cache';
+import { readCache, writeCache } from '../stores/cache';
 
 export type SearchTab = 'top' | 'latest' | 'users' | 'feeds';
 
@@ -35,16 +35,6 @@ export function useSearch(client: BskyClient | null, initialTab?: SearchTab, ini
   const [users, setUsers] = useState<ProfileViewBasic[]>(cached?.users ?? []);
   const [feeds, setFeeds] = useState<FeedGeneratorView[]>(cached?.feeds ?? []);
   const [loading, setLoading] = useState(false);
-  const autoFetched = useRef(false);
-
-  // Auto-restore on mount: silently re-search if initialQuery matches a cached search.
-  useEffect(() => {
-    if (initialQuery && !autoFetched.current) {
-      autoFetched.current = true;
-      const cacheExists = !!cached;
-      search(initialQuery, initialTab ?? 'top', cacheExists);
-    }
-  }, [initialQuery, initialTab]);
 
   const search = useCallback(async (q: string, t: SearchTab, silent = false) => {
     if (!client || !q.trim()) return;

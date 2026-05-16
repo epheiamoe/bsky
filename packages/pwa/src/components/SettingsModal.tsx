@@ -54,21 +54,27 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
   const currentProvider = useMemo(() => getProviderByBaseUrl(baseUrl), [baseUrl]);
   const currentModelInfo = useMemo(() => getModelInfo(currentProvider?.id || '', model), [currentProvider, model]);
   const isCustom = !currentProvider || !currentModelInfo;
+  const scenarioProviders = useMemo(() =>
+    PROVIDERS.filter(p => config.apiKeys?.[p.id]),
+    [config.apiKeys]
+  );
 
   const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const providerId = e.target.value;
     const provider = getProviderById(providerId);
     if (provider) {
       setBaseUrl(provider.baseUrl);
-      // Load existing key for this provider (or keep current if none saved)
       const savedKey = config.apiKeys?.[providerId];
-      if (savedKey) setApiKey(savedKey);
-      // Auto-select first model
-      const firstModel = provider.models[0];
-      if (firstModel) {
+      if (savedKey) setApiKey(savedKey); else setApiKey('');
+      if (provider.models.length > 0) {
+        const firstModel = provider.models[0]!;
         setModel(firstModel.id);
         setThinkingEnabled(firstModel.thinking);
         setVisionEnabled(firstModel.vision);
+      } else {
+        setModel('');
+        setThinkingEnabled(true);
+        setVisionEnabled(false);
       }
     }
   };
@@ -326,9 +332,9 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
               {(['aiChat', 'translate', 'polish', 'imageDescription'] as const).map(scenario => {
                 const isImageDesc = scenario === 'imageDescription';
                 const labelKey = scenario === 'aiChat' ? 'settings.scenario.aiChat' : scenario === 'translate' ? 'settings.scenario.translate' : scenario === 'polish' ? 'settings.scenario.polish' : 'settings.scenario.imageDescription';
-                const options = isImageDesc
-                  ? PROVIDERS.flatMap(p => p.models.filter(m => m.vision).map(m => ({ p, m })))
-                  : PROVIDERS.flatMap(p => p.models.map(m => ({ p, m })));
+              const options = isImageDesc
+                ? scenarioProviders.flatMap(p => p.models.filter(m => m.vision).map(m => ({ p, m })))
+                : scenarioProviders.flatMap(p => p.models.map(m => ({ p, m })));
                 return (
                   <div key={scenario}>
                     <label htmlFor={`settings-scenario-${scenario}`} className="text-xs text-text-secondary mb-1 block">{t(labelKey)}</label>

@@ -21,6 +21,7 @@ export function useVirtualizedList<T>(
   }
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const didRestore = useRef(false);
 
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -58,12 +59,33 @@ export function useVirtualizedList<T>(
       }
     };
     el.addEventListener('scroll', report, { passive: true });
-    const raf = (globalThis as any).requestAnimationFrame?.(report);
+    const raf = (globalThis as any).requestAnimationFrame?.(() => {
+      // Only report non-zero scrollTop to avoid overwriting saved position
+      // before virtualizer applies initialOffset
+      const c = scrollRef.current as any;
+      const st = c?.scrollTop ?? 0;
+      if (st > 0) report();
+    });
     return () => {
       el.removeEventListener('scroll', report);
       if (raf != null) (globalThis as any).cancelAnimationFrame?.(raf);
     };
   }, [options?.onScrollTopChange, cacheKey, items.length]);
+
+  // Scroll restoration: restore saved scrollTop after items load (handles cache-miss remount)
+  useEffect(() => {
+    if (options?.initialScrollTop && options.initialScrollTop > 0 && items.length > 0 && !didRestore.current) {
+      didRestore.current = true;
+      (globalThis as any).requestAnimationFrame?.(() => {
+        virtualizer.scrollToOffset(options!.initialScrollTop!, { align: 'start' });
+      });
+    }
+  }, [items.length > 0, options?.initialScrollTop, cacheKey]);
+
+  // Reset restoration flag when cacheKey changes (new list context)
+  useEffect(() => {
+    didRestore.current = false;
+  }, [cacheKey]);
 
   return { scrollRef, virtualizer, measureAndCache };
 }

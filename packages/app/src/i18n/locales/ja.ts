@@ -8,6 +8,7 @@ const ja: LocaleMessages = {
   'nav.profile': 'プロフィール',
   'nav.aiChat': 'AI チャット',
   'ai.repaired': 'この会話は自動修復されました。ページを更新して修正を完了してください。',
+  'ai.sandboxInit': 'Python サンドボックスを初期化中です。初回使用は最大 60 秒かかる場合があります...',
   'ai.consentTitle': 'AI はあなたに代わって操作します',
   'ai.consentDesc': 'AI はタイムラインの読み取り、投稿の検索、プロフィールの表示ができます。投稿、いいね、リポスト、フォローなどの操作はあなたの確認が必要です。AI は許可なくあなたに代わって行動することはありません。',
   'ai.consentAccept': '理解しました、チャットを開始',
@@ -37,6 +38,8 @@ const ja: LocaleMessages = {
   'action.removeBookmark': 'ブックマーク解除',
   'action.addToList': 'リストに追加',
   'action.removeFromList': 'リストから削除',
+  'action.remove': '削除',
+  'action.download': 'ダウンロード',
   'action.copy': 'コピー',
   'action.copied': 'コピー済み',
   'action.copyLink': 'リンクをコピー',
@@ -354,7 +357,7 @@ const ja: LocaleMessages = {
   'welcome.kimiStep1': 'platform.kimi.com（中国）または platform.kimi.ai（海外）にアクセスして登録。',
   'welcome.kimiStep2': 'ダッシュボードで API キーを作成。',
   'welcome.kimiStep3': 'キーをコピーして設定 → AI に貼り付け。中国=api.moonshot.cn、海外=api.moonshot.ai。',
-  'welcome.customTitle': '他のプロバイダー（Anthropic, Google, Kimi 等）',
+  'welcome.customTitle': '他のプロバイダー（Anthropic, Google 等）',
   'welcome.customDesc': '設定で「Custom」を選択 → OpenAI 互換の Base URL + API キーを入力。',
   'welcome.finishTitle': '準備完了！',
   'welcome.finishDesc': 'AI プロバイダーの設定や各種設定はいつでも設定画面から変更できます。',
@@ -525,6 +528,13 @@ const ja: LocaleMessages = {
   'post.liked': 'いいね',
   'post.reposted': 'リポスト',
   'post.openInBsky': 'bsky.app で見る',
+
+  // ── Workspace ──
+  'workspace.title': 'ワークスペース',
+  'workspace.empty': 'ワークスペースにファイルがありません。AIチャットの入力欄からファイルをアップロードしてください。',
+  'workspace.file': 'ファイル',
+  'workspace.files': 'ファイル',
+  'workspace.open': 'ワークスペースを開く',
 };
 
 export default ja;

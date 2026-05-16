@@ -27,6 +27,8 @@ export { useChatHistory } from './hooks/useChatHistory.js';
 export { FileChatStorage } from './services/chatStorage.js';
 export type { ChatStorage, ChatRecord, ChatSummary } from './services/chatStorage.js';
 export { initChatService, saveChat, loadChat, saveChatNow, deleteChat, listChats } from './services/chatService.js';
+export type { WorkspaceStorage, WorkspaceFile } from './services/workspaceStorage.js';
+export { setWorkspaceStorageFactory, getDefaultWorkspaceStorage, FileWorkspaceStorage } from './services/workspaceStorage.js';
 export { useTranslation } from './hooks/useTranslation.js';
 export type { TargetLang, TranslationResult } from './hooks/useTranslation.js';
 export { useProfile } from './hooks/useProfile.js';

@@ -11,9 +11,11 @@ interface FeedHeaderProps {
   currentFeedUri?: string;
   refresh?: () => Promise<void>;
   client?: BskyClient | null;
+  mobileMenuButton?: React.ReactNode;
+  mobileCollapsed?: boolean;
 }
 
-export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeaderProps) {
+export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuButton, mobileCollapsed }: FeedHeaderProps) {
   const { t } = useI18n();
   const [showMenu, setShowMenu] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
@@ -33,10 +35,12 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
 
   return (
     <>
+      <div className={`transition-all duration-300 ease-out overflow-hidden md:!overflow-visible md:!max-h-none md:!transform-none ${mobileCollapsed ? 'max-h-0 -translate-y-full' : 'max-h-32'}`}>
       <div className="sticky top-0 z-10 bg-background px-4 py-3 flex items-center justify-between border-b border-border flex-shrink-0 gap-2">
         <div className="relative inline-flex items-center gap-1">
-          <span className="text-lg font-bold text-text-primary">
-            <Icon name="home" size={16} /> {t('nav.feed')}{currentFeedUri ? ' - ' + getFeedLabel(currentFeedUri) : ''}
+          {mobileMenuButton}
+          <span className="text-lg font-bold text-text-primary truncate">
+            {currentFeedUri ? getFeedLabel(currentFeedUri) : t('nav.feed')}
           </span>
           <button
             onClick={() => { setShowMenu(!showMenu); refreshFeeds(); }}
@@ -75,7 +79,9 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client }: FeedHeader
           >
             {t('action.refresh')}
           </button>
+          {mobileMenuButton}
         </div>
+      </div>
       </div>
       {showConfig && (
         <FeedConfigModal

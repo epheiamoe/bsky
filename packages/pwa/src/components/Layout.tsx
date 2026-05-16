@@ -7,16 +7,25 @@ import type { AIConfig, BskyClient } from '@bsky/core';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { saveAppConfig } from '../hooks/useAppConfig.js';
 import { Sidebar } from './Sidebar';
-import { SettingsModal } from './SettingsModal';
 import { WidgetPanel } from './WidgetPanel.js';
+import { MobileTabBar } from './MobileTabBar.js';
 import { Icon } from './Icon.js';
+
+const TAB_PAGES = new Set(['feed', 'search', 'aiChat', 'profile']);
+
+export const MobileHeaderCtx = React.createContext<{
+  onSidebarOpen: () => void;
+  tabBarHidden: boolean;
+  setTabBarHidden: (v: boolean) => void;
+  dmCount: number;
+}>({ onSidebarOpen: () => {}, tabBarHidden: false, setTabBarHidden: () => {}, dmCount: 0 });
 
 interface LayoutProps {
   currentView: AppView;
   canGoBack: boolean;
   goBack: () => void;
   goHome: () => void;
-  goTo: (v: AppView) => void;
+  goTo: (v: AppView, replace?: boolean) => void;
   client: BskyClient;
   onLogout: () => void;
   children: React.ReactNode;
@@ -26,12 +35,10 @@ interface LayoutProps {
   draftCount?: number;
   dmCount?: number;
   polishConfig?: AIConfig;
+  userDisplayName?: string;
   composeDraft?: string;
   onComposeDraftChange?: (text: string) => void;
   aiConfig?: AIConfig;
-  settingsOpen: boolean;
-  onSettingsClose: () => void;
-  onSettingsOpen: () => void;
 }
 
 export function Layout({
@@ -52,9 +59,7 @@ export function Layout({
   composeDraft,
   onComposeDraftChange,
   aiConfig,
-  settingsOpen,
-  onSettingsClose,
-  onSettingsOpen,
+  userDisplayName,
 }: LayoutProps) {
   const { t } = useI18n();
   const [dark, setDark] = useState(() => {
@@ -136,9 +141,39 @@ export function Layout({
 
   const authenticated = client.isAuthenticated();
   const handle = authenticated ? client.getHandle() : null;
+  const isTabPage = TAB_PAGES.has(currentView.type);
+  const [tabBarHidden, setTabBarHidden] = useState(false);
+
+  // Auto-hide tab bar when keyboard is open (input/textarea focused)
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') {
+        setTabBarHidden(true);
+      }
+    };
+    const onFocusOut = () => {
+      // Delay to let the new focus settle before deciding
+      setTimeout(() => {
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+          setTabBarHidden(false);
+        }
+      }, 100);
+    };
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#000000' : '#FFFFFF');
   }, [dark]);
 
   const toggleDark = useCallback(() => setDark((d) => !d), []);
@@ -153,14 +188,16 @@ export function Layout({
     client,
     goTo,
     threadUri: currentView.type === 'thread' ? (currentView as { uri?: string }).uri : undefined,
+    userHandle: client?.getHandle?.(),
+    userDisplayName,
   };
 
   return (
     <div className="min-h-[100dvh] bg-background text-text-primary font-sans">
       {/* Screen reader announcement region for view transitions and AI agents */}
       <div aria-live="polite" className="sr-only" aria-atomic="true" />
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border" aria-label={t('a11y.mainNav')}>
+      {/* ── Header — hidden on mobile for tab pages ── */}
+      <header className={`sticky top-0 z-50 h-12 flex items-center px-4 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border ${isTabPage ? 'hidden md:flex' : ''}`} aria-label={t('a11y.mainNav')}>
         <div className="flex items-center gap-3 w-full">
           {/* Hamburger (mobile) */}
           <button
@@ -198,13 +235,6 @@ export function Layout({
           </span>
           <div className="ml-auto flex items-center gap-2">
             <button
-              onClick={onSettingsOpen}
-              className="text-text-secondary hover:text-text-primary transition-colors p-1"
-              aria-label={t('nav.settings')}
-            >
-              <Icon name="settings" size={18} />
-            </button>
-            <button
               onClick={toggleDark}
               className="text-text-secondary hover:text-text-primary transition-colors p-1"
               aria-label={dark ? t('theme.switchLight') : t('theme.switchDark')}
@@ -228,7 +258,7 @@ export function Layout({
           >
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
             <motion.div
-              className="absolute left-0 top-0 h-full w-64 bg-background border-r border-border shadow-lg"
+              className="absolute left-0 top-0 h-full w-64 bg-background border-r border-border shadow-lg flex flex-col"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -237,7 +267,7 @@ export function Layout({
             >
               <Sidebar
                 currentView={currentView}
-                goTo={(v) => { goTo(v); setSidebarOpen(false); }}
+                goTo={(v, replace) => { goTo(v, replace); setSidebarOpen(false); }}
                 client={client}
                 draftCount={draftCount}
                 dmCount={dmCount}
@@ -254,9 +284,11 @@ export function Layout({
           <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} onLogout={onLogout} />
         </aside>
 
-        <main id="main-content" tabIndex={-1} className="flex-1 max-w-content mx-auto w-full min-h-[calc(100dvh-3rem)]">
+        <MobileHeaderCtx.Provider value={{ onSidebarOpen: () => setSidebarOpen(true), tabBarHidden, setTabBarHidden, dmCount: dmCount ?? 0 }}>
+        <main id="main-content" tabIndex={-1} className={`flex-1 max-w-content mx-auto w-full pt-[env(safe-area-inset-top)] ${isTabPage ? '' : 'min-h-[calc(100dvh-3rem)]'}`}>
           {children}
         </main>
+        </MobileHeaderCtx.Provider>
 
         <aside className="hidden lg:flex flex-col w-right-panel h-[calc(100dvh-3rem)] sticky top-12 border-l border-border flex-shrink-0" aria-label={t('a11y.widgetPanel')}>
           <WidgetPanel
@@ -270,14 +302,12 @@ export function Layout({
         </aside>
       </div>
 
-      <SettingsModal
-        open={settingsOpen}
-        onClose={onSettingsClose}
-        config={config}
-        onConfigChange={onConfigChange}
-        onRelogin={onRelogin}
-        onLogout={onLogout}
-      />
+      {/* ── Mobile tab bar ── */}
+      {isTabPage && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-50">
+          <MobileTabBar currentView={currentView} handle={handle} goTo={goTo} hidden={tabBarHidden} />
+        </div>
+      )}
     </div>
   );
 }

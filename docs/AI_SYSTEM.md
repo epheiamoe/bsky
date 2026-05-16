@@ -649,6 +649,9 @@ interface ToolDescriptor {
 - `get_lists` — user's lists
 - `get_list_feed` — posts from list members
 
+**Sandbox Tools (1, read-only)**:
+- `execute_python` — run isolated Python code in browser via Pyodide WASM (pandas/numpy/matplotlib available). Files can be uploaded to workspace for analysis. Returns stdout/stderr/output files (CSV/PNG/JSON). Lazy init on first call. See `docs/WORKSPACE.md`.
+
 **Write Tools (6, require confirmation)**:
 - `create_list` — create a list
 - `edit_list_members` — add/remove list members

@@ -23,18 +23,19 @@ interface AIChatViewProps {
   focused: boolean;
   userHandle?: string;
   locale?: string;
+  userPronouns?: string;
 }
 
 type PickMode = { type: 'copy' | 'edit' | 'export'; buffer: string } | null;
 type ImageInput = { path: string } | null;
 
-export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, cols, rows, focused, userHandle, locale: uiLocale }: AIChatViewProps) {
+export function AIChatView({ client, aiConfig, sessionId, contextPost, contextProfile, contextUri, goTo, goBack, cols, rows, focused, userHandle, locale: uiLocale, userPronouns }: AIChatViewProps) {
   const [showHistory, setShowHistory] = useState(!contextUri && !sessionId);
   const isProfile = contextUri && !contextUri.startsWith('at://');
   const profileContext = contextProfile ?? (isProfile ? contextUri : undefined);
   const postContext = contextPost ?? (isProfile ? undefined : contextUri);
   const { conversations, deleteConversation, refresh } = useChatHistory();
-  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, userHandle, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
+  const { messages, loading, guidingQuestions, send, stop, addUserImage, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex } = useAIChat(client, aiConfig, postContext, { chatId: sessionId, userHandle, userPronouns, environment: 'tui', locale: uiLocale, contextProfile: profileContext, stream: true, onChatSaved: refresh });
   const [input, setInput] = useState('');
   const [historyIdx, setHistoryIdx] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
@@ -47,6 +48,7 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   const wasAtBottom = useRef(true);
   const { t, locale } = useI18n();
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
+  const [consented, setConsented] = useState(messages.length > 0);
 
   useEffect(() => { if (messages.length > 0) setShowHistory(false); }, [messages]);
 
@@ -168,6 +170,11 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   useInput((input, key) => {
     if (showHistory) return;
 
+    // Consent banner blocks all other input until accepted
+    if (!consented && messages.length === 0) {
+      if (key.return) { setConsented(true); }
+      return;
+    }
     if (pickMode) {
       if (key.escape) { setPickMode(null); return; }
       if (key.return) { handlePickConfirm(); return; }
@@ -308,7 +315,16 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
       </Box>
       {lastCopied && <Box height={1}><Text color="green" bold>{'📋 '}{t('ai.copied')}</Text></Box>}
       {exported && <Box height={1}><Text color="green" bold>{'📥 '}{t('ai.exported') || 'Exported'}: {exported}</Text></Box>}
-      {guidingQuestions.length > 0 && messages.length === 0 && (
+      {!consented && messages.length === 0 && (
+        <Box flexDirection="column" borderStyle="round" borderColor="yellow" paddingX={1} marginTop={0} marginBottom={0}>
+          <Text bold color="yellow">{'🔑 '}{t('ai.consentTitle')}</Text>
+          <Text dimColor>{t('ai.consentDesc')}</Text>
+          <Box marginTop={0}>
+            <Text color="green">[Enter] {t('ai.consentAccept')}</Text>
+          </Box>
+        </Box>
+      )}
+      {consented && guidingQuestions.length > 0 && messages.length === 0 && (
         <Box flexDirection="column" marginTop={0}>
           <Text dimColor>{t('ai.quickQuestions')}</Text>
           {guidingQuestions.map((q, i) => <Text key={i} color="cyan">{'  '}[{i + 1}] {q}</Text>)}

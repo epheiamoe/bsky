@@ -1,0 +1,47 @@
+# bsky — Bluesky Client
+
+A dual-UI (TUI + PWA) social client for Bluesky with AI integration.
+MIT License · https://github.com/epheiamoe/bsky
+
+## Live URL
+https://bsky.epheia.dev / https://ai-bsky.pages.dev
+
+## Tech Stack
+TypeScript · React · Tailwind CSS · Vite · Ink (TUI) · Cloudflare Pages
+
+## How This App Works
+This is a Progressive Web App (PWA) — a single-page application with hash-based routing.
+Users log in with their Bluesky account credentials. Once authenticated, they can browse
+their timeline, search posts/users, manage notifications, send direct messages, chat
+with AI, bookmark posts, curate lists, and view profiles.
+
+## Hash Routes (for AI agents reading the SPA)
+- `#/feed` — Timeline with custom feed selector
+- `#/search?q=...&tab=...` — Search (tabs: top/latest/users/feeds)
+- `#/notifications` — Notifications
+- `#/dm` — Direct message conversations
+- `#/dm?conv=...` — Specific DM conversation
+- `#/bookmarks` — Bookmarked posts
+- `#/profile?actor=...` — User profile (tabs: posts/replies)
+- `#/ai` — AI chat
+- `#/ai?session=...` — Specific AI chat session
+- `#/lists` — Curation lists
+- `#/list?uri=...` — Specific list detail
+- `#/compose` — Compose new post
+- `#/compose?replyTo=...` — Reply to post
+- `#/drafts` — Draft posts
+- `#/about` — About page
+- `#/atplay` — Experimental features
+
+## Key Files (in repository root)
+- README.md — Full project overview
+- CHANGELOG.md — Version history
+- AGENTS.md — AI agent development guide
+- docs/ARCHITECTURE.md — System architecture
+- docs/PACKAGES.md — Complete file listing per package
+- docs/DESIGN.md — PWA design system
+- docs/SCROLL.md — Virtual scroll spec
+- docs/KEYBOARD.md — TUI keyboard shortcuts
+- docs/DM.md — DM implementation docs
+- docs/AI_SYSTEM.md — AI integration architecture
+- docs/MCP.md — MCP server implementation

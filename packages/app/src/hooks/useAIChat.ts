@@ -11,6 +11,7 @@ interface UseAIChatOptions {
   stream?: boolean;
   userHandle?: string;
   userDisplayName?: string;
+  userPronouns?: string;
   environment?: 'tui' | 'pwa';
   locale?: string;
   /** Profile context: handle (not at:// prefixed) — passed from navigation, not URL */
@@ -115,12 +116,13 @@ export function useAIChat(
       currentUser:    options?.userHandle,
       userHandle:     options?.userHandle,
       userDisplayName: options?.userDisplayName,
+      userPronouns:   options?.userPronouns,
       environment:    options?.environment || 'pwa',
       locale:         options?.locale,
       visionEnabled:  aiConfig.visionEnabled ?? false,
       customPrompt:   aiConfig.customSystemPrompt,
     });
-  }, [options?.userHandle, options?.userDisplayName, options?.locale, options?.environment, aiConfig.visionEnabled, aiConfig.customSystemPrompt]);
+  }, [options?.userHandle, options?.userDisplayName, options?.userPronouns, options?.locale, options?.environment, aiConfig.visionEnabled, aiConfig.customSystemPrompt]);
 
   // Keep chatIdRef in sync
   useEffect(() => {
