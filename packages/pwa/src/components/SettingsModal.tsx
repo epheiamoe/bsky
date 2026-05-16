@@ -120,6 +120,7 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
         model,
         provider: currentProvider?.id,
         reasoningStyle: currentProvider?.reasoningStyle,
+        apiType: currentProvider?.apiType,
         thinkingEnabled: thinkingEnabled,
         visionEnabled: visionEnabled,
         customSystemPrompt,
@@ -135,6 +136,8 @@ export function SettingsModal({ open, onClose, config, onConfigChange, onRelogin
     onConfigChange(updated);
     document.documentElement.classList.toggle('dark', darkMode);
     document.documentElement.classList.toggle('cvd', cvdMode);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', darkMode ? '#000000' : '#FFFFFF');
   };
 
   const tabs: { key: Tab; iconName: string; labelKey: string }[] = [

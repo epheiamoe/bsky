@@ -40,6 +40,7 @@ export interface AppConfig {
     visionEnabled?: boolean;
     provider?: string;
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
+    apiType?: 'chat' | 'responses';
   };
   targetLang?: string;
   translateMode?: 'simple' | 'json';
@@ -52,6 +53,7 @@ export interface AppConfig {
     polish: string;
     imageDescription: string;
   };
+  userPronouns?: string;
 }
 
 function resolveAiApiKey(tuiConfig: TuiConfig, providerId: string | undefined): string {
@@ -91,6 +93,7 @@ function getConfigFromEnv(): AppConfig | null {
     translateMode: tuiConfig.translateMode,
     apiKeys: tuiConfig.apiKeys,
     scenarioModels: tuiConfig.scenarioModels,
+    userPronouns: tuiConfig.userPronouns ?? '',
   };
 }
 
@@ -98,7 +101,21 @@ function Root({ isRawModeSupported }: { isRawModeSupported: boolean }) {
   const [appConfig, setAppConfig] = React.useState<AppConfig | null>(getConfigFromEnv);
 
   if (!appConfig) {
+    // Build partial existing config from env + tuiConfig for smart wizard
+    const tuiPartial = getTuiConfig();
+    const partial: Partial<SetupConfig> = {};
+    if (process.env.BLUESKY_HANDLE) partial.blueskyHandle = process.env.BLUESKY_HANDLE;
+    if (process.env.BLUESKY_APP_PASSWORD) partial.blueskyPassword = process.env.BLUESKY_APP_PASSWORD;
+    if (process.env.BLUESKY_PDS) partial.blueskyPds = process.env.BLUESKY_PDS;
+    if (tuiPartial.aiConfig.provider) partial.providerId = tuiPartial.aiConfig.provider;
+    if (tuiPartial.aiConfig.model) partial.llmModel = tuiPartial.aiConfig.model;
+    const apiKey = resolveAiApiKey(tuiPartial, tuiPartial.aiConfig.provider);
+    if (apiKey) partial.llmApiKey = apiKey;
+    if (tuiPartial.targetLang) partial.locale = tuiPartial.targetLang;
+    if (tuiPartial.userPronouns) partial.userPronouns = tuiPartial.userPronouns;
+
     return React.createElement(SetupWizard, {
+      existing: Object.keys(partial).length > 0 ? partial : undefined,
       onComplete: (_config: SetupConfig) => {
         // reload env (SetupWizard writes .env + configStore)
         const cwdEnv = path.resolve(process.cwd(), '.env');
