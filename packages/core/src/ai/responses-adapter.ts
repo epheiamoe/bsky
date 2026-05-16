@@ -9,6 +9,7 @@ import type {
   StreamProcessor,
 } from './adapter.js';
 import { registerAdapter } from './adapter.js';
+import { getModelInfo } from './providers.js';
 
 // ── Responses API Stream Processor ──
 
@@ -135,6 +136,12 @@ class ResponsesApiAdapter implements ApiAdapter {
 
     if (instructions) body.instructions = instructions;
     if (stream) body.stream = true;
+
+    // Reasoning effort for models that support it (OpenAI o3/o4-mini, xAI grok-4.x)
+    const modelInfo = config.provider ? getModelInfo(config.provider, overrides?.model || config.model) : undefined;
+    if (modelInfo?.supportsReasoningEffort) {
+      body.reasoning = { effort: (config as any).reasoningEffort || 'medium' };
+    }
 
     if (tools.length > 0) {
       body.tools = tools.map(t => ({

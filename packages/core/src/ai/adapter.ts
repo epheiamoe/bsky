@@ -1,4 +1,5 @@
 import type { ToolDescriptor } from './tools.js';
+import { getProviderById, getModelInfo } from './providers.js';
 
 // ── Shared types ──
 
@@ -35,6 +36,7 @@ export type AIConfig = {
   provider?: string;
   reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
   apiType?: 'chat' | 'responses';
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
   customSystemPrompt?: string;
 };
 
@@ -156,8 +158,9 @@ export class ChatCompletionsAdapter implements ApiAdapter {
     stream: boolean,
     overrides?: { temperature?: number; maxTokens?: number; model?: string },
   ): RequestSpec {
+    const effectiveModel = overrides?.model || config.model;
     const body: Record<string, unknown> = {
-      model: overrides?.model || config.model,
+      model: effectiveModel,
       messages,
       temperature: overrides?.temperature ?? 0.7,
       max_tokens: overrides?.maxTokens ?? 4096,
@@ -165,9 +168,26 @@ export class ChatCompletionsAdapter implements ApiAdapter {
 
     if (stream) body.stream = true;
 
+    // ── Provider-specific parameter handling ──
+    const modelInfo = config.provider ? getModelInfo(config.provider, effectiveModel) : undefined;
+
+    // Fixed params (immutable per model, e.g. Kimi K2.6/K2.5)
+    if (modelInfo?.fixedParams) {
+      for (const [key, val] of Object.entries(modelInfo.fixedParams)) {
+        body[key] = val;
+      }
+    }
+
+    // Thinking param: DeepSeek and Kimi use { type: "enabled" | "disabled" }
     if (config.provider && shouldSendThinkingParam(config.provider)) {
       body.thinking = { type: config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
+      // Kimi K2.6/K2.5: temperature varies with thinking mode
+      if (config.provider.startsWith('kimi-') && modelInfo) {
+        body.temperature = config.thinkingEnabled !== false ? 1.0 : 0.6;
+      }
     }
+
+    // Mistral structured content reasoning
     if (config.reasoningStyle === 'structured_content' && config.thinkingEnabled !== false) {
       body.reasoning_effort = 'high';
     }
@@ -223,7 +243,7 @@ export class ChatCompletionsAdapter implements ApiAdapter {
 // ── Utility ──
 
 function shouldSendThinkingParam(providerId: string): boolean {
-  return providerId === 'deepseek';
+  return providerId === 'deepseek' || providerId.startsWith('kimi-');
 }
 
 function cleanBaseUrl(baseUrl: string): string {

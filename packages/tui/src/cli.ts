@@ -41,6 +41,7 @@ export interface AppConfig {
     provider?: string;
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
     apiType?: 'chat' | 'responses';
+    reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
   };
   targetLang?: string;
   translateMode?: 'simple' | 'json';

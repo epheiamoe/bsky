@@ -122,6 +122,14 @@ export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange }: 
       link: 'https://openrouter.ai/keys',
       linkLabel: 'openrouter.ai',
     },
+    {
+      name: 'Kimi',
+      desc: t('welcome.kimiDesc'),
+      steps: [t('welcome.kimiStep1'), t('welcome.kimiStep2'), t('welcome.kimiStep3')],
+      baseUrl: 'https://api.moonshot.cn',
+      link: 'https://platform.kimi.com',
+      linkLabel: 'platform.kimi.com',
+    },
   ], [t]);
 
   const [pronounsRad, setPronounsRad] = useState<'skip' | 'neutral' | 'custom'>(

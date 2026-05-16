@@ -15,6 +15,7 @@ export interface TuiConfig {
     provider?: string;
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
     apiType?: 'chat' | 'responses';
+    reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
     thinkingEnabled?: boolean;
     visionEnabled?: boolean;
     customSystemPrompt?: string;

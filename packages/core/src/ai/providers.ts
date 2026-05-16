@@ -8,6 +8,8 @@ export interface ModelInfo {
   thinking: boolean;
   vision: boolean;
   video?: boolean;
+  fixedParams?: Record<string, unknown>;
+  supportsReasoningEffort?: boolean;
 }
 
 export interface ProviderInfo {
@@ -51,5 +53,5 @@ export function isCustomModel(providerId: string, modelId: string): boolean {
 }
 
 export function shouldSendThinkingParam(providerId: string): boolean {
-  return providerId === 'deepseek';
+  return providerId === 'deepseek' || providerId === 'kimi-cn' || providerId === 'kimi-overseas';
 }
