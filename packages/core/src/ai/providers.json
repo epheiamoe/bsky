@@ -30,11 +30,23 @@
     "apiType": "responses",
     "reasoningStyle": "none",
     "models": [
-      { "id": "gpt-4.1", "label": "GPT-4.1", "thinking": false, "vision": true },
-      { "id": "gpt-4.1-mini", "label": "GPT-4.1 Mini", "thinking": false, "vision": true },
-      { "id": "gpt-4.1-nano", "label": "GPT-4.1 Nano", "thinking": false, "vision": true },
-      { "id": "o3", "label": "o3", "thinking": true, "vision": true },
-      { "id": "o4-mini", "label": "o4-mini", "thinking": true, "vision": true }
+      { "id": "gpt-5.5", "label": "GPT-5.5 (旗舰高性能)", "thinking": true, "vision": true },
+      { "id": "gpt-5.4", "label": "GPT-5.4 (中高端)", "thinking": true, "vision": true },
+      { "id": "gpt-5.4-mini", "label": "GPT-5.4 Mini (中端轻量)", "thinking": true, "vision": true },
+      { "id": "gpt-5.4-nano", "label": "GPT-5.4 Nano (低价高吞吐)", "thinking": false, "vision": true },
+      { "id": "gpt-5-mini", "label": "GPT-5 Mini (低价低延迟)", "thinking": false, "vision": true }
+    ]
+  },
+  {
+    "id": "xai",
+    "label": "xAI Grok",
+    "baseUrl": "https://api.x.ai",
+    "apiType": "responses",
+    "reasoningStyle": "none",
+    "models": [
+      { "id": "grok-4.3", "label": "Grok 4.3 (旗舰)", "thinking": true, "vision": true },
+      { "id": "grok-4.20-reasoning", "label": "Grok 4.20 (中高端)", "thinking": true, "vision": false },
+      { "id": "grok-4-1-fast-reasoning", "label": "Grok 4.1 Fast (轻量)", "thinking": true, "vision": false }
     ]
   }
 ]
