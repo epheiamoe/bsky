@@ -1,11 +1,11 @@
 {
   "name": "@bsky/pwa",
-  "version": "0.13.5",
+  "version": "0.13.9",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/copy-docs.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "echo lint-pwa"

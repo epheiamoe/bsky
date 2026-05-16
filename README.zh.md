@@ -177,4 +177,4 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.13.8** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.13.9** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

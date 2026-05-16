@@ -177,4 +177,4 @@ Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.13.8** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.13.9** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
