@@ -1,4 +1,5 @@
 import type { PythonSandboxEngine, PythonExecutionResult } from '@bsky/core';
+import { getDefaultWorkspaceStorage } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
 /**
@@ -146,7 +147,43 @@ export class PyodideSandbox implements PythonSandboxEngine {
 
     console.debug('[Pyodide] Sending execute to Worker, code length:', code.length);
     return new Promise((resolve, reject) => {
-      this._pendingExecutions.push({ resolve, reject, code });
+      const wrappedResolve = async (result: PythonExecutionResult) => {
+        if (chatId && result.files && result.files.length > 0) {
+          try {
+            const storage = getDefaultWorkspaceStorage();
+            for (const file of result.files) {
+              const isText = ['csv', 'json', 'txt', 'md'].includes(file.type);
+              let data: Uint8Array;
+              if (isText) {
+                data = new TextEncoder().encode(file.content);
+              } else {
+                const binaryStr = atob(file.content);
+                data = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                  data[i] = binaryStr.charCodeAt(i);
+                }
+              }
+              const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+              const mimeType = isText
+                ? `text/${file.type === 'md' ? 'markdown' : file.type}`
+                : 'application/octet-stream';
+              await storage.saveFile({
+                id,
+                name: file.name,
+                mimeType,
+                size: file.size || data.length,
+                data,
+                uploadedAt: new Date().toISOString(),
+                chatId,
+              });
+            }
+          } catch (err) {
+            console.error('[Pyodide] Failed to save output files:', err);
+          }
+        }
+        resolve(result);
+      };
+      this._pendingExecutions.push({ resolve: wrappedResolve, reject, code });
       this.worker!.postMessage({ type: 'execute', code });
     });
   }

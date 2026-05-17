@@ -1,15 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useI18n } from '@bsky/app';
+import { useI18n, getDefaultWorkspaceStorage } from '@bsky/app';
+import type { WorkspaceFile } from '@bsky/app';
 import { Icon } from '../Icon.js';
-import { getDefaultWorkspaceStorage } from '@bsky/app';
-
-interface PythonFile {
-  name: string;
-  type: string;
-  size: number;
-  path: string;
-  content?: string; // optional — may be omitted to keep chat history lean
-}
 
 interface PythonResultProps {
   result: string; // JSON string from the tool result
@@ -26,50 +18,36 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
     }
   }, [result]);
 
-  // Sync output files to workspace storage
+  const [workspaceFiles, setWorkspaceFiles] = useState<WorkspaceFile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Load files from workspace storage
   useEffect(() => {
-    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.files)) return;
-    const files = parsed.files as Array<{ name: string; type: string; size: number; path: string; content: string }>;
-    if (files.length === 0) return;
+    if (!chatId) {
+      setWorkspaceFiles([]);
+      setLoadError(null);
+      return;
+    }
 
-    console.log('[PythonResult] Syncing', files.length, 'files to workspace. chatId:', chatId);
+    setLoading(true);
+    setLoadError(null);
 
-    const syncFiles = async () => {
+    const loadFiles = async () => {
       try {
         const storage = getDefaultWorkspaceStorage();
-        for (const file of files) {
-          const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          let data: Uint8Array;
-          const isText = ['csv', 'json', 'txt', 'md'].includes(file.type);
-          console.log('[PythonResult] Processing file:', file.name, 'type:', file.type, 'size:', file.size, 'contentLength:', file.content?.length ?? 0);
-          if (isText) {
-            data = new TextEncoder().encode(file.content);
-          } else {
-            // Base64 decode for binary files
-            const binaryStr = atob(file.content);
-            data = new Uint8Array(binaryStr.length);
-            for (let i = 0; i < binaryStr.length; i++) {
-              data[i] = binaryStr.charCodeAt(i);
-            }
-          }
-          console.log('[PythonResult] Saving file:', file.name, 'dataLength:', data.length, 'chatId:', chatId);
-          await storage.saveFile({
-            id,
-            name: file.name,
-            mimeType: isText ? `text/${file.type === 'md' ? 'markdown' : file.type}` : `application/octet-stream`,
-            size: file.size || data.length,
-            data,
-            uploadedAt: new Date().toISOString(),
-            chatId, // Pass chatId for session isolation
-          });
-        }
-        console.log('[PythonResult] All files synced successfully');
+        const files = await storage.listFiles(chatId);
+        setWorkspaceFiles(files);
       } catch (err) {
-        console.error('[PythonResult] Failed to sync files to workspace:', err);
+        console.error('[PythonResult] Failed to load workspace files:', err);
+        setLoadError(err instanceof Error ? err.message : 'Failed to load workspace files');
+      } finally {
+        setLoading(false);
       }
     };
-    void syncFiles();
-  }, [parsed, chatId]);
+
+    void loadFiles();
+  }, [chatId, parsed?.files?.length]);
 
   if (!parsed || typeof parsed !== 'object') {
     return (
@@ -83,8 +61,8 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
   const hasStdout = typeof parsed.stdout === 'string' && parsed.stdout.length > 0;
   const hasStderr = typeof parsed.stderr === 'string' && parsed.stderr.length > 0;
   const hasError = typeof parsed.error === 'string' && parsed.error.length > 0;
-  const files = Array.isArray(parsed.files) ? parsed.files : [];
   const hasExecutionTime = typeof parsed.executionTime === 'number';
+  const hasFiles = workspaceFiles.length > 0;
 
   // Error state
   if (!success) {
@@ -93,7 +71,9 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
         {hasError && <ErrorBlock error={parsed.error} />}
         {hasStdout && <OutputBlock stdout={parsed.stdout} />}
         {hasStderr && <StderrBlock stderr={parsed.stderr} />}
-        {files.length > 0 && <FileList files={files} />}
+        {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
+        {loadError && <div className="text-xs text-red-400">{loadError}</div>}
+        {hasFiles && <FileList files={workspaceFiles} />}
         {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={false} />}
       </div>
     );
@@ -103,7 +83,9 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
     <div className="space-y-3">
       {hasStdout && <OutputBlock stdout={parsed.stdout} />}
       {hasStderr && <StderrBlock stderr={parsed.stderr} />}
-      {files.length > 0 && <FileList files={files} />}
+      {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
+      {loadError && <div className="text-xs text-red-400">{loadError}</div>}
+      {hasFiles && <FileList files={workspaceFiles} />}
       {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={true} />}
     </div>
   );
@@ -189,7 +171,7 @@ function StderrBlock({ stderr = '' }: { stderr?: string }) {
 }
 
 // ── File List ──
-function FileList({ files }: { files: PythonFile[] }) {
+function FileList({ files }: { files: WorkspaceFile[] }) {
   const { t } = useI18n();
   return (
     <div className="space-y-2">
@@ -197,40 +179,62 @@ function FileList({ files }: { files: PythonFile[] }) {
         Output Files ({files.length})
       </div>
       <div className="grid gap-2">
-        {files.map((file, i) => (
-          <PythonFilePreview key={i} file={file} />
+        {files.map((file) => (
+          <PythonFilePreview key={file.id} file={file} />
         ))}
       </div>
     </div>
   );
 }
 
-function PythonFilePreview({ file }: { file: PythonFile }) {
-  const hasContent = typeof file.content === 'string';
+function PythonFilePreview({ file }: { file: WorkspaceFile }) {
+  const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+  const mimeType = file.mimeType || '';
 
-  if (file.type === 'csv' && hasContent) {
-    return <CsvPreview content={file.content!} filename={file.name} />;
+  if (fileExt === 'csv' || mimeType === 'text/csv') {
+    return <CsvPreview file={file} />;
   }
 
-  if (['png', 'jpg', 'jpeg'].includes(file.type) && hasContent) {
-    return <ImagePreview content={file.content!} filename={file.name} />;
+  if (['png', 'jpg', 'jpeg'].includes(fileExt) || mimeType.startsWith('image/')) {
+    return <ImagePreview file={file} />;
   }
 
-  if (file.type === 'json' && hasContent) {
-    return <JsonPreview content={file.content!} filename={file.name} />;
+  if (fileExt === 'json' || mimeType === 'application/json') {
+    return <JsonPreview file={file} />;
   }
 
-  // Fallback: show file metadata (content omitted or unsupported type)
+  // Fallback: show file metadata with download link
+  return <FileMetadata file={file} />;
+}
+
+function FileMetadata({ file }: { file: WorkspaceFile }) {
+  const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const blob = new Blob([file.data as BlobPart], { type: file.mimeType });
+    const url = URL.createObjectURL(blob);
+    setDownloadUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file.id, file.data, file.mimeType]);
+
   return (
     <div className="flex items-center gap-3 bg-surface rounded-lg px-3 py-2 border border-border">
-      <FileIcon type={file.type} />
+      <FileIcon type={fileExt} />
       <div className="flex-1 min-w-0">
         <span className="text-sm text-text-secondary truncate block">{file.name}</span>
-        {!hasContent && (
-          <span className="text-xs text-text-secondary/40">在工作区中查看</span>
-        )}
+        <span className="text-xs text-text-secondary/40">{file.mimeType}</span>
       </div>
       <span className="text-xs text-text-secondary/40 shrink-0">{formatSize(file.size)}</span>
+      {downloadUrl && (
+        <a
+          href={downloadUrl}
+          download={file.name}
+          className="text-xs text-primary hover:underline shrink-0"
+        >
+          Download
+        </a>
+      )}
     </div>
   );
 }
@@ -250,12 +254,19 @@ function FileIcon({ type }: { type: string }) {
 }
 
 // ── CSV Preview ──
-function CsvPreview({ content, filename }: { content: string; filename: string }) {
-  const safeContent = String(content ?? '');
+function CsvPreview({ file }: { file: WorkspaceFile }) {
+  const content = useMemo(() => {
+    try {
+      return new TextDecoder().decode(file.data);
+    } catch {
+      return '';
+    }
+  }, [file.data]);
+
   const rows = useMemo(() => {
-    const lines = safeContent.trim().split('\n');
+    const lines = content.trim().split('\n');
     return lines.map(line => line.split(','));
-  }, [safeContent]);
+  }, [content]);
 
   if (rows.length === 0) return null;
 
@@ -263,7 +274,7 @@ function CsvPreview({ content, filename }: { content: string; filename: string }
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="bg-surface/80 px-3 py-1.5 text-xs text-text-secondary/60 border-b border-border flex items-center gap-2">
         <Icon name="table" size={14} className="text-text-secondary/40" />
-        <span>{filename}</span>
+        <span>{file.name}</span>
         <span className="ml-auto text-text-secondary/40">{rows.length} rows × {rows[0]?.length} cols</span>
       </div>
       <div className="overflow-x-auto max-h-[300px]">
@@ -295,19 +306,26 @@ function CsvPreview({ content, filename }: { content: string; filename: string }
 }
 
 // ── Image Preview ──
-function ImagePreview({ content, filename }: { content: string; filename: string }) {
-  const safeContent = String(content ?? '');
-  const src = useMemo(() => `data:image/png;base64,${safeContent}`, [safeContent]);
+function ImagePreview({ file }: { file: WorkspaceFile }) {
+  const src = useMemo(() => {
+    const blob = new Blob([file.data as BlobPart], { type: file.mimeType });
+    return URL.createObjectURL(blob);
+  }, [file.id, file.data, file.mimeType]);
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(src);
+  }, [src]);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="bg-surface/80 px-3 py-1.5 text-xs text-text-secondary/60 border-b border-border flex items-center gap-2">
         <Icon name="file-image" size={14} className="text-text-secondary/40" />
-        <span>{filename}</span>
+        <span>{file.name}</span>
+        <span className="ml-auto text-text-secondary/40">{formatSize(file.size)}</span>
       </div>
       <img
         src={src}
-        alt={filename}
+        alt={file.name}
         className="w-full h-auto max-h-[400px] object-contain bg-black/20"
         loading="lazy"
       />
@@ -316,21 +334,29 @@ function ImagePreview({ content, filename }: { content: string; filename: string
 }
 
 // ── JSON Preview ──
-function JsonPreview({ content, filename }: { content: string; filename: string }) {
-  const safeContent = String(content ?? '');
+function JsonPreview({ file }: { file: WorkspaceFile }) {
+  const content = useMemo(() => {
+    try {
+      return new TextDecoder().decode(file.data);
+    } catch {
+      return '';
+    }
+  }, [file.data]);
+
   const formatted = useMemo(() => {
     try {
-      return JSON.stringify(JSON.parse(safeContent), null, 2);
+      return JSON.stringify(JSON.parse(content), null, 2);
     } catch {
-      return safeContent;
+      return content;
     }
-  }, [safeContent]);
+  }, [content]);
 
   return (
     <div className="border border-border rounded-xl overflow-hidden">
       <div className="bg-surface/80 px-3 py-1.5 text-xs text-text-secondary/60 border-b border-border flex items-center gap-2">
         <Icon name="file-code" size={14} className="text-text-secondary/40" />
-        <span>{filename}</span>
+        <span>{file.name}</span>
+        <span className="ml-auto text-text-secondary/40">{formatSize(file.size)}</span>
       </div>
       <pre className="px-3 py-2 text-xs text-text-secondary/80 whitespace-pre overflow-x-auto max-h-[300px] font-mono leading-relaxed">
         {formatted}
