@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18n } from '@bsky/app';
 import { Icon } from '../Icon.js';
+import { WorkspaceImage } from './WorkspaceImage.js';
 
 interface AssistantMessageProps {
   content: string;
@@ -29,7 +30,22 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
           : 'bg-surface border-border'
       } ${compact ? 'px-2.5 py-1.5 max-w-[90%]' : 'px-3 py-2 max-w-[85%]'}`} role={isError ? 'alert' : undefined}>
         <div className={`text-text-primary markdown-body ${compact ? 'text-[13px]' : 'text-sm'}`}>
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              img: ({ src, alt }) => {
+                // Check if this is a workspace image reference
+                // Supports: ![alt](filename.png) or ![alt](/workspace/data/filename.png)
+                if (src && (src.startsWith('/workspace/') || !src.startsWith('http'))) {
+                  return <WorkspaceImage src={src} alt={alt} />;
+                }
+                // Regular external image
+                return <img src={src} alt={alt} className="max-w-full h-auto rounded-lg" />;
+              }
+            }}
+          >
+            {content}
+          </ReactMarkdown>
         </div>
         {!isError && content && (
           <button

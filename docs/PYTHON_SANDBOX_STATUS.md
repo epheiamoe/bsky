@@ -250,7 +250,21 @@ MCP:  Same as TUI
 
 **Fix**: Use `pyodide.FS.readFile(path, { encoding: 'binary' })` to get Uint8Array
 
-### Phase 13: Final Goal — AI Batch AT Tool Calls ⏳
+### Phase 13: AI Workspace Image References ✅
+
+**Status**: COMPLETED
+
+**Feature**: AI can reference workspace images using Markdown `![]()` syntax
+
+**Implementation**:
+- `WorkspaceImage` component: loads image from workspace storage by filename
+- `AssistantMessage` component: custom ReactMarkdown `img` renderer that detects workspace image references
+- Supports: `![desc](filename.png)` and `![desc](/workspace/output/filename.png)`
+- AI prompt updated to inform AI about this capability
+
+**Supported formats**: PNG, JPG, JPEG
+
+### Phase 14: Final Goal — AI Batch AT Tool Calls ⏳
 
 **Vision**: Enable AI to write Python scripts that batch-call AT Protocol tools
 

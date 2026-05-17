@@ -117,6 +117,7 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
   };
 
   return (
+    <>
     <Modal open={open} onClose={onClose} titleId="workspace-title">
       <input
         ref={fileInputRef}
@@ -227,9 +228,10 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
         </div>
       </div>
     </Modal>
-      <PreviewModal
-        file={previewFile}
-        onClose={() => setPreviewFile(null)}
-      />
+    <PreviewModal
+      file={previewFile}
+      onClose={() => setPreviewFile(null)}
+    />
+    </>
   );
 }
