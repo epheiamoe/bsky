@@ -6,6 +6,9 @@
  * to load the external Pyodide loader from CDN.
  */
 
+// Tell TypeScript this is a Worker context, not Window
+/// <reference lib="webworker" />
+
 const CDN_URLS = [
   'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js',
 ];
@@ -100,6 +103,36 @@ async function loadPyodideRuntime() {
         }
       } catch (fsErr) {
         console.debug('[PyodideWorker] FS setup warning (may already exist): ' + String(fsErr));
+      }
+
+      // Load micropip and install third-party packages (best-effort)
+      console.debug('[PyodideWorker] Loading micropip...');
+      self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.7, message: 'Loading package manager...' });
+      try {
+        await withTimeout(
+          pyodide.loadPackage('micropip'),
+          60000,
+          'Load micropip'
+        );
+        console.debug('[PyodideWorker] micropip loaded');
+
+        const packages = ['pandas', 'numpy', 'matplotlib'];
+        console.debug('[PyodideWorker] Installing third-party packages: ' + packages.join(', '));
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.8, message: 'Installing pandas, numpy, matplotlib (this may take 30-60s)...' });
+
+        await withTimeout(
+          pyodide.runPythonAsync(`
+import micropip
+await micropip.install(${JSON.stringify(packages)})
+          `.trim()),
+          120000,
+          'Install third-party packages'
+        );
+        console.debug('[PyodideWorker] Third-party packages installed');
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.95, message: 'Packages installed successfully' });
+      } catch (pkgErr) {
+        console.debug('[PyodideWorker] Package installation warning (non-fatal): ' + String(pkgErr));
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.95, message: 'Package installation skipped (some packages may be unavailable)' });
       }
 
       console.debug('[PyodideWorker] Sending initComplete');
