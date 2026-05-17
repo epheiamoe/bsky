@@ -1,16 +1,36 @@
 # Python Sandbox Status Tracker
 
-## Current State (2025-05-17 22:30 CST)
+## Current State (2025-05-18)
 
 ### Git Status
 - **Branch**: `feat/adapter-pattern`
-- **Current Commit**: `7bf38e2` — `feat(pwa): configure matplotlib for Chinese text support`
-- **PWA Deployment**: https://14dfc951.ai-bsky.pages.dev
+- **Current Commit**: `44a77ee` — `fix(app): save Python output files to workspace in NodePythonSandbox`
+- **PWA Deployment**: https://4f8ca5b9.ai-bsky.pages.dev
 - **Previous Deployments**:
   - `f481167` — 基础执行功能（working baseline）
-  - `061011b5` — Classic Worker + debug logging（失败）
   - `ac945156` — Vite `?worker` 导入 + 第三方包 + executionTime + mountFile
-  - `14dfc951` — 当前版本（含 matplotlib 字体配置）
+  - `14dfc951` — matplotlib 字体配置
+  - `4f8ca5b9` — Workspace 统一存储（进行中）
+
+### Critical Bugs Found (2025-05-18)
+
+**Bug 1: 跨会话隔离失败** ❌
+- **根因 A**: `AIChatPage.tsx` `handleFileSelect` useCallback 依赖数组 `[]`，`sessionId` 初始值 `undefined` 被捕获，上传文件保存时 `chatId: undefined`
+- **根因 B**: `tools.ts` `execute_python` handler 调用 `sandbox.execute(p.code)` 未传 `chatId`，Python 生成的文件从未保存到 workspace
+- **影响**: 所有文件成为全局文件，任何会话都能看到
+
+**Bug 2: 文件下载/预览空白** ❌
+- **根因**: `pyodide.worker.ts` `scanOutputFiles()` 调用 `pyodide.FS.readFile(path)` 默认返回字符串，二进制文件 `new Uint8Array(string)` 抛出异常，catch 后 `content: ''`
+- **影响**: 所有二进制文件（PNG、JPG）和可能的文本文件内容为空
+
+**修复计划**:
+1. ✅ `pyodide-sandbox.ts` — 执行后保存文件到 workspace（已完成）
+2. ✅ `PythonResult.tsx` — 从 workspace 加载文件（已完成）
+3. ✅ `node-python-sandbox.ts` — 执行后保存文件到 workspace（已完成）
+4. ⏳ `AIChatPage.tsx` — 修复 stale closure（添加 `sessionId` 到依赖数组）
+5. ⏳ `tools.ts` — 传递 `chatId` 给 `sandbox.execute(code, chatId)`
+6. ⏳ `pyodide.worker.ts` — 二进制文件读取使用 `encoding: 'binary'`
+7. ⏳ `WorkspaceModal.tsx` — 简化 Blob 创建
 
 ### Test Results (2025-05-17)
 
@@ -40,19 +60,16 @@
 - ✅ 可用 `returnValue` 获取最后表达式结果
 - ✅ stdout/stderr 完整捕获
 - ✅ matplotlib 中文字体支持（Noto Sans CJK SC，从 CDN 下载）
-- ✅ 工作区文件同步（Python 输出文件自动同步到 IndexedDB）
+- ⚠️ 工作区文件同步（存在隔离和内容 bug，修复中）
 
 **已知 Bug**:
-- 🟡 **工作区文件内容为空** — Python 执行成功创建文件，ToolCard 显示文件列表和大小，但工作区预览/下载内容为空
-  - **根因分析**：
-    1. `pyodide.FS.readFile(path, { encoding: 'utf8' })` 可能返回 `Uint8Array` 而非字符串（Pyodide 的 Emscripten FS 可能忽略 `encoding` 参数）
-    2. `typeof content !== 'string'` 导致 PythonResult 组件显示 "在工作区中查看" 而非实际内容
-    3. `WorkspaceModal` 中 `file.data` 从 IndexedDB 读取时类型问题
-  - **修复方向**：
-    1. Worker 中统一使用 `new TextDecoder('utf-8').decode()` 解码文本文件，不依赖 `encoding` 参数
-    2. 添加调试日志确认 `readFile` 返回值类型
-  - **代码位置**：
-    - `packages/pwa/src/services/pyodide.worker.ts` — `scanOutputFiles()` 函数
+- 🔴 **跨会话隔离失败** — 文件未按 chatId 隔离
+  - **根因**: `AIChatPage.tsx` stale closure + `tools.ts` 未传 chatId
+  - **修复**: 见上方修复计划 4-5
+  
+- 🔴 **文件内容为空** — 下载/预览空白
+  - **根因**: Worker 中 `FS.readFile()` 未指定 binary encoding
+  - **修复**: 见上方修复计划 6
 
 ### Architecture
 
@@ -186,7 +203,51 @@ sys.stdout = _StdoutCapture()
 
 **Fix**: Add `e.stopPropagation()` to expand/collapse buttons in PythonResult (ErrorBlock and OutputBlock) to prevent event bubbling to parent ToolCard
 
-### Phase 11: Final Goal — AI Batch AT Tool Calls ⏳
+### Phase 11: Workspace File Isolation (In Progress)
+
+**Status**: IN PROGRESS
+
+**Goal**: Files created by Python should be isolated per chat session
+
+**Architecture**: Unified data flow across PWA + TUI + MCP
+- Sandbox layer saves files to WorkspaceStorage after execution
+- Tool handler returns metadata-only JSON (no content) to AI
+- UI loads files from WorkspaceStorage by chatId
+
+**Unified Data Flow**:
+```
+PWA:  Worker → content → pyodide-sandbox.ts → save to IndexedDB Workspace
+                                              → return metadata to tools.ts
+                                              → AI receives metadata JSON
+                                              → PythonResult loads from IndexedDB
+
+TUI:  Python subprocess → content → node-python-sandbox.ts → save to FileSystem Workspace
+                                                           → return metadata to tools.ts
+                                                           → AI receives metadata JSON
+
+MCP:  Same as TUI
+```
+
+**Completed**:
+- ✅ `pyodide-sandbox.ts` — execute() saves files to IndexedDB after execution
+- ✅ `node-python-sandbox.ts` — execute() saves files to filesystem after execution
+- ✅ `PythonResult.tsx` — loads files from workspace storage instead of sync
+
+**Remaining Fixes**:
+- ⏳ `AIChatPage.tsx` — fix stale closure in handleFileSelect (add sessionId to deps)
+- ⏳ `tools.ts` — pass chatId through execute_python handler
+- ⏳ `pyodide.worker.ts` — binary file read with encoding: 'binary'
+- ⏳ `WorkspaceModal.tsx` — simplify Blob creation
+
+### Phase 12: Fix Binary File Content (In Progress)
+
+**Status**: IN PROGRESS
+
+**Root Cause**: `pyodide.FS.readFile(path)` returns string by default; `new Uint8Array(string)` throws for binary files
+
+**Fix**: Use `pyodide.FS.readFile(path, { encoding: 'binary' })` to get Uint8Array
+
+### Phase 13: Final Goal — AI Batch AT Tool Calls ⏳
 
 **Vision**: Enable AI to write Python scripts that batch-call AT Protocol tools
 
@@ -250,7 +311,22 @@ for post in posts:
 - [x] **Phase 8**: Fix Service Worker POST caching (commit `1996ea4`)
 - [x] **Phase 9**: Fix expand/collapse UI bug (commit `3823553`)
 - [x] **Phase 10**: Fix workspace empty display bug (commit `d55707e`)
-- [ ] **Phase 11**: Create bsky_tools library for batch AT operations
+- [ ] **Phase 11**: Fix chat isolation and binary file content (in progress)
+- [ ] **Phase 12**: Create bsky_tools library for batch AT operations
+
+### 2025-05-18
+- [x] Subagent investigation: 3 independent bugs found
+- [x] Commit: `88094d8` — fix chatId propagation for workspace isolation
+- [x] Commit: `5cf75a4` — add diagnostic logging to pyodide worker
+- [x] Deploy: https://9436c483.ai-bsky.pages.dev
+- [x] User testing: logs show Worker returns content but PythonResult receives empty
+- [x] Root cause identified: tools.ts strips content field
+- [x] Decision: Plan B — save files to workspace in sandbox layer, load in UI
+- [x] Commit: `f558fb4` — save Python output files to workspace storage
+- [x] Commit: `44a77ee` — NodePythonSandbox saves to workspace
+- [x] Deploy: https://4f8ca5b9.ai-bsky.pages.dev
+- [ ] User testing: cross-session isolation still fails, files still empty
+- [ ] Fixes remaining: AIChatPage stale closure, tools.ts chatId, worker binary read
 
 ## Key Lessons
 
@@ -264,3 +340,7 @@ for post in posts:
 8. **Package installation batches**: Install heavy packages separately with longer timeouts; failure of optional packages should not block sandbox readiness
 9. **Event propagation in nested UI**: Inner component buttons must call `e.stopPropagation()` to prevent triggering parent onClick handlers
 10. **Uint8Array.buffer vs Uint8Array**: `file.data.buffer` may contain unused space causing empty files; use `file.data` directly for Blob creation
+11. **Stale closures in useCallback**: Empty dependency arrays capture initial prop values; dynamic values like sessionId must be in deps
+12. **FS.readFile encoding matters**: Pyodide's Emscripten FS defaults to string; binary files require explicit `{ encoding: 'binary' }`
+13. **Tools should not carry binary content**: AI messages with base64 content waste tokens; store files in workspace, pass metadata only
+14. **Unified architecture across platforms**: PWA + TUI + MCP should share the same file storage abstraction (WorkspaceStorage)

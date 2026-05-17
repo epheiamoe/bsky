@@ -1004,3 +1004,119 @@ async function networkFirst(request) {
 
 > 完整项目上下文、版本历史、功能状态见 `docs/CONTEXT.md`。
 > Lessons 21-45 见 `docs/CONTEXT.md`「关键教训」章节。
+
+---
+
+## Lesson 66: Stale Closure in useCallback
+
+**Category**: React / Hooks
+
+**Root Cause**: `AIChatPage.tsx` `handleFileSelect` useCallback had empty dependency array `[]`, capturing initial `sessionId = undefined`. When user navigated to a specific chat session, `sessionId` prop updated but the callback was never recreated.
+
+**Context**:
+- `sessionId` prop changes when user opens different chat sessions
+- `handleFileSelect` saves uploaded files with `chatId: sessionId`
+- Empty deps `[]` meant `sessionId` was forever `undefined` from first render
+- Files saved without `chatId` became "global" files visible in all sessions
+
+**Solution**: Add dynamic dependencies to useCallback:
+```typescript
+const handleFileSelect = useCallback(async (e) => {
+  // ... save file with chatId: sessionId
+}, [sessionId]); // <-- must include sessionId
+```
+
+**Lesson Learned**:
+1. **Empty dependency arrays are dangerous** — only for truly static callbacks
+2. **Props used inside callbacks must be in deps** — ESLint exhaustive-deps rule catches this
+3. **Closure captures value at creation time** — not a live reference
+4. **Test multi-session workflows** — upload files in different sessions, verify isolation
+
+---
+
+## Lesson 67: FS.readFile Encoding for Binary Data
+
+**Category**: WebAssembly / Pyodide
+
+**Root Cause**: `pyodide.FS.readFile(path)` without options returns a JavaScript string (UTF-8 decoded). For binary files (PNG, JPG), `new Uint8Array(string)` throws TypeError, leaving content empty.
+
+**Context**:
+- Pyodide's Emscripten FS defaults to string return for `readFile()`
+- Binary files need raw bytes, not UTF-8 decoded string
+- `new Uint8Array(string)` is invalid — Uint8Array constructor doesn't accept strings
+
+**Solution**: Explicitly request binary encoding:
+```typescript
+// Wrong (returns string, breaks binary files)
+const rawData = pyodide.FS.readFile(path);
+
+// Correct (returns Uint8Array, works for all files)
+const rawData = pyodide.FS.readFile(path, { encoding: 'binary' });
+```
+
+**Lesson Learned**:
+1. **Always specify encoding for FS.readFile** — default behavior varies by runtime
+2. **Binary data must stay binary** — never convert to string and back
+3. **Test with binary files** — images, PDFs, zip files expose encoding issues
+4. **Type guards after read** — verify returned type matches expectation
+
+---
+
+## Lesson 68: Pass Context Through Tool Handlers
+
+**Category**: AI / Architecture
+
+**Root Cause**: `tools.ts` `execute_python` handler called `sandbox.execute(p.code)` without passing `chatId`, so Python-generated files were never saved to workspace storage.
+
+**Context**:
+- `PythonSandboxEngine.execute(code, chatId?)` accepts optional chatId for isolation
+- `createTools(client)` creates tools without chat session context
+- Tool handlers run in AIAssistant, which has access to chatId
+- Missing chatId means `if (chatId && ...)` condition is always false
+
+**Solution**: Pass getChatId function through tool creation:
+```typescript
+// createTools receives a function to get current chatId
+export function createTools(client: BskyClient, getChatId?: () => string | undefined): ToolDescriptor[] {
+  // ...
+  handler: async (p) => {
+    const result = await sandbox.execute(p.code as string, getChatId?.());
+    // ...
+  }
+}
+```
+
+**Lesson Learned**:
+1. **Tools need runtime context** — session ID, user preferences, etc.
+2. **Use getter functions for dynamic values** — static values become stale
+3. **Test tool execution in different sessions** — verify isolation
+4. **Document context requirements** — each tool should declare what context it needs
+
+---
+
+## Lesson 69: Unified File Storage Across Platforms
+
+**Category**: Architecture / Cross-Platform
+
+**Root Cause**: Initially planned to pass file content through AI tool results (from Worker → tools.ts → UI), but content was stripped to save tokens. Files ended up empty in workspace.
+
+**Context**:
+- PWA uses IndexedDB for file storage
+- TUI uses filesystem for file storage
+- Both implement `WorkspaceStorage` interface
+- AI messages shouldn't carry binary content (wastes tokens)
+
+**Solution**: Store files in workspace at sandbox layer, return metadata-only to AI:
+```
+Worker → content ✅
+  → Sandbox.saveToWorkspace(chatId) ✅
+  → tools.ts → metadata JSON → AI
+  → UI loads from workspace by chatId ✅
+```
+
+**Lesson Learned**:
+1. **Separate data storage from AI messaging** — don't put files in chat history
+2. **Use shared abstractions** — `WorkspaceStorage` interface works for both PWA and TUI
+3. **Metadata is lightweight** — name, size, type are enough for AI context
+4. **Cross-platform consistency** — PWA + TUI + MCP share same data flow
+5. **Test on all platforms** — IndexedDB and filesystem have different characteristics
