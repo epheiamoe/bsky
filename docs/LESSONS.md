@@ -1,7 +1,7 @@
 # Lessons Learned — Bsky Project
 
 > 详细教训记录，按会话分组。每次会话新增一个章节。
-> 当前共 56 课，涵盖 AI、认证、UI、API、存储、DM 等领域。
+> 当前共 65 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM 等领域。
 > 本文可快速索引；完整上下文见 `docs/CONTEXT.md`。
 
 ---
@@ -45,6 +45,11 @@
 | [58](#lesson-58-pyodide-api-call-sequencing) | Pyodide API Sequencing | WASM | WASM 加载完成 ≠ API 就绪 |
 | [59](#lesson-59-binary-data-handling-in-workers) | Binary Data in Workers | Data | apply() 有参数上限，大文件分块 |
 | [60](#lesson-60-incremental-feature-addition) | Incremental Feature Addition | Process | Sandbox 环境逐个添加功能 |
+| [61](#lesson-61-vite-worker-import-over-blob-url) | Vite Worker Import over Blob URL | Worker | Vite `?worker` 导入避免模板字符串转义问题 |
+| [62](#lesson-62-micropip-package-installation-batches) | micropip Package Installation Batches | WASM | 第三方包分批次安装，失败不阻塞 |
+| [63](#lesson-63-matplotlib-fonts-in-wasm) | Matplotlib Fonts in WASM | WASM | WASM 环境无系统字体，需手动加载字体文件 |
+| [64](#lesson-64-event-propagation-in-nested-ui) | Event Propagation in Nested UI | UI | 嵌套组件中的按钮必须阻止事件冒泡 |
+| [65](#lesson-65-cache-api-only-supports-get) | Cache API Only Supports GET | PWA | Cache API 只支持 GET 请求，POST 会抛异常 |
 
 > Lessons 21-45 记录在 `docs/CONTEXT.md` 的「关键教训」章节。
 
@@ -781,6 +786,152 @@ function arrayBufferToBase64(buffer) {
 
 ---
 
+## Lesson 61: Vite Worker Import over Blob URL
+
+**Category**: Worker
+
+**Root Cause**: Inline Worker code embedded as a template string (`const WORKER_CODE = \`...\``) caused `SyntaxError: Invalid or unexpected token` after Vite minification. The minifier corrupted nested quotes/backticks in the bundled output (blob:...:183:489).
+
+**Context**:
+- Worker code was ~250 lines of JavaScript embedded in a TypeScript template literal
+- Vite build process minified the outer bundle, which included the inner Worker code string
+- Nested backticks, quotes, and special characters were not properly escaped during minification
+- Error manifested only in production build, not in development
+
+**Solution**: Extract Worker to standalone file `pyodide.worker.ts` and import via Vite's `?worker` syntax:
+```typescript
+import PyodideWorker from './pyodide.worker.ts?worker';
+const worker = new PyodideWorker();
+```
+
+**Lesson Learned**:
+1. **Never embed large code blocks as template strings** — minifiers may corrupt nested syntax
+2. **Vite `?worker` handles bundling automatically** — no manual escaping needed
+3. **Separate files enable TypeScript checking** for Worker code
+4. **Code splitting** — Worker becomes independent chunk, reducing main bundle size
+
+---
+
+## Lesson 62: micropip Package Installation Batches
+
+**Category**: WASM / Pyodide
+
+**Root Cause**: Installing all third-party packages in a single `micropip.install()` call caused timeouts and made it impossible to identify which package failed.
+
+**Context**:
+- pandas (~10MB), numpy (~5MB), matplotlib (~15MB), scipy (~20MB), scikit-learn (~15MB)
+- Total download: ~65MB on first load
+- Single timeout of 120s was sometimes insufficient for slow connections
+- One failed package (e.g., scipy) would abort the entire installation
+
+**Solution**: Install in three batches with separate timeouts:
+1. **Core** (pandas, numpy, matplotlib) — 120s timeout, must succeed
+2. **Utility** (beautifulsoup4, pyyaml, openpyxl) — 60s timeout, best-effort
+3. **Heavy** (scipy, scikit-learn) — 180s timeout, failure not fatal
+
+**Lesson Learned**:
+1. **Batch installation by size/criticality** — core packages first, optional packages later
+2. **Separate timeouts** — heavy packages need longer timeouts
+3. **Best-effort for optional packages** — failure should not block sandbox readiness
+4. **Progress reporting per batch** — users see "Installing pandas..." then "Installing scipy..."
+
+---
+
+## Lesson 63: Matplotlib Fonts in WASM
+
+**Category**: WASM / Pyodide
+
+**Root Cause**: Matplotlib's `rcParams['font.sans-serif']` only sets font priority; if no font files exist in the system, text renders as boxes (tofu).
+
+**Context**:
+- Pyodide WASM environment has no system fonts installed
+- Setting `matplotlib.rcParams['font.sans-serif'] = ['SimHei']` has no effect if SimHei.ttf doesn't exist
+- matplotlib caches font list at `~/.cache/matplotlib/fontlist-v330.json`
+- 63 glyph missing warnings when rendering Chinese text
+
+**Solution Attempt**: Configure font fallback (partial fix):
+```python
+matplotlib.rcParams['axes.unicode_minus'] = False
+# Try common CJK fonts in priority order
+```
+
+**Future Fix**: Download font file to Pyodide FS:
+```javascript
+const fontResponse = await fetch('https://cdn.../NotoSansCJKsc-Regular.otf');
+const fontBuffer = await fontResponse.arrayBuffer();
+pyodide.FS.writeFile('/home/pyodide/.fonts/NotoSansCJKsc-Regular.otf', new Uint8Array(fontBuffer));
+```
+
+**Lesson Learned**:
+1. **Font configuration ≠ font availability** — rcParams only sets search priority
+2. **WASM environments lack system resources** — fonts, locales, timezone data must be manually provided
+3. **Font caching** — matplotlib caches font list; new fonts require cache refresh or pre-installation
+4. **File size trade-off** — Noto Sans CJK is ~4MB; consider subset fonts for smaller footprint
+
+---
+
+## Lesson 64: Event Propagation in Nested UI
+
+**Category**: UI / React
+
+**Root Cause**: Clicking expand/collapse buttons inside `PythonResult` triggered the parent `ToolCard`'s `onToggle`, causing the entire card to collapse instead of just expanding the output text.
+
+**Context**:
+- `ToolCard` has `onClick={onToggle}` on its root div
+- `PythonResult` renders inside `ToolCard`'s expanded content area
+- `PythonResult` has its own expand/collapse buttons for long stdout/error text
+- Clicking these buttons bubbled up to `ToolCard`, triggering card-level toggle
+
+**Solution**: Add `e.stopPropagation()` to inner buttons:
+```tsx
+<button onClick={(e) => {
+  e.stopPropagation();
+  setExpanded(!expanded);
+}}>
+  {expanded ? '收起' : '展开'}
+</button>
+```
+
+**Lesson Learned**:
+1. **Nested interactive components need event isolation** — always consider propagation
+2. **stopPropagation is not evil** — appropriate for preventing parent handlers when child has its own logic
+3. **Component boundaries** — shared/nested components should document their event handling assumptions
+4. **Test nested interactions** — click inner buttons, expect only inner state change
+
+---
+
+## Lesson 65: Cache API Only Supports GET
+
+**Category**: PWA / Service Worker
+
+**Root Cause**: Service Worker's `networkFirst` strategy called `cache.put(request, response)` for all requests, but the Cache API only supports GET requests. POST requests threw `TypeError: Failed to execute 'put' on 'Cache': Request method 'POST' is unsupported`.
+
+**Context**:
+- Service Worker caches API responses for offline support
+- Bluesky API uses POST for most read operations (XRPC convention)
+- `networkFirst` strategy: fetch → if OK → cache.put → return response
+- `cache.put()` unconditionally called for all successful responses
+
+**Solution**: Add method check before caching:
+```javascript
+async function networkFirst(request) {
+  const response = await fetch(request);
+  if (response.ok && request.method === 'GET') {
+    const cache = await caches.open(CACHE_NAME);
+    cache.put(request, response.clone());
+  }
+  return response;
+}
+```
+
+**Lesson Learned**:
+1. **Cache API is GET-only** — POST/PUT/DELETE cannot be cached via Cache API
+2. **Always check request.method before cache.put()** — prevents runtime errors
+3. **Service Worker errors are silent** — they appear in console but don't break functionality
+4. **Different strategies for different methods** — GET = cacheable, POST = network-only
+
+---
+
 # Quick Reference by Category
 
 ## AI/Prompting
@@ -805,6 +956,7 @@ function arrayBufferToBase64(buffer) {
 - [Lesson 16](#lesson-16-widget-header-buttons-module-refs) — Module ref 运行时 context
 - [Lesson 52](#lesson-52-cvd-friendly-palette) — CVD 双重编码 + CSS 变量
 - [Lesson 54](#lesson-54-react-portal-event-bubbling) — Portal 事件沿 Fiber 冒泡
+- [Lesson 64](#lesson-64-event-propagation-in-nested-ui) — 嵌套组件按钮阻止事件冒泡
 
 ## API/Network
 - [Lesson 9](#lesson-9-ky-retry-must-explicit-statuscodes) — ky retry 显式配置
@@ -835,6 +987,15 @@ function arrayBufferToBase64(buffer) {
 - [Lesson 57](#lesson-57-web-worker-module-vs-classic) — Module Worker 加载 UMD 脚本有风险
 - [Lesson 58](#lesson-58-pyodide-api-call-sequencing) — WASM 加载完成 ≠ API 就绪
 - [Lesson 59](#lesson-59-binary-data-handling-in-workers) — apply() 有参数上限，大文件分块
+- [Lesson 61](#lesson-61-vite-worker-import-over-blob-url) — Vite `?worker` 导入避免模板字符串转义问题
+- [Lesson 62](#lesson-62-micropip-package-installation-batches) — 第三方包分批次安装，失败不阻塞
+- [Lesson 63](#lesson-63-matplotlib-fonts-in-wasm) — WASM 环境无系统字体，需手动加载字体文件
+
+## UI/UX (continued)
+- [Lesson 64](#lesson-64-event-propagation-in-nested-ui) — 嵌套组件中的按钮必须阻止事件冒泡
+
+## PWA/Service Worker
+- [Lesson 65](#lesson-65-cache-api-only-supports-get) — Cache API 只支持 GET 请求，POST 会抛异常
 
 ## Development Process
 - [Lesson 60](#lesson-60-incremental-feature-addition) — Sandbox 环境逐个添加功能

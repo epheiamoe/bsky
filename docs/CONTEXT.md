@@ -48,12 +48,12 @@
 - **关于页面** `#/about` : PWA+TUI，显示 repo URL / commit hash（Vite 构建时注入 `__COMMIT_HASH__`）/ build time / 描述 / 反馈 / 联系
 - **AI Chat**: 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 人类可读结果), 31 工具格式化, `/view` 命令给 AI 注入当前页面上下文
 - **AI Chat 侧边栏 Widget**: 持久化会话（`_aiChatSessionId`）、折叠卡片、新对话/全页打开按钮
-- **Python 沙箱** (v0.14.0): AI 工具 `execute_python` 在浏览器内运行隔离 Python 代码（Pyodide WASM）。
-  - **当前状态**: ⚠️ **部分可用** — 基础执行功能可用（commit `f481167`），但 stdout 捕获、包安装、文件扫描等功能添加后导致 Worker 立即失败（commit `2e69a88`）
-  - **已知问题**: Worker 在 18ms 内崩溃，"Worker error: unknown error"，无初始化过程
-  - **架构**: inline Blob URL Worker（避免 `.ts` MIME 问题），jsdelivr CDN，60s 超时，实时进度汇报
-  - **已实现**: 基础执行、超时/进度/中止、文件系统写入
-  - **待修复**: stdout/stderr 捕获、包安装（pandas/numpy/matplotlib）、输出文件扫描、聊天隔离
+- **Python 沙箱** (v0.14.0+): AI 工具 `execute_python` 在浏览器内运行隔离 Python 代码（Pyodide WASM）。
+  - **当前状态**: ✅ **核心功能全部可用** — 基础执行、stdout/stderr 捕获、文件系统、输出文件扫描、第三方包安装、mountFile/unmountFile、executionTime 计算
+  - **架构**: Vite `?worker` 导入的独立 Worker chunk（替代 inline Blob URL），jsdelivr CDN，多阶段初始化（downloading/loading/packages/ready）
+  - **已预装包**: pandas 1.5.3, numpy 1.26.1, matplotlib 3.5.2, beautifulsoup4, pyyaml, openpyxl, scipy 1.11.2, scikit-learn 1.3.1
+  - **已知限制**: matplotlib 中文字体缺失（WASM 环境无字体文件）
+  - **已知 Bug**: 工作区显示为空（文件已创建但工作区组件未同步）
   - **参考文档**: `docs/PYTHON_SANDBOX_STATUS.md`
 - **DM 私信**: chat.bsky.convo.* — 文字消息 + emoji 反应 + 引用帖 + 删除 + 静音 + 加载更早
 - **页面动画**: framer-motion v12.38.0 驱动。11 页面 fadeIn 入场、PostCard hover、PostActionsRow 按压反馈、NotifsPage/DraftsPage 交错入场。**Image lightbox**: hero 弹簧动画（sourceRects[current] 位置→居中）、两层 cover→contain 交叉淡入淡出、AnimatePresence mode="wait" 左右滑动切换。**Mobile sidebar**: 左侧滑入（AnimatePresence + spring）+ backdrop-blur-sm。**统一 Modal**: scaleIn/Out + backdrop-blur + Esc 关闭 + bottom-sheet 变体。
