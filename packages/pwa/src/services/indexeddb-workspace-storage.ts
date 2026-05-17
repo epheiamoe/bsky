@@ -26,6 +26,17 @@ function withStore(mode: IDBTransactionMode): Promise<IDBObjectStore> {
 import type { WorkspaceStorage, WorkspaceFile } from '@bsky/app';
 
 export class IndexedDBWorkspaceStorage implements WorkspaceStorage {
+  private static _cleanedUp = false;
+
+  constructor() {
+    if (!IndexedDBWorkspaceStorage._cleanedUp) {
+      IndexedDBWorkspaceStorage._cleanedUp = true;
+      this.cleanupOrphanedFiles().catch(() => {
+        // Silently ignore cleanup errors on initialization
+      });
+    }
+  }
+
   async saveFile(file: WorkspaceFile): Promise<void> {
     const store = await withStore('readwrite');
     return new Promise((resolve, reject) => {
@@ -60,10 +71,30 @@ export class IndexedDBWorkspaceStorage implements WorkspaceStorage {
       req.onsuccess = () => {
         let files = req.result as WorkspaceFile[];
         if (chatId) {
-          files = files.filter(f => !f.chatId || f.chatId === chatId);
+          // Strict isolation: only include files matching this exact chatId
+          files = files.filter(f => f.chatId === chatId);
         }
         files.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
         resolve(files);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async cleanupOrphanedFiles(): Promise<number> {
+    const store = await withStore('readwrite');
+    return new Promise((resolve, reject) => {
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const files = req.result as WorkspaceFile[];
+        const orphaned = files.filter(f => !f.chatId || f.chatId === '');
+        let deleted = 0;
+        for (const file of orphaned) {
+          store.delete(file.id);
+          deleted++;
+        }
+        console.log(`[IndexedDBWorkspaceStorage] Cleaned up ${deleted} orphaned files without chatId`);
+        resolve(deleted);
       };
       req.onerror = () => reject(req.error);
     });
