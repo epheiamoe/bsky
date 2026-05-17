@@ -1,105 +1,112 @@
 # Python Sandbox Status Tracker
 
-## Current State (2025-05-17 12:00 CST)
+## Current State (2025-05-17 14:00 CST)
 
 ### Git Status
 - **Branch**: `feat/adapter-pattern`
-- **Current Commit**: `c39c839` — `revert: rollback pyodide-sandbox.ts to working version (f481167)`
-- **Status**: ✅ **ROLLED BACK** — Worker is functional again
-- **Working Baseline**: `f481167` — `fix: python sandbox - add timeout, progress, abort support. Basic execution works`
-- **Rolled Back From**: `2e69a88` — `feat: python sandbox - stdout/stderr capture, filesystem setup, package install (pandas/numpy/matplotlib), output file scanning, chat isolation`
-- **Previous Issue**: Worker failed immediately (18ms) with "Worker error: unknown error"
+- **Current Commit**: `efd954a` — `chore: remove temporary files`
+- **Previous**: `bbfce8e` — `feat: NodePythonSandbox for MCP and TUI with child_process sandboxing`
+- **Status**: ✅ **NodePythonSandbox IMPLEMENTED** — MCP and TUI now support Python execution
 
-### Rollback Summary
+### Architecture Overview
 
-**Decision**: Roll back to working version (`f481167`) after failed enhancement attempt.
-
-**Reason**: The enhancement commit (`2e69a88`) broke the Worker completely — 18ms immediate failure with "Worker error: unknown error". After investigation (including subagent code review), the issue persisted across environments and was not temporary.
-
-**Root Cause Hypothesis**:
-1. **Module Worker + UMD import issue (70%)**: `{ type: 'module' }` Worker with `import(url)` loading pyodide.js (UMD format) may have browser compatibility issues
-2. **Pyodide API initialization instability (20%)**: New `pyodide.loadPackage()` / `pyodide.FS.mkdirTree()` calls immediately after `loadPyodide()` may fail if WASM is partially initialized
-3. **Feature interaction (10%)**: Adding 5 features simultaneously created unpredictable interactions
-
-**What Was Lost in Rollback**:
-- stdout/stderr capture (`pyodide.setStdout`)
-- Filesystem setup (`/workspace/data`, `/workspace/output`, `/workspace/temp`)
-- Package installation (`pandas`, `numpy`, `matplotlib`)
-- Output file scanning (`scanOutputFiles`)
-- Chat isolation (`chatId` parameter)
-
-**What Still Works**:
-- Basic Python execution (`success: true`)
-- Standard library imports
-- File system writes to `/workspace/output/`
-- Timeout protection (30s/60s)
-- Progress reporting
-- Abort support
-
-### Previous Working State (commit f481167)
-
-**Confirmed working features**:
-- Basic Python execution (`success: true`)
-- Standard library imports (`json`, `math`, `pathlib`, etc.)
-- File system writes to `/workspace/output/`
-- Timeout protection (30s/60s)
-- Progress reporting (`downloading` → `loading` → `ready`)
-- Abort support
-
-**Known limitations of working version**:
-- stdout/stderr always empty (no capture)
-- Output files not scanned (always `files: []`)
-- pandas/numpy/matplotlib not available
-- No chat isolation
-
-### Architecture
-- `packages/pwa/src/services/pyodide-sandbox.ts` - PyodideSandbox class + WORKER_CODE
-- `packages/core/src/ai/python-sandbox.ts` - PythonSandboxEngine interface
-- `packages/core/src/ai/tools.ts` - execute_python tool definition
-- `packages/pwa/src/components/ai/PythonResult.tsx` - Result rendering (stdout/stderr/files)
-- `packages/pwa/src/components/ai/ToolCard.tsx` - Tool call card with Python preview
-
-### Worker Configuration
-- Inline Blob URL Worker (avoids `.ts` MIME issues on CDN)
-- CDN: jsdelivr only (unpkg blocked by CORS)
-- Pyodide v0.25.0
-- Lazy init on first `execute()` call
-- Message types: `init`, `execute`, `abort`
-
-### CDN URL
 ```
-https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js
+                    PythonSandboxEngine (interface)
+                           @bsky/core
+                    /              |              \
+        PyodideSandbox    NodePythonSandbox    (future: cloud sandbox)
+           (PWA)            (MCP + TUI)
+        Web Worker         child_process
+        Pyodide WASM       System Python
 ```
 
-### Proposed Fix Options
+### Platform Support
 
-**Option A: Classic Worker (recommended)**
-- Change `new Worker(url, { type: 'module' })` → `new Worker(url)`
-- Change `await import(url)` → `importScripts(url)`
-- Most robust solution for loading UMD scripts
+| Platform | Implementation | File | Status |
+|----------|---------------|------|--------|
+| **PWA** | `PyodideSandbox` (Web Worker + Pyodide WASM) | `packages/pwa/src/services/pyodide-sandbox.ts` | ✅ Base execution works (stdout not captured yet) |
+| **MCP** | `NodePythonSandbox` (child_process) | `packages/app/src/services/node-python-sandbox.ts` | ✅ Implemented, needs testing |
+| **TUI** | `NodePythonSandbox` (child_process) | `packages/app/src/services/node-python-sandbox.ts` | ✅ Implemented, needs testing |
 
-**Option B: Defensive programming + enhanced logging**
-- Add API existence checks before calling pyodide methods
-- Add try/catch around each initialization step
-- Improve error reporting in `worker.onerror`
-- Keep module worker but make it more resilient
+### NodePythonSandbox Details
 
-**Option C: Revert to working state, then incremental additions**
-- Revert to commit f481167
-- Add features one by one with testing between each
+**Location**: `packages/app/src/services/node-python-sandbox.ts`
 
-### Next Steps (incremental approach)
-1. ✅ **Rollback complete** — Back to working baseline
-2. 🔄 **Test baseline** — Verify `f481167` still works after rollback
-3. 📋 **Plan incremental additions** — Add ONE feature at a time:
-   - Step 1: stdout/stderr capture (with fallback if API unavailable)
-   - Step 2: Output file scanning (scan `/workspace/output/` after execution)
-   - Step 3: Filesystem setup (`mkdirTree` with existence check)
-   - Step 4: Package installation (lazy load on first use)
-   - Step 5: Chat isolation (pass `chatId` to Worker)
-4. 🔍 **Consider Classic Worker** — If Module Worker issues persist, switch to `importScripts()`
-5. 🧪 **Test each step** — Deploy and verify before next addition
-6. 📝 **Document findings** — Update LESSONS.md with each lesson
+**Features**:
+- ✅ `child_process.spawn('python3')` execution
+- ✅ Sandboxed filesystem (temp directory per instance)
+- ✅ File output scanning (`/workspace/output/`)
+- ✅ stdout/stderr capture
+- ✅ 30-second timeout
+- ✅ `mountFile`/`unmountFile` support
+- ✅ Chat isolation via `chatId` parameter
+
+**Security**:
+- Each sandbox instance gets a unique temp directory
+- Python code is wrapped with filesystem restrictions
+- `open()` is monkey-patched to deny access outside workspace
+- Process is killed after timeout
+
+**Package structure**:
+- `@bsky/app` exports `NodePythonSandbox` via conditional export:
+  - `import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox'`
+  - Main `index.ts` does NOT export it (avoids browser bundling issues)
+
+### Registration Points
+
+**MCP**: `packages/mcp/src/server.ts`
+```typescript
+import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox';
+setGlobalPythonSandbox(new NodePythonSandbox());
+```
+
+**TUI**: `packages/tui/src/cli.ts`
+```typescript
+import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox';
+setGlobalPythonSandbox(new NodePythonSandbox());
+```
+
+**PWA**: `packages/pwa/src/components/AIChatPage.tsx`
+```typescript
+import { PyodideSandbox } from '../services/pyodide-sandbox.js';
+setGlobalPythonSandbox(new PyodideSandbox());
+```
+
+### Deployment
+
+- **PWA staging**: https://6e574d37.ai-bsky.pages.dev
+- **MCP**: Needs manual testing via MCP client
+- **TUI**: Needs manual testing via terminal
+
+## Final Goal: AI Batch AT Tool Calls via Python
+
+**Vision**: Enable AI to write Python scripts that batch-call AT Protocol tools.
+
+**Example use case**:
+```python
+from bsky_tools import search_posts, get_profile, follow
+
+# Find users who posted about "AI" in the last week
+posts = search_posts(q="AI lang:en since:2025-05-10", limit=100)
+
+# Get their profiles
+for post in posts:
+    profile = get_profile(post['author'])
+    if profile['followersCount'] < 1000:
+        # Follow small accounts interested in AI
+        follow(profile['did'])
+        print(f"Followed {profile['handle']}")
+```
+
+**Implementation plan**:
+1. ✅ Python sandbox infrastructure (PWA + MCP + TUI)
+2. 🔄 Create `bsky_tools` Python library that wraps AT Protocol API
+3. 🔄 Inject `bsky_tools` into Python execution environment
+4. 🔄 Add `BskyClient` instance to sandbox context
+5. 🔄 Support async operations (since AT tools are async)
+6. 🔄 Handle authentication (use existing BskyClient session)
+
+**Status**: Infrastructure complete. Custom library pending.
 
 ## Progress Log
 
@@ -111,7 +118,7 @@ https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js
 - [x] Commit: `f5d3a54` — v0.14.0 initial
 - [x] Deploy to staging
 - [x] Add timeout + progress + abort
-- [x] Commit: `f481167` — **WORKING baseline**
+- [x] Commit: `f481167` — **PWA WORKING baseline**
 - [x] Add stdout/stderr capture
 - [x] Setup filesystem (/workspace/*)
 - [x] Install packages (pandas/numpy/matplotlib)
@@ -125,5 +132,10 @@ https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js
 - [x] Issue persists after 8+ hours
 - [x] **ROLLBACK** to `f481167`
 - [x] Commit: `c39c839` — **ROLLED BACK**
-- [ ] Test baseline functionality
-- [ ] Incremental feature addition (one at a time)
+- [x] Deploy rollback (ce30e42b)
+- [x] **Implement NodePythonSandbox** for MCP + TUI
+- [x] Commit: `bbfce8e` — NodePythonSandbox
+- [x] Deploy updated PWA (6e574d37)
+- [ ] Test MCP execute_python
+- [ ] Test TUI execute_python
+- [ ] Create bsky_tools Python library
