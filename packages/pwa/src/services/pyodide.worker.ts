@@ -221,6 +221,7 @@ async function executePython(code: string) {
   let stdout = '';
   let stderr = '';
   let outputFiles: Awaited<ReturnType<typeof scanOutputFiles>> = [];
+  const startTime = Date.now();
 
   try {
     // Setup stdout/stderr capture using Python-level redirection (safe, no JS API dependency)
@@ -264,13 +265,15 @@ async function executePython(code: string) {
     throw err;
   }
 
+  const executionTime = Date.now() - startTime;
+
   return {
     stdout: stdout,
     stderr: stderr,
     returnValue: returnValue,
     files: outputFiles,
     success: success,
-    executionTime: 0,
+    executionTime: executionTime,
   };
 }
 
