@@ -11,11 +11,16 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
-import { getProviderById } from '@bsky/core';
+import { getProviderById, setGlobalPythonSandbox } from '@bsky/core';
+import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox';
 import { setDraftStorageFactory, FileDraftStorage, initChatService, FileChatStorage } from '@bsky/app';
 
 setDraftStorageFactory(() => new FileDraftStorage());
 initChatService(new FileChatStorage());
+
+// Initialize Python sandbox for execute_python tool
+const sandbox = new NodePythonSandbox();
+setGlobalPythonSandbox(sandbox);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

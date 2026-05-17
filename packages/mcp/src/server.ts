@@ -4,7 +4,8 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { BskyClient } from '@bsky/core';
+import { BskyClient, setGlobalPythonSandbox } from '@bsky/core';
+import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox';
 import { loadConfig } from './config.js';
 import { getMcpTools, callTool } from './tools.js';
 
@@ -13,6 +14,11 @@ export async function main() {
 
   const client = new BskyClient({ pdsUrl: config.pdsUrl });
   await client.login(config.handle, config.appPassword);
+
+  // Initialize Python sandbox for execute_python tool
+  const sandbox = new NodePythonSandbox();
+  setGlobalPythonSandbox(sandbox);
+  console.error('[MCP] Python sandbox initialized');
 
   const { descriptors, list: toolList } = getMcpTools(
     client,
