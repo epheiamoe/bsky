@@ -3,8 +3,14 @@ import type { PythonSandboxEngine, PythonExecutionResult } from '@bsky/core';
 /**
  * Minimal inline Worker code — embedded as string to avoid MIME type issues.
  * 
- * Loads Pyodide from CDN using dynamic import in a module Worker.
- * Only supports basic init and execute — no packages, no filesystem, no stdout capture.
+ * Uses CLASSIC Worker (not module) with importScripts() to load Pyodide.
+ * This avoids browser compatibility issues with module Workers loading UMD scripts.
+ * 
+ * Features:
+ * - stdout/stderr capture via Python-level redirection
+ * - Workspace filesystem setup (/workspace/data, /workspace/output, /workspace/temp)
+ * - Output file scanning after execution
+ * - Detailed debug logging at each step
  */
 const WORKER_CODE = `
 var CDN_URLS = [
@@ -30,7 +36,9 @@ function withTimeout(promise, ms, label) {
 }
 
 async function loadPyodide() {
+  console.debug('[PyodideWorker] loadPyodide() called');
   if (pyodide !== null) {
+    console.debug('[PyodideWorker] Pyodide already loaded, returning cached instance');
     return pyodide;
   }
 
@@ -44,33 +52,61 @@ async function loadPyodide() {
       console.debug('[PyodideWorker] Trying CDN: ' + url);
       self.postMessage({ type: 'initProgress', stage: 'downloading', progress: 0.1, message: 'Downloading Pyodide loader...' });
       
-      await withTimeout(import(url), 30000, 'Download pyodide.js');
+      // Classic Worker: use importScripts instead of dynamic import
+      console.debug('[PyodideWorker] Calling importScripts...');
+      await withTimeout(
+        new Promise(function(resolve, reject) {
+          try {
+            importScripts(url);
+            console.debug('[PyodideWorker] importScripts succeeded');
+            resolve();
+          } catch (err) {
+            console.debug('[PyodideWorker] importScripts failed: ' + String(err));
+            reject(err);
+          }
+        }),
+        30000,
+        'Download pyodide.js via importScripts'
+      );
 
+      console.debug('[PyodideWorker] Looking for loadPyodide function...');
       var loadFn = self.loadPyodide || globalThis.loadPyodide;
       if (typeof loadFn !== 'function') {
-        throw new Error('loadPyodide not found after importing ' + url);
+        console.debug('[PyodideWorker] loadPyodide not found. self keys: ' + Object.keys(self).join(', '));
+        throw new Error('loadPyodide not found after importScripts ' + url);
       }
+      console.debug('[PyodideWorker] loadPyodide found');
 
       var lastSlash = url.lastIndexOf('/');
       var baseUrl = lastSlash > 0 ? url.substring(0, lastSlash + 1) : url + '/';
       console.debug('[PyodideWorker] Base URL: ' + baseUrl);
       self.postMessage({ type: 'initProgress', stage: 'loading', progress: 0.3, message: 'Loading Pyodide WASM runtime...' });
       
+      console.debug('[PyodideWorker] Calling loadPyodide({ indexURL: baseUrl })...');
       pyodide = await withTimeout(loadFn({ indexURL: baseUrl }), 60000, 'Load Pyodide WASM');
-      console.debug('[PyodideWorker] Pyodide loaded successfully');
+      console.debug('[PyodideWorker] Pyodide loaded successfully. pyodide object type: ' + typeof pyodide);
       
       // Setup workspace filesystem (defensive, wrapped in try/catch)
+      console.debug('[PyodideWorker] Setting up filesystem...');
       try {
-        if (pyodide.FS && typeof pyodide.FS.mkdirTree === 'function') {
-          pyodide.FS.mkdirTree('/workspace/data');
-          pyodide.FS.mkdirTree('/workspace/output');
-          pyodide.FS.mkdirTree('/workspace/temp');
+        var fs = pyodide.FS;
+        console.debug('[PyodideWorker] FS object found: ' + typeof fs);
+        if (fs && typeof fs.mkdirTree === 'function') {
+          console.debug('[PyodideWorker] Creating /workspace/data...');
+          fs.mkdirTree('/workspace/data');
+          console.debug('[PyodideWorker] Creating /workspace/output...');
+          fs.mkdirTree('/workspace/output');
+          console.debug('[PyodideWorker] Creating /workspace/temp...');
+          fs.mkdirTree('/workspace/temp');
           console.debug('[PyodideWorker] Workspace directories created');
+        } else {
+          console.debug('[PyodideWorker] FS.mkdirTree not available, skipping filesystem setup');
         }
       } catch (fsErr) {
         console.debug('[PyodideWorker] FS setup warning (may already exist): ' + String(fsErr));
       }
       
+      console.debug('[PyodideWorker] Sending initComplete');
       self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
       return pyodide;
     } catch (err) {
@@ -158,28 +194,7 @@ async function executePython(code) {
   
   try {
     // Setup stdout/stderr capture using Python-level redirection (safe, no JS API dependency)
-    pyodide.runPython(`
-import sys
-_stdout_lines = []
-_stderr_lines = []
-
-class _StdoutCapture:
-    def write(self, text):
-        if text:
-            _stdout_lines.append(str(text))
-    def flush(self):
-        pass
-
-class _StderrCapture:
-    def write(self, text):
-        if text:
-            _stderr_lines.append(str(text))
-    def flush(self):
-        pass
-
-sys.stdout = _StdoutCapture()
-sys.stderr = _StderrCapture()
-`);
+    pyodide.runPython(["import sys", "_stdout_lines = []", "_stderr_lines = []", "", "class _StdoutCapture:", "    def write(self, text):", "        if text:", "            _stdout_lines.append(str(text))", "    def flush(self):", "        pass", "", "class _StderrCapture:", "    def write(self, text):", "        if text:", "            _stderr_lines.append(str(text))", "    def flush(self):", "        pass", "", "sys.stdout = _StdoutCapture()", "sys.stderr = _StderrCapture()"].join("\n"));
     
     // Execute user code
     returnValue = await pyodide.runPythonAsync(code);
@@ -297,7 +312,8 @@ export class PyodideSandbox implements PythonSandboxEngine {
         const blob = new Blob([WORKER_CODE], { type: 'application/javascript' });
         const url = URL.createObjectURL(blob);
         console.debug('[Pyodide] Created inline Worker from Blob URL');
-        this.worker = new Worker(url, { type: 'module' });
+        console.debug('[Pyodide] Creating Classic Worker (no module type)...');
+        this.worker = new Worker(url);
       } catch (err) {
         console.debug('[Pyodide] Failed to create Worker:', err);
         this._initFailed = true;
@@ -329,11 +345,15 @@ export class PyodideSandbox implements PythonSandboxEngine {
 
       this.worker.onerror = (err) => {
         const details = err.message || 'unknown error';
-        console.debug('[Pyodide] Worker error:', details);
+        const filename = err.filename || 'unknown';
+        const lineno = err.lineno || 0;
+        const colno = err.colno || 0;
+        console.error('[Pyodide] Worker error:', details, 'at', filename + ':' + lineno + ':' + colno);
+        console.error('[Pyodide] Worker error event:', err);
         this._initFailed = true;
         this._initPromise = null;
         this._initReject = null;
-        reject(new Error('Worker error: ' + details));
+        reject(new Error('Worker error: ' + details + ' at ' + filename + ':' + lineno));
       };
 
       console.debug('[Pyodide] Sending init message to Worker');
