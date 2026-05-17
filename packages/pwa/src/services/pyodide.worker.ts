@@ -116,19 +116,52 @@ async function loadPyodideRuntime() {
         );
         console.debug('[PyodideWorker] micropip loaded');
 
-        const packages = ['pandas', 'numpy', 'matplotlib'];
-        console.debug('[PyodideWorker] Installing third-party packages: ' + packages.join(', '));
-        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.8, message: 'Installing pandas, numpy, matplotlib (this may take 30-60s)...' });
-
+        // Batch 1: Core data science packages
+        const corePackages = ['pandas', 'numpy', 'matplotlib'];
+        console.debug('[PyodideWorker] Installing core packages: ' + corePackages.join(', '));
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.75, message: 'Installing pandas, numpy, matplotlib (this may take 30-60s)...' });
         await withTimeout(
           pyodide.runPythonAsync(`
 import micropip
-await micropip.install(${JSON.stringify(packages)})
+await micropip.install(${JSON.stringify(corePackages)})
           `.trim()),
           120000,
-          'Install third-party packages'
+          'Install core packages'
         );
-        console.debug('[PyodideWorker] Third-party packages installed');
+        console.debug('[PyodideWorker] Core packages installed');
+
+        // Batch 2: Utility packages (small, fast)
+        const utilPackages = ['beautifulsoup4', 'pyyaml', 'openpyxl'];
+        console.debug('[PyodideWorker] Installing utility packages: ' + utilPackages.join(', '));
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.85, message: 'Installing beautifulsoup4, pyyaml, openpyxl...' });
+        await withTimeout(
+          pyodide.runPythonAsync(`
+import micropip
+await micropip.install(${JSON.stringify(utilPackages)})
+          `.trim()),
+          60000,
+          'Install utility packages'
+        );
+        console.debug('[PyodideWorker] Utility packages installed');
+
+        // Batch 3: Heavy packages (scipy, scikit-learn) — best effort
+        const heavyPackages = ['scipy', 'scikit-learn'];
+        console.debug('[PyodideWorker] Installing heavy packages: ' + heavyPackages.join(', '));
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.9, message: 'Installing scipy, scikit-learn (this may take 1-2min)...' });
+        try {
+          await withTimeout(
+            pyodide.runPythonAsync(`
+import micropip
+await micropip.install(${JSON.stringify(heavyPackages)})
+            `.trim()),
+            180000,
+            'Install heavy packages'
+          );
+          console.debug('[PyodideWorker] Heavy packages installed');
+        } catch (heavyErr) {
+          console.debug('[PyodideWorker] Heavy packages skipped: ' + String(heavyErr));
+        }
+
         self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.95, message: 'Packages installed successfully' });
       } catch (pkgErr) {
         console.debug('[PyodideWorker] Package installation warning (non-fatal): ' + String(pkgErr));
