@@ -38,7 +38,7 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
 
   const handleDownload = useCallback(async (file: WorkspaceFile) => {
     try {
-      const blob = new Blob([file.data.buffer as ArrayBuffer], { type: file.mimeType });
+      const blob = new Blob([file.data], { type: file.mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -54,7 +54,7 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
 
   const handlePreview = useCallback(async (file: WorkspaceFile) => {
     try {
-      const blob = new Blob([file.data.buffer as ArrayBuffer], { type: file.mimeType });
+      const blob = new Blob([file.data], { type: file.mimeType });
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
       // Clean up blob URL after a delay (browser will keep it alive while tab is open)
