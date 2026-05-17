@@ -35,25 +35,13 @@
 | 跨库联动 | ✅ pandas + sklearn + openpyxl + yaml + matplotlib 全流程 |
 
 **已知限制**:
-- ⚠️ matplotlib 中文字体缺失 — 无 CJK 字体文件，中文显示为方框（已配置字体回退，但 WASM 环境无字体文件）
 - ⚠️ 无网络请求库（requests/urllib 不可用，WebAssembly 限制）
 - ⚠️ 无子进程支持（WebAssembly 限制）
 - ✅ 可用 `returnValue` 获取最后表达式结果
 - ✅ stdout/stderr 完整捕获
-
-**已知 Bug**:
-- 🔴 **工作区显示为空** — Python 执行成功创建文件，ToolCard 显示文件列表，但点击「工作区」按钮显示空工作区
-  - **根因分析**：
-    1. Python 文件创建在 **Pyodide 虚拟文件系统** (`/workspace/output/` in WASM)
-    2. 工作区组件读取 **IndexedDBWorkspaceStorage** (浏览器 IndexedDB)
-    3. 两个存储系统完全独立，没有同步机制
-    4. 文件通过 `result.files` 返回给 UI 仅用于展示，从未写入 IndexedDB
-  - **修复方向**：在 AIChatPage 处理 `execute_python` 工具结果时，将 `result.files` 同步到 `WorkspaceStorage`
-  - **代码位置**：
-    - `packages/pwa/src/components/AIChatPage.tsx` — 消息处理逻辑
-    - `packages/pwa/src/components/WorkspaceModal.tsx` — 工作区 UI
-    - `packages/pwa/src/services/indexeddb-workspace-storage.ts` — IndexedDB 存储
-    - `packages/pwa/src/services/pyodide.worker.ts` — Pyodide FS (虚拟文件系统)
+- ✅ matplotlib 中文字体支持（Noto Sans CJK SC，从 CDN 下载）
+- ✅ 工作区文件同步（Python 输出文件自动同步到 IndexedDB）
+- ✅ 工作区文件预览/下载修复（`file.data` 替代 `file.data.buffer`）
 
 ### Architecture
 
@@ -150,15 +138,16 @@ sys.stdout = _StdoutCapture()
 - PyodideSandbox: replace stubs with actual Worker round-trip messages
 - Files mounted to `/workspace/data/` for Python access
 
-### Phase 7: Matplotlib Chinese Font Support ⚠️
+### Phase 7: Matplotlib Chinese Font Support ✅
 
-**Status**: PARTIAL
+**Status**: COMPLETED
 
 **Implementation**:
-- Configure `matplotlib.rcParams` to try CJK fonts (SimHei, WenQuanYi, Noto Sans CJK SC)
+- Download Noto Sans CJK SC from jsDelivr CDN (`https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf`)
+- Save font to `/home/pyodide/.fonts/NotoSansCJKsc-Regular.otf` via `pyodide.FS.writeFile`
+- Configure matplotlib `font_manager` to use downloaded font via `addfont()`
 - Set `axes.unicode_minus = False`
-- **Limitation**: Pyodide WASM environment has no font files installed; rcParams only sets priority, doesn't provide fonts
-- **Future fix**: Download font file (e.g., Noto Sans CJK, ~4MB) to Pyodide FS during init
+- Best-effort: font download failure is non-fatal
 
 ### Phase 8: Fix Worker String Escaping ✅
 
@@ -249,7 +238,7 @@ for post in posts:
 - [x] **Phase 7**: Configure matplotlib for Chinese text (commit `7bf38e2`)
 - [x] **Phase 8**: Fix Service Worker POST caching (commit `1996ea4`)
 - [x] **Phase 9**: Fix expand/collapse UI bug (commit `3823553`)
-- [ ] **Phase 10**: Fix workspace empty display bug
+- [x] **Phase 10**: Fix workspace empty display bug (commit `d55707e`)
 - [ ] **Phase 11**: Create bsky_tools library for batch AT operations
 
 ## Key Lessons
@@ -263,3 +252,4 @@ for post in posts:
 7. **Vite ?worker over Blob URL**: Template string escaping in bundled Worker code causes SyntaxError; use Vite native Worker import
 8. **Package installation batches**: Install heavy packages separately with longer timeouts; failure of optional packages should not block sandbox readiness
 9. **Event propagation in nested UI**: Inner component buttons must call `e.stopPropagation()` to prevent triggering parent onClick handlers
+10. **Uint8Array.buffer vs Uint8Array**: `file.data.buffer` may contain unused space causing empty files; use `file.data` directly for Blob creation
