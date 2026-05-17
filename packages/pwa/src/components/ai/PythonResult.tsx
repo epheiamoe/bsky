@@ -82,7 +82,10 @@ function ErrorBlock({ error = '' }: { error?: string }) {
       </pre>
       {isLong && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
           className="px-3 py-1 text-xs text-red-400 hover:text-red-300 transition-colors"
         >
           {expanded ? '收起' : '展开'}
@@ -111,7 +114,10 @@ function OutputBlock({ stdout = '' }: { stdout?: string }) {
       </pre>
       {isLong && (
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          }}
           className="w-full px-3 py-1.5 text-xs text-text-secondary/60 hover:text-text-secondary hover:bg-surface transition-colors border-t border-border"
         >
           {expanded ? '收起输出' : `展开剩余 ${lines.length - 15} 行`}
