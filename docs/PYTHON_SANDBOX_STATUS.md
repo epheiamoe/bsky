@@ -27,10 +27,13 @@
 1. ✅ `pyodide-sandbox.ts` — 执行后保存文件到 workspace（已完成）
 2. ✅ `PythonResult.tsx` — 从 workspace 加载文件（已完成）
 3. ✅ `node-python-sandbox.ts` — 执行后保存文件到 workspace（已完成）
-4. ⏳ `AIChatPage.tsx` — 修复 stale closure（添加 `sessionId` 到依赖数组）
-5. ⏳ `tools.ts` — 传递 `chatId` 给 `sandbox.execute(code, chatId)`
-6. ⏳ `pyodide.worker.ts` — 二进制文件读取使用 `encoding: 'binary'`
-7. ⏳ `WorkspaceModal.tsx` — 简化 Blob 创建
+4. ✅ `AIChatPage.tsx` — 修复 stale closure（添加 `sessionId` 到依赖数组）
+5. ✅ `tools.ts` — 传递 `chatId` 给 `sandbox.execute(code, chatId)`
+6. ✅ `pyodide.worker.ts` — 二进制文件读取使用 `encoding: 'binary'`
+7. ✅ `WorkspaceModal.tsx` — 简化 Blob 创建
+8. ✅ `IndexedDBWorkspaceStorage` — 严格隔离 + 清理旧文件
+9. ✅ `PreviewModal` — 应用内预览（图片/CSV/JSON/文本）
+10. ✅ `PreviewModal` — UTF-8 解码修复中文乱码
 
 ### Test Results (2025-05-17)
 
