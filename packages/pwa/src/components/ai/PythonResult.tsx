@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useI18n } from '@bsky/app';
 import { Icon } from '../Icon.js';
+import { getDefaultWorkspaceStorage } from '@bsky/app';
 
 interface PythonFile {
   name: string;
@@ -23,6 +24,45 @@ export function PythonResult({ result }: PythonResultProps) {
       return null;
     }
   }, [result]);
+
+  // Sync output files to workspace storage
+  useEffect(() => {
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.files)) return;
+    const files = parsed.files as Array<{ name: string; type: string; size: number; path: string; content: string }>;
+    if (files.length === 0) return;
+
+    const syncFiles = async () => {
+      try {
+        const storage = getDefaultWorkspaceStorage();
+        for (const file of files) {
+          const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          let data: Uint8Array;
+          const isText = ['csv', 'json', 'txt', 'md'].includes(file.type);
+          if (isText) {
+            data = new TextEncoder().encode(file.content);
+          } else {
+            // Base64 decode for binary files
+            const binaryStr = atob(file.content);
+            data = new Uint8Array(binaryStr.length);
+            for (let i = 0; i < binaryStr.length; i++) {
+              data[i] = binaryStr.charCodeAt(i);
+            }
+          }
+          await storage.saveFile({
+            id,
+            name: file.name,
+            mimeType: isText ? `text/${file.type === 'md' ? 'markdown' : file.type}` : `application/octet-stream`,
+            size: file.size || data.length,
+            data,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        console.debug('[PythonResult] Failed to sync files to workspace:', err);
+      }
+    };
+    void syncFiles();
+  }, [parsed]);
 
   if (!parsed || typeof parsed !== 'object') {
     return (

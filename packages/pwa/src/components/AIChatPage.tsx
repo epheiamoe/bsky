@@ -211,6 +211,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const visionEnabled = aiConfig.visionEnabled ?? false;
   const [aiConsent, setAiConsent] = useState(() => localStorage.getItem('bsky_ai_consent') === '1');
   const [sandboxInit, setSandboxInit] = useState<{ active: boolean; progress: number; message: string }>({ active: false, progress: 0, message: '' });
@@ -328,6 +329,10 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     } else {
       void send(text);
       setInput('');
+    }
+    // Reset textarea height after sending
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
     }
   }, [input, loading, send, pendingFile, addUserImage, contextPost, contextProfile]);
 
@@ -983,6 +988,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
               <Icon name="database" size={20} />
             </button>
             <textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => {
                 setInput(e.target.value);
