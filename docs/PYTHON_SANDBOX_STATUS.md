@@ -41,7 +41,18 @@
 - ✅ stdout/stderr 完整捕获
 - ✅ matplotlib 中文字体支持（Noto Sans CJK SC，从 CDN 下载）
 - ✅ 工作区文件同步（Python 输出文件自动同步到 IndexedDB）
-- ✅ 工作区文件预览/下载修复（`file.data` 替代 `file.data.buffer`）
+
+**已知 Bug**:
+- 🟡 **工作区文件内容为空** — Python 执行成功创建文件，ToolCard 显示文件列表和大小，但工作区预览/下载内容为空
+  - **根因分析**：
+    1. `pyodide.FS.readFile(path, { encoding: 'utf8' })` 可能返回 `Uint8Array` 而非字符串（Pyodide 的 Emscripten FS 可能忽略 `encoding` 参数）
+    2. `typeof content !== 'string'` 导致 PythonResult 组件显示 "在工作区中查看" 而非实际内容
+    3. `WorkspaceModal` 中 `file.data` 从 IndexedDB 读取时类型问题
+  - **修复方向**：
+    1. Worker 中统一使用 `new TextDecoder('utf-8').decode()` 解码文本文件，不依赖 `encoding` 参数
+    2. 添加调试日志确认 `readFile` 返回值类型
+  - **代码位置**：
+    - `packages/pwa/src/services/pyodide.worker.ts` — `scanOutputFiles()` 函数
 
 ### Architecture
 
