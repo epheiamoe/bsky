@@ -4,6 +4,7 @@ import { getDefaultWorkspaceStorage, useI18n } from '@bsky/app';
 import type { WorkspaceFile } from '@bsky/app';
 import { Modal } from './Modal.js';
 import { Icon } from './Icon.js';
+import { PreviewModal } from './PreviewModal.js';
 
 interface WorkspaceModalProps {
   open: boolean;
@@ -16,6 +17,7 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
   const [files, setFiles] = useState<WorkspaceFile[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewFile, setPreviewFile] = useState<WorkspaceFile | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadFiles = useCallback(async () => {
@@ -52,16 +54,8 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
     }
   }, []);
 
-  const handlePreview = useCallback(async (file: WorkspaceFile) => {
-    try {
-      const blob = new Blob([file.data as BlobPart], { type: file.mimeType });
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      // Clean up blob URL after a delay (browser will keep it alive while tab is open)
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch (err) {
-      console.error('Failed to preview file:', err);
-    }
+  const handlePreview = useCallback((file: WorkspaceFile) => {
+    setPreviewFile(file);
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
@@ -233,5 +227,9 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
         </div>
       </div>
     </Modal>
+      <PreviewModal
+        file={previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
   );
 }
