@@ -168,6 +168,25 @@ await micropip.install(${JSON.stringify(heavyPackages)})
         self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.95, message: 'Package installation skipped (some packages may be unavailable)' });
       }
 
+      // Configure matplotlib for Chinese text support (best-effort)
+      console.debug('[PyodideWorker] Configuring matplotlib fonts...');
+      try {
+        pyodide.runPython(`
+import matplotlib
+matplotlib.rcParams['axes.unicode_minus'] = False
+cjk_fonts = ['SimHei', 'WenQuanYi Micro Hei', 'Noto Sans CJK SC', 'DejaVu Sans']
+for font in cjk_fonts:
+    try:
+        matplotlib.rcParams['font.sans-serif'] = [font] + matplotlib.rcParams.get('font.sans-serif', [])
+        break
+    except:
+        continue
+        `);
+        console.debug('[PyodideWorker] Matplotlib font config applied');
+      } catch (fontErr) {
+        console.debug('[PyodideWorker] Matplotlib font config skipped: ' + String(fontErr));
+      }
+
       console.debug('[PyodideWorker] Sending initComplete');
       self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
       return pyodide;
