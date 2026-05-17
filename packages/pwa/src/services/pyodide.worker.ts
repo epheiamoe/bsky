@@ -1,0 +1,281 @@
+/**
+ * Pyodide Web Worker — runs in browser, loads Pyodide WASM from CDN.
+ *
+ * Uses CLASSIC Worker (IIFE) semantics via Vite's `?worker` import.
+ * Vite bundles this file as a standalone chunk; `importScripts()` is used
+ * to load the external Pyodide loader from CDN.
+ */
+
+const CDN_URLS = [
+  'https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js',
+];
+
+let pyodide: any = null;
+let initAborted = false;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
+async function loadPyodideRuntime() {
+  console.debug('[PyodideWorker] loadPyodide() called');
+  if (pyodide !== null) {
+    console.debug('[PyodideWorker] Pyodide already loaded, returning cached instance');
+    return pyodide;
+  }
+
+  let lastError: Error | null = null;
+  for (let i = 0; i < CDN_URLS.length; i++) {
+    if (initAborted) {
+      throw new Error('Initialization aborted by user');
+    }
+    const url = CDN_URLS[i];
+    try {
+      console.debug('[PyodideWorker] Trying CDN: ' + url);
+      self.postMessage({ type: 'initProgress', stage: 'downloading', progress: 0.1, message: 'Downloading Pyodide loader...' });
+
+      // Classic Worker: use importScripts instead of dynamic import
+      console.debug('[PyodideWorker] Calling importScripts...');
+      await withTimeout(
+        new Promise<void>((resolve, reject) => {
+          try {
+            self.importScripts(url);
+            console.debug('[PyodideWorker] importScripts succeeded');
+            resolve();
+          } catch (err) {
+            console.debug('[PyodideWorker] importScripts failed: ' + String(err));
+            reject(err);
+          }
+        }),
+        30000,
+        'Download pyodide.js via importScripts'
+      );
+
+      console.debug('[PyodideWorker] Looking for loadPyodide function...');
+      const loadFn = (self as any).loadPyodide || (globalThis as any).loadPyodide;
+      if (typeof loadFn !== 'function') {
+        console.debug('[PyodideWorker] loadPyodide not found. self keys: ' + Object.keys(self).join(', '));
+        throw new Error('loadPyodide not found after importScripts ' + url);
+      }
+      console.debug('[PyodideWorker] loadPyodide found');
+
+      const lastSlash = url.lastIndexOf('/');
+      const baseUrl = lastSlash > 0 ? url.substring(0, lastSlash + 1) : url + '/';
+      console.debug('[PyodideWorker] Base URL: ' + baseUrl);
+      self.postMessage({ type: 'initProgress', stage: 'loading', progress: 0.3, message: 'Loading Pyodide WASM runtime...' });
+
+      console.debug('[PyodideWorker] Calling loadPyodide({ indexURL: baseUrl })...');
+      pyodide = await withTimeout(loadFn({ indexURL: baseUrl }), 60000, 'Load Pyodide WASM');
+      console.debug('[PyodideWorker] Pyodide loaded successfully. pyodide object type: ' + typeof pyodide);
+
+      // Setup workspace filesystem (defensive, wrapped in try/catch)
+      console.debug('[PyodideWorker] Setting up filesystem...');
+      try {
+        const fs = pyodide.FS;
+        console.debug('[PyodideWorker] FS object found: ' + typeof fs);
+        if (fs && typeof fs.mkdirTree === 'function') {
+          console.debug('[PyodideWorker] Creating /workspace/data...');
+          fs.mkdirTree('/workspace/data');
+          console.debug('[PyodideWorker] Creating /workspace/output...');
+          fs.mkdirTree('/workspace/output');
+          console.debug('[PyodideWorker] Creating /workspace/temp...');
+          fs.mkdirTree('/workspace/temp');
+          console.debug('[PyodideWorker] Workspace directories created');
+        } else {
+          console.debug('[PyodideWorker] FS.mkdirTree not available, skipping filesystem setup');
+        }
+      } catch (fsErr) {
+        console.debug('[PyodideWorker] FS setup warning (may already exist): ' + String(fsErr));
+      }
+
+      console.debug('[PyodideWorker] Sending initComplete');
+      self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
+      return pyodide;
+    } catch (err) {
+      lastError = err as Error;
+      console.debug('[PyodideWorker] CDN failed: ' + url + ' - ' + String(err));
+      self.postMessage({ type: 'initProgress', stage: 'retry', progress: 0.1, message: 'CDN failed, trying next...' });
+    }
+  }
+
+  throw new Error('All CDN sources failed. Last error: ' + (lastError?.message ?? String(lastError)));
+}
+
+function getFileType(filename: string): string {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? '';
+  const typeMap: Record<string, string> = {
+    'csv': 'csv',
+    'json': 'json',
+    'png': 'png',
+    'jpg': 'jpg',
+    'jpeg': 'jpeg',
+    'txt': 'txt',
+    'md': 'md',
+    'py': 'txt',
+  };
+  return typeMap[ext] || 'unknown';
+}
+
+function isTextFile(type: string): boolean {
+  return type === 'csv' || type === 'json' || type === 'txt' || type === 'md';
+}
+
+async function scanOutputFiles(): Promise<Array<{ name: string; type: string; size: number; path: string; content: string }>> {
+  const files: Array<{ name: string; type: string; size: number; path: string; content: string }> = [];
+  try {
+    if (!pyodide.FS || typeof pyodide.FS.readdir !== 'function') {
+      return files;
+    }
+    const entries = pyodide.FS.readdir('/workspace/output/');
+    for (let i = 0; i < entries.length; i++) {
+      const name = entries[i];
+      if (name === '.' || name === '..') continue;
+
+      const path = '/workspace/output/' + name;
+      const stat = pyodide.FS.stat(path);
+      const type = getFileType(name);
+      let content = '';
+
+      try {
+        if (isTextFile(type)) {
+          content = pyodide.FS.readFile(path, { encoding: 'utf8' });
+        } else {
+          const binary = pyodide.FS.readFile(path);
+          const bytes = new Uint8Array(binary);
+          const chunkSize = 32768; // Safe limit (below 65535)
+          let binaryStr = '';
+          for (let j = 0; j < bytes.length; j += chunkSize) {
+            const chunk = bytes.subarray(j, j + chunkSize);
+            binaryStr += String.fromCharCode.apply(null, chunk as any);
+          }
+          content = btoa(binaryStr);
+        }
+      } catch (readErr) {
+        console.debug('[PyodideWorker] Failed to read file ' + name + ': ' + String(readErr));
+      }
+
+      files.push({
+        name: name,
+        type: type,
+        size: stat.size,
+        path: path,
+        content: content,
+      });
+    }
+  } catch (err) {
+    console.debug('[PyodideWorker] Failed to scan output directory: ' + String(err));
+  }
+  return files;
+}
+
+async function executePython(code: string) {
+  let returnValue: any = null;
+  let success = false;
+  let stdout = '';
+  let stderr = '';
+  let outputFiles: Awaited<ReturnType<typeof scanOutputFiles>> = [];
+
+  try {
+    // Setup stdout/stderr capture using Python-level redirection (safe, no JS API dependency)
+    pyodide.runPython(
+      [
+        'import sys',
+        '_stdout_lines = []',
+        '_stderr_lines = []',
+        '',
+        'class _StdoutCapture:',
+        '    def write(self, text):',
+        '        if text:',
+        '            _stdout_lines.append(str(text))',
+        '    def flush(self):',
+        '        pass',
+        '',
+        'class _StderrCapture:',
+        '    def write(self, text):',
+        '        if text:',
+        '            _stderr_lines.append(str(text))',
+        '    def flush(self):',
+        '        pass',
+        '',
+        'sys.stdout = _StdoutCapture()',
+        'sys.stderr = _StderrCapture()',
+      ].join('\n')
+    );
+
+    // Execute user code
+    returnValue = await pyodide.runPythonAsync(code);
+    success = true;
+
+    // Read captured output
+    stdout = pyodide.globals.get('_stdout_lines').toJs().join('');
+    stderr = pyodide.globals.get('_stderr_lines').toJs().join('');
+
+    // Scan output files
+    outputFiles = await scanOutputFiles();
+  } catch (err) {
+    console.debug('[PyodideWorker] Execution error: ' + (err instanceof Error ? err.message : String(err)));
+    throw err;
+  }
+
+  return {
+    stdout: stdout,
+    stderr: stderr,
+    returnValue: returnValue,
+    files: outputFiles,
+    success: success,
+    executionTime: 0,
+  };
+}
+
+self.onmessage = async function (e: MessageEvent) {
+  const msg = e.data;
+  if (msg.type === 'init') {
+    try {
+      console.debug('[PyodideWorker] Init message received, starting loadPyodide...');
+      await loadPyodideRuntime();
+      console.debug('[PyodideWorker] loadPyodide completed successfully');
+      self.postMessage({ type: 'initComplete' });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.debug('[PyodideWorker] Init failed: ' + errMsg);
+      self.postMessage({ type: 'initError', error: errMsg });
+    }
+  } else if (msg.type === 'execute') {
+    try {
+      const result = await executePython(msg.code);
+      self.postMessage({ type: 'result', result: result });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      self.postMessage({
+        type: 'result',
+        result: {
+          stdout: '',
+          stderr: errMsg,
+          returnValue: null,
+          files: [],
+          success: false,
+          executionTime: 0,
+        },
+      });
+    }
+  } else if (msg.type === 'abort') {
+    console.debug('[PyodideWorker] Abort received');
+    initAborted = true;
+  } else {
+    console.debug('[PyodideWorker] Unknown message: ' + msg.type);
+  }
+};
