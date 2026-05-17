@@ -245,9 +245,11 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
   const files: Array<{ name: string; type: string; size: number; path: string; content: string }> = [];
   try {
     if (!pyodide.FS || typeof pyodide.FS.readdir !== 'function') {
+      console.log('[PyodideWorker] FS not available, skipping file scan');
       return files;
     }
     const entries = pyodide.FS.readdir('/workspace/output/');
+    console.log('[PyodideWorker] Scanned /workspace/output/, found', entries.length, 'entries:', entries.join(', '));
     for (let i = 0; i < entries.length; i++) {
       const name = entries[i];
       if (name === '.' || name === '..') continue;
@@ -258,26 +260,26 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
       let content = '';
 
       try {
-        console.debug('[PyodideWorker] Reading file: ' + name + ' (type: ' + type + ')');
+        console.log('[PyodideWorker] Reading file: ' + name + ' (type: ' + type + ', stat.size: ' + stat.size + ')');
         const rawData = pyodide.FS.readFile(path);
-        console.debug('[PyodideWorker] readFile returned type: ' + typeof rawData + ', constructor: ' + (rawData?.constructor?.name || 'unknown'));
+        console.log('[PyodideWorker] readFile returned type: ' + typeof rawData + ', constructor: ' + (rawData?.constructor?.name || 'unknown') + ', length: ' + (rawData?.length ?? 'N/A'));
 
         if (isTextFile(type)) {
           // Decode text files using TextDecoder (reliable across Pyodide versions)
           if (typeof rawData === 'string') {
             content = rawData;
-            console.debug('[PyodideWorker] File ' + name + ' returned as string, length: ' + rawData.length);
+            console.log('[PyodideWorker] File ' + name + ' returned as string, length: ' + rawData.length);
           } else if (rawData instanceof Uint8Array) {
             content = new TextDecoder('utf-8').decode(rawData);
-            console.debug('[PyodideWorker] File ' + name + ' decoded from Uint8Array, length: ' + content.length);
+            console.log('[PyodideWorker] File ' + name + ' decoded from Uint8Array, length: ' + content.length);
           } else {
-            console.debug('[PyodideWorker] File ' + name + ' unexpected type, converting to string');
+            console.log('[PyodideWorker] File ' + name + ' unexpected type, converting to string');
             content = String(rawData);
           }
         } else {
           // Binary files: convert to base64
           const bytes = new Uint8Array(rawData);
-          console.debug('[PyodideWorker] Binary file ' + name + ', size: ' + bytes.length + ' bytes');
+          console.log('[PyodideWorker] Binary file ' + name + ', size: ' + bytes.length + ' bytes');
           const chunkSize = 32768; // Safe limit (below 65535)
           let binaryStr = '';
           for (let j = 0; j < bytes.length; j += chunkSize) {
@@ -287,7 +289,7 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
           content = btoa(binaryStr);
         }
       } catch (readErr) {
-        console.debug('[PyodideWorker] Failed to read file ' + name + ': ' + String(readErr));
+        console.log('[PyodideWorker] Failed to read file ' + name + ': ' + String(readErr));
       }
 
       files.push({
@@ -297,9 +299,11 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
         path: path,
         content: content,
       });
+      console.log('[PyodideWorker] Added file to result:', name, 'contentLength:', content.length);
     }
+    console.log('[PyodideWorker] File scan complete, returning', files.length, 'files');
   } catch (err) {
-    console.debug('[PyodideWorker] Failed to scan output directory: ' + String(err));
+    console.log('[PyodideWorker] Failed to scan output directory: ' + String(err));
   }
   return files;
 }
@@ -350,7 +354,7 @@ async function executePython(code: string) {
     // Scan output files
     outputFiles = await scanOutputFiles();
   } catch (err) {
-    console.debug('[PyodideWorker] Execution error: ' + (err instanceof Error ? err.message : String(err)));
+    console.log('[PyodideWorker] Execution error: ' + (err instanceof Error ? err.message : String(err)));
     throw err;
   }
 
