@@ -156,11 +156,12 @@ export class PyodideSandbox implements PythonSandboxEngine {
       throw new Error('Python sandbox not ready');
     }
     console.debug('[Pyodide] mountFile:', name, 'size:', data.length);
+    const worker = this.worker; // capture for closure
     return new Promise((resolve, reject) => {
       const handler = (e: MessageEvent) => {
         const msg = e.data;
         if (msg.type === 'mountResult') {
-          this.worker!.removeEventListener('message', handler);
+          worker.removeEventListener('message', handler);
           if (msg.result.success) {
             resolve();
           } else {
@@ -168,8 +169,8 @@ export class PyodideSandbox implements PythonSandboxEngine {
           }
         }
       };
-      this.worker.addEventListener('message', handler);
-      this.worker.postMessage({ type: 'mountFile', name, data });
+      worker.addEventListener('message', handler);
+      worker.postMessage({ type: 'mountFile', name, data });
     });
   }
 
@@ -178,11 +179,12 @@ export class PyodideSandbox implements PythonSandboxEngine {
       throw new Error('Python sandbox not ready');
     }
     console.debug('[Pyodide] unmountFile:', name);
+    const worker = this.worker; // capture for closure
     return new Promise((resolve, reject) => {
       const handler = (e: MessageEvent) => {
         const msg = e.data;
         if (msg.type === 'unmountResult') {
-          this.worker!.removeEventListener('message', handler);
+          worker.removeEventListener('message', handler);
           if (msg.result.success) {
             resolve();
           } else {
@@ -190,8 +192,8 @@ export class PyodideSandbox implements PythonSandboxEngine {
           }
         }
       };
-      this.worker.addEventListener('message', handler);
-      this.worker.postMessage({ type: 'unmountFile', name });
+      worker.addEventListener('message', handler);
+      worker.postMessage({ type: 'unmountFile', name });
     });
   }
 
