@@ -258,11 +258,26 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
       let content = '';
 
       try {
+        console.debug('[PyodideWorker] Reading file: ' + name + ' (type: ' + type + ')');
+        const rawData = pyodide.FS.readFile(path);
+        console.debug('[PyodideWorker] readFile returned type: ' + typeof rawData + ', constructor: ' + (rawData?.constructor?.name || 'unknown'));
+
         if (isTextFile(type)) {
-          content = pyodide.FS.readFile(path, { encoding: 'utf8' });
+          // Decode text files using TextDecoder (reliable across Pyodide versions)
+          if (typeof rawData === 'string') {
+            content = rawData;
+            console.debug('[PyodideWorker] File ' + name + ' returned as string, length: ' + rawData.length);
+          } else if (rawData instanceof Uint8Array) {
+            content = new TextDecoder('utf-8').decode(rawData);
+            console.debug('[PyodideWorker] File ' + name + ' decoded from Uint8Array, length: ' + content.length);
+          } else {
+            console.debug('[PyodideWorker] File ' + name + ' unexpected type, converting to string');
+            content = String(rawData);
+          }
         } else {
-          const binary = pyodide.FS.readFile(path);
-          const bytes = new Uint8Array(binary);
+          // Binary files: convert to base64
+          const bytes = new Uint8Array(rawData);
+          console.debug('[PyodideWorker] Binary file ' + name + ', size: ' + bytes.length + ' bytes');
           const chunkSize = 32768; // Safe limit (below 65535)
           let binaryStr = '';
           for (let j = 0; j < bytes.length; j += chunkSize) {
