@@ -58,6 +58,19 @@ async function loadPyodide() {
       
       pyodide = await withTimeout(loadFn({ indexURL: baseUrl }), 60000, 'Load Pyodide WASM');
       console.debug('[PyodideWorker] Pyodide loaded successfully');
+      
+      // Setup workspace filesystem (defensive, wrapped in try/catch)
+      try {
+        if (pyodide.FS && typeof pyodide.FS.mkdirTree === 'function') {
+          pyodide.FS.mkdirTree('/workspace/data');
+          pyodide.FS.mkdirTree('/workspace/output');
+          pyodide.FS.mkdirTree('/workspace/temp');
+          console.debug('[PyodideWorker] Workspace directories created');
+        }
+      } catch (fsErr) {
+        console.debug('[PyodideWorker] FS setup warning (may already exist): ' + String(fsErr));
+      }
+      
       self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
       return pyodide;
     } catch (err) {
@@ -70,17 +83,121 @@ async function loadPyodide() {
   throw new Error('All CDN sources failed. Last error: ' + (lastError !== null && lastError.message !== undefined ? lastError.message : String(lastError)));
 }
 
+function getFileType(filename) {
+  var ext = filename.split('.').pop().toLowerCase();
+  var typeMap = {
+    'csv': 'csv',
+    'json': 'json',
+    'png': 'png',
+    'jpg': 'jpg',
+    'jpeg': 'jpeg',
+    'txt': 'txt',
+    'md': 'md',
+    'py': 'txt'
+  };
+  return typeMap[ext] || 'unknown';
+}
+
+function isTextFile(type) {
+  return type === 'csv' || type === 'json' || type === 'txt' || type === 'md';
+}
+
+async function scanOutputFiles() {
+  var files = [];
+  try {
+    if (!pyodide.FS || typeof pyodide.FS.readdir !== 'function') {
+      return files;
+    }
+    var entries = pyodide.FS.readdir('/workspace/output/');
+    for (var i = 0; i < entries.length; i++) {
+      var name = entries[i];
+      if (name === '.' || name === '..') continue;
+      
+      var path = '/workspace/output/' + name;
+      var stat = pyodide.FS.stat(path);
+      var type = getFileType(name);
+      var content = '';
+      
+      try {
+        if (isTextFile(type)) {
+          content = pyodide.FS.readFile(path, { encoding: 'utf8' });
+        } else {
+          var binary = pyodide.FS.readFile(path);
+          var bytes = new Uint8Array(binary);
+          var chunkSize = 32768; // Safe limit (below 65535)
+          var binaryStr = '';
+          for (var j = 0; j < bytes.length; j += chunkSize) {
+            var chunk = bytes.subarray(j, j + chunkSize);
+            binaryStr += String.fromCharCode.apply(null, chunk);
+          }
+          content = btoa(binaryStr);
+        }
+      } catch (readErr) {
+        console.debug('[PyodideWorker] Failed to read file ' + name + ': ' + String(readErr));
+      }
+      
+      files.push({
+        name: name,
+        type: type,
+        size: stat.size,
+        path: path,
+        content: content
+      });
+    }
+  } catch (err) {
+    console.debug('[PyodideWorker] Failed to scan output directory: ' + String(err));
+  }
+  return files;
+}
+
 async function executePython(code) {
   var returnValue = null;
   var success = false;
+  var stdout = '';
+  var stderr = '';
+  
   try {
+    // Setup stdout/stderr capture using Python-level redirection (safe, no JS API dependency)
+    pyodide.runPython(`
+import sys
+_stdout_lines = []
+_stderr_lines = []
+
+class _StdoutCapture:
+    def write(self, text):
+        if text:
+            _stdout_lines.append(str(text))
+    def flush(self):
+        pass
+
+class _StderrCapture:
+    def write(self, text):
+        if text:
+            _stderr_lines.append(str(text))
+    def flush(self):
+        pass
+
+sys.stdout = _StdoutCapture()
+sys.stderr = _StderrCapture()
+`);
+    
+    // Execute user code
     returnValue = await pyodide.runPythonAsync(code);
     success = true;
+    
+    // Read captured output
+    stdout = pyodide.globals.get('_stdout_lines').toJs().join('');
+    stderr = pyodide.globals.get('_stderr_lines').toJs().join('');
+    
+    // Scan output files
+    var outputFiles = await scanOutputFiles();
+    
   } catch (err) {
     console.debug('[PyodideWorker] Execution error: ' + (err.message !== undefined ? err.message : String(err)));
     throw err;
   }
-  return { stdout: '', stderr: '', returnValue: returnValue, files: [], success: success, executionTime: 0 };
+  
+  return { stdout: stdout, stderr: stderr, returnValue: returnValue, files: outputFiles, success: success, executionTime: 0 };
 }
 
 self.onmessage = async function(e) {
