@@ -168,23 +168,45 @@ await micropip.install(${JSON.stringify(heavyPackages)})
         self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.95, message: 'Package installation skipped (some packages may be unavailable)' });
       }
 
-      // Configure matplotlib for Chinese text support (best-effort)
-      console.debug('[PyodideWorker] Configuring matplotlib fonts...');
+      // Download and configure Chinese font for matplotlib (best-effort)
+      console.debug('[PyodideWorker] Setting up Chinese font for matplotlib...');
       try {
-        pyodide.runPython(`
+        const fontUrl = 'https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/SimplifiedChinese/NotoSansCJKsc-Regular.otf';
+        console.debug('[PyodideWorker] Downloading font from: ' + fontUrl);
+        self.postMessage({ type: 'initProgress', stage: 'packages', progress: 0.96, message: 'Downloading Chinese font...' });
+
+        const fontResponse = await withTimeout(
+          fetch(fontUrl),
+          30000,
+          'Download Chinese font'
+        );
+        if (fontResponse.ok) {
+          const fontBuffer = await fontResponse.arrayBuffer();
+          const fontPath = '/home/pyodide/.fonts/NotoSansSC-Regular.otf';
+          pyodide.FS.mkdirTree('/home/pyodide/.fonts');
+          pyodide.FS.writeFile(fontPath, new Uint8Array(fontBuffer));
+          console.debug('[PyodideWorker] Font downloaded and saved to: ' + fontPath);
+
+          // Configure matplotlib to use the downloaded font
+          pyodide.runPython(`
 import matplotlib
+import matplotlib.font_manager as fm
 matplotlib.rcParams['axes.unicode_minus'] = False
-cjk_fonts = ['SimHei', 'WenQuanYi Micro Hei', 'Noto Sans CJK SC', 'DejaVu Sans']
-for font in cjk_fonts:
-    try:
-        matplotlib.rcParams['font.sans-serif'] = [font] + matplotlib.rcParams.get('font.sans-serif', [])
-        break
-    except:
-        continue
-        `);
-        console.debug('[PyodideWorker] Matplotlib font config applied');
+
+# Add the downloaded font
+font_path = '/home/pyodide/.fonts/NotoSansSC-Regular.otf'
+fm.fontManager.addfont(font_path)
+prop = fm.FontProperties(fname=font_path)
+
+# Set as default sans-serif font
+matplotlib.rcParams['font.sans-serif'] = [prop.get_name()] + matplotlib.rcParams.get('font.sans-serif', [])
+          `);
+          console.debug('[PyodideWorker] Matplotlib Chinese font configured');
+        } else {
+          console.debug('[PyodideWorker] Font download failed: ' + fontResponse.status);
+        }
       } catch (fontErr) {
-        console.debug('[PyodideWorker] Matplotlib font config skipped: ' + String(fontErr));
+        console.debug('[PyodideWorker] Chinese font setup skipped (non-fatal): ' + String(fontErr));
       }
 
       console.debug('[PyodideWorker] Sending initComplete');
