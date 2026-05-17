@@ -72,7 +72,7 @@ function toBase64(data: Uint8Array): string {
   return btoa(binary);
 }
 
-export function createTools(client: BskyClient): ToolDescriptor[] {
+export function createTools(client: BskyClient, getChatId?: () => string | undefined): ToolDescriptor[] {
   const tools: ToolDescriptor[] = [
     // ======================== PYTHON SANDBOX ========================
     {
@@ -117,7 +117,7 @@ print(f"Processed {len(df)} rows")`,
         }
         const startTime = Date.now();
         try {
-          const result = await sandbox.execute(p.code as string);
+          const result = await sandbox.execute(p.code as string, getChatId?.());
           const executionTime = Date.now() - startTime;
           const response: Record<string, unknown> = {
             stdout: result.stdout,

@@ -300,7 +300,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
       }
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
+  }, [sessionId]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || loading) return;

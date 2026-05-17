@@ -221,7 +221,7 @@ export function useAIChat(
   // Initialize tools and system prompt
   useEffect(() => {
     if (!client) return;
-    const tools = createTools(client);
+    const tools = createTools(client, () => chatIdRef.current);
     assistant.setTools(tools);
 
     // Set context from options (first navigation — in memory, not URL)

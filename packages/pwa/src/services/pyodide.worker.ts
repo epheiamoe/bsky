@@ -261,7 +261,8 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
 
       try {
         console.log('[PyodideWorker] Reading file: ' + name + ' (type: ' + type + ', stat.size: ' + stat.size + ')');
-        const rawData = pyodide.FS.readFile(path);
+        // Always read as binary to get Uint8Array, then decode text if needed
+        const rawData = pyodide.FS.readFile(path, { encoding: 'binary' });
         console.log('[PyodideWorker] readFile returned type: ' + typeof rawData + ', constructor: ' + (rawData?.constructor?.name || 'unknown') + ', length: ' + (rawData?.length ?? 'N/A'));
 
         if (isTextFile(type)) {
