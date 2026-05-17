@@ -897,6 +897,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
                     resultContent={group.result?.content}
                     expanded={expandedCards.has(gi) || (loading && gi === lastStreamGroupIndex)}
                     onToggle={() => toggleCard(gi)}
+                    chatId={sessionId}
                   />
                 </div>
               );

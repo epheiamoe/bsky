@@ -13,9 +13,10 @@ interface PythonFile {
 
 interface PythonResultProps {
   result: string; // JSON string from the tool result
+  chatId?: string; // Current chat session ID for workspace file isolation
 }
 
-export function PythonResult({ result }: PythonResultProps) {
+export function PythonResult({ result, chatId }: PythonResultProps) {
   const { t } = useI18n();
   const parsed = useMemo(() => {
     try {
@@ -31,6 +32,8 @@ export function PythonResult({ result }: PythonResultProps) {
     const files = parsed.files as Array<{ name: string; type: string; size: number; path: string; content: string }>;
     if (files.length === 0) return;
 
+    console.log('[PythonResult] Syncing', files.length, 'files to workspace. chatId:', chatId);
+
     const syncFiles = async () => {
       try {
         const storage = getDefaultWorkspaceStorage();
@@ -38,6 +41,7 @@ export function PythonResult({ result }: PythonResultProps) {
           const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           let data: Uint8Array;
           const isText = ['csv', 'json', 'txt', 'md'].includes(file.type);
+          console.log('[PythonResult] Processing file:', file.name, 'type:', file.type, 'size:', file.size, 'contentLength:', file.content?.length ?? 0);
           if (isText) {
             data = new TextEncoder().encode(file.content);
           } else {
@@ -48,6 +52,7 @@ export function PythonResult({ result }: PythonResultProps) {
               data[i] = binaryStr.charCodeAt(i);
             }
           }
+          console.log('[PythonResult] Saving file:', file.name, 'dataLength:', data.length, 'chatId:', chatId);
           await storage.saveFile({
             id,
             name: file.name,
@@ -55,14 +60,16 @@ export function PythonResult({ result }: PythonResultProps) {
             size: file.size || data.length,
             data,
             uploadedAt: new Date().toISOString(),
+            chatId, // Pass chatId for session isolation
           });
         }
+        console.log('[PythonResult] All files synced successfully');
       } catch (err) {
-        console.debug('[PythonResult] Failed to sync files to workspace:', err);
+        console.error('[PythonResult] Failed to sync files to workspace:', err);
       }
     };
     void syncFiles();
-  }, [parsed]);
+  }, [parsed, chatId]);
 
   if (!parsed || typeof parsed !== 'object') {
     return (

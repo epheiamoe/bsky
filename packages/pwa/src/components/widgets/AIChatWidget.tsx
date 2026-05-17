@@ -147,7 +147,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
           }
           if (group.type === 'tool') {
             return (
-              <ToolCard key={gi} toolName={group.msg.toolName ?? ''} args={group.msg.content} resultContent={group.result?.content}
+              <ToolCard key={gi} toolName={group.msg.toolName ?? ''} args={group.msg.content} resultContent={group.result?.content} chatId={chatId}
                 expanded={expandedCards.has(gi)} onToggle={() => toggleCard(gi)} compact />
             );
           }

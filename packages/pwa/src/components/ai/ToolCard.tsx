@@ -12,9 +12,10 @@ interface ToolCardProps {
   expanded: boolean;
   onToggle: () => void;
   compact?: boolean;
+  chatId?: string; // Current chat session ID for workspace file isolation
 }
 
-export function ToolCard({ toolName, args, resultContent, expanded, onToggle, compact }: ToolCardProps) {
+export function ToolCard({ toolName, args, resultContent, expanded, onToggle, compact, chatId }: ToolCardProps) {
   const { t } = useI18n();
   const display = useMemo(() => formatToolResult(toolName, resultContent ?? args ?? ''), [toolName, resultContent, args]);
 
@@ -125,7 +126,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
           )}
           
           {toolName === 'execute_python' && resultContent ? (
-            <PythonResult result={resultContent} />
+            <PythonResult result={resultContent} chatId={chatId} />
           ) : toolName !== 'execute_python' ? (
             display.body
           ) : (
