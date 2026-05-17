@@ -3,6 +3,7 @@ import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { PythonSandboxEngine, PythonExecutionResult, PythonFile } from '@bsky/core';
+import { getDefaultWorkspaceStorage } from './workspaceStorage.js';
 
 /**
  * NodePythonSandbox — executes Python in a sandboxed child process.
@@ -96,7 +97,7 @@ export class NodePythonSandbox implements PythonSandboxEngine {
         stderr += data.toString('utf-8');
       });
 
-      proc.on('close', (code: number | null) => {
+      proc.on('close', async (code: number | null) => {
         clearTimeout(timeout);
 
         // Cleanup temp script
@@ -104,6 +105,37 @@ export class NodePythonSandbox implements PythonSandboxEngine {
 
         const executionTime = Date.now() - startTime;
         const files = this.scanOutputFiles(chatId);
+
+        // Save output files to workspace storage (unified with PWA behavior)
+        if (chatId && files.length > 0) {
+          try {
+            const storage = getDefaultWorkspaceStorage();
+            for (const file of files) {
+              const isText = this.isTextFile(file.type);
+              let data: Uint8Array;
+              if (isText) {
+                data = Buffer.from(file.content, 'utf-8');
+              } else {
+                data = Buffer.from(file.content, 'base64');
+              }
+              const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+              const mimeType = isText
+                ? `text/${file.type === 'md' ? 'markdown' : file.type}`
+                : 'application/octet-stream';
+              await storage.saveFile({
+                id,
+                name: file.name,
+                mimeType,
+                size: file.size || data.length,
+                data,
+                uploadedAt: new Date().toISOString(),
+                chatId,
+              });
+            }
+          } catch (err) {
+            console.error('[NodePythonSandbox] Failed to save output files:', err);
+          }
+        }
 
         resolve({
           stdout,
