@@ -277,6 +277,32 @@ async function executePython(code: string) {
   };
 }
 
+function mountFile(name: string, data: Uint8Array) {
+  const path = '/workspace/data/' + name;
+  try {
+    pyodide.FS.writeFile(path, data);
+    console.debug('[PyodideWorker] Mounted file: ' + path);
+    return { success: true };
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.debug('[PyodideWorker] Failed to mount file: ' + errMsg);
+    return { success: false, error: errMsg };
+  }
+}
+
+function unmountFile(name: string) {
+  const path = '/workspace/data/' + name;
+  try {
+    pyodide.FS.unlink(path);
+    console.debug('[PyodideWorker] Unmounted file: ' + path);
+    return { success: true };
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.debug('[PyodideWorker] Failed to unmount file: ' + errMsg);
+    return { success: false, error: errMsg };
+  }
+}
+
 self.onmessage = async function (e: MessageEvent) {
   const msg = e.data;
   if (msg.type === 'init') {
@@ -308,6 +334,12 @@ self.onmessage = async function (e: MessageEvent) {
         },
       });
     }
+  } else if (msg.type === 'mountFile') {
+    const result = mountFile(msg.name, msg.data);
+    self.postMessage({ type: 'mountResult', result: result });
+  } else if (msg.type === 'unmountFile') {
+    const result = unmountFile(msg.name);
+    self.postMessage({ type: 'unmountResult', result: result });
   } else if (msg.type === 'abort') {
     console.debug('[PyodideWorker] Abort received');
     initAborted = true;

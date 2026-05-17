@@ -152,13 +152,47 @@ export class PyodideSandbox implements PythonSandboxEngine {
   }
 
   async mountFile(name: string, data: Uint8Array): Promise<void> {
-    console.debug('[Pyodide] mountFile called (not implemented in minimal version)');
-    return Promise.resolve();
+    if (!this._isReady || !this.worker) {
+      throw new Error('Python sandbox not ready');
+    }
+    console.debug('[Pyodide] mountFile:', name, 'size:', data.length);
+    return new Promise((resolve, reject) => {
+      const handler = (e: MessageEvent) => {
+        const msg = e.data;
+        if (msg.type === 'mountResult') {
+          this.worker!.removeEventListener('message', handler);
+          if (msg.result.success) {
+            resolve();
+          } else {
+            reject(new Error('Failed to mount file: ' + msg.result.error));
+          }
+        }
+      };
+      this.worker.addEventListener('message', handler);
+      this.worker.postMessage({ type: 'mountFile', name, data });
+    });
   }
 
   async unmountFile(name: string): Promise<void> {
-    console.debug('[Pyodide] unmountFile called (not implemented in minimal version)');
-    return Promise.resolve();
+    if (!this._isReady || !this.worker) {
+      throw new Error('Python sandbox not ready');
+    }
+    console.debug('[Pyodide] unmountFile:', name);
+    return new Promise((resolve, reject) => {
+      const handler = (e: MessageEvent) => {
+        const msg = e.data;
+        if (msg.type === 'unmountResult') {
+          this.worker!.removeEventListener('message', handler);
+          if (msg.result.success) {
+            resolve();
+          } else {
+            reject(new Error('Failed to unmount file: ' + msg.result.error));
+          }
+        }
+      };
+      this.worker.addEventListener('message', handler);
+      this.worker.postMessage({ type: 'unmountFile', name });
+    });
   }
 
   private _handleResult(result: PythonExecutionResult): void {
