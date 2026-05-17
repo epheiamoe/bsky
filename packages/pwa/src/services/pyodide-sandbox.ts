@@ -58,6 +58,19 @@ async function loadPyodide() {
       
       pyodide = await withTimeout(loadFn({ indexURL: baseUrl }), 60000, 'Load Pyodide WASM');
       console.debug('[PyodideWorker] Pyodide loaded successfully');
+      
+      // Setup workspace filesystem
+      try {
+        if (pyodide.FS && typeof pyodide.FS.mkdirTree === 'function') {
+          pyodide.FS.mkdirTree('/workspace/data');
+          pyodide.FS.mkdirTree('/workspace/output');
+          pyodide.FS.mkdirTree('/workspace/temp');
+          console.debug('[PyodideWorker] Workspace directories created');
+        }
+      } catch (fsErr) {
+        console.debug('[PyodideWorker] FS setup warning: ' + String(fsErr));
+      }
+      
       self.postMessage({ type: 'initProgress', stage: 'ready', progress: 1, message: 'Python sandbox ready' });
       return pyodide;
     } catch (err) {
@@ -68,6 +81,73 @@ async function loadPyodide() {
   }
 
   throw new Error('All CDN sources failed. Last error: ' + (lastError !== null && lastError.message !== undefined ? lastError.message : String(lastError)));
+}
+
+function getFileType(filename) {
+  var ext = filename.split('.').pop().toLowerCase();
+  var typeMap = {
+    'csv': 'csv',
+    'json': 'json',
+    'png': 'png',
+    'jpg': 'jpg',
+    'jpeg': 'jpeg',
+    'txt': 'txt',
+    'md': 'md',
+    'py': 'txt'
+  };
+  return typeMap[ext] || 'unknown';
+}
+
+function isTextFile(type) {
+  return type === 'csv' || type === 'json' || type === 'txt' || type === 'md';
+}
+
+async function scanOutputFiles() {
+  var files = [];
+  try {
+    if (!pyodide.FS || typeof pyodide.FS.readdir !== 'function') {
+      return files;
+    }
+    var entries = pyodide.FS.readdir('/workspace/output/');
+    for (var i = 0; i < entries.length; i++) {
+      var name = entries[i];
+      if (name === '.' || name === '..') continue;
+      
+      var path = '/workspace/output/' + name;
+      var stat = pyodide.FS.stat(path);
+      var type = getFileType(name);
+      var content = '';
+      
+      try {
+        if (isTextFile(type)) {
+          content = pyodide.FS.readFile(path, { encoding: 'utf8' });
+        } else {
+          var binary = pyodide.FS.readFile(path);
+          var bytes = new Uint8Array(binary);
+          var chunkSize = 65536;
+          var binaryStr = '';
+          for (var j = 0; j < bytes.length; j += chunkSize) {
+            var chunk = bytes.subarray(j, j + chunkSize);
+            binaryStr += String.fromCharCode.apply(null, chunk);
+          }
+          content = btoa(binaryStr);
+        }
+      } catch (readErr) {
+        console.debug('[PyodideWorker] Failed to read file ' + name + ': ' + String(readErr));
+      }
+      
+      files.push({
+        name: name,
+        type: type,
+        size: stat.size,
+        path: path,
+        content: content
+      });
+    }
+  } catch (err) {
+    console.debug('[PyodideWorker] Failed to scan output directory: ' + String(err));
+  }
+  return files;
 }
 
 async function executePython(code) {
@@ -112,11 +192,14 @@ async function executePython(code) {
     }
   }
   
+  // Scan output files
+  var outputFiles = await scanOutputFiles();
+  
   return { 
     stdout: stdoutLines.join('\n'), 
     stderr: stderrLines.join('\n'), 
     returnValue: returnValue, 
-    files: [], 
+    files: outputFiles, 
     success: success, 
     executionTime: 0 
   };
