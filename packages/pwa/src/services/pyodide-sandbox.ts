@@ -73,14 +73,53 @@ async function loadPyodide() {
 async function executePython(code) {
   var returnValue = null;
   var success = false;
+  var stdoutLines = [];
+  var stderrLines = [];
+  
   try {
+    // Setup stdout/stderr capture if available
+    if (typeof pyodide.setStdout === 'function') {
+      pyodide.setStdout({ 
+        batched: function(texts) {
+          for (var i = 0; i < texts.length; i++) {
+            stdoutLines.push(texts[i]);
+          }
+        }
+      });
+    }
+    if (typeof pyodide.setStderr === 'function') {
+      pyodide.setStderr({ 
+        batched: function(texts) {
+          for (var i = 0; i < texts.length; i++) {
+            stderrLines.push(texts[i]);
+          }
+        }
+      });
+    }
+    
     returnValue = await pyodide.runPythonAsync(code);
     success = true;
   } catch (err) {
     console.debug('[PyodideWorker] Execution error: ' + (err.message !== undefined ? err.message : String(err)));
     throw err;
+  } finally {
+    // Reset stdout/stderr to prevent leaks
+    if (typeof pyodide.setStdout === 'function') {
+      pyodide.setStdout({ batched: function() {} });
+    }
+    if (typeof pyodide.setStderr === 'function') {
+      pyodide.setStderr({ batched: function() {} });
+    }
   }
-  return { stdout: '', stderr: '', returnValue: returnValue, files: [], success: success, executionTime: 0 };
+  
+  return { 
+    stdout: stdoutLines.join('\n'), 
+    stderr: stderrLines.join('\n'), 
+    returnValue: returnValue, 
+    files: [], 
+    success: success, 
+    executionTime: 0 
+  };
 }
 
 self.onmessage = async function(e) {

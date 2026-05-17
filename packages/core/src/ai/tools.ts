@@ -118,10 +118,11 @@ print(f"Processed {len(df)} rows")`,
         const startTime = Date.now();
         try {
           const result = await sandbox.execute(p.code as string);
+          const executionTime = Date.now() - startTime;
           const response: Record<string, unknown> = {
             stdout: result.stdout,
             stderr: result.stderr,
-            executionTime: result.executionTime,
+            executionTime: executionTime,
             success: result.success,
           };
           if (result.files.length > 0) {
