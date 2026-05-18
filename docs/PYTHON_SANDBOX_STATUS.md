@@ -34,6 +34,9 @@
 8. ✅ `IndexedDBWorkspaceStorage` — 严格隔离 + 清理旧文件
 9. ✅ `PreviewModal` — 应用内预览（图片/CSV/JSON/文本）
 10. ✅ `PreviewModal` — UTF-8 解码修复中文乱码
+11. ✅ `PythonExecutionResult` — 添加 `executionTimestamp` 字段
+12. ✅ `PythonResult.tsx` — 按 executionTimestamp 过滤，只显示本次执行产生的文件
+13. ✅ `AssistantMessage` — 预加载 workspace 图片，替换 Markdown 中的 URL 为 blob URL
 
 ### Test Results (2025-05-17)
 

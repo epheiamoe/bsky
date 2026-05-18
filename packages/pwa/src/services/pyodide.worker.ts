@@ -368,6 +368,7 @@ async function executePython(code: string) {
     files: outputFiles,
     success: success,
     executionTime: executionTime,
+    executionTimestamp: startTime,
   };
 }
 

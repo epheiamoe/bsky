@@ -166,6 +166,7 @@ async function executePython(code: string): Promise<PythonExecutionResult> {
     files,
     success,
     executionTime: Date.now() - startTime,
+    executionTimestamp: startTime,
   };
 }
 

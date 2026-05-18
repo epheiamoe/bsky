@@ -27,6 +27,7 @@ export interface PythonExecutionResult {
   files: PythonFile[];
   success: boolean;
   executionTime: number;
+  executionTimestamp: number; // Unix timestamp when execution started, for filtering recent files
 }
 
 export interface PythonSandboxEngine {

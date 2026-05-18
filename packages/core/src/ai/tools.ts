@@ -123,6 +123,7 @@ print(f"Processed {len(df)} rows")`,
             stdout: result.stdout,
             stderr: result.stderr,
             executionTime: executionTime,
+            executionTimestamp: result.executionTimestamp,
             success: result.success,
           };
           if (result.files.length > 0) {
@@ -141,6 +142,7 @@ print(f"Processed {len(df)} rows")`,
           return JSON.stringify({
             error: `Execution failed: ${err instanceof Error ? err.message : String(err)}`,
             executionTime: Date.now() - startTime,
+            executionTimestamp: startTime,
             success: false,
           });
         }

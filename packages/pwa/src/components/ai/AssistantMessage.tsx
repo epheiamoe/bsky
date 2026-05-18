@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18n } from '@bsky/app';
 import { Icon } from '../Icon.js';
-import { WorkspaceImage } from './WorkspaceImage.js';
 
 interface AssistantMessageProps {
   content: string;
@@ -14,6 +13,72 @@ interface AssistantMessageProps {
 export function AssistantMessage({ content, isError, compact }: AssistantMessageProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const [processedContent, setProcessedContent] = useState(content);
+
+  // Pre-load workspace images and replace URLs with blob URLs
+  useEffect(() => {
+    let cancelled = false;
+    const blobUrls: string[] = [];
+
+    const processImages = async () => {
+      try {
+        const { getDefaultWorkspaceStorage } = await import('@bsky/app');
+        const storage = getDefaultWorkspaceStorage();
+
+        // Extract all image references: ![alt](src)
+        const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+        let newContent = content;
+        let match;
+
+        while ((match = imageRegex.exec(content)) !== null) {
+          const [fullMatch, alt, src] = match;
+
+          // Skip external URLs (http/https)
+          if (src.startsWith('http://') || src.startsWith('https://')) {
+            continue;
+          }
+
+          // Extract filename from path (e.g., "/workspace/output/chart.png" → "chart.png")
+          const filename = src.split('/').pop() || src;
+          if (!filename) continue;
+
+          try {
+            // Get all files from workspace (across all sessions for AI references)
+            const allFiles = await storage.listFiles();
+            const file = allFiles.find(f =>
+              f.name === filename || f.name.toLowerCase() === filename.toLowerCase()
+            );
+
+            if (file && file.mimeType.startsWith('image/')) {
+              const blob = new Blob([file.data as BlobPart], { type: file.mimeType });
+              const url = URL.createObjectURL(blob);
+              blobUrls.push(url);
+
+              if (!cancelled) {
+                newContent = newContent.replace(fullMatch, `![${alt}](${url})`);
+              }
+            }
+          } catch (err) {
+            console.error('[AssistantMessage] Failed to load workspace image:', filename, err);
+          }
+        }
+
+        if (!cancelled) {
+          setProcessedContent(newContent);
+        }
+      } catch (err) {
+        console.error('[AssistantMessage] Failed to process images:', err);
+      }
+    };
+
+    processImages();
+
+    return () => {
+      cancelled = true;
+      // Clean up blob URLs
+      blobUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [content]);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -30,21 +95,8 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
           : 'bg-surface border-border'
       } ${compact ? 'px-2.5 py-1.5 max-w-[90%]' : 'px-3 py-2 max-w-[85%]'}`} role={isError ? 'alert' : undefined}>
         <div className={`text-text-primary markdown-body ${compact ? 'text-[13px]' : 'text-sm'}`}>
-          <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
-            components={{
-              img: ({ src, alt }) => {
-                // Check if this is a workspace image reference
-                // Supports: ![alt](filename.png) or ![alt](/workspace/data/filename.png)
-                if (src && (src.startsWith('/workspace/') || !src.startsWith('http'))) {
-                  return <WorkspaceImage src={src} alt={alt} />;
-                }
-                // Regular external image
-                return <img src={src} alt={alt} className="max-w-full h-auto rounded-lg" />;
-              }
-            }}
-          >
-            {content}
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {processedContent}
           </ReactMarkdown>
         </div>
         {!isError && content && (

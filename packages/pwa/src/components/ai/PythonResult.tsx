@@ -62,7 +62,14 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
   const hasStderr = typeof parsed.stderr === 'string' && parsed.stderr.length > 0;
   const hasError = typeof parsed.error === 'string' && parsed.error.length > 0;
   const hasExecutionTime = typeof parsed.executionTime === 'number';
-  const hasFiles = workspaceFiles.length > 0;
+
+  // Filter files to only show those created during/after this execution
+  const executionTimestamp = typeof parsed.executionTimestamp === 'number' ? parsed.executionTimestamp : 0;
+  const recentFiles = workspaceFiles.filter(f => {
+    const fileTime = new Date(f.uploadedAt).getTime();
+    return fileTime >= executionTimestamp - 5000; // 5s tolerance for file save delay
+  });
+  const hasFiles = recentFiles.length > 0;
 
   // Error state
   if (!success) {
@@ -73,7 +80,7 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
         {hasStderr && <StderrBlock stderr={parsed.stderr} />}
         {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
         {loadError && <div className="text-xs text-red-400">{loadError}</div>}
-        {hasFiles && <FileList files={workspaceFiles} />}
+        {hasFiles && <FileList files={recentFiles} />}
         {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={false} />}
       </div>
     );
@@ -85,7 +92,7 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
       {hasStderr && <StderrBlock stderr={parsed.stderr} />}
       {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
       {loadError && <div className="text-xs text-red-400">{loadError}</div>}
-      {hasFiles && <FileList files={workspaceFiles} />}
+      {hasFiles && <FileList files={recentFiles} />}
       {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={true} />}
     </div>
   );

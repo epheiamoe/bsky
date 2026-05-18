@@ -144,6 +144,7 @@ export class NodePythonSandbox implements PythonSandboxEngine {
           files,
           success: code === 0 && !killed,
           executionTime,
+          executionTimestamp: startTime,
         });
       });
 
