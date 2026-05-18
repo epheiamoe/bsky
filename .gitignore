@@ -10,5 +10,7 @@ bsky-tui.config.json
 Thumbs.db
 AGENTS.local.md
 
-.wiki/temp
-.wiki/sessions/
+.wiki/
+temp/
+tmp/
+public/
