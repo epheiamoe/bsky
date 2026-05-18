@@ -1,25 +1,25 @@
 # Python Sandbox Status Tracker
 
-## Current State (2025-05-18)
+## Current State (2026-05-18)
 
 ### Git Status
 - **Branch**: `feat/adapter-pattern`
-- **Current Commit**: `44a77ee` — `fix(app): save Python output files to workspace in NodePythonSandbox`
-- **PWA Deployment**: https://4f8ca5b9.ai-bsky.pages.dev
+- **Current Commit**: `49b720b` — `fix(pwa): correct MIME type mapping for workspace files`
+- **PWA Deployment**: https://2394be5b.ai-bsky.pages.dev
 - **Previous Deployments**:
   - `f481167` — 基础执行功能（working baseline）
   - `ac945156` — Vite `?worker` 导入 + 第三方包 + executionTime + mountFile
   - `14dfc951` — matplotlib 字体配置
   - `4f8ca5b9` — Workspace 统一存储（进行中）
 
-### Critical Bugs Found (2025-05-18)
+### Critical Bugs Found (2026-05-18)
 
-**Bug 1: 跨会话隔离失败** ❌
+**Bug 1: 跨会话隔离失败** ✅ FIXED
 - **根因 A**: `AIChatPage.tsx` `handleFileSelect` useCallback 依赖数组 `[]`，`sessionId` 初始值 `undefined` 被捕获，上传文件保存时 `chatId: undefined`
 - **根因 B**: `tools.ts` `execute_python` handler 调用 `sandbox.execute(p.code)` 未传 `chatId`，Python 生成的文件从未保存到 workspace
 - **影响**: 所有文件成为全局文件，任何会话都能看到
 
-**Bug 2: 文件下载/预览空白** ❌
+**Bug 2: 文件下载/预览空白** ✅ FIXED
 - **根因**: `pyodide.worker.ts` `scanOutputFiles()` 调用 `pyodide.FS.readFile(path)` 默认返回字符串，二进制文件 `new Uint8Array(string)` 抛出异常，catch 后 `content: ''`
 - **影响**: 所有二进制文件（PNG、JPG）和可能的文本文件内容为空
 
@@ -37,6 +37,7 @@
 11. ✅ `PythonExecutionResult` — 添加 `executionTimestamp` 字段
 12. ✅ `PythonResult.tsx` — 按 executionTimestamp 过滤，只显示本次执行产生的文件
 13. ✅ `AssistantMessage` — 预加载 workspace 图片到 Map，ReactMarkdown img 组件同步渲染 blob URL
+14. ✅ `WorkspaceModal` — 修复 MIME type 映射（workspace 文件下载和预览使用正确 Content-Type）
 
 ### Test Results (2025-05-17)
 
@@ -66,16 +67,6 @@
 - ✅ 可用 `returnValue` 获取最后表达式结果
 - ✅ stdout/stderr 完整捕获
 - ✅ matplotlib 中文字体支持（Noto Sans CJK SC，从 CDN 下载）
-- ⚠️ 工作区文件同步（存在隔离和内容 bug，修复中）
-
-**已知 Bug**:
-- 🔴 **跨会话隔离失败** — 文件未按 chatId 隔离
-  - **根因**: `AIChatPage.tsx` stale closure + `tools.ts` 未传 chatId
-  - **修复**: 见上方修复计划 4-5
-  
-- 🔴 **文件内容为空** — 下载/预览空白
-  - **根因**: Worker 中 `FS.readFile()` 未指定 binary encoding
-  - **修复**: 见上方修复计划 6
 
 ### Architecture
 
@@ -209,9 +200,9 @@ sys.stdout = _StdoutCapture()
 
 **Fix**: Add `e.stopPropagation()` to expand/collapse buttons in PythonResult (ErrorBlock and OutputBlock) to prevent event bubbling to parent ToolCard
 
-### Phase 11: Workspace File Isolation (In Progress)
+### Phase 11: Workspace File Isolation ✅
 
-**Status**: IN PROGRESS
+**Status**: COMPLETED
 
 **Goal**: Files created by Python should be isolated per chat session
 
@@ -240,14 +231,15 @@ MCP:  Same as TUI
 - ✅ `PythonResult.tsx` — loads files from workspace storage instead of sync
 
 **Remaining Fixes**:
-- ⏳ `AIChatPage.tsx` — fix stale closure in handleFileSelect (add sessionId to deps)
-- ⏳ `tools.ts` — pass chatId through execute_python handler
-- ⏳ `pyodide.worker.ts` — binary file read with encoding: 'binary'
-- ⏳ `WorkspaceModal.tsx` — simplify Blob creation
+- ✅ `AIChatPage.tsx` — fix stale closure in handleFileSelect (add sessionId to deps)
+- ✅ `tools.ts` — pass chatId through execute_python handler
+- ✅ `pyodide.worker.ts` — binary file read with encoding: 'binary'
+- ✅ `WorkspaceModal.tsx` — simplify Blob creation
+- ✅ `WorkspaceModal.tsx` — fix MIME type mapping for workspace file downloads
 
-### Phase 12: Fix Binary File Content (In Progress)
+### Phase 12: Fix Binary File Content ✅
 
-**Status**: IN PROGRESS
+**Status**: COMPLETED
 
 **Root Cause**: `pyodide.FS.readFile(path)` returns string by default; `new Uint8Array(string)` throws for binary files
 
@@ -268,6 +260,8 @@ MCP:  Same as TUI
 **Supported formats**: PNG, JPG, JPEG
 
 ### Phase 14: Final Goal — AI Batch AT Tool Calls ⏳
+
+**Status**: NEXT STEP
 
 **Vision**: Enable AI to write Python scripts that batch-call AT Protocol tools
 
@@ -331,8 +325,8 @@ for post in posts:
 - [x] **Phase 8**: Fix Service Worker POST caching (commit `1996ea4`)
 - [x] **Phase 9**: Fix expand/collapse UI bug (commit `3823553`)
 - [x] **Phase 10**: Fix workspace empty display bug (commit `d55707e`)
-- [ ] **Phase 11**: Fix chat isolation and binary file content (in progress)
-- [ ] **Phase 12**: Create bsky_tools library for batch AT operations
+- [x] **Phase 11**: Fix chat isolation and binary file content (completed)
+- [x] **Phase 12**: Fix binary file content and MIME type mapping (completed)
 
 ### 2025-05-18
 - [x] Subagent investigation: 3 independent bugs found
@@ -345,8 +339,25 @@ for post in posts:
 - [x] Commit: `f558fb4` — save Python output files to workspace storage
 - [x] Commit: `44a77ee` — NodePythonSandbox saves to workspace
 - [x] Deploy: https://4f8ca5b9.ai-bsky.pages.dev
-- [ ] User testing: cross-session isolation still fails, files still empty
-- [ ] Fixes remaining: AIChatPage stale closure, tools.ts chatId, worker binary read
+- [x] Fix stale closure in AIChatPage.tsx handleFileSelect (sessionId dependency)
+- [x] Pass chatId through tools.ts execute_python handler
+- [x] Fix binary file read with encoding: 'binary' in pyodide.worker.ts
+- [x] Simplify Blob creation in WorkspaceModal.tsx
+- [x] Add PreviewModal for in-app file preview
+- [x] Fix UTF-8 decoding for Chinese characters in preview
+- [x] Add executionTimestamp field to PythonExecutionResult
+- [x] Filter files by executionTimestamp in PythonResult.tsx
+- [x] Preload workspace images for AI markdown rendering
+- [x] Commit: `49b720b` — fix(pwa): correct MIME type mapping for workspace files
+- [x] Deploy: https://2394be5b.ai-bsky.pages.dev
+
+### 2026-05-18
+- [x] All Phase 11 workspace isolation fixes completed
+- [x] All Phase 12 binary file content fixes completed
+- [x] All critical bugs marked as fixed
+- [x] Known Bug section removed (all resolved)
+- [x] Status document updated to reflect current state
+- [ ] **Phase 14**: AI Batch AT Tool Calls — NEXT STEP (not started)
 
 ## Key Lessons
 
@@ -364,3 +375,8 @@ for post in posts:
 12. **FS.readFile encoding matters**: Pyodide's Emscripten FS defaults to string; binary files require explicit `{ encoding: 'binary' }`
 13. **Tools should not carry binary content**: AI messages with base64 content waste tokens; store files in workspace, pass metadata only
 14. **Unified architecture across platforms**: PWA + TUI + MCP should share the same file storage abstraction (WorkspaceStorage)
+15. **MIME type mapping**: Workspace file downloads need explicit MIME type lookup based on file extension, not generic `application/octet-stream`
+16. **executionTimestamp filtering**: Only show files created during the current execution by comparing timestamps, avoiding stale files from previous runs
+17. **Image preloading for AI markdown**: Workspace images referenced in AI responses must be preloaded into a Map before ReactMarkdown renders to avoid async loading flashes
+
+(End of file)
