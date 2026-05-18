@@ -9,19 +9,19 @@
 | `AGENTS.md` | 架构原则、安全红线、命令参考 |
 | `docs/ARCHITECTURE.md` | 系统架构（含 v0.13.9 ApiAdapter 模式） |
 | `docs/PACKAGES.md` | 各包职责与文件清单 |
-| `docs/HOOKS.md` | 所有 hook 签名 |
-| `docs/AI_SYSTEM.md` | AI 集成架构（ApiAdapter + 7 providers） |
+| `docs/hooks/index.md` | 所有 hook 分类索引 |
+| `docs/ai/index.md` | AI 集成架构（ApiAdapter + 7 providers） |
 | `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范（必须用像素值） |
 | `docs/KEYBOARD.md` | TUI 快捷键冲突表 |
 | `docs/MCP.md` | MCP 服务器实现记录 |
 | `docs/DM.md` | DM 私信 API/鉴权/模型 |
 | `CHANGELOG.md` | 完整版本历史 |
 
-> 其余文档见 `docs/archive/`。详细教训见 `docs/LESSONS.md`（56 课）。
+> 其余文档见 `docs/archive/`。详细教训见 `docs/LESSONS.md`（69 课分类索引 → `docs/lessons/*.md`）。
 
 ## 当前版本
 
-**v0.14.0** — Python 沙箱 + 工作区：`execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）。支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区（IndexedDB/PWA 或文件系统/TUI）。inline Blob URL Worker，CDN fallback，60 秒超时，实时进度汇报。结果以代码卡片化展示（stdout/stderr/CSV/图片/JSON）。
+**v0.14.0** — Python 沙箱 + 工作区：`execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）。支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区（IndexedDB/PWA 或文件系统/TUI）。Vite `?worker` 导入的独立 Worker chunk（替代 inline Blob URL），jsdelivr CDN，多阶段初始化（downloading/loading/packages/ready）。60 秒超时，实时进度汇报。结果以代码卡片化展示（stdout/stderr/CSV/图片/JSON）。
 
 **v0.13.9** — API Adapter 模式：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个提供商（OpenAI/xAI/Kimi/OpenRouter）。`fixedParams`/`supportsReasoningEffort` 元数据。`reasoningEffort` 支持。Welcome 设置 6 厂商展示卡。
 
