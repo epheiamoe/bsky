@@ -1,54 +1,100 @@
-# Bluesky TUI Documentation
+# Bluesky Client Documentation
 
-Monorepo documentation for the Bluesky Terminal UI Client with AI integration.
+> Dual-interface Bluesky client: PWA (browser) + TUI (terminal) with AI integration.
 
 ## Quick Navigation
 
 | Doc | Content |
 |-----|---------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Overall architecture, layer diagram, dependency flow |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Overall architecture, monorepo layers, dependency flow |
 | [PACKAGES.md](./PACKAGES.md) | Package descriptions, key files, exports, dependencies |
-| [NAVIGATION.md](./NAVIGATION.md) | AppView state machine, goTo/goBack/goHome, keyboard shortcuts |
-| [HOOKS.md](./HOOKS.md) | React hooks reference, store pattern, key signatures |
-| [AI_SYSTEM.md](./AI_SYSTEM.md) | AIAssistant class, 31 tools, thread flattening, prompts |
-| [CHAT_STORAGE.md](./CHAT_STORAGE.md) | ChatStorage interface, FileChatStorage, PWA IndexedDB plan |
-| [PWA_GUIDE.md](./PWA_GUIDE.md) | How to build PWA: what to reuse, what to build new, component mapping |
-| [KEYBOARD.md](./KEYBOARD.md) | Centralized keyboard dispatch, focus management, handler priority |
-| [ENV.md](./ENV.md) | Environment variables (.env and PWA config) |
-| [API_CLIENT.md](./API_CLIENT.md) | BskyClient reference: all endpoints, auth, post structure |
-| [TERMINOLOGY.md](./TERMINOLOGY.md) | Terms and naming conventions (主题帖, 回复, 讨论串) |
-| [TESTING.md](./TESTING.md) | Test framework, test files, patterns, running tests |
-| [USER_ISSUSES.md](在这里，我会记录我遇到的不严重但影响体验的问题，请你查看，修复对应ISSUSE 后请标记，类似github 那样。你可以在认为需要的时候查看它，提示：检查这个文件的末尾即可，因为新问题会显示在末尾。)
+| [CONTEXT.md](./CONTEXT.md) | Context recovery guide: versions, status, quick commands, dev rules |
+| [AGENTS.md](../AGENTS.md) | AI agent guide: safety rules, quick start, architecture |
+
+### AI System
+| Doc | Content |
+|-----|---------|
+| [ai/index.md](./ai/index.md) | AI architecture overview, section index |
+| [ai/adapter.md](./ai/adapter.md) | ApiAdapter pattern, Chat vs Responses API |
+| [ai/providers.md](./ai/providers.md) | 7 provider configs, ModelInfo, fixedParams |
+| [ai/assistant.md](./ai/assistant.md) | AIAssistant class, AIConfig |
+| [ai/tools.md](./ai/tools.md) | 33 AI tools architecture |
+| [ai/streaming.md](./ai/streaming.md) | SSE streaming, token delivery |
+| [ai/reasoning.md](./ai/reasoning.md) | Reasoning effort, thinking mode |
+| [ai/features.md](./ai/features.md) | Translation, Polish draft, single-turn functions |
+| [AI_CONTEXT.md](./AI_CONTEXT.md) | AI context injection mechanism |
+
+### Hooks
+| Doc | Content |
+|-----|---------|
+| [hooks/index.md](./hooks/index.md) | Hooks overview, cross-reference, store pattern |
+| [hooks/auth.md](./hooks/auth.md) | Authentication |
+| [hooks/timeline.md](./hooks/timeline.md) | Timeline, posts, threads |
+| [hooks/compose.md](./hooks/compose.md) | Compose, drafts |
+| [hooks/ai-chat.md](./hooks/ai-chat.md) | AI chat, chat history |
+| [hooks/social.md](./hooks/social.md) | Profile, search, notifications, bookmarks |
+| [hooks/messaging.md](./hooks/messaging.md) | DM conversations |
+| [hooks/lists.md](./hooks/lists.md) | Lists management |
+| [hooks/ui.md](./hooks/ui.md) | Navigation, virtualization, scroll, search history |
+| [hooks/widgets.md](./hooks/widgets.md) | Widget system, post actions |
+| [hooks/translation.md](./hooks/translation.md) | Translation, i18n |
+
+### Feature Docs
+| Doc | Content |
+|-----|---------|
+| [DM.md](./DM.md) | Direct messages API, auth, models |
+| [MCP.md](./MCP.md) | MCP server implementation |
+| [ATPLAY.md](./ATPLAY.md) | AT Play experimental features |
+| [PDS.md](./PDS.md) | Third-party PDS support |
+| [PYTHON_SANDBOX_STATUS.md](./PYTHON_SANDBOX_STATUS.md) | Python sandbox status tracker |
+| [WORKSPACE.md](./WORKSPACE.md) | Workspace file management |
+| [SCROLL.md](./SCROLL.md) | Virtual scrolling + scroll restore |
+| [KEYBOARD.md](./KEYBOARD.md) | TUI keyboard shortcuts |
+| [DESIGN.md](./DESIGN.md) | PWA design system |
+| [PWA_GUIDE.md](./PWA_GUIDE.md) | PWA component mapping |
+| [TODO.md](./TODO.md) | Feature roadmap, completion status |
+| [CHANGELOG.md](../CHANGELOG.md) | Version history |
+
+### Lessons & Issues
+| Doc | Content |
+|-----|---------|
+| [LESSONS.md](./LESSONS.md) | 69 lessons learned, categorized index |
+| [lessons/](./lessons/) | Categorized lesson files |
+| [USER_ISSUSES.md](./USER_ISSUSES.md) | Known issues log |
+| [archive/](./archive/) | Archived docs |
 
 ## Project Structure
 
 ```
 bsky/
 ├── packages/
-│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 31 tools.
-│   ├── app/         Layer 1: React hooks + pure stores. PWA-ready.
-│   └── tui/         Layer 2: Ink/React terminal UI.
+│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 33 tools.
+│   ├── app/         Layer 1: React hooks + pure stores. Shared by PWA/TUI.
+│   ├── pwa/         Layer 2a: Browser PWA (React DOM + Tailwind).
+│   ├── tui/         Layer 2b: Terminal UI (Ink).
+│   └── mcp/         MCP server (npm: @epheiamoe/bsky-mcp).
+├── docs/            Documentation.
 ├── contracts/       JSON Schemas, system prompts.
-├── docs/            Documentation (this directory).
 ├── .env.example
-├── README.md
-└── TEST_REPORT.md
+└── README.md
 ```
 
 ## Key Architectural Decisions
 
 1. **Core has zero UI dependencies** — can be used from any framework
-2. **App layer hooks are PWA-ready** — PWA only needs to write render components
-3. **Single keyboard handler** — Ink's `useInput` in App.tsx, no stdin conflicts
-4. **ChatStorage interface** — TUI uses JSON files, PWA implements IndexedDB
-5. **All tests use real API calls** — no mocks, 29 tests all pass
-6. **Translation supports 7 languages** — configured via `TRANSLATE_TARGET_LANG`
+2. **App layer hooks are shared** — PWA and TUI use the same hooks
+3. **Single source of truth** — Business logic lives once in `core` + `app`
+4. **ChatStorage interface** — PWA uses IndexedDB, TUI uses JSON files
+5. **All tests use real API calls** — no mocks
+6. **33 AI tools** — 27 read + 1 sandbox + 6 write operations
 
 ## Tech Stack
 
 - TypeScript 5.x strict mode
 - pnpm workspace monorepo
-- Ink 5 (React-based TUI)
+- React 19 + Tailwind CSS (PWA)
+- Ink 5 (TUI)
 - ky (HTTP client)
-- DeepSeek v3 (AI via OpenAI-compatible API)
+- DeepSeek / OpenAI / xAI / Mistral / Kimi (AI providers)
 - Vitest (test runner)
+- Pyodide WASM (Python sandbox in browser)

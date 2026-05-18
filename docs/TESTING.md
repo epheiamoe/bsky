@@ -4,22 +4,19 @@
 
 - **Runner**: Vitest 3.x
 - **Config**: `packages/core/vitest.config.ts` (globals, 60s timeout)
-- **All tests are integration tests**: Real Bluesky API + real DeepSeek API calls. No mocks.
+- **All tests are integration tests**: Real Bluesky API + real AI API calls. No mocks.
 
 ## Running Tests
 
 ```bash
 # All tests
-pnpm test
+cd packages/core && npx vitest run --config vitest.config.ts
 
 # Specific file
-pnpm --filter @bsky/core test tests/ai_integration.test.ts
-
-# E2E suite
-pnpm --filter @bsky/core test:e2e
+npx vitest run tests/ai_integration.test.ts
 
 # Watch mode
-pnpm --filter @bsky/core test:watch
+npx vitest --watch
 ```
 
 ## Test Files
@@ -30,6 +27,7 @@ pnpm --filter @bsky/core test:watch
 | `tests/feed.test.ts` | 8 | Create post, getPostThread, flatten, search, image upload/download |
 | `tests/ai_integration.test.ts` | 8 | Tool calling, search via AI, profile via AI, translation, polish, guiding questions |
 | `tests/e2e.test.ts` | 10 | Full flow: auth → post → thread → image → AI tool call → translation → polish → profile → timeline → notifications → guiding questions |
+| `tests/list.test.ts` | 5 | List CRUD, members, mute/unmute |
 
 ## Test Patterns
 
