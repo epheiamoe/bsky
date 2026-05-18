@@ -2,6 +2,20 @@ import type { PythonSandboxEngine, PythonExecutionResult } from '@bsky/core';
 import { getDefaultWorkspaceStorage } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
+const MIME_TYPE_MAP: Record<string, string> = {
+  'png': 'image/png',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'csv': 'text/csv',
+  'json': 'application/json',
+  'txt': 'text/plain',
+  'md': 'text/markdown',
+};
+
+function getMimeType(type: string): string {
+  return MIME_TYPE_MAP[type] || 'application/octet-stream';
+}
+
 /**
  * PyodideSandbox — PWA implementation of PythonSandboxEngine via Web Worker.
  *
@@ -164,9 +178,7 @@ export class PyodideSandbox implements PythonSandboxEngine {
                 }
               }
               const id = `py-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-              const mimeType = isText
-                ? `text/${file.type === 'md' ? 'markdown' : file.type}`
-                : 'application/octet-stream';
+              const mimeType = getMimeType(file.type);
               await storage.saveFile({
                 id,
                 name: file.name,

@@ -108,12 +108,23 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
     return 'file-text';
   };
 
-  const canPreview = (mimeType: string): boolean => {
-    return mimeType.startsWith('image/') ||
-           mimeType.startsWith('text/') ||
-           mimeType.includes('json') ||
-           mimeType.includes('csv') ||
-           mimeType.includes('markdown');
+  const canPreview = (mimeType: string, filename?: string): boolean => {
+    // Check MIME type
+    if (mimeType.startsWith('image/') ||
+        mimeType.startsWith('text/') ||
+        mimeType.includes('json') ||
+        mimeType.includes('csv') ||
+        mimeType.includes('markdown')) {
+      return true;
+    }
+    // Fallback: check file extension for old files with incorrect MIME type
+    if (filename) {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      if (ext && ['png', 'jpg', 'jpeg', 'csv', 'json', 'txt', 'md', 'markdown'].includes(ext)) {
+        return true;
+      }
+    }
+    return false;
   };
 
   return (
@@ -188,7 +199,7 @@ export function WorkspaceModal({ open, onClose, chatId }: WorkspaceModalProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    {canPreview(file.mimeType) && (
+                    {canPreview(file.mimeType, file.name) && (
                       <button
                         onClick={() => handlePreview(file)}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-primary hover:bg-surface transition-colors"
