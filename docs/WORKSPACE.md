@@ -28,7 +28,7 @@ AIChatPage 消息引用: [文件: /workspace/data/filename.csv]
 AI 调用 execute_python(code)
     │
     ▼
-PyodideSandbox (PWA)            ← Blob URL inline Worker
+PyodideSandbox (PWA)            ← Vite ?worker Web Worker
     │
     ├─ Worker 加载 Pyodide from CDN
     ├─ 安装 pandas, numpy, matplotlib
@@ -54,7 +54,7 @@ PythonResult 组件 (PWA)
 |------|------|
 | `packages/app/src/services/workspaceStorage.ts` | WorkspaceStorage 接口 + FileWorkspaceStorage (TUI) + 工厂 |
 | `packages/pwa/src/services/indexeddb-workspace-storage.ts` | IndexedDBWorkspaceStorage (PWA) |
-| `packages/pwa/src/services/pyodide-sandbox.ts` | PyodideSandbox — inline Web Worker 实现 |
+| `packages/pwa/src/services/pyodide-sandbox.ts` | PyodideSandbox — Web Worker (Vite ?worker) |
 | `packages/pwa/src/components/WorkspaceModal.tsx` | 工作区文件管理弹窗 |
 | `packages/pwa/src/components/ai/PythonResult.tsx` | Python 执行结果渲染 |
 | `packages/core/src/ai/python-sandbox.ts` | PythonSandboxEngine 接口定义 |
@@ -64,15 +64,16 @@ PythonResult 组件 (PWA)
 
 ## Worker 实现细节
 
-### Inline Blob Worker
+### Vite ?worker Import
 
-为避免 `.ts` 文件在 CDN 上被错误解析为 `video/mp2t` MIME 类型，Worker 代码以字符串常量形式**完全内联**在主 bundle 中，通过 `Blob URL` 创建：
+Worker 代码放在独立文件 `pyodide.worker.ts` 中，通过 Vite 的 `?worker` 语法导入：
 
 ```typescript
-const blob = new Blob([WORKER_CODE], { type: 'application/javascript' });
-const url = URL.createObjectURL(blob);
-this.worker = new Worker(url, { type: 'module' });
+import PyodideWorker from './pyodide.worker.ts?worker';
+const worker = new PyodideWorker();
 ```
+
+Vite 自动将 Worker 代码打包为独立 chunk，无需内联或 Blob URL。Classic Worker 模式（非 module）用于兼容 UMD 格式的 Pyodide 脚本。
 
 ### CDN Fallback
 
@@ -190,7 +191,7 @@ Worker 发送 `initProgress` 消息，UI 实时更新横幅：
 ## 已知问题 & 限制
 
 1. **首次加载慢**：Pyodide WASM ~5MB + stdlib ~6MB + packages，首次初始化需 10-30 秒
-2. **TUI 未实现**：当前仅 PWA 支持 Python 沙箱（TUI 需 Node.js Pyodide 或系统 Python）
+2. **TUI 已实现**：TUI 和 MCP 使用 `NodePythonSandbox`（`child_process` + 系统 Python），见 `packages/app/src/services/node-python-sandbox.ts`
 3. **Worker CSP**：极少数企业环境可能阻止 `blob:` URL Worker
 4. **内存限制**：WASM 内存受限，处理 >100MB 数据可能 OOM
 
@@ -198,7 +199,7 @@ Worker 发送 `initProgress` 消息，UI 实时更新横幅：
 
 ## 未来改进
 
-- [ ] TUI Python 沙箱支持（Pyodide Node.js 或系统 Python）
+- [x] TUI Python 沙箱支持（NodePythonSandbox via child_process）
 - [ ] 本地 Pyodide 缓存（IndexedDB 缓存 WASM 和包）
 - [ ] 更多预装包（scipy, scikit-learn）
 - [ ] 交互式 Matplotlib 输出（widget 模式）

@@ -100,6 +100,13 @@ pnpm -r typecheck
 8. **Commit → Build → Deploy**: Commit before build for correct `__COMMIT_HASH__`
 9. **PDS**: `chatKy` direct to `api.bsky.chat` + session JWT. No PDS proxy (returns 501)
 10. **Widget**: `WidgetPanel` provides header; widget provides content only. All `toggleWidget()` calls persist via `_onWidgetToggle` → `saveAppConfig()`
+11. **Documentation**: When changes affect documented behavior, update relevant docs immediately:
+    - Code changes that alter hook signatures → update `docs/hooks/`
+    - New/modified AI tools → update `docs/ai/tools.md`
+    - New providers or adapter changes → update `docs/ai/providers.md` or `docs/ai/adapter.md`
+    - Architecture changes → update `docs/ARCHITECTURE.md`
+    - If a doc is actively changing, add `[WIP]` or `[v0.X.0+]` at the top
+    - Outdated docs that are superseded should be moved to `docs/archive/`
 
 ## AI Guidance
 
