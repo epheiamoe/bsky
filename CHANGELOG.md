@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.14.0] — Unreleased
+## [0.15.0] — Unreleased
+
+### Added
+
+- **bsky_tools Python Library (Phase 14)**: AI can batch-call Bluesky API methods from Python sandbox for efficient data processing and bulk operations.
+  - **33 API Methods**: All existing tool handlers exposed as Python functions with identical response format
+  - **Fields Filtering**: `fields` parameter to filter JSON responses and reduce token usage
+  - **PWA Bridge**: Synchronous XHR-based API client running in Web Worker (27 read operations)
+  - **TUI/MCP Bridge**: JSON-RPC over stdin/stdout with pre-execution AST analysis
+  - **Write Operation Confirmation**: AST analysis detects write calls, requires pre-execution user confirmation
+  - **Dynamic Call Rejection**: `getattr(bsky_tools, ...)` patterns blocked for security
+- **Core API Definitions**: `bsky-tools-api.ts` (TypeScript interfaces) + `bsky-tools-definitions.ts` (metadata + Python wrapper generation + AST analysis)
+- **User Documentation**: `docs/BSKY_TOOLS.md` — complete API reference, examples, platform differences, security notes
+
+### Changed
+
+- **AI System Prompt**: Added comprehensive bsky_tools usage guide with method list, examples, and fields parameter explanation
+- **execute_python Tool Description**: Added bsky_tools library documentation for AI context
+
+## [0.14.0] — 2026-05-19
 
 ### Added
 
