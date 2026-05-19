@@ -710,7 +710,25 @@ class BskyTools:
     def edit_list_members(self, list_uri: str, subject: str, action: str = 'add', fields: Optional[List[str]] = None):
         return self._call('edit_list_members', list_uri, subject, action)
 
-bsky_tools = BskyTools()
+# Create singleton instance
+_bsky_tools_instance = BskyTools()
+
+# Register as a proper Python module so 'import bsky_tools' works
+import types
+_bsky_tools_module = types.ModuleType('bsky_tools')
+_bsky_tools_module.__dict__.update(globals())
+_bsky_tools_module.bsky_tools = _bsky_tools_instance
+_bsky_tools_module.BskyTools = BskyTools
+_bsky_tools_module.BskyToolsError = BskyToolsError
+# Add convenience: from bsky_tools import search_posts, get_profile
+for _name in dir(_bsky_tools_instance):
+    if not _name.startswith('_'):
+        setattr(_bsky_tools_module, _name, getattr(_bsky_tools_instance, _name))
+
+sys.modules['bsky_tools'] = _bsky_tools_module
+
+# Also keep global variable for backward compatibility
+bsky_tools = _bsky_tools_instance
 `;
 
 async function executePython(code: string, enableWrite: boolean = false) {
@@ -748,14 +766,17 @@ async function executePython(code: string, enableWrite: boolean = false) {
       ].join('\n')
     );
 
-    // Inject bsky_tools if auth is available
-    if (authConfig) {
-      // Recreate bridge with enableWrite flag if needed
-      const bridge = createBskyToolsBridge(authConfig, enableWrite);
-      console.debug('[PyodideWorker] Injecting bsky_tools (enableWrite:', enableWrite, ')...');
-      pyodide.globals.set('bskyToolsBridge', bridge);
+    // Inject bsky_tools — always do this so `import bsky_tools` works
+    // If auth is not available yet, the module exists but methods will raise BskyToolsError
+    try {
+      if (authConfig) {
+        const bridge = createBskyToolsBridge(authConfig, enableWrite);
+        pyodide.globals.set('bskyToolsBridge', bridge);
+      }
       await pyodide.runPythonAsync(BSKY_TOOLS_PYTHON_WRAPPER);
-      console.debug('[PyodideWorker] bsky_tools injected successfully');
+      console.debug('[PyodideWorker] bsky_tools module registered');
+    } catch (injectErr) {
+      console.warn('[PyodideWorker] Failed to inject bsky_tools:', injectErr);
     }
 
     // Execute user code
