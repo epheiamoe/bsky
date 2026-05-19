@@ -28,6 +28,33 @@ export class FileWorkspaceStorage implements WorkspaceStorage {
     if (!fs.existsSync(this.dir)) {
       fs.mkdirSync(this.dir, { recursive: true });
     }
+    // Clean up legacy files without chatId (orphaned from pre-isolation era)
+    this.cleanupOrphanedFiles();
+  }
+
+  private cleanupOrphanedFiles(): number {
+    try {
+      const files = fs.readdirSync(this.dir).filter(f => f.endsWith('.json'));
+      let removed = 0;
+      for (const f of files) {
+        const id = f.replace('.json', '');
+        try {
+          const metaRaw = fs.readFileSync(path.join(this.dir, f), 'utf-8');
+          const meta = JSON.parse(metaRaw);
+          if (!meta.chatId || meta.chatId === '') {
+            fs.unlinkSync(path.join(this.dir, f));
+            try { fs.unlinkSync(this._dataPath(id)); } catch {}
+            removed++;
+          }
+        } catch { /* skip corrupted files */ }
+      }
+      if (removed > 0) {
+        console.log(`[FileWorkspaceStorage] Cleaned up ${removed} orphaned files (no chatId)`);
+      }
+      return removed;
+    } catch {
+      return 0;
+    }
   }
 
   private _metaPath(id: string): string {
@@ -79,8 +106,8 @@ export class FileWorkspaceStorage implements WorkspaceStorage {
         const id = f.replace('.json', '');
         const file = await this.loadFile(id);
         if (!file) continue;
-        // If chatId is provided, only include files matching this chat or global files (no chatId)
-        if (chatId && file.chatId && file.chatId !== chatId) continue;
+        // Strict isolation: if chatId is provided, only include files matching this chat
+        if (chatId && file.chatId !== chatId) continue;
         result.push(file);
       }
       result.sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
