@@ -1,11 +1,9 @@
 # Phase 14: AI Batch AT Tool Calls — Implementation Plan
 
-> **Status**: ⚠️ IMPLEMENTED — v0.15.0 deployed, **critical bugs found, refactor planned**
-> **Completed**: 2026-05-19
+> **Status**: ⚠️ IN DEVELOPMENT — Basic implementation complete, **critical bugs found, refactor required before merge**
 > **Branch**: feat/phase14-bsky-tools
-> **Merged to main**: Pending PR (waiting for refactor)
 > **Estimated effort**: 3-5 days initial + 2-3 days refactor
-> **Depends on**: v0.14.0 Python sandbox completion (Phase 1-13.5 ✅)
+> **Depends on**: Python sandbox (Phase 1-13.5 ✅)
 > **Document created**: 2026-05-19
 > **Last updated**: 2026-05-20
 > **Context recovery note**: If this doc is out of date, check `docs/PYTHON_SANDBOX_STATUS.md` for current status

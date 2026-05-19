@@ -1,10 +1,10 @@
 # Phase 14 Refactor Plan: Unify API Handler Layer (v0.16.0)
 
 > **Status**: 📋 PLANNED  
-> **Target Version**: v0.16.0  
+> **Target**: Complete before merging feat/phase14-bsky-tools to main  
 > **Estimated Effort**: 2-3 days  
-> **Priority**: 🔴 Critical — Blocks stable release  
-> **Depends on**: v0.15.0 hotfixes (current)  
+> **Priority**: 🔴 Critical — Blocks merge to main  
+> **Depends on**: Current branch (feat/phase14-bsky-tools)  
 > **Created**: 2026-05-20  
 > **Last Updated**: 2026-05-20
 
@@ -12,7 +12,7 @@
 
 ## Problem Statement
 
-The current Phase 14 implementation (v0.15.0) has a **fundamental architectural flaw**: the PWA Worker (`pyodide.worker.ts`) re-implemented all 27 read API handlers from scratch instead of reusing the existing `tools.ts` handlers.
+The current Phase 14 implementation on `feat/phase14-bsky-tools` branch has a **fundamental architectural flaw**: the PWA Worker (`pyodide.worker.ts`) re-implemented all 27 read API handlers from scratch instead of reusing the existing `tools.ts` handlers.
 
 ### Why This Happened
 
