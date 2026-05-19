@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] — Unreleased
+
+### Added
+
+- **Python Sandbox (v0.14.0 core feature)**: AI can execute Python code in an isolated environment for data analysis, batch processing, statistics, and plotting. Three-platform implementation with unified architecture.
+  - **PWA**: PyodideSandbox (Web Worker + Pyodide WASM) with 8 pre-installed third-party packages (pandas, numpy, matplotlib, beautifulsoup4, pyyaml, openpyxl, scipy, scikit-learn)
+  - **TUI**: NodePythonSandbox (child_process) with workspace file management
+  - **MCP**: NodePythonSandbox with external AI client support
+- **Workspace File Management**: Per-chat-session file isolation with IndexedDB (PWA) and filesystem (TUI/MCP) storage. Upload, download, delete, preview files.
+- **TUI AI Chat Cards**: ThinkingCard and ToolCard components for expandable thinking traces and tool call display (31 tool formatters)
+- **TUI WidgetOverlay**: Full-screen modal widget system (`w` key) with AIChatWidget and PolishWidget
+- **TUI WorkspaceModal**: File manager for Python output files with upload/download/delete/preview
+- **MCP Troubleshooting Guide**: `docs/MCP_TROUBLESHOOTING.md` — comprehensive error diagnosis documentation
+- **MCP Environment Variable Mapping**: Automatic `BLUESKY_HANDLE` → `BSKY_HANDLE` mapping in launcher script for backward compatibility
+
+### Fixed
+
+- **MCP WorkspaceStorage initialization**: Added `setWorkspaceStorageFactory()` call in MCP server startup, fixing Python output file persistence
+- **MCP getChatId + assistant context**: Fixed `execute_python` chat session isolation and `view_image`/`create_post` uploaded image resolution
+- **Cross-platform path handling**: Updated `execute_python` tool description to use `os.environ['BSKY_WORKSPACE']` instead of hard-coded `/workspace/output/` paths
+- **TUI FileWorkspaceStorage strict isolation**: Changed `listFiles(chatId)` to exclude global files when chatId is provided, matching PWA behavior
+- **TUI cli.ts initialization**: Added `setWorkspaceStorageFactory()` and `setWorkspaceStorageFactory()` calls (was missing, causing runtime errors)
+
+### Changed
+
+- **execute_python tool description**: Clarified platform differences (PWA auto-installs packages vs MCP/TUI requires manual pip install)
+- **BSKY_WORKSPACE semantics**: Points to `output/{chatId}` directory in MCP/TUI, not base temp directory
+- **NodePythonSandbox BSKY_WORKSPACE**: Now set to `workspaceDir` (output/{chatId}) instead of `baseDir` for correct file access
+
 ## [0.13.9] — 2026-05-16
 
 ### Added

@@ -30,6 +30,7 @@
 | **AT Play** | `docs/ATPLAY.md` | 社交圈分析数据管线/API/组件 |
 | **第三方 PDS** | `docs/PDS.md` | PDS 发现管线、CORS 处理 |
 | **Python 沙箱** | `docs/PYTHON_SANDBOX_STATUS.md` | Pyodide WASM、工作区、Phase 1-14 状态 |
+| **下一阶段计划** | `docs/PHASE14_PLAN.md` | AI Batch AT Tool Calls（bluesky_tools Python 库）完整技术方案 |
 | **用户问题** | `docs/USER_ISSUSES.md` | 已知 & 已解决问题日志 |
 | **术语** | `docs/TERMINOLOGY.md` | 主题帖/回复/讨论串等命名规范 |
 | **TUI 工具** | `docs/TUI_UTILS.md` | CJK 文本换行、鼠标追踪 |
