@@ -430,31 +430,49 @@ export const BSKY_TOOLS: BskyToolDefinition[] = [
 // ══════════════════════════════════════════════════════════════════
 
 /**
+ * Convert camelCase to snake_case for Python parameter names.
+ * Examples: maxReplies → max_replies, replyTo → reply_to, quoteUri → quote_uri
+ */
+function camelToSnake(str: string): string {
+  return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+}
+
+/**
+ * Convert snake_case back to camelCase for JSON-RPC/tool handler parameter names.
+ */
+function snakeToCamel(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
  * Generate Python wrapper code for Pyodide (PWA).
  * Uses Pyodide's built-in `js` module for JS interop.
+ * Parameter names are converted to snake_case for Python conventions.
  */
 export function generatePyodideWrapper(): string {
   const methods = BSKY_TOOLS.map(tool => {
     const params = tool.parameters
       .filter(p => p.name !== 'fields')
       .map(p => {
+        const pyName = camelToSnake(p.name);
         if (p.default !== undefined) {
           const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
-          return `${p.name}=${def}`;
+          return `${pyName}=${def}`;
         }
-        return p.name;
+        return pyName;
       })
       .join(', ');
 
     const args = tool.parameters
       .filter(p => p.name !== 'fields')
-      .map(p => p.name)
+      .map(p => camelToSnake(p.name))
       .concat(['fields=None'])
       .join(', ');
 
+    // Kwargs use original camelCase keys for JS bridge compatibility
     const kwargsEntries = tool.parameters
       .filter(p => p.name !== 'fields')
-      .map(p => `"${p.name}": ${p.name}`)
+      .map(p => `"${p.name}": ${camelToSnake(p.name)}`)
       .concat(['"fields": fields'])
       .join(', ');
 
@@ -489,24 +507,32 @@ bsky_tools = BskyTools(js.bskyToolsBridge)
 /**
  * Generate Python wrapper code for Node.js (TUI/MCP).
  * Uses JSON-RPC over stdin/stdout for communication.
+ * Parameter names are converted to snake_case for Python conventions.
  */
 export function generateNodeWrapper(): string {
   const methods = BSKY_TOOLS.map(tool => {
     const params = tool.parameters
       .filter(p => p.name !== 'fields')
       .map(p => {
+        const pyName = camelToSnake(p.name);
         if (p.default !== undefined) {
           const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
-          return `${p.name}=${def}`;
+          return `${pyName}=${def}`;
         }
-        return p.name;
+        return pyName;
       })
       .join(', ');
 
     const args = tool.parameters
       .filter(p => p.name !== 'fields')
-      .map(p => p.name)
+      .map(p => camelToSnake(p.name))
       .concat(['fields=None'])
+      .join(', ');
+
+    // Kwargs use original camelCase keys for JSON-RPC handler compatibility
+    const kwargsEntries = tool.parameters
+      .filter(p => p.name !== 'fields')
+      .map(p => `"${p.name}": ${camelToSnake(p.name)}`)
       .join(', ');
 
     return `
@@ -518,7 +544,7 @@ export function generateNodeWrapper(): string {
         # Convert string fields to list
         if isinstance(fields, str):
             fields = [f.strip() for f in fields.split(',') if f.strip()]
-        kwargs = {${tool.parameters.filter(p => p.name !== 'fields').map(p => `"${p.name}": ${p.name}`).join(', ')}}
+        kwargs = {${kwargsEntries}}
         if fields is not None:
             kwargs["fields"] = fields
         return self._call("${tool.name}", kwargs)`;

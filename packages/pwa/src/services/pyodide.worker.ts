@@ -324,7 +324,16 @@ function syncRequest(method: 'GET' | 'POST', url: string, headers: Record<string
   try {
     xhr.send(body || null);
     if (xhr.status >= 200 && xhr.status < 300) {
-      return { ok: true, data: xhr.responseText ? JSON.parse(xhr.responseText) : null, status: xhr.status };
+      let data: any = xhr.responseText;
+      // Try JSON parse, fall back to raw text for non-JSON responses
+      if (xhr.responseText) {
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          // Not JSON, keep as raw string
+        }
+      }
+      return { ok: true, data, status: xhr.status };
     }
     return { ok: false, error: `HTTP ${xhr.status}: ${xhr.statusText}`, status: xhr.status };
   } catch (err) {
@@ -386,7 +395,7 @@ function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = f
   bridge.get_timeline = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getTimeline', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_author_feed = (actor: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getAuthorFeed', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_popular_feed_generators = (limit?: number, fields?: string[]) => { const res = get('app.bsky.unspecced.getPopularFeedGenerators', { limit }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_feed_generator = (feed: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeedGenerator', { feed }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_feed_generator = (feed: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeedGenerator', { feed }); return res.ok ? filterFields(res.data.view || res.data, fields) : { error: res.error }; };
   bridge.get_feed = (feed: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeed', { feed, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_post_thread = (uri: string, depth?: number, format?: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_post_context = (uri: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth: 3 }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
@@ -394,7 +403,31 @@ function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = f
   bridge.get_quotes = (uri: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.searchPosts', { q: uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.search_actors = (q: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.actor.searchActors', { q, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_profile = (actor: string, fields?: string[]) => { const res = get('app.bsky.actor.getProfile', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) => { if (direction === 'followers') { const res = get('app.bsky.graph.getFollowers', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; } const res = get('app.bsky.graph.getFollows', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) => {
+    const resolvedActor = actor === 'me' ? auth.handle : actor;
+    if (direction === 'followers') {
+      const res = get('app.bsky.graph.getFollowers', { actor: resolvedActor, limit, cursor });
+      if (!res.ok) return { error: res.error };
+      const data = res.data as any;
+      const normalized = {
+        direction: 'followers',
+        items: data.followers.map((f: any) => ({ handle: f.handle, displayName: f.displayName })),
+        total: data.followers.length,
+        cursor: data.cursor
+      };
+      return filterFields(normalized, fields);
+    }
+    const res = get('app.bsky.graph.getFollows', { actor: resolvedActor, limit, cursor });
+    if (!res.ok) return { error: res.error };
+    const data = res.data as any;
+    const normalized = {
+      direction: 'following',
+      items: data.follows.map((f: any) => ({ handle: f.handle, displayName: f.displayName })),
+      total: data.follows.length,
+      cursor: data.cursor
+    };
+    return filterFields(normalized, fields);
+  };
   bridge.get_suggested_follows = (actor: string, fields?: string[]) => { const res = get('app.bsky.graph.getSuggestedFollows', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.list_notifications = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.notification.listNotifications', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
   bridge.get_lists = (actor?: string, fields?: string[]) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };

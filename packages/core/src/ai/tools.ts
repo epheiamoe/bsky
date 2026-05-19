@@ -342,7 +342,8 @@ print(f"Processed {len(df)} rows")`,
       },
       handler: async (p) => {
         const res = await client.getFeedGenerator(p.feed as string);
-        return JSON.stringify(res);
+        // Unwrap the view — the actual feed data is inside res.view
+        return JSON.stringify(res.view || res);
       },
       requiresWrite: false,
     },

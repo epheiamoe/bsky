@@ -262,6 +262,10 @@ export interface BskyToolsAPI {
 /**
  * Filter an object to only include specified fields.
  * Supports nested paths with dot notation (e.g., 'author.handle').
+ * 
+ * Smart array handling: if fields are not found at the top level but the object
+ * contains arrays, fields are applied to array items while metadata keys
+ * (cursor, total, etc.) are preserved.
  */
 export function filterFields(obj: unknown, fields: string[]): unknown {
   if (obj === null || obj === undefined) return obj;
@@ -273,28 +277,50 @@ export function filterFields(obj: unknown, fields: string[]): unknown {
 
   if (typeof obj !== 'object') return obj;
 
+  const record = obj as Record<string, unknown>;
   const result: Record<string, unknown> = {};
   const fieldGroups = new Map<string, string[]>();
+  let hasTopLevelMatches = false;
 
   // Group nested fields
   for (const field of fields) {
     const parts = field.split('.');
     if (parts.length === 1) {
-      if (field in (obj as Record<string, unknown>)) {
-        result[field] = (obj as Record<string, unknown>)[field];
+      if (field in record) {
+        result[field] = record[field];
+        hasTopLevelMatches = true;
       }
     } else {
       const root = parts[0]!;
       const rest = parts.slice(1).join('.');
       if (!fieldGroups.has(root)) fieldGroups.set(root, []);
       fieldGroups.get(root)!.push(rest);
+      hasTopLevelMatches = true; // We have nested fields to process
     }
   }
 
   // Process nested fields
   for (const [root, restFields] of fieldGroups) {
-    if (root in (obj as Record<string, unknown>)) {
-      result[root] = filterFields((obj as Record<string, unknown>)[root], restFields);
+    if (root in record) {
+      result[root] = filterFields(record[root], restFields);
+    }
+  }
+
+  // Smart array handling: if no top-level matches but object has arrays,
+  // apply fields to array items and preserve metadata
+  if (!hasTopLevelMatches && Object.keys(result).length === 0) {
+    const arrayKeys = Object.keys(record).filter(k => Array.isArray(record[k]));
+    if (arrayKeys.length > 0) {
+      // Preserve non-array metadata
+      for (const [key, value] of Object.entries(record)) {
+        if (!Array.isArray(value)) {
+          result[key] = value;
+        }
+      }
+      // Apply field filtering to array items
+      for (const key of arrayKeys) {
+        result[key] = (record[key] as unknown[]).map(item => filterFields(item, fields));
+      }
     }
   }
 
