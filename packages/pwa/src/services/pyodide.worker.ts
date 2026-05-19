@@ -332,7 +332,7 @@ function syncRequest(method: 'GET' | 'POST', url: string, headers: Record<string
   }
 }
 
-function createBskyToolsBridge(auth: typeof authConfig) {
+function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = false) {
   if (!auth) return null;
   const headers = { 'Authorization': `Bearer ${auth.jwt}`, 'Content-Type': 'application/json' };
   const pds = auth.pds || 'https://api.bsky.app';
@@ -347,8 +347,13 @@ function createBskyToolsBridge(auth: typeof authConfig) {
     return syncRequest('GET', url.toString(), headers);
   };
 
+  const post = (endpoint: string, body?: Record<string, any>) => {
+    return syncRequest('POST', `${pds}/xrpc/${endpoint}`, headers, JSON.stringify(body));
+  };
+
   const bridge: Record<string, (...args: any[]) => any> = {};
 
+  // Read operations
   bridge.resolve_handle = (handle: string) => { const res = get('com.atproto.identity.resolveHandle', { handle }); return res.ok ? res.data : { error: res.error }; };
   bridge.get_record = (uri: string) => { const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/); if (!match) return { error: 'Invalid AT URI' }; const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] }); return res.ok ? res.data : { error: res.error }; };
   bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string) => { const res = get('com.atproto.repo.listRecords', { repo, collection, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
@@ -367,6 +372,10 @@ function createBskyToolsBridge(auth: typeof authConfig) {
   bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string) => { if (direction === 'followers') { const res = get('app.bsky.graph.getFollowers', { actor, limit, cursor }); return res.ok ? res.data : { error: res.error }; } const res = get('app.bsky.graph.getFollows', { actor, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
   bridge.get_suggested_follows = (actor: string) => { const res = get('app.bsky.graph.getSuggestedFollows', { actor }); return res.ok ? res.data : { error: res.error }; };
   bridge.list_notifications = (limit?: number, cursor?: string) => { const res = get('app.bsky.notification.listNotifications', { limit, cursor }); return res.ok ? res.data : { error: res.error }; };
+  bridge.get_lists = (actor?: string) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? res.data : { error: res.error }; };
+  bridge.get_list_feed = (list: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
+
+  // Not implemented in PWA
   bridge.extract_images_from_post = (uri: string) => { return { error: 'Not implemented in PWA bridge' }; };
   bridge.download_image = (did: string, cid: string, filename?: string) => { return { error: 'Not implemented in PWA bridge' }; };
   bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number) => { return { error: 'Not implemented in PWA bridge' }; };
@@ -374,16 +383,91 @@ function createBskyToolsBridge(auth: typeof authConfig) {
   bridge.fetch_web_markdown = (url: string) => { return { error: 'Not implemented in PWA bridge' }; };
   bridge.search_web_ddg = (query: string) => { return { error: 'Not implemented in PWA bridge' }; };
   bridge.search_wikipedia = (query: string, lang?: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.get_lists = (actor?: string) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_list_feed = (list: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
 
-  // Write operations (disabled by default)
-  const writeTools = ['create_post', 'like', 'repost', 'follow', 'create_list', 'edit_list_members'];
-  for (const tool of writeTools) {
-    bridge[tool] = () => ({ error: `Write operation '${tool}' requires user confirmation. Not available in PWA Python sandbox.` });
+  // Write operations
+  if (enableWrite) {
+    bridge.create_post = (text: string, replyTo?: string, quoteUri?: string, images?: any[], threadgate?: any) => {
+      const res = post('app.bsky.feed.post', { text, replyTo, quoteUri, images, threadgate });
+      return res.ok ? res.data : { error: res.error };
+    };
+    bridge.like = (uri: string) => {
+      const res = post('app.bsky.feed.like', { uri });
+      return res.ok ? res.data : { error: res.error };
+    };
+    bridge.repost = (uri: string) => {
+      const res = post('app.bsky.feed.repost', { uri });
+      return res.ok ? res.data : { error: res.error };
+    };
+    bridge.follow = (subject: string) => {
+      const res = post('app.bsky.graph.follow', { subject });
+      return res.ok ? res.data : { error: res.error };
+    };
+    bridge.create_list = (name: string, purpose: string, description?: string) => {
+      const res = post('app.bsky.graph.list', { name, purpose, description });
+      return res.ok ? res.data : { error: res.error };
+    };
+    bridge.edit_list_members = (listUri: string, subject: string, action: string = 'add') => {
+      const res = post('app.bsky.graph.listitem', { listUri, subject, action });
+      return res.ok ? res.data : { error: res.error };
+    };
+  } else {
+    const writeTools = ['create_post', 'like', 'repost', 'follow', 'create_list', 'edit_list_members'];
+    for (const tool of writeTools) {
+      bridge[tool] = () => ({ error: `Write operation '${tool}' requires user confirmation. Set enableWrite=true.` });
+    }
   }
 
   return bridge;
+}
+
+function analyzePythonCode(code: string): { hasWriteOperations: boolean; writeOperations: Array<{ tool: string; count: number }>; hasDynamicCalls: boolean; error?: string } {
+  if (!pyodide) return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Pyodide not initialized' };
+  
+  try {
+    const result = pyodide.runPython(`
+import ast
+import json
+
+code = """${code.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"""
+
+try:
+    tree = ast.parse(code)
+except SyntaxError as e:
+    print(json.dumps({"error": str(e)}))
+    exit()
+
+write_tools = {"create_post", "like", "repost", "follow", "create_list", "edit_list_members"}
+write_ops = []
+dynamic_calls = []
+
+for node in ast.walk(tree):
+    if isinstance(node, ast.Call):
+        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == 'bsky_tools':
+            tool_name = node.func.attr
+            if tool_name in write_tools:
+                write_ops.append({"tool": tool_name, "line": node.lineno})
+        elif isinstance(node.func, ast.Name) and node.func.id == 'getattr':
+            dynamic_calls.append(node.lineno)
+
+from collections import Counter
+counts = Counter(op["tool"] for op in write_ops)
+
+result = {
+    "hasWriteOperations": len(write_ops) > 0,
+    "writeOperations": [{"tool": tool, "count": count} for tool, count in counts.items()],
+    "hasDynamicCalls": len(dynamic_calls) > 0,
+}
+
+print(json.dumps(result))
+    `);
+    
+    const output = pyodide.globals.get('_stdout_lines');
+    const lines = output.toJs ? output.toJs() : output;
+    const jsonStr = Array.isArray(lines) ? lines.join('') : String(lines);
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: String(err) };
+  }
 }
 
 const BSKY_TOOLS_PYTHON_WRAPPER = `
@@ -475,7 +559,7 @@ class BskyTools:
 bsky_tools = BskyTools()
 `;
 
-async function executePython(code: string) {
+async function executePython(code: string, enableWrite: boolean = false) {
   let returnValue: any = null;
   let success = false;
   let stdout = '';
@@ -511,9 +595,11 @@ async function executePython(code: string) {
     );
 
     // Inject bsky_tools if auth is available
-    if (bskyToolsBridge) {
-      console.debug('[PyodideWorker] Injecting bsky_tools...');
-      pyodide.globals.set('bskyToolsBridge', bskyToolsBridge);
+    if (authConfig) {
+      // Recreate bridge with enableWrite flag if needed
+      const bridge = createBskyToolsBridge(authConfig, enableWrite);
+      console.debug('[PyodideWorker] Injecting bsky_tools (enableWrite:', enableWrite, ')...');
+      pyodide.globals.set('bskyToolsBridge', bridge);
       await pyodide.runPythonAsync(BSKY_TOOLS_PYTHON_WRAPPER);
       console.debug('[PyodideWorker] bsky_tools injected successfully');
     }
@@ -585,9 +671,18 @@ self.onmessage = async function (e: MessageEvent) {
       console.debug('[PyodideWorker] Init failed: ' + errMsg);
       self.postMessage({ type: 'initError', error: errMsg });
     }
+  } else if (msg.type === 'analyze') {
+    try {
+      const result = analyzePythonCode(msg.code);
+      self.postMessage({ type: 'analysisResult', result });
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      self.postMessage({ type: 'analysisResult', result: { error: errMsg } });
+    }
   } else if (msg.type === 'execute') {
     try {
-      const result = await executePython(msg.code);
+      const enableWrite = msg.enableWrite === true;
+      const result = await executePython(msg.code, enableWrite);
       self.postMessage({ type: 'result', result: result });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);

@@ -139,7 +139,7 @@ export class PyodideSandbox implements PythonSandboxEngine {
     yield { stage: 'ready', progress: 1, message: 'Python sandbox ready' };
   }
 
-  async execute(code: string, chatId?: string): Promise<PythonExecutionResult> {
+  async execute(code: string, chatId?: string, options?: { enableWrite?: boolean }): Promise<PythonExecutionResult> {
     console.debug('[Pyodide] Execute called, ready:', this._isReady, 'failed:', this._initFailed);
 
     if (!this._isReady) {
@@ -162,7 +162,45 @@ export class PyodideSandbox implements PythonSandboxEngine {
       throw new Error('Python sandbox initialization failed');
     }
 
-    console.debug('[Pyodide] Sending execute to Worker, code length:', code.length);
+    // Step 1: AST Analysis (unless enableWrite is already set)
+    let enableWrite = options?.enableWrite ?? false;
+    if (!enableWrite) {
+      const analysis = await this._analyzeCode(code);
+      if (analysis.error) {
+        console.warn('[Pyodide] AST analysis error:', analysis.error);
+      }
+      if (analysis.hasDynamicCalls) {
+        return {
+          stdout: '',
+          stderr: 'Security error: Dynamic method calls (getattr) are not allowed for safety reasons.',
+          returnValue: null,
+          files: [],
+          success: false,
+          executionTime: 0,
+          executionTimestamp: Date.now(),
+        };
+      }
+      if (analysis.hasWriteOperations) {
+        const opsDesc = analysis.writeOperations.map(op => `${op.tool} ×${op.count}`).join(', ');
+        const confirmed = window.confirm(
+          `This Python script will perform the following write operations:\n\n${opsDesc}\n\nDo you want to allow these operations?`
+        );
+        if (!confirmed) {
+          return {
+            stdout: '',
+            stderr: `Write operations cancelled by user. The script would have: ${opsDesc}`,
+            returnValue: null,
+            files: [],
+            success: false,
+            executionTime: 0,
+            executionTimestamp: Date.now(),
+          };
+        }
+        enableWrite = true;
+      }
+    }
+
+    console.debug('[Pyodide] Sending execute to Worker, code length:', code.length, 'enableWrite:', enableWrite);
     return new Promise((resolve, reject) => {
       const wrappedResolve = async (result: PythonExecutionResult) => {
         if (chatId && result.files && result.files.length > 0) {
@@ -199,7 +237,33 @@ export class PyodideSandbox implements PythonSandboxEngine {
         resolve(result);
       };
       this._pendingExecutions.push({ resolve: wrappedResolve, reject, code });
-      this.worker!.postMessage({ type: 'execute', code });
+      this.worker!.postMessage({ type: 'execute', code, enableWrite });
+    });
+  }
+
+  private async _analyzeCode(code: string): Promise<{ hasWriteOperations: boolean; writeOperations: Array<{ tool: string; count: number }>; hasDynamicCalls: boolean; error?: string }> {
+    if (!this.worker) return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Worker not initialized' };
+    
+    return new Promise((resolve) => {
+      const handler = (e: MessageEvent) => {
+        const msg = e.data;
+        if (msg.type === 'analysisResult') {
+          this.worker?.removeEventListener('message', handler);
+          resolve(msg.result || { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false });
+        }
+      };
+      if (!this.worker) {
+        resolve({ hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Worker not available' });
+        return;
+      }
+      this.worker.addEventListener('message', handler);
+      this.worker.postMessage({ type: 'analyze', code });
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        this.worker?.removeEventListener('message', handler);
+        resolve({ hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Analysis timeout' });
+      }, 5000);
     });
   }
 
