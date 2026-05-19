@@ -1,6 +1,9 @@
 # Phase 14: AI Batch AT Tool Calls — Implementation Plan
 
-> **Status**: Planned — Next major feature after v0.14.0 release
+> **Status**: ✅ COMPLETED — Implemented in v0.15.0
+> **Completed**: 2026-05-19
+> **Branch**: feat/phase14-bsky-tools
+> **Merged to main**: Pending PR
 > **Estimated effort**: 3-5 days (with subagent parallelization)
 > **Depends on**: v0.14.0 Python sandbox completion (Phase 1-13.5 ✅)
 > **Document created**: 2026-05-19
