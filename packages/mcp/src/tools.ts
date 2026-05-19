@@ -1,15 +1,6 @@
 import { createTools, type ToolDescriptor } from '@bsky/core';
 import type { BskyClient } from '@bsky/core';
 
-const WRITE_TOOL_NAMES = new Set([
-  'create_post',
-  'like',
-  'repost',
-  'follow',
-  'create_list',
-  'edit_list_members',
-]);
-
 export interface McpToolListEntry {
   name: string;
   description: string;
@@ -20,8 +11,12 @@ export interface McpToolListEntry {
   };
 }
 
-export function getMcpTools(client: BskyClient, enableWrite: boolean) {
-  const allDescriptors = createTools(client);
+export function getMcpTools(
+  client: BskyClient,
+  enableWrite: boolean,
+  getChatId?: () => string | undefined,
+) {
+  const allDescriptors = createTools(client, getChatId);
 
   const allowed = allDescriptors.filter((d) =>
     enableWrite || !d.requiresWrite,
@@ -44,6 +39,7 @@ export async function callTool(
   descriptors: ToolDescriptor[],
   client: BskyClient,
   enableWrite: boolean,
+  assistant?: unknown,
 ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
   const tool = descriptors.find((d) => d.definition.name === name);
   if (!tool) {
@@ -69,7 +65,7 @@ export async function callTool(
   }
 
   try {
-    const jsonText = await tool.handler(args, undefined);
+    const jsonText = await tool.handler(args, assistant);
     return { content: [{ type: 'text', text: jsonText }] };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
