@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI System Prompt**: Added comprehensive bsky_tools usage guide with method list, examples, and fields parameter explanation
 - **execute_python Tool Description**: Added bsky_tools library documentation for AI context
 
+### Fixed (v0.15.0-hotfix1, 2026-05-20)
+
+- **`search_posts` fields parameter**: Smart array detection in `filterFields` — when fields aren't found at top level but object contains arrays, applies filtering to array items while preserving metadata keys (`cursor`, `total`)
+- **`fetch_web_markdown` JSON parse error**: `syncRequest` now try/catches JSON.parse and falls back to raw string for non-JSON responses (e.g., markdown from `r.jina.ai`)
+- **`get_feed_generator` response structure**: Both PWA and TUI handlers now unwrap `res.view` before returning, providing direct access to `uri`, `did`, `displayName`, etc.
+- **`get_connections` normalization**: PWA bridge now returns `{direction, items, total, cursor}` structure matching TUI/MCP, and handles `actor="me"` resolution
+- **Python parameter naming**: `generateNodeWrapper()` and `generatePyodideWrapper()` now convert camelCase to snake_case (e.g., `maxReplies` → `max_replies`) for Python conventions, while keeping camelCase kwargs for handler compatibility
+
+### Known Issues (Documented)
+
+- **`fields` still broken in PWA Worker**: Hotfix only applied to shared `filterFields` in `bsky-tools-api.ts`; Worker has its own copy without smart array handling. Requires v0.16.0 refactor to fix properly.
+- **`BSKY_WORKSPACE` not set in Pyodide**: `os.environ['BSKY_WORKSPACE']` returns empty string. Workaround: use `/workspace/{data,output,temp}` directly.
+- **`search_web_ddg` CORS in PWA**: Browser blocks DuckDuckGo requests. Use TUI/MCP for web search, or use `fetch_web_markdown` with specific URLs.
+- **Module namespace pollution**: `bsky_tools` module leaks previous execution's global variables due to `__dict__.update(globals())`.
+- **`get_feed` 401**: JWT token may expire in long sessions. Re-authenticate to refresh.
+
 ## [0.14.0] — 2026-05-19
 
 ### Added

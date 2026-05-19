@@ -1,12 +1,13 @@
 # Phase 14: AI Batch AT Tool Calls — Implementation Plan
 
-> **Status**: ✅ COMPLETED — Implemented in v0.15.0
+> **Status**: ⚠️ IMPLEMENTED — v0.15.0 deployed, **critical bugs found, refactor planned**
 > **Completed**: 2026-05-19
 > **Branch**: feat/phase14-bsky-tools
-> **Merged to main**: Pending PR
-> **Estimated effort**: 3-5 days (with subagent parallelization)
+> **Merged to main**: Pending PR (waiting for refactor)
+> **Estimated effort**: 3-5 days initial + 2-3 days refactor
 > **Depends on**: v0.14.0 Python sandbox completion (Phase 1-13.5 ✅)
 > **Document created**: 2026-05-19
+> **Last updated**: 2026-05-20
 > **Context recovery note**: If this doc is out of date, check `docs/PYTHON_SANDBOX_STATUS.md` for current status
 
 ---
@@ -396,33 +397,61 @@ Note: Write operations (create_post, like, repost, follow) still require user co
 
 ---
 
-## Post-Implementation Fixes (v0.15.1)
+## Post-Implementation Issues & Refactor Plan (v0.15.0 → v0.16.0)
 
-After initial deployment to staging, AI testing revealed critical issues:
+After initial deployment to staging, comprehensive AI testing revealed **critical architectural issues** that require a significant refactor.
 
-### Critical Issue: `bsky_tools` Not a Real Python Module
+### 🚨 Critical Architectural Flaw: Duplicate Implementation
 
-**Problem**: `bsky_tools` was only injected as a global variable, not registered in `sys.modules`. This caused `ModuleNotFoundError: No module named 'bsky_tools'` when AI tried `import bsky_tools`.
+**Problem**: PWA Worker (`pyodide.worker.ts`) **re-implemented all API handlers from scratch** instead of reusing the existing `tools.ts` handlers.
 
-**Root Cause**: The Python wrapper was injected via `pyodide.globals.set('bsky_tools', ...)` but not added to `sys.modules['bsky_tools']`.
+**Current state**:
+```
+PWA Worker:  pyodide.worker.ts → sync XHR → Bluesky API (raw responses)
+TUI/MCP:     node-python-sandbox.ts → JSON-RPC → tools.ts → BskyClient (transformed responses)
+```
 
-**Fix Plan**:
-1. Register `bsky_tools` in `sys.modules['bsky_tools']` during initialization
-2. Ensure injection happens at Pyodide init time, not just at execute time
-3. Make `bsky_tools` importable: `import bsky_tools` and `from bsky_tools import search_posts`
-4. Support both global variable and module import patterns
+**Why this is wrong**:
+1. **27 read tools = 2 implementations** — maintenance nightmare
+2. **Different response structures** — PWA returns raw API, TUI returns normalized
+3. **Bugs in one won't be in the other** — fields filtering, error handling diverge
+4. **Write confirmation logic duplicated** — AST analysis in two places
+5. **search_web_ddg uses raw DuckDuckGo** instead of `fetchViaJina` + `parseDDGLite`
 
-**Files to modify**:
-- `packages/pwa/src/services/pyodide.worker.ts` — Add `sys.modules['bsky_tools'] = bsky_tools` after wrapper injection
-- `packages/pwa/src/services/pyodide.worker.ts` — Move injection to `loadPyodideRuntime()` completion
+**Correct architecture** (planned for v0.16.0):
+```
+PWA: Python → Worker bridge → postMessage → Main Thread → tools.ts handler → BskyClient
+TUI: Python → JSON-RPC → Node.js → tools.ts handler → BskyClient
+MCP: Python → JSON-RPC → Node.js → tools.ts handler → BskyClient
+                                    ↑
+                              Single source of truth
+```
 
-### Major Issues Fixed in v0.15.0
+See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 
-1. **Auto-initialization**: `BskyTools.__init__` now auto-detects `bskyToolsBridge` from `globals()`
-2. **Fields parameter**: Supports both list `fields=["handle"]` and string `fields="handle,displayName"`
-3. **Error handling**: `_call()` raises `BskyToolsError` on API errors instead of returning dicts
-4. **DID handling**: `resolve_handle()` detects DID input and returns directly without API call
-5. **Write confirmation**: PWA shows `window.confirm()` dialog with operation summary
+### Issues Found in Testing (Round 1-2)
+
+| # | Issue | Severity | Status |
+|---|-------|----------|--------|
+| 1 | `fields` parameter returns `{}` for array responses | 🔴 Critical | Hotfixed in worker, needs proper fix |
+| 2 | `BSKY_WORKSPACE` not set in Pyodide | 🔴 Critical | Not fixed |
+| 3 | `search_web_ddg` CORS error in PWA | 🔴 Critical | Architecture issue — should use tools.ts handler |
+| 4 | Module namespace pollution (`globals()` leak) | 🔴 Critical | Not fixed |
+| 5 | Write op parameter names mismatched (camelCase vs snake_case) | 🟡 Medium | Partially fixed |
+| 6 | `get_feed` 401 (JWT expired) | 🟡 Medium | Documented limitation |
+| 7 | `download_image`/`view_image` 501 | 🟡 Medium | PDS limitation |
+| 8 | `list_records`/`get_suggested_follows` 501 | 🟡 Medium | PDS limitation |
+
+### Hotfixes Applied (v0.15.0-hotfix1, 2026-05-20)
+
+1. ✅ **Smart array filtering** in `bsky-tools-api.ts` — `filterFields` now detects arrays
+2. ✅ **JSON parse fallback** in worker — non-JSON responses returned as strings
+3. ✅ **`get_feed_generator` unwrapping** — extracts `res.view` before returning
+4. ✅ **`get_connections` normalization** — returns `{direction, items, total, cursor}`
+5. ✅ **`actor="me"` resolution** — translates to actual handle in worker
+6. ✅ **snake_case parameters** — Python wrapper uses snake_case with camelCase kwargs
+7. ✅ **Response structure reference** — added to `docs/BSKY_TOOLS.md`
+8. ✅ **Known limitations updated** — documented 501/401/CORS issues
 
 ### Testing Status
 
@@ -431,7 +460,7 @@ After initial deployment to staging, AI testing revealed critical issues:
 | 1 | 2026-05-19 | 30/33 pass | fields broken, no error handling, DID issue |
 | 2 | 2026-05-19 | Build pass | Fixed fields, errors, DID, auto-init |
 | 3 | 2026-05-19 | ❌ Module not found | `bsky_tools` not in `sys.modules` |
-| 4 | (planned) | TBD | Will test `import bsky_tools` |
+| 4 | 2026-05-20 | 20/27 pass | fields still broken, BSKY_WORKSPACE missing, namespace pollution |
 
 ---
 
@@ -439,14 +468,14 @@ After initial deployment to staging, AI testing revealed critical issues:
 
 **If this document is the only reference after context compression:**
 
-1. Phase 14 is about enabling AI to batch-call Bluesky API from Python sandbox
-2. Uses JS Proxy Bridge (PWA) or JSON-RPC (TUI/MCP)
-3. New files: `bsky-tools-api.ts`, `bsky-tools-pyodide.ts`, `bsky-tools-node.ts`
-4. Modified files: `pyodide.worker.ts`, `node-python-sandbox.ts`, `tools.ts`, `prompts.ts`
-5. Key decision: Blocking API, simplified dicts, pre-execution confirmation
+1. Phase 14 enables AI to batch-call Bluesky API from Python sandbox
+2. **Current architecture is WRONG** — PWA worker has duplicate API implementations
+3. **Planned refactor**: Worker → Main Thread → tools.ts (single source of truth)
+4. See `docs/PHASE14_REFACTOR.md` for v0.16.0 refactor plan
+5. See `docs/BSKY_TOOLS.md` for user-facing API documentation
 6. Check `docs/PYTHON_SANDBOX_STATUS.md` for Phase 1-13.5 status
 7. Check `docs/TODO.md` for feature completion tracking
 
 ---
 
-*Created: 2026-05-19 | Status: In Progress (v0.15.1 fixes) | Target: Staging deployment*
+*Created: 2026-05-19 | Updated: 2026-05-20 | Status: Hotfix deployed, refactor planned | Target: v0.16.0 refactor*

@@ -141,9 +141,53 @@ thread = bsky_tools.get_post_thread(uri, fields=["post.uri", "post.author.handle
 ### Important Notes
 
 - `fields` filters the **returned data**, not the API request — all data is still fetched, only the output is filtered
+- **Smart array filtering**: For methods that return arrays (e.g., `search_posts`, `get_timeline`), `fields` automatically applies to array items while preserving metadata keys like `cursor` and `total`
 - Without `fields`, the full API response is returned (same as individual tool calls)
 - Invalid field names are silently ignored
 - Works with all methods except `fetch_web_markdown` and `search_web_ddg` (which return raw text)
+
+### Parameter Naming
+
+All Python parameters use **snake_case** (Python convention):
+
+```python
+# ✅ Correct (snake_case)
+bsky_tools.get_post_context(uri, max_replies=5)
+bsky_tools.create_post(text="Hello", reply_to=uri)
+
+# ❌ Incorrect (camelCase won't work)
+bsky_tools.get_post_context(uri, maxReplies=5)  # TypeError!
+```
+
+---
+
+## Response Structure Reference
+
+Different methods return data under different keys. Use this table to know what key contains the actual data:
+
+| Method | Data Key | Metadata Keys | Notes |
+|--------|----------|---------------|-------|
+| `search_posts` | `posts` | `cursor`, `total`, `hitsTotal` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt` |
+| `get_timeline` | `feed` | `cursor` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount` |
+| `get_author_feed` | `feed` | `cursor` | Same structure as `get_timeline` |
+| `get_connections` | `items` | `direction`, `total`, `cursor` | Each item has `handle`, `displayName`. Use `direction="followers"` or `direction="following"` |
+| `get_post_interactions` | `items` | `direction`, `total`, `cursor` | `direction` is `"likes"` or `"reposts"` |
+| `get_quotes` | `posts` | `cursor` | Same structure as `search_posts` |
+| `list_notifications` | `notifications` | `cursor` | Each item has `reason`, `author`, `indexedAt`, `isRead` |
+| `get_popular_feed_generators` | `feeds` | — | Each item has `uri`, `displayName`, `description`, `creator` |
+| `get_feed_generator` | — | — | Returns feed info directly (unwrapped): `uri`, `did`, `creator`, `displayName`, `description`, `likeCount` |
+| `get_lists` | `lists` | — | Each item has `uri`, `name`, `purpose`, `memberCount` |
+| `get_list_feed` | `feed` | `cursor` | Same structure as `get_timeline` |
+| `get_record` | `uri`, `cid`, `value` | — | `value` contains the actual record data |
+| `resolve_handle` | `did` | — | Returns `{did: "did:plc:..."}` |
+| `get_profile` | — | — | Returns profile directly: `did`, `handle`, `displayName`, `followersCount`, `followsCount`, `postsCount` |
+| `search_actors` | `actors` | `cursor` | Each item has `did`, `handle`, `displayName`, `description` |
+| `extract_images_from_post` | `images` | `count` | Each item has `did`, `cid`, `mimeType`, `alt` |
+| `extract_external_link` | `uri`, `title`, `description` | — | Returns link card data directly |
+| `fetch_web_markdown` | `url`, `title`, `content` | — | `content` is the markdown text |
+| `search_wikipedia` | `title`, `extract`, `url` | — | Returns summary directly |
+
+**Important**: `get_connections` returns `items` (not `follows` or `followers`), and `total` is the **page count** (not the absolute total). Use `get_profile` to get the actual `followersCount`.
 
 ---
 
@@ -265,10 +309,14 @@ Common errors:
 |---|-----------|-----------|
 | 1 | `fields` filters **returned data**, not the API request | All data is fetched; filtering happens before returning to Python |
 | 2 | `get_post_thread` in PWA lacks `format`/`maxReplies` | Use `depth` parameter only; for flat format, use `get_post_context` |
-| 3 | `list_records` may return empty for large repos | Use `cursor` pagination; verify actor's PDS |
-| 4 | `get_suggested_follows` may return empty for new accounts | Normal behavior for accounts with few connections |
-| 5 | Write operations require confirmation | Use TUI/MCP for programmatic write workflows |
-| 6 | Write operations on PWA require browser `confirm()` dialog | Use TUI/MCP for programmatic write workflows |
+| 3 | `list_records` may return HTTP 501 on some PDS instances | Use `cursor` pagination; verify actor's PDS supports this endpoint |
+| 4 | `get_suggested_follows` may return HTTP 501 | This endpoint is not available on all PDS instances |
+| 5 | `get_feed` may return HTTP 401 if JWT expired | Re-authenticate to refresh the session token |
+| 6 | `search_web_ddg` fails in PWA due to CORS | Use TUI/MCP for web search, or use `fetch_web_markdown` with specific URLs |
+| 7 | Write operations require confirmation | Use TUI/MCP for programmatic write workflows |
+| 8 | Write operations on PWA require browser `confirm()` dialog | Use TUI/MCP for programmatic write workflows |
+| 9 | `BSKY_WORKSPACE` environment variable not set in Pyodide | Use `/workspace/{data,output,temp}` directly instead of `os.environ['BSKY_WORKSPACE']` |
+| 10 | Module namespace pollution | Previous execution's variables may leak into `bsky_tools` module namespace |
 
 ---
 
