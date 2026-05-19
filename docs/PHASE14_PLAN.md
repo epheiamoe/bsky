@@ -1,9 +1,10 @@
 # Phase 14: AI Batch AT Tool Calls — Implementation Plan
 
-> **Status**: ⚠️ IN DEVELOPMENT — Basic implementation complete, **critical bugs found, refactor required before merge**
+> **Status**: 🚧 IN DEVELOPMENT — Part of v0.14.0, **refactor required before merge**
 > **Branch**: feat/phase14-bsky-tools
+> **Merged to main**: Pending (refactor required)
 > **Estimated effort**: 3-5 days initial + 2-3 days refactor
-> **Depends on**: Python sandbox (Phase 1-13.5 ✅)
+> **Depends on**: v0.13.9 Python sandbox foundation (Phase 1-13 ✅)
 > **Document created**: 2026-05-19
 > **Last updated**: 2026-05-20
 > **Context recovery note**: If this doc is out of date, check `docs/PYTHON_SANDBOX_STATUS.md` for current status
@@ -395,9 +396,9 @@ Note: Write operations (create_post, like, repost, follow) still require user co
 
 ---
 
-## Post-Implementation Issues & Refactor Plan (v0.15.0 → v0.16.0)
+## Post-Implementation Issues & Refactor Plan
 
-After initial deployment to staging, comprehensive AI testing revealed **critical architectural issues** that require a significant refactor.
+After initial deployment to staging, comprehensive AI testing revealed **critical architectural issues** that require a significant refactor **before merging to main**.
 
 ### 🚨 Critical Architectural Flaw: Duplicate Implementation
 
@@ -416,7 +417,7 @@ TUI/MCP:     node-python-sandbox.ts → JSON-RPC → tools.ts → BskyClient (tr
 4. **Write confirmation logic duplicated** — AST analysis in two places
 5. **search_web_ddg uses raw DuckDuckGo** instead of `fetchViaJina` + `parseDDGLite`
 
-**Correct architecture** (planned for v0.16.0):
+**Correct architecture** (planned refactor):
 ```
 PWA: Python → Worker bridge → postMessage → Main Thread → tools.ts handler → BskyClient
 TUI: Python → JSON-RPC → Node.js → tools.ts handler → BskyClient
@@ -431,7 +432,7 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 
 | # | Issue | Severity | Status |
 |---|-------|----------|--------|
-| 1 | `fields` parameter returns `{}` for array responses | 🔴 Critical | Hotfixed in worker, needs proper fix |
+| 1 | `fields` parameter returns `{}` for array responses | 🔴 Critical | Partial fix applied, needs proper refactor |
 | 2 | `BSKY_WORKSPACE` not set in Pyodide | 🔴 Critical | Not fixed |
 | 3 | `search_web_ddg` CORS error in PWA | 🔴 Critical | Architecture issue — should use tools.ts handler |
 | 4 | Module namespace pollution (`globals()` leak) | 🔴 Critical | Not fixed |
@@ -440,7 +441,7 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 | 7 | `download_image`/`view_image` 501 | 🟡 Medium | PDS limitation |
 | 8 | `list_records`/`get_suggested_follows` 501 | 🟡 Medium | PDS limitation |
 
-### Hotfixes Applied (v0.15.0-hotfix1, 2026-05-20)
+### Fixes Applied (2026-05-20)
 
 1. ✅ **Smart array filtering** in `bsky-tools-api.ts` — `filterFields` now detects arrays
 2. ✅ **JSON parse fallback** in worker — non-JSON responses returned as strings
@@ -469,11 +470,11 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 1. Phase 14 enables AI to batch-call Bluesky API from Python sandbox
 2. **Current architecture is WRONG** — PWA worker has duplicate API implementations
 3. **Planned refactor**: Worker → Main Thread → tools.ts (single source of truth)
-4. See `docs/PHASE14_REFACTOR.md` for v0.16.0 refactor plan
+4. See `docs/PHASE14_REFACTOR.md` for refactor plan
 5. See `docs/BSKY_TOOLS.md` for user-facing API documentation
 6. Check `docs/PYTHON_SANDBOX_STATUS.md` for Phase 1-13.5 status
 7. Check `docs/TODO.md` for feature completion tracking
 
 ---
 
-*Created: 2026-05-19 | Updated: 2026-05-20 | Status: Hotfix deployed, refactor planned | Target: v0.16.0 refactor*
+*Created: 2026-05-19 | Updated: 2026-05-20 | Status: In development, refactor planned before merge*
