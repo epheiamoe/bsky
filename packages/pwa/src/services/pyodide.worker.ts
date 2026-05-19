@@ -375,14 +375,119 @@ function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = f
   bridge.get_lists = (actor?: string) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? res.data : { error: res.error }; };
   bridge.get_list_feed = (list: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
 
-  // Not implemented in PWA
-  bridge.extract_images_from_post = (uri: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.download_image = (did: string, cid: string, filename?: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.extract_external_link = (uri: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.fetch_web_markdown = (url: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.search_web_ddg = (query: string) => { return { error: 'Not implemented in PWA bridge' }; };
-  bridge.search_wikipedia = (query: string, lang?: string) => { return { error: 'Not implemented in PWA bridge' }; };
+  // Extract images from post
+  bridge.extract_images_from_post = (uri: string) => {
+    const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/);
+    if (!match) return { error: 'Invalid AT URI' };
+    const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] });
+    if (!res.ok) return { error: res.error };
+    const record = res.data as any;
+    const images: Array<{ did: string; cid: string; mimeType: string; alt: string }> = [];
+    if (record.value?.embed?.$type === 'app.bsky.embed.images') {
+      for (const img of record.value.embed.images) {
+        images.push({
+          did: match[1],
+          cid: img.image?.ref?.$link || '',
+          mimeType: img.image?.mimeType || 'image/jpeg',
+          alt: img.alt || '',
+        });
+      }
+    }
+    return { images, count: images.length };
+  };
+
+  // Download image
+  bridge.download_image = (did: string, cid: string, filename?: string) => {
+    const blobRes = syncRequest('GET', `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`, headers);
+    if (!blobRes.ok) return { error: blobRes.error };
+    const data = blobRes.data as string;
+    const ext = (blobRes.status === 200 && (blobRes as any).headers?.['content-type']?.includes('png')) ? 'png' : 'jpg';
+    const fname = filename || `bsky_image_${Date.now()}.${ext}`;
+    try {
+      pyodide.FS.writeFile(`/workspace/output/${fname}`, data);
+      return { saved: `/workspace/output/${fname}`, size: data.length, mimeType: `image/${ext}` };
+    } catch (e) {
+      return { error: `Failed to save image: ${e}` };
+    }
+  };
+
+  // View image
+  bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number) => {
+    if (!did || !cid) return { error: 'did and cid are required' };
+    const blobRes = syncRequest('GET', `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`, headers);
+    if (!blobRes.ok) return { error: blobRes.error };
+    // Return as base64 for display
+    const bytes = new Uint8Array(blobRes.data as any);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    const base64 = btoa(binary);
+    return { data: base64, alt: alt || '', size: bytes.length };
+  };
+
+  // Extract external link
+  bridge.extract_external_link = (uri: string) => {
+    const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/);
+    if (!match) return { error: 'Invalid AT URI' };
+    const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] });
+    if (!res.ok) return { error: res.error };
+    const record = res.data as any;
+    if (record.value?.embed?.$type === 'app.bsky.embed.external') {
+      const ext = record.value.embed.external;
+      return { uri: ext.uri, title: ext.title, description: ext.description };
+    }
+    return { link: null, message: 'No external link embed found' };
+  };
+
+  // Fetch web markdown
+  bridge.fetch_web_markdown = (url: string) => {
+    const res = syncRequest('GET', `https://r.jina.ai/${encodeURIComponent(url)}`, {});
+    if (!res.ok) return { error: res.error, url };
+    const content = res.data as string;
+    const trimmed = content.length > 10000 ? content.slice(0, 10000) + '\n\n... (truncated)' : content;
+    const titleMatch = trimmed.match(/#\s+(.+)/);
+    return { url, title: titleMatch ? titleMatch[1] : '', content: trimmed };
+  };
+
+  // Search web DDG
+  bridge.search_web_ddg = (query: string) => {
+    const res = syncRequest('GET', `https://html.duckduckgo.com/html?q=${encodeURIComponent(query)}`, {});
+    if (!res.ok) return { error: res.error };
+    // Simple HTML parsing - extract results
+    const html = res.data as string;
+    const results: Array<{ title: string; url: string; snippet: string }> = [];
+    const resultRegex = /class="result__a" href="([^"]+)"[^>]*>([^<]+)/g;
+    const snippetRegex = /class="result__snippet"[^>]*>([^<]+)/g;
+    let match;
+    while ((match = resultRegex.exec(html)) !== null && results.length < 10) {
+      const urlMatch = match[1];
+      const title = match[2];
+      const snippetMatch = snippetRegex.exec(html);
+      results.push({
+        title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
+        url: urlMatch,
+        snippet: snippetMatch ? snippetMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '',
+      });
+    }
+    return { results, query };
+  };
+
+  // Search Wikipedia
+  bridge.search_wikipedia = (query: string, lang: string = 'en') => {
+    const res = syncRequest('GET', `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`, {});
+    if (res.status === 404) return { error: 'No Wikipedia article found matching that query.' };
+    if (!res.ok) return { error: `Wikipedia API error: HTTP ${res.status}` };
+    const summary = res.data as any;
+    return {
+      title: summary.title,
+      displayTitle: summary.displaytitle,
+      description: summary.description,
+      extract: summary.extract,
+      thumbnail: summary.thumbnail,
+      url: summary.content_urls?.desktop?.page,
+    };
+  };
 
   // Write operations
   if (enableWrite) {
