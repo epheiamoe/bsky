@@ -351,29 +351,54 @@ function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = f
     return syncRequest('POST', `${pds}/xrpc/${endpoint}`, headers, JSON.stringify(body));
   };
 
+  // Field filtering utility
+  function filterFields(obj: unknown, fields: string[] | undefined): unknown {
+    if (!fields || fields.length === 0) return obj;
+    if (obj === null || obj === undefined) return obj;
+    if (Array.isArray(obj)) return obj.map(item => filterFields(item, fields));
+    if (typeof obj !== 'object') return obj;
+    
+    const result: Record<string, unknown> = {};
+    for (const field of fields) {
+      const parts = field.split('.');
+      if (parts.length === 1) {
+        if (field in (obj as Record<string, unknown>)) {
+          result[field] = (obj as Record<string, unknown>)[field];
+        }
+      } else {
+        const root = parts[0];
+        const rest = parts.slice(1).join('.');
+        if (root && root in (obj as Record<string, unknown>)) {
+          result[root] = filterFields((obj as Record<string, unknown>)[root], [rest]);
+        }
+      }
+    }
+    return result;
+  }
+
   const bridge: Record<string, (...args: any[]) => any> = {};
 
   // Read operations
-  bridge.resolve_handle = (handle: string) => { const res = get('com.atproto.identity.resolveHandle', { handle }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_record = (uri: string) => { const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/); if (!match) return { error: 'Invalid AT URI' }; const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] }); return res.ok ? res.data : { error: res.error }; };
-  bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string) => { const res = get('com.atproto.repo.listRecords', { repo, collection, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.search_posts = (q: string, limit?: number, cursor?: string, sort?: string) => { const res = get('app.bsky.feed.searchPosts', { q, limit, cursor, sort }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_timeline = (limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getTimeline', { limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_author_feed = (actor: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getAuthorFeed', { actor, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_popular_feed_generators = (limit?: number) => { const res = get('app.bsky.unspecced.getPopularFeedGenerators', { limit }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_feed_generator = (feed: string) => { const res = get('app.bsky.feed.getFeedGenerator', { feed }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_feed = (feed: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getFeed', { feed, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_post_thread = (uri: string, depth?: number) => { const res = get('app.bsky.feed.getPostThread', { uri, depth }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_post_context = (uri: string, maxReplies?: number) => { const res = get('app.bsky.feed.getPostThread', { uri, depth: 3 }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_post_interactions = (uri: string, type?: string, limit?: number, cursor?: string) => { if (type === 'reposts') { const res = get('app.bsky.feed.getRepostedBy', { uri, limit, cursor }); return res.ok ? res.data : { error: res.error }; } const res = get('app.bsky.feed.getLikes', { uri, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_quotes = (uri: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.searchPosts', { q: uri, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.search_actors = (q: string, limit?: number, cursor?: string) => { const res = get('app.bsky.actor.searchActors', { q, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_profile = (actor: string) => { const res = get('app.bsky.actor.getProfile', { actor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string) => { if (direction === 'followers') { const res = get('app.bsky.graph.getFollowers', { actor, limit, cursor }); return res.ok ? res.data : { error: res.error }; } const res = get('app.bsky.graph.getFollows', { actor, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_suggested_follows = (actor: string) => { const res = get('app.bsky.graph.getSuggestedFollows', { actor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.list_notifications = (limit?: number, cursor?: string) => { const res = get('app.bsky.notification.listNotifications', { limit, cursor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_lists = (actor?: string) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? res.data : { error: res.error }; };
-  bridge.get_list_feed = (list: string, limit?: number, cursor?: string) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? res.data : { error: res.error }; };
+  bridge.resolve_handle = (handle: string, fields?: string[]) => { const res = get('com.atproto.identity.resolveHandle', { handle }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_record = (uri: string, fields?: string[]) => { const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/); if (!match) return { error: 'Invalid AT URI' }; const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('com.atproto.repo.listRecords', { repo, collection, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.search_posts = (q: string, limit?: number, cursor?: string, sort?: string, fields?: string[]) => { const res = get('app.bsky.feed.searchPosts', { q, limit, cursor, sort }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_timeline = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getTimeline', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_author_feed = (actor: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getAuthorFeed', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_popular_feed_generators = (limit?: number, fields?: string[]) => { const res = get('app.bsky.unspecced.getPopularFeedGenerators', { limit }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_feed_generator = (feed: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeedGenerator', { feed }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_feed = (feed: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeed', { feed, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_post_thread = (uri: string, depth?: number, format?: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_post_context = (uri: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth: 3 }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_post_interactions = (uri: string, type?: string, limit?: number, cursor?: string, fields?: string[]) => { if (type === 'reposts') { const res = get('app.bsky.feed.getRepostedBy', { uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; } const res = get('app.bsky.feed.getLikes', { uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_quotes = (uri: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.searchPosts', { q: uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.search_actors = (q: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.actor.searchActors', { q, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_profile = (actor: string, fields?: string[]) => { const res = get('app.bsky.actor.getProfile', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) => { if (direction === 'followers') { const res = get('app.bsky.graph.getFollowers', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; } const res = get('app.bsky.graph.getFollows', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_suggested_follows = (actor: string, fields?: string[]) => { const res = get('app.bsky.graph.getSuggestedFollows', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.list_notifications = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.notification.listNotifications', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_lists = (actor?: string, fields?: string[]) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.get_list_feed = (list: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
 
   // Extract images from post
   bridge.extract_images_from_post = (uri: string) => {
@@ -577,66 +602,90 @@ print(json.dumps(result))
 
 const BSKY_TOOLS_PYTHON_WRAPPER = `
 import js
-from typing import List, Dict, Any, Optional
+import sys
+from typing import List, Dict, Any, Optional, Union
 
 class BskyToolsError(Exception):
     pass
 
 class BskyTools:
     def __init__(self):
+        # Auto-detect bridge from globals
         self._bridge = js.bskyToolsBridge if hasattr(js, 'bskyToolsBridge') else None
+        if not self._bridge and 'bskyToolsBridge' in globals():
+            self._bridge = globals()['bskyToolsBridge']
 
-    def _call(self, method: str, *args):
+    def _call(self, method: str, *args, fields: Optional[Union[List[str], str]] = None):
         if not self._bridge:
             raise BskyToolsError("BskyTools not initialized. Auth required.")
+        
+        # Convert fields string to list
+        if isinstance(fields, str):
+            fields = [f.strip() for f in fields.split(',') if f.strip()]
+        
+        # Pass fields as last argument if provided
+        if fields is not None:
+            args = args + (fields,)
+        
         result = getattr(self._bridge, method)(*args)
         if hasattr(result, 'to_py'):
-            return result.to_py()
+            result = result.to_py()
+        
+        # Check for errors
+        if isinstance(result, dict) and 'error' in result:
+            raise BskyToolsError(result['error'])
+        
         return result
 
-    def resolve_handle(self, handle: str, fields: Optional[List[str]] = None):
-        return self._call('resolve_handle', handle)
-    def get_record(self, uri: str, fields: Optional[List[str]] = None):
-        return self._call('get_record', uri)
-    def list_records(self, repo: str, collection: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('list_records', repo, collection, limit, cursor)
-    def search_posts(self, q: str, limit: int = 25, cursor: Optional[str] = None, sort: str = 'top', fields: Optional[List[str]] = None):
-        return self._call('search_posts', q, limit, cursor, sort)
-    def get_timeline(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_timeline', limit, cursor)
-    def get_author_feed(self, actor: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_author_feed', actor, limit, cursor)
-    def get_popular_feed_generators(self, limit: int = 50, fields: Optional[List[str]] = None):
-        return self._call('get_popular_feed_generators', limit)
-    def get_feed_generator(self, feed: str, fields: Optional[List[str]] = None):
-        return self._call('get_feed_generator', feed)
-    def get_feed(self, feed: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_feed', feed, limit, cursor)
-    def get_post_thread(self, uri: str, depth: int = 3, fields: Optional[List[str]] = None):
-        return self._call('get_post_thread', uri, depth)
-    def get_post_context(self, uri: str, max_replies: int = 5, fields: Optional[List[str]] = None):
-        return self._call('get_post_context', uri, max_replies)
-    def get_post_interactions(self, uri: str, type: str = 'likes', limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_post_interactions', uri, type, limit, cursor)
-    def get_quotes(self, uri: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_quotes', uri, limit, cursor)
-    def search_actors(self, q: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('search_actors', q, limit, cursor)
-    def get_profile(self, actor: str, fields: Optional[List[str]] = None):
-        return self._call('get_profile', actor)
-    def get_connections(self, actor: str, direction: str = 'following', limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_connections', actor, direction, limit, cursor)
-    def get_suggested_follows(self, actor: str, fields: Optional[List[str]] = None):
-        return self._call('get_suggested_follows', actor)
-    def list_notifications(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('list_notifications', limit, cursor)
-    def extract_images_from_post(self, uri: str, fields: Optional[List[str]] = None):
-        return self._call('extract_images_from_post', uri)
-    def download_image(self, did: str, cid: str, filename: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('download_image', did, cid, filename)
-    def view_image(self, did: Optional[str] = None, cid: Optional[str] = None, alt: Optional[str] = None, upload_index: Optional[int] = None, fields: Optional[List[str]] = None):
-        return self._call('view_image', did, cid, alt, upload_index)
-    def extract_external_link(self, uri: str, fields: Optional[List[str]] = None):
+    def resolve_handle(self, handle: str, fields: Optional[Union[List[str], str]] = None):
+        # If input is already a DID, return it directly
+        if handle.startswith('did:'):
+            result = {'did': handle}
+            if fields:
+                result = {k: v for k, v in result.items() if k in (fields if isinstance(fields, list) else [f.strip() for f in fields.split(',')])}
+            return result
+        return self._call('resolve_handle', handle, fields=fields)
+    def get_record(self, uri: str, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_record', uri, fields=fields)
+    def list_records(self, repo: str, collection: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('list_records', repo, collection, limit, cursor, fields=fields)
+    def search_posts(self, q: str, limit: int = 25, cursor: Optional[str] = None, sort: str = 'top', fields: Optional[Union[List[str], str]] = None):
+        return self._call('search_posts', q, limit, cursor, sort, fields=fields)
+    def get_timeline(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_timeline', limit, cursor, fields=fields)
+    def get_author_feed(self, actor: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_author_feed', actor, limit, cursor, fields=fields)
+    def get_popular_feed_generators(self, limit: int = 50, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_popular_feed_generators', limit, fields=fields)
+    def get_feed_generator(self, feed: str, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_feed_generator', feed, fields=fields)
+    def get_feed(self, feed: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_feed', feed, limit, cursor, fields=fields)
+    def get_post_thread(self, uri: str, depth: int = 3, format: str = 'flat', max_replies: int = 5, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_post_thread', uri, depth, format, max_replies, fields=fields)
+    def get_post_context(self, uri: str, max_replies: int = 5, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_post_context', uri, max_replies, fields=fields)
+    def get_post_interactions(self, uri: str, type: str = 'likes', limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_post_interactions', uri, type, limit, cursor, fields=fields)
+    def get_quotes(self, uri: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_quotes', uri, limit, cursor, fields=fields)
+    def search_actors(self, q: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('search_actors', q, limit, cursor, fields=fields)
+    def get_profile(self, actor: str, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_profile', actor, fields=fields)
+    def get_connections(self, actor: str, direction: str = 'following', limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_connections', actor, direction, limit, cursor, fields=fields)
+    def get_suggested_follows(self, actor: str, fields: Optional[Union[List[str], str]] = None):
+        return self._call('get_suggested_follows', actor, fields=fields)
+    def list_notifications(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('list_notifications', limit, cursor, fields=fields)
+    def extract_images_from_post(self, uri: str, fields: Optional[Union[List[str], str]] = None):
+        return self._call('extract_images_from_post', uri, fields=fields)
+    def download_image(self, did: str, cid: str, filename: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('download_image', did, cid, filename, fields=fields)
+    def view_image(self, did: Optional[str] = None, cid: Optional[str] = None, alt: Optional[str] = None, upload_index: Optional[int] = None, fields: Optional[Union[List[str], str]] = None):
+        return self._call('view_image', did, cid, alt, upload_index, fields=fields)
+    def extract_external_link(self, uri: str, fields: Optional[Union[List[str], str]] = None):
         return self._call('extract_external_link', uri)
     def fetch_web_markdown(self, url: str, fields: Optional[List[str]] = None):
         return self._call('fetch_web_markdown', url)
