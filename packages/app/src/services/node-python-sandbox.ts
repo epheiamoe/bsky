@@ -410,6 +410,13 @@ export class NodePythonSandbox implements PythonSandboxEngine {
       const handlerParams = { ...params };
       delete handlerParams.fields;
 
+      // Special case: resolve_handle with DID input
+      if (method === 'resolve_handle' && handlerParams.handle && typeof handlerParams.handle === 'string' && handlerParams.handle.startsWith('did:')) {
+        const result = { did: handlerParams.handle };
+        const filteredResult = fields && fields.length > 0 ? filterFields(result, fields) : result;
+        return { jsonrpc: '2.0', result: filteredResult, id };
+      }
+
       // Execute tool handler — result is a JSON string
       const resultJson = await handler(handlerParams, {});
       const result = JSON.parse(resultJson);

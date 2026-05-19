@@ -515,6 +515,9 @@ export function generateNodeWrapper(): string {
         
         Returns: ${tool.returns}
         """
+        # Convert string fields to list
+        if isinstance(fields, str):
+            fields = [f.strip() for f in fields.split(',') if f.strip()]
         kwargs = {${tool.parameters.filter(p => p.name !== 'fields').map(p => `"${p.name}": ${p.name}`).join(', ')}}
         if fields is not None:
             kwargs["fields"] = fields
