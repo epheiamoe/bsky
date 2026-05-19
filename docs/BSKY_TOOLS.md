@@ -19,17 +19,39 @@
 
 ## Quick Start
 
-### Initialization
+### Module Import
 
-`bsky_tools` is pre-initialized in the Python sandbox. Simply use it directly:
+`bsky_tools` is a **real Python module** registered in `sys.modules`. You can use it in two ways:
 
+**Option 1: Direct import (recommended)**
 ```python
-# bsky_tools is already available — no import needed
+import bsky_tools
+
 posts = bsky_tools.search_posts("AI", limit=50)
 for post in posts['posts']:
     if post['likeCount'] > 100:
         print(f"Popular: {post['author']}: {post['text'][:80]}")
 ```
+
+**Option 2: Import specific functions**
+```python
+from bsky_tools import search_posts, get_profile, follow
+
+posts = search_posts("indiedev", limit=100)
+for post in posts['posts']:
+    profile = get_profile(post['author'])
+    if profile['followersCount'] < 1000:
+        follow(profile['did'])
+        print(f"Followed {profile['handle']}")
+```
+
+**Option 3: Use the pre-initialized global variable**
+```python
+# bsky_tools global is also available (backward compatible)
+posts = bsky_tools.search_posts("AI", limit=50)
+```
+
+**Note**: The module is automatically registered during Python sandbox initialization. You never need to manually initialize it.
 
 ```python
 # Batch follow small accounts
@@ -245,7 +267,7 @@ Common errors:
 | 2 | `get_post_thread` in PWA lacks `format`/`maxReplies` | Use `depth` parameter only; for flat format, use `get_post_context` |
 | 3 | `list_records` may return empty for large repos | Use `cursor` pagination; verify actor's PDS |
 | 4 | `get_suggested_follows` may return empty for new accounts | Normal behavior for accounts with few connections |
-| 5 | `import bsky_tools` does not work | Use the pre-initialized `bsky_tools` global directly |
+| 5 | Write operations require confirmation | Use TUI/MCP for programmatic write workflows |
 | 6 | Write operations on PWA require browser `confirm()` dialog | Use TUI/MCP for programmatic write workflows |
 
 ---
