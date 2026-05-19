@@ -3,7 +3,7 @@
   "mcp": {
     "bsky": {
       "type": "local",
-      "command": ["node", "scripts/start-mcp.mjs"],
+      "command": ["node", "packages/mcp/dist/start-with-env.js"],
       "enabled": true
     }
   }

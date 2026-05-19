@@ -94,6 +94,7 @@ export function SettingsView({ goBack }: SettingsViewProps) {
         model: activeModel,
         provider: providerId,
         reasoningStyle: selectedProvider.reasoningStyle,
+        apiType: selectedProvider.apiType,
         thinkingEnabled: currentModelInfo?.thinking ?? config.aiConfig.thinkingEnabled ?? true,
         visionEnabled: currentModelInfo?.vision ?? config.aiConfig.visionEnabled ?? false,
       },

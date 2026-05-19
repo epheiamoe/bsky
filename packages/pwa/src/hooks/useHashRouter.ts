@@ -43,7 +43,7 @@ export function useHashRouter() {
     return () => window.removeEventListener('popstate', handler);
   }, []);
 
-  const goTo = useCallback((view: AppView) => {
+  const goTo = useCallback((view: AppView, replace?: boolean) => {
     // Bare feed navigation → resolve to last active or default feed
     if (view.type === 'feed' && !view.feedUri) {
       const resolved = getLastFeedUri() ?? getFeedConfig().defaultFeedUri ?? BUILTIN_FEEDS.following;
@@ -52,9 +52,14 @@ export function useHashRouter() {
       }
     }
     const hash = encodeView(view);
-    window.history.pushState(null, '', hash);
+    if (replace) {
+      window.history.replaceState(null, '', hash);
+      setCanGoBack(false);
+    } else {
+      window.history.pushState(null, '', hash);
+      setCanGoBack(true);
+    }
     setCurrentView(view);
-    setCanGoBack(true);
   }, []);
 
   const goBack = useCallback(() => {

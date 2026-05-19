@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useAIChat, useI18n, getAIChatSessionId, resetAIChatSession } from '@bsky/app';
+import { getAppConfig } from '../../hooks/useAppConfig.js';
 import type { AIChatMessage } from '@bsky/app';
 import type { WidgetProps } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
@@ -25,10 +26,12 @@ export function AIChatHeaderButtons({ goTo, onClose }: { goTo: (v: unknown) => v
 }
 
 export function AIChatWidget({ onClose, context }: WidgetProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const client = context?.client;
   const goTo = context?.goTo as ((v: unknown) => void) | undefined;
   const aiConfig: AIConfig = (context?.aiConfig as AIConfig | undefined) ?? { apiKey: '', baseUrl: '', model: '' };
+  const userHandle = context?.userHandle as string | undefined;
+  const userDisplayName = context?.userDisplayName as string | undefined;
 
   const [widgetKey, setWidgetKey] = useState(0);
   const chatId = useMemo(() => getAIChatSessionId() || resetAIChatSession(), [widgetKey]);
@@ -39,7 +42,10 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
     chatId,
     stream: true,
     environment: 'pwa',
-    locale: context?.locale as string | undefined,
+    locale,
+    userHandle,
+    userDisplayName,
+    userPronouns: getAppConfig().userPronouns,
   });
 
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
@@ -141,7 +147,7 @@ export function AIChatWidget({ onClose, context }: WidgetProps) {
           }
           if (group.type === 'tool') {
             return (
-              <ToolCard key={gi} toolName={group.msg.toolName ?? ''} args={group.msg.content} resultContent={group.result?.content}
+              <ToolCard key={gi} toolName={group.msg.toolName ?? ''} args={group.msg.content} resultContent={group.result?.content} chatId={chatId}
                 expanded={expandedCards.has(gi)} onToggle={() => toggleCard(gi)} compact />
             );
           }

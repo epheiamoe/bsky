@@ -7,11 +7,12 @@ import type { IconName } from './Icon.js';
 
 interface SidebarProps {
   currentView: AppView;
-  goTo: (v: AppView) => void;
+  goTo: (v: AppView, replace?: boolean) => void;
   client: BskyClient;
   notifCount?: number;
   draftCount?: number;
   dmCount?: number;
+  onLogout: () => void;
 }
 
 const SIDEBAR_TABS = [
@@ -27,54 +28,68 @@ const SIDEBAR_TABS = [
   { icon: 'flask-conical' as IconName, key: 'nav.atplay', type: 'atplay' as const, needsHandle: false },
 ] as const;
 
-export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmCount }: SidebarProps) {
+export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmCount, onLogout }: SidebarProps) {
   const { t } = useI18n();
   const handle = client.isAuthenticated() ? client.getHandle() : null;
 
   return (
-    <nav className="flex flex-col py-4 px-3 gap-1 flex-1" aria-label="Main">
-      {SIDEBAR_TABS.map((tab) => {
-        const isActive = tab.type === 'profile'
-          ? currentView.type === 'profile'
-          : currentView.type === tab.type;
-        return (
-          <button
-            key={tab.type}
-            onClick={() => {
-              if (tab.type === 'profile' && handle) {
-                goTo({ type: 'profile', actor: handle });
-              } else {
-                goTo({ type: tab.type } as AppView);
-              }
-            }}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
-              isActive
-                ? 'bg-primary/10 text-primary font-semibold border-primary'
-                : 'text-text-secondary hover:bg-surface border-transparent'
-            }`}
-            aria-current={isActive ? 'page' : undefined}
-          >
-            <Icon name={tab.icon} size={20} className="mr-2" />
-            <span className="flex-1">{t(tab.key)}</span>
-            {tab.type === 'notifications' && notifCount != null && notifCount > 0 && (
-              <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
-                {notifCount > 99 ? '99+' : notifCount}
-              </span>
-            )}
-            {tab.type === 'compose' && draftCount != null && draftCount > 0 && (
-              <span className="bg-yellow-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
-                {draftCount > 99 ? '99+' : draftCount}
-              </span>
-            )}
-            {tab.type === 'dm' && dmCount != null && dmCount > 0 && (
-              <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
-                {dmCount > 99 ? '99+' : dmCount}
-              </span>
-            )}
-          </button>
-        );
-      })}
-      <div className="mt-auto pt-3 border-t border-border">
+    <nav className="flex flex-col py-4 px-3 gap-1 min-h-0 flex-1" aria-label="Main">
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
+        {SIDEBAR_TABS.map((tab) => {
+          const isActive = tab.type === 'profile'
+            ? currentView.type === 'profile'
+            : currentView.type === tab.type;
+          return (
+            <button
+              key={tab.type}
+              onClick={() => {
+                if (tab.type === 'profile' && handle) {
+                  goTo({ type: 'profile', actor: handle });
+                } else {
+                  goTo({ type: tab.type } as AppView);
+                }
+              }}
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
+                isActive
+                  ? 'bg-primary/10 text-primary font-semibold border-primary'
+                  : 'text-text-secondary hover:bg-surface border-transparent'
+              }`}
+              aria-current={isActive ? 'page' : undefined}
+            >
+              <Icon name={tab.icon} size={20} className="mr-2" />
+              <span className="flex-1">{t(tab.key)}</span>
+              {tab.type === 'notifications' && notifCount != null && notifCount > 0 && (
+                <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+                  {notifCount > 99 ? '99+' : notifCount}
+                </span>
+              )}
+              {tab.type === 'compose' && draftCount != null && draftCount > 0 && (
+                <span className="bg-yellow-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+                  {draftCount > 99 ? '99+' : draftCount}
+                </span>
+              )}
+              {tab.type === 'dm' && dmCount != null && dmCount > 0 && (
+                <span className="bg-primary text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center leading-none">
+                  {dmCount > 99 ? '99+' : dmCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <div className="pt-3 border-t border-border space-y-1">
+        <button
+          onClick={() => goTo({ type: 'settings' } as AppView)}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
+            currentView.type === 'settings'
+              ? 'bg-primary/10 text-primary font-semibold border-primary'
+              : 'text-text-secondary hover:bg-surface border-transparent'
+          }`}
+          aria-current={currentView.type === 'settings' ? 'page' : undefined}
+        >
+          <Icon name="settings" size={20} className="mr-2" />
+          <span>{t('nav.settings')}</span>
+        </button>
         <button
           onClick={() => goTo({ type: 'components' } as unknown as AppView)}
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
@@ -84,7 +99,21 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmC
           }`}
         >
           <Icon name="component" size={20} className="mr-2" />
-          <span>组件</span>
+          <span>{t('nav.components')}</span>
+        </button>
+        <button
+          onClick={() => goTo({ type: 'about' })}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 text-text-secondary hover:bg-surface border-transparent"
+        >
+          <Icon name="badge-question-mark" size={20} className="mr-2" />
+          <span>{t('nav.about')}</span>
+        </button>
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 text-text-secondary hover:text-red-500 border-transparent hover:bg-surface"
+        >
+          <Icon name="log-out" size={20} className="mr-2" />
+          <span>{t('settings.logout')}</span>
         </button>
       </div>
     </nav>

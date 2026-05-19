@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import { formatToolResult } from './formatToolResult.js';
+import { PythonResult } from './PythonResult.js';
 
 const WRENCH_SVG = '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" />';
 
@@ -11,9 +12,10 @@ interface ToolCardProps {
   expanded: boolean;
   onToggle: () => void;
   compact?: boolean;
+  chatId?: string; // Current chat session ID for workspace file isolation
 }
 
-export function ToolCard({ toolName, args, resultContent, expanded, onToggle, compact }: ToolCardProps) {
+export function ToolCard({ toolName, args, resultContent, expanded, onToggle, compact, chatId }: ToolCardProps) {
   const { t } = useI18n();
   const display = useMemo(() => formatToolResult(toolName, resultContent ?? args ?? ''), [toolName, resultContent, args]);
 
@@ -27,6 +29,19 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
 
   const formattedArgs = useMemo(() => {
     if (!args) return '';
+    // Special handling for execute_python: show code line count instead of raw code
+    if (toolName === 'execute_python') {
+      const match = args.match(/\{.*\}/s);
+      if (match) {
+        try {
+          const parsed = JSON.parse(match[0]);
+          const code = parsed.code as string || '';
+          const lines = code.split('\n').filter(l => l.trim()).length;
+          return `Code · ${lines} line${lines !== 1 ? 's' : ''}`;
+        } catch {}
+      }
+      return 'Python code';
+    }
     const match = args.match(/\{.*\}/s);
     if (match) {
       try {
@@ -35,7 +50,15 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
       } catch {}
     }
     return args;
-  }, [args]);
+  }, [args, toolName]);
+
+  // Special preview for execute_python
+  const previewText = useMemo(() => {
+    if (toolName === 'execute_python') {
+      return 'Python sandbox execution';
+    }
+    return display.summary;
+  }, [toolName, display.summary]);
 
   return (
     <div
@@ -66,7 +89,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
       } text-text-secondary/70 whitespace-nowrap overflow-hidden text-ellipsis ${
         expanded ? 'opacity-0 invisible max-h-0 py-0 my-0 overflow-hidden' : 'opacity-100 visible'
       }`}>
-        {display.summary}
+        {previewText}
       </div>
 
       {/* Expanded content — animated max-height + scrollable */}
@@ -82,7 +105,33 @@ export function ToolCard({ toolName, args, resultContent, expanded, onToggle, co
             <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" className="shrink-0" dangerouslySetInnerHTML={{ __html: WRENCH_SVG }} />
             {formattedArgs}
           </div>}
-          {display.body}
+          
+          {/* Always show Python code for execute_python */}
+          {toolName === 'execute_python' && args && (
+            <div className="mb-3">
+              <div className="text-xs text-text-secondary/60 mb-1 font-medium">Python Code</div>
+              <pre className="bg-black/30 rounded-lg px-3 py-2 text-xs font-mono text-text-secondary/80 whitespace-pre overflow-x-auto max-h-[200px] border border-border/50">
+                {(() => {
+                  const match = args.match(/\{.*\}/s);
+                  if (match) {
+                    try {
+                      const parsed = JSON.parse(match[0]);
+                      return parsed.code || '';
+                    } catch {}
+                  }
+                  return '';
+                })()}
+              </pre>
+            </div>
+          )}
+          
+          {toolName === 'execute_python' && resultContent ? (
+            <PythonResult result={resultContent} chatId={chatId} />
+          ) : toolName !== 'execute_python' ? (
+            display.body
+          ) : (
+            <div className="text-sm text-text-secondary/60 italic">等待执行结果...</div>
+          )}
         </div>
       </div>
     </div>

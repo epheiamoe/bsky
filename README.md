@@ -21,7 +21,11 @@ Supports third-party PDS.
 
 ![AI Chat](assets/illustration/AI-chat-1.png)
 
-Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap. Bring your own API key — nothing runs through our servers.
+Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap.
+
+**Python Sandbox** — AI can execute Python code for data analysis, statistics, and visualization. Pandas, NumPy, and Matplotlib available in-browser via Pyodide WASM. Results saved to workspace with per-chat file isolation.
+
+Bring your own API key — nothing runs through our servers.
 
 ### 🌍 AI Beyond Bluesky — Web Search Built In
 
@@ -89,6 +93,8 @@ Five guided steps that introduce you to the app's philosophy — from AI transpa
 
 **And also:**
 
+- **Python Sandbox** — AI executes Python for data analysis, statistics, plotting. Pandas/NumPy/Matplotlib (PWA auto-installs, TUI/MCP requires manual pip install)
+- **Workspace Files** — per-chat file isolation. Upload CSV/JSON, download results, preview in-app
 - **Bookmarks** — bookmark anything, browse later
 - **Search** — posts, users, feeds across 4 tabs
 - **Profile** — edit avatar, banner, display name
@@ -145,11 +151,29 @@ Or visit **[bsky.epheia.dev](https://bsky.epheia.dev)** or **[ai-bsky.pages.dev]
 
 ### MCP Server (for AI clients)
 
+Connect external AI clients (Claude Desktop, ChatGPT, VS Code, Cursor, OpenCode) to your Bluesky account via MCP.
+
 ```bash
 pnpm install && pnpm -r build          # first time only
 cd packages/mcp && pnpm build          # build MCP server
 BSKY_HANDLE=... BSKY_APP_PASSWORD=... node dist/index.js
 ```
+
+**OpenCode integration** (with `.env` auto-loading):
+```jsonc
+// opencode.jsonc
+{
+  "mcp": {
+    "bsky": {
+      "type": "local",
+      "command": ["node", "packages/mcp/dist/start-with-env.js"],
+      "enabled": true
+    }
+  }
+}
+```
+
+The `start-with-env.js` wrapper automatically loads your `.env` file and maps `BLUESKY_HANDLE` → `BSKY_HANDLE` for compatibility.
 
 Or install globally from npm:
 
@@ -157,6 +181,8 @@ Or install globally from npm:
 npm install -g @epheiamoe/bsky-mcp
 BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 ```
+
+**Troubleshooting**: See [docs/MCP_TROUBLESHOOTING.md](docs/MCP_TROUBLESHOOTING.md) for common issues.
 
 ---
 
@@ -177,4 +203,4 @@ Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.13.8** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.13.9** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)

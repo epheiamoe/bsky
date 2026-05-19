@@ -17,7 +17,8 @@ export type AppView =
   | { type: 'about' }
   | { type: 'diagnostic' }
   | { type: 'atplay' }
-  | { type: 'atplaySocialCircle' };
+  | { type: 'atplaySocialCircle' }
+  | { type: 'settings' };
 
 export interface NavigationState {
   currentView: AppView;

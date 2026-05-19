@@ -28,6 +28,8 @@ interface ThreadViewProps {
   imageDescConfig?: AIConfig;
   imageDescLang?: string;
   singleImageFill?: boolean;
+  threadPreviewLines?: number;
+  quotedPostPreviewLines?: number;
 }
 
 function Spinner() {
@@ -38,7 +40,7 @@ function Spinner() {
   );
 }
 
-export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill }: ThreadViewProps) {
+export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill, threadPreviewLines = 8, quotedPostPreviewLines = 8 }: ThreadViewProps) {
   const {
     flatLines,
     loading,
@@ -171,7 +173,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       {formatTime(line.indexedAt)}
                     </span>
                   </div>
-                  <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap line-clamp-4">
+                  <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap" style={{ WebkitLineClamp: threadPreviewLines }}>
                     {line.text}
                   </p>
                 </div>
@@ -235,7 +237,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
                   <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
                 </div>
-                <p className="text-sm text-text-primary line-clamp-4 break-words">{linkifyText(focused.quotedPost.text)}</p>
+                <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
                 {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
                   <div className="mt-1 flex gap-1">
                     {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
@@ -338,6 +340,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               imageDescLang={imageDescLang}
               singleImageFill={singleImageFill}
               client={client}
+              previewLines={threadPreviewLines}
+              quotedPreviewLines={quotedPostPreviewLines}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                     </PostCard>

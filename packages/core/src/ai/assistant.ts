@@ -10,84 +10,12 @@ import {
   P_ALT_DESCRIPTION_SYSTEM,
   PF_ALT_DESCRIPTION_USER,
 } from './prompts.js';
-import { cleanBaseUrl, shouldSendThinkingParam } from './providers.js';
+import type { ChatMessage, AIConfig, ContentBlock } from './adapter.js';
+import { getAdapter } from './adapter.js';
 
-export interface ContentBlock {
-  type: 'text' | 'image_url';
-  text?: string;
-  image_url?: { url: string; detail?: 'auto' | 'low' | 'high' };
-}
+export type { AIConfig, ChatMessage, ContentBlock } from './adapter.js';
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string | ContentBlock[];
-  name?: string;
-  tool_call_id?: string;
-  tool_calls?: ToolCall[];
-  reasoning_content?: string;
-}
-
-export interface ToolCall {
-  id: string;
-  type: 'function';
-  function: {
-    name: string;
-    arguments: string;
-  };
-}
-
-export interface ChatCompletionRequest {
-  model: string;
-  messages: ChatMessage[];
-  tools?: Array<{
-    type: 'function';
-    function: {
-      name: string;
-      description: string;
-      parameters: Record<string, unknown>;
-    };
-  }>;
-  tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
-  temperature?: number;
-  max_tokens?: number;
-  stream?: boolean;
-  thinking?: { type: 'enabled' | 'disabled' };
-}
-
-export interface ChatCompletionChoice {
-  index: number;
-  message: {
-    role: 'assistant';
-    content: string | null;
-    tool_calls?: ToolCall[];
-    reasoning_content?: string;
-  };
-  finish_reason: 'stop' | 'tool_calls' | 'length';
-}
-
-export interface ChatCompletionResponse {
-  id: string;
-  object: 'chat.completion';
-  created: number;
-  model: string;
-  choices: ChatCompletionChoice[];
-  usage?: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-export type AIConfig = {
-  apiKey: string;
-  baseUrl: string;
-  model: string;
-  thinkingEnabled?: boolean;
-  visionEnabled?: boolean;
-  provider?: string;       // 'deepseek' | 'mistral' | etc
-  reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
-  customSystemPrompt?: string;
-};
+export { P_ALT_DESCRIPTION_SYSTEM, PF_ALT_DESCRIPTION_USER } from './prompts.js';
 
 const DEFAULT_CONFIG: Partial<AIConfig> = {
   baseUrl: 'https://api.deepseek.com',
@@ -212,112 +140,96 @@ export class AIAssistant {
 
     const intermediateSteps: Array<{ type: 'tool_call' | 'tool_result' | 'assistant' | 'user'; content: string }> = [];
     let toolCallsExecuted = 0;
-    // No hard limit — user can pause/stop manually
+    const adapter = getAdapter(this.config.apiType);
     for (let round = 0; ; round++) {
-      const response = await this.makeRequest();
+      const response = await this.makeRequest(adapter);
 
-      const choice = response.choices[0];
-      if (!choice) throw new Error('No response from AI');
-
-      const message = choice.message;
-
-      // Check for tool calls
-      if (message.tool_calls && message.tool_calls.length > 0) {
-        // Add assistant's tool call message
+      if (!response.toolCalls || response.toolCalls.length === 0) {
+        const finalContent = response.content || '';
         this.messages.push({
           role: 'assistant',
-          content: message.content || '',
-          tool_calls: message.tool_calls,
-          ...(message.reasoning_content ? { reasoning_content: message.reasoning_content } : {}),
+          content: finalContent,
+          ...(response.reasoningContent ? { reasoning_content: response.reasoningContent } : {}),
         });
-
-        for (const tc of message.tool_calls) {
-          const toolName = tc.function.name;
-          let toolArgs: Record<string, unknown>;
-          try {
-            toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
-          } catch {
-            toolArgs = { _raw: tc.function.arguments };
-            console.warn(`[assistant] Malformed JSON in tool call "${toolName}" arguments, using raw string`);
-          }
-          const toolDesc = this.toolMap.get(toolName);
-
-          intermediateSteps.push({
-            type: 'tool_call',
-            content: `🔧 Calling ${toolName}(${JSON.stringify(toolArgs)})`,
-          });
-
-          let toolResult: string;
-          if (toolDesc) {
-            // ── Write confirmation gate ──
-            if (toolDesc.requiresWrite) {
-              intermediateSteps.push({
-                type: 'tool_call',
-                content: `⚡ PENDING: ${toolDesc.definition.description}`,
-              });
-              const approved = await this._waitForConfirmation();
-              if (!approved) {
-                toolResult = 'User cancelled the operation.';
-                toolCallsExecuted++;
-                intermediateSteps.push({
-                  type: 'tool_result',
-                  content: `Cancelled: ${toolName}`,
-                });
-                this.messages.push({
-                  role: 'tool',
-                  content: toolResult,
-                  tool_call_id: tc.id,
-                });
-                continue;
-              }
-            }
-            try {
-              toolResult = await toolDesc.handler(toolArgs, this);
-            } catch (err) {
-              toolResult = `Error executing tool: ${err instanceof Error ? err.message : String(err)}`;
-            }
-          } else {
-            toolResult = `Unknown tool: ${toolName}`;
-          }
-          toolCallsExecuted++;
-
-          intermediateSteps.push({
-            type: 'tool_result',
-            content: `Result: ${toolResult.slice(0, 300)}${toolResult.length > 300 ? '...' : ''}`,
-          });
-
-          // Add tool result message
-          this.messages.push({
-            role: 'tool',
-            content: toolResult,
-            tool_call_id: tc.id,
-          });
-        }
-
-        // Continue loop to get final response
-        continue;
+        intermediateSteps.push({ type: 'assistant', content: finalContent });
+        return { content: finalContent, toolCallsExecuted, intermediateSteps };
       }
 
-      // No tool calls - final response
-      const finalContent = message.content || '';
+      // Tool calls
+      const toolCalls = response.toolCalls.map(tc => ({
+        id: tc.id,
+        type: 'function' as const,
+        function: { name: tc.name, arguments: tc.arguments },
+      }));
+
       this.messages.push({
         role: 'assistant',
-        content: finalContent,
-        ...(message.reasoning_content ? { reasoning_content: message.reasoning_content } : {}),
+        content: response.content || '',
+        tool_calls: toolCalls,
+        ...(response.reasoningContent ? { reasoning_content: response.reasoningContent } : {}),
       });
 
-      intermediateSteps.push({
-        type: 'assistant',
-        content: finalContent,
-      });
+      for (const tc of response.toolCalls) {
+        const toolName = tc.name;
+        let toolArgs: Record<string, unknown>;
+        try {
+          toolArgs = JSON.parse(tc.arguments) as Record<string, unknown>;
+        } catch {
+          toolArgs = { _raw: tc.arguments };
+          console.warn(`[assistant] Malformed JSON in tool call "${toolName}" arguments, using raw string`);
+        }
+        const toolDesc = this.toolMap.get(toolName);
 
-      return {
-        content: finalContent,
-        toolCallsExecuted,
-        intermediateSteps,
-      };
+        intermediateSteps.push({
+          type: 'tool_call',
+          content: `🔧 Calling ${toolName}(${JSON.stringify(toolArgs)})`,
+        });
+
+        let toolResult: string;
+        if (toolDesc) {
+          if (toolDesc.requiresWrite) {
+            intermediateSteps.push({
+              type: 'tool_call',
+              content: `⚡ PENDING: ${toolDesc.definition.description}`,
+            });
+            const approved = await this._waitForConfirmation();
+            if (!approved) {
+              toolResult = 'User cancelled the operation.';
+              toolCallsExecuted++;
+              intermediateSteps.push({
+                type: 'tool_result',
+                content: `Cancelled: ${toolName}`,
+              });
+              this.messages.push({
+                role: 'tool',
+                content: toolResult,
+                tool_call_id: tc.id,
+              });
+              continue;
+            }
+          }
+          try {
+            toolResult = await toolDesc.handler(toolArgs, this);
+          } catch (err) {
+            toolResult = `Error executing tool: ${err instanceof Error ? err.message : String(err)}`;
+          }
+        } else {
+          toolResult = `Unknown tool: ${toolName}`;
+        }
+        toolCallsExecuted++;
+
+        intermediateSteps.push({
+          type: 'tool_result',
+          content: `Result: ${toolResult.slice(0, 300)}${toolResult.length > 300 ? '...' : ''}`,
+        });
+
+        this.messages.push({
+          role: 'tool',
+          content: toolResult,
+          tool_call_id: tc.id,
+        });
+      }
     }
-    // Loop is unbounded — stop() or user pause controls termination
   }
 
   private _buildMessages(): ChatMessage[] {
@@ -345,16 +257,15 @@ export class AIAssistant {
       if (msgs[i]!.role === 'user') {
         const text: string = typeof msgs[i]!.content === 'string' ? (msgs[i]!.content as string) : '';
         const blocks: ContentBlock[] = [
-          { type: 'text' as const, text },
+          { type: 'text', text },
           ...this._pendingImages.flatMap(img => {
             const result: ContentBlock[] = [];
-            if (img.alt) result.push({ type: 'text' as const, text: `[图片 ALT: ${img.alt}]` });
-            result.push({ type: 'image_url' as const, image_url: { url: img.url, detail: 'auto' as const } });
+            if (img.alt) result.push({ type: 'text', text: `[图片 ALT: ${img.alt}]` });
+            result.push({ type: 'image_url', image_url: { url: img.url, detail: 'auto' } });
             return result;
           }),
         ];
         msgs[i] = { ...msgs[i]!, content: blocks } as ChatMessage;
-        // Persist images into the actual message store so they survive across turns
         this.messages[i] = { ...this.messages[i]!, content: blocks } as ChatMessage;
         break;
       }
@@ -362,48 +273,24 @@ export class AIAssistant {
     this.clearPendingImages();
     return msgs;
   }
-  private async makeRequest(): Promise<ChatCompletionResponse> {
-    const body: ChatCompletionRequest = {
-      model: this.config.model,
-      messages: this._buildMessages(),
-      temperature: 0.7,
-      max_tokens: 4096,
-    };
-    if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
-      (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
-    }
-    if (this.config.reasoningStyle === 'structured_content' && this.config.thinkingEnabled !== false) {
-      (body as any).reasoning_effort = 'high';
-    }
 
-    // Only include tools if we have any
-    if (this.tools.length > 0) {
-      body.tools = this.tools.map((t) => ({
-        type: 'function' as const,
-        function: {
-          name: t.definition.name,
-          description: t.definition.description,
-          parameters: t.definition.inputSchema as Record<string, unknown>,
-        },
-      }));
-      body.tool_choice = 'auto';
-    }
+  private async makeRequest(adapter: ReturnType<typeof getAdapter>): Promise<{
+    content: string;
+    reasoningContent?: string;
+    toolCalls?: Array<{ id: string; name: string; arguments: string }>;
+  }> {
+    const spec = adapter.buildRequest(this.config, this._buildMessages(), this.tools, false);
 
-      const url = `${cleanBaseUrl(this.config.baseUrl)}/v1/chat/completions`;
-
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.config.apiKey}`,
-        },
-        body: JSON.stringify(body),
+    let res: Response;
+    try {
+      res = await fetch(spec.url, {
+        method: 'POST',
+        headers: spec.headers,
+        body: JSON.stringify(spec.body),
       });
     } catch (e) {
       if (e instanceof TypeError) {
-        throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
+        throw new Error(`Network error: unable to reach LLM API at ${spec.url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
       }
       throw e;
     }
@@ -413,7 +300,7 @@ export class AIAssistant {
       throw new Error(`AI API error ${res.status}: ${errorText}`);
     }
 
-    return res.json() as Promise<ChatCompletionResponse>;
+    return adapter.parseResponse(await res.json());
   }
 
   /**
@@ -428,45 +315,17 @@ export class AIAssistant {
   }> {
     this.addUserMessage(content);
 
-    // No hard limit — user can pause/stop manually via AbortSignal
+    const adapter = getAdapter(this.config.apiType);
+
     for (let round = 0; ; round++) {
-      const body: ChatCompletionRequest = {
-        model: this.config.model,
-        messages: this._buildMessages(),
-        temperature: 0.7,
-        max_tokens: 4096,
-        stream: true,
-      };
-      if (this.config.provider && shouldSendThinkingParam(this.config.provider)) {
-        (body as any).thinking = { type: this.config.thinkingEnabled !== false ? 'enabled' : 'disabled' };
-      }
-      if (this.config.reasoningStyle === 'structured_content' && this.config.thinkingEnabled !== false) {
-        (body as any).reasoning_effort = 'high';
-      }
-
-      if (this.tools.length > 0) {
-        body.tools = this.tools.map((t) => ({
-          type: 'function' as const,
-          function: {
-            name: t.definition.name,
-            description: t.definition.description,
-            parameters: t.definition.inputSchema as Record<string, unknown>,
-          },
-        }));
-        body.tool_choice = 'auto';
-      }
-
-      const url = `${cleanBaseUrl(this.config.baseUrl)}/v1/chat/completions`;
+      const spec = adapter.buildRequest(this.config, this._buildMessages(), this.tools, true);
 
       let res: Response;
       try {
-        res = await fetch(url, {
+        res = await fetch(spec.url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.config.apiKey}`,
-          },
-          body: JSON.stringify(body),
+          headers: spec.headers,
+          body: JSON.stringify(spec.body),
           signal,
         });
       } catch (e) {
@@ -475,7 +334,7 @@ export class AIAssistant {
           return;
         }
         if (e instanceof TypeError) {
-          throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. If you are in China/HK, check VPN/proxy settings — some providers (e.g. Mistral) may be DNS-poisoned. (${(e as Error).message})`);
+          throw new Error(`Network error: unable to reach LLM API at ${spec.url}. Check LLM_BASE_URL and network. If you are in China/HK, check VPN/proxy settings — some providers (e.g. Mistral) may be DNS-poisoned. (${(e as Error).message})`);
         }
         throw e;
       }
@@ -485,78 +344,30 @@ export class AIAssistant {
         throw new Error(`AI API error ${res.status}: ${errorText}`);
       }
 
-      // Parse SSE stream
+      // Parse SSE stream via adapter
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
+      const processor = adapter.createStreamProcessor();
       let fullContent = '';
       let reasoningContent = '';
-      let toolCallAccum: Map<number, { id: string; name: string; arguments: string }> = new Map();
 
       try {
-      while (true) {
-        if (signal?.aborted) {
-          yield { type: 'done', content: '\n\n[已暂停]' };
-          break;
+        while (true) {
+          if (signal?.aborted) {
+            yield { type: 'done', content: '\n\n[已暂停]' };
+            break;
+          }
+          const { done, value } = await reader.read();
+          if (done) break;
+          const text = decoder.decode(value, { stream: true });
+          const events = processor.feed(text);
+          for (const ev of events) {
+            if (ev.type === 'token') fullContent += ev.content;
+            if (ev.type === 'thinking') reasoningContent += ev.content;
+            yield ev;
+          }
         }
-        const { done, value } = await reader.read();
-        if (done) break;
-        const text = decoder.decode(value, { stream: true });
-        const lines = text.split('\n');
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const data = line.slice(6);
-          if (data === '[DONE]') continue;
-
-          try {
-            const chunk = JSON.parse(data);
-            const delta = chunk.choices?.[0]?.delta;
-            if (!delta) continue;
-
-            if (delta.reasoning_content) {
-              reasoningContent += delta.reasoning_content;
-              yield { type: 'thinking', content: delta.reasoning_content as string };
-            }
-
-            if (delta.content) {
-              // Handle structured content (Mistral: arrays of thinking/text blocks)
-              if (Array.isArray(delta.content)) {
-                for (const block of delta.content) {
-                  if (block.type === 'thinking' && block.thinking) {
-                    for (const t of block.thinking) {
-                      if (t.type === 'text' && t.text) {
-                        reasoningContent += t.text;
-                        yield { type: 'thinking', content: t.text };
-                      }
-                    }
-                  } else if (block.type === 'text' && block.text) {
-                    fullContent += block.text;
-                    yield { type: 'token', content: block.text };
-                  }
-                }
-              } else {
-                fullContent += delta.content;
-                yield { type: 'token', content: delta.content };
-              }
-            }
-
-            if (delta.tool_calls) {
-              for (const tc of delta.tool_calls) {
-                const idx = tc.index;
-                if (!toolCallAccum.has(idx)) {
-                  toolCallAccum.set(idx, { id: tc.id || '', name: tc.function?.name || '', arguments: '' });
-                }
-                const acc = toolCallAccum.get(idx)!;
-                if (tc.id) acc.id = tc.id;
-                if (tc.function?.name) acc.name = tc.function.name;
-                if (tc.function?.arguments) acc.arguments += tc.function.arguments;
-              }
-            }
-          } catch { /* skip unparseable chunks */ }
-        }
-      }
       } catch (_err) {
-        // Aborted during SSE reading — yield partial content
         if (signal?.aborted) {
           yield { type: 'done', content: fullContent };
           return;
@@ -564,30 +375,27 @@ export class AIAssistant {
         throw _err;
       }
 
-       // Check if we got tool calls
-      if (toolCallAccum.size > 0) {
-        const toolCalls = Array.from(toolCallAccum.entries())
-          .sort(([a], [b]) => a - b)
-          .map(([, v]) => ({
-            id: v.id,
-            type: 'function' as const,
-            function: { name: v.name, arguments: v.arguments },
-          }));
-
+      // Check if we got tool calls
+      const toolCalls = processor.getToolCalls();
+      if (toolCalls.length > 0) {
         this.messages.push({
           role: 'assistant',
           content: fullContent || '',
-          tool_calls: toolCalls,
+          tool_calls: toolCalls.map(tc => ({
+            id: tc.id,
+            type: 'function' as const,
+            function: { name: tc.name, arguments: tc.arguments },
+          })),
           ...(reasoningContent ? { reasoning_content: reasoningContent } : {}),
         });
 
         for (const tc of toolCalls) {
-          const toolName = tc.function.name;
+          const toolName = tc.name;
           let toolArgs: Record<string, unknown>;
           try {
-            toolArgs = JSON.parse(tc.function.arguments) as Record<string, unknown>;
+            toolArgs = JSON.parse(tc.arguments) as Record<string, unknown>;
           } catch {
-            toolArgs = { _raw: tc.function.arguments };
+            toolArgs = { _raw: tc.arguments };
             console.warn(`[assistant] Malformed JSON in tool call "${toolName}" arguments, using raw string`);
           }
           const toolDesc = this.toolMap.get(toolName);
@@ -596,7 +404,6 @@ export class AIAssistant {
 
           let toolResult: string;
           if (toolDesc) {
-            // ── Write confirmation gate (streaming) ──
             if (toolDesc.requiresWrite) {
               const desc = buildToolDescription(toolName, toolArgs);
               yield { type: 'confirmation_needed' as any, content: desc, toolName };
@@ -629,7 +436,6 @@ export class AIAssistant {
             tool_call_id: tc.id,
           });
         }
-        // Continue loop for next round
         continue;
       }
 
@@ -642,7 +448,6 @@ export class AIAssistant {
       yield { type: 'done', content: fullContent };
       return;
     }
-    // Streaming loop unbounded — AbortSignal controls termination
   }
 }
 
@@ -672,33 +477,28 @@ export async function singleTurnAI(
   maxTokens = 2000,
   modelOverride?: string,
 ): Promise<string> {
-  const body = {
-    model: modelOverride || config.model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ],
-    temperature,
-    max_tokens: maxTokens,
-    stream: false,
-    thinking: config.provider && shouldSendThinkingParam(config.provider) ? { type: config.thinkingEnabled !== false ? 'enabled' : 'disabled' } : undefined,
-  };
+  const adapter = getAdapter(config.apiType);
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt },
+  ];
 
-  const url = `${cleanBaseUrl(config.baseUrl)}/v1/chat/completions`;
+  const spec = adapter.buildRequest(config, messages, [], false, {
+    temperature,
+    maxTokens,
+    model: modelOverride,
+  });
 
   let res: Response;
   try {
-    res = await fetch(url, {
+    res = await fetch(spec.url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify(body),
+      headers: spec.headers,
+      body: JSON.stringify(spec.body),
     });
   } catch (e) {
     if (e instanceof TypeError) {
-      throw new Error(`Network error: unable to reach LLM API at ${url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
+      throw new Error(`Network error: unable to reach LLM API at ${spec.url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
     }
     throw e;
   }
@@ -708,8 +508,8 @@ export async function singleTurnAI(
     throw new Error(`AI API error ${res.status}: ${errorText}`);
   }
 
-  const data = (await res.json()) as ChatCompletionResponse;
-  return data.choices[0]?.message?.content ?? '';
+  const data = (await res.json()) as any;
+  return adapter.parseResponse(data).content;
 }
 
 /**
@@ -722,11 +522,6 @@ export interface TranslationResult {
 
 /**
  * Single-turn AI translation with retry and dual mode support.
- * - 'simple': plain text translation (current behavior)
- * - 'json': structured JSON output with source language detection
- *
- * Retries up to maxRetries times on empty content or network errors,
- * with exponential backoff.
  */
 export async function translateText(
   config: AIConfig,
@@ -742,30 +537,33 @@ export async function translateText(
     ? PF_TRANSLATE_JSON(langLabel)
     : PF_TRANSLATE_SIMPLE(langLabel);
 
+  const adapter = getAdapter(config.apiType);
+
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     try {
-      const body: Record<string, unknown> = {
-        model: modelOverride || config.model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
-        ],
-        temperature: 0.3,
-        max_tokens: 2000,
-        thinking: { type: 'disabled' },
-      };
+      const messages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: text },
+      ];
 
-      if (mode === 'json') {
-        body.response_format = { type: 'json_object' };
+      const spec = adapter.buildRequest(config, messages, [], false, {
+        temperature: 0.3,
+        maxTokens: 2000,
+        model: modelOverride,
+      });
+
+      if (config.apiType !== 'responses') {
+        (spec.body as any).thinking = { type: 'disabled' };
       }
 
-      const res = await fetch(`${config.baseUrl}/v1/chat/completions`, {
+      if (mode === 'json') {
+        (spec.body as any).response_format = { type: 'json_object' };
+      }
+
+      const res = await fetch(spec.url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
-        body: JSON.stringify(body),
+        headers: spec.headers,
+        body: JSON.stringify(spec.body),
       });
 
       if (!res.ok) {
@@ -773,11 +571,10 @@ export async function translateText(
         throw new Error(`Translate API error ${res.status}: ${errorText.slice(0, 200)}`);
       }
 
-      const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-      const content = data.choices?.[0]?.message?.content ?? '';
+      const data = await res.json() as any;
+      const content = adapter.parseResponse(data).content;
 
       if (!content.trim()) {
-        // Empty content — retry
         if (attempt < maxRetries - 1) {
           await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
           continue;
@@ -789,7 +586,6 @@ export async function translateText(
         try {
           const parsed = JSON.parse(content) as { translated?: string; source_lang?: string };
           if (!parsed.translated) {
-            // Missing translated field — retry
             if (attempt < maxRetries - 1) {
               await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
               continue;
@@ -801,7 +597,6 @@ export async function translateText(
             sourceLang: parsed.source_lang || 'und',
           };
         } catch {
-          // JSON parse failed — retry
           if (attempt < maxRetries - 1) {
             await new Promise(r => setTimeout(r, 800 * (attempt + 1)));
             continue;
@@ -847,7 +642,6 @@ export async function polishDraft(config: AIConfig, draft: string, requirement: 
 
 /**
  * Generate a concise conversation title from the first user message + first AI reply.
- * Uses singleTurnAI for a lightweight one-shot call. Returns a fallback on failure.
  */
 export async function generateChatTitle(
   config: AIConfig,
@@ -870,8 +664,6 @@ export async function generateChatTitle(
 
 /**
  * Generate an accessibility-focused image description using a vision-capable model.
- * The caller provides a download function (e.g. BskyClient.downloadBlob) — this
- * keeps image fetching in the same path as view_image and avoids CDN CORS issues.
  */
 export async function describeImage(
   config: AIConfig,
@@ -897,36 +689,35 @@ export async function describeImage(
   }
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
-  const body = {
-    model: config.model,
-    messages: [
-      { role: 'system', content: P_ALT_DESCRIPTION_SYSTEM(targetLang) },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: PF_ALT_DESCRIPTION_USER(existingAlt) },
-          { type: 'image_url', image_url: { url: dataUrl, detail: 'auto' } },
-        ],
-      },
-    ],
-    temperature: 0.3,
-    max_tokens: 300,
-    stream: false,
-  };
+  const adapter = getAdapter(config.apiType);
+  const messages: ChatMessage[] = [
+    { role: 'system', content: P_ALT_DESCRIPTION_SYSTEM(targetLang) },
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: PF_ALT_DESCRIPTION_USER(existingAlt) },
+        { type: 'image_url', image_url: { url: dataUrl, detail: 'auto' } },
+      ] as ContentBlock[],
+    },
+  ];
 
-  const url = `${cleanBaseUrl(config.baseUrl)}/v1/chat/completions`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${config.apiKey}` },
-    body: JSON.stringify(body),
+  const spec = adapter.buildRequest(config, messages, [], false, {
+    temperature: 0.3,
+    maxTokens: 300,
   });
 
-  if (!response.ok) {
-    const errText = await response.text().catch(() => '');
-    throw new Error(`Image description API error ${response.status}: ${errText.slice(0, 200)}`);
+  const res = await fetch(spec.url, {
+    method: 'POST',
+    headers: spec.headers,
+    body: JSON.stringify(spec.body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Image description API error ${res.status}: ${errText.slice(0, 200)}`);
   }
 
-  const respData = await response.json() as any;
-  const content = respData?.choices?.[0]?.message?.content ?? '';
+  const respData = await res.json() as any;
+  const content = adapter.parseResponse(respData).content;
   return content.trim().slice(0, 500);
 }

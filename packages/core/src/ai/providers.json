@@ -3,6 +3,7 @@
     "id": "deepseek",
     "label": "DeepSeek",
     "baseUrl": "https://api.deepseek.com",
+    "apiType": "chat",
     "reasoningStyle": "reasoning_content",
     "models": [
       { "id": "deepseek-v4-flash", "label": "DeepSeek V4 Flash", "thinking": true, "vision": false },
@@ -13,6 +14,7 @@
     "id": "mistral",
     "label": "Mistral",
     "baseUrl": "https://api.mistral.ai",
+    "apiType": "chat",
     "reasoningStyle": "structured_content",
     "models": [
       { "id": "mistral-small-latest", "label": "Mistral Small (24B)", "thinking": true, "vision": true },
@@ -20,5 +22,62 @@
       { "id": "mistral-medium-latest", "label": "Mistral Medium (128B)", "thinking": false, "vision": true },
       { "id": "ministral-3b-latest", "label": "Ministral 3B (Fast)", "thinking": false, "vision": false }
     ]
+  },
+  {
+    "id": "openai",
+    "label": "OpenAI",
+    "baseUrl": "https://api.openai.com",
+    "apiType": "responses",
+    "reasoningStyle": "none",
+    "models": [
+      { "id": "gpt-5.5", "label": "GPT-5.5 (旗舰高性能)", "thinking": true, "vision": true, "supportsReasoningEffort": true },
+      { "id": "gpt-5.4", "label": "GPT-5.4 (中高端)", "thinking": true, "vision": true, "supportsReasoningEffort": true },
+      { "id": "gpt-5.4-mini", "label": "GPT-5.4 Mini (中端轻量)", "thinking": true, "vision": true, "supportsReasoningEffort": true },
+      { "id": "gpt-5.4-nano", "label": "GPT-5.4 Nano (低价高吞吐)", "thinking": false, "vision": true },
+      { "id": "gpt-5-mini", "label": "GPT-5 Mini (低价低延迟)", "thinking": false, "vision": true }
+    ]
+  },
+  {
+    "id": "xai",
+    "label": "xAI Grok",
+    "baseUrl": "https://api.x.ai",
+    "apiType": "responses",
+    "reasoningStyle": "none",
+    "models": [
+      { "id": "grok-4.3", "label": "Grok 4.3 (旗舰)", "thinking": true, "vision": true, "supportsReasoningEffort": true },
+      { "id": "grok-4.1-reasoning", "label": "Grok 4.1 Reasoning (轻量推理)", "thinking": true, "vision": false, "supportsReasoningEffort": true },
+      { "id": "grok-4-fast", "label": "Grok 4 Fast (高吞吐)", "thinking": false, "vision": true },
+      { "id": "grok-4-mini", "label": "Grok 4 Mini (极速低价)", "thinking": false, "vision": false }
+    ]
+  },
+  {
+    "id": "kimi-cn",
+    "label": "Kimi Moonshot (CN)",
+    "baseUrl": "https://api.moonshot.cn",
+    "apiType": "chat",
+    "reasoningStyle": "reasoning_content",
+    "models": [
+      { "id": "kimi-k2.6", "label": "Kimi K2.6", "thinking": true, "vision": true, "video": true, "fixedParams": { "top_p": 0.95, "n": 1, "presence_penalty": 0, "frequency_penalty": 0 } },
+      { "id": "kimi-k2.5", "label": "Kimi K2.5", "thinking": true, "vision": true, "video": false, "fixedParams": { "top_p": 0.95, "n": 1, "presence_penalty": 0, "frequency_penalty": 0 } }
+    ]
+  },
+  {
+    "id": "kimi-overseas",
+    "label": "Kimi Moonshot (Overseas)",
+    "baseUrl": "https://api.moonshot.ai",
+    "apiType": "chat",
+    "reasoningStyle": "reasoning_content",
+    "models": [
+      { "id": "kimi-k2.6", "label": "Kimi K2.6", "thinking": true, "vision": true, "video": true, "fixedParams": { "top_p": 0.95, "n": 1, "presence_penalty": 0, "frequency_penalty": 0 } },
+      { "id": "kimi-k2.5", "label": "Kimi K2.5", "thinking": true, "vision": true, "video": false, "fixedParams": { "top_p": 0.95, "n": 1, "presence_penalty": 0, "frequency_penalty": 0 } }
+    ]
+  },
+  {
+    "id": "openrouter",
+    "label": "OpenRouter",
+    "baseUrl": "https://openrouter.ai",
+    "apiType": "chat",
+    "reasoningStyle": "none",
+    "models": []
   }
 ]

@@ -5,6 +5,7 @@ import { useBookmarks, useI18n, useVirtualizedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
+import { PullToRefresh } from './PullToRefresh.js';
 
 interface BookmarkPageProps {
   client: BskyClient;
@@ -15,9 +16,11 @@ interface BookmarkPageProps {
   imageDescConfig?: import('@bsky/core').AIConfig;
   imageDescLang?: string;
   singleImageFill?: boolean;
+  previewLines?: number;
+  quotedPreviewLines?: number;
 }
 
-export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill }: BookmarkPageProps) {
+export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: BookmarkPageProps) {
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
@@ -57,7 +60,9 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : bookmarks.length > 0 ? (
-        <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
+        <>
+          <PullToRefresh onRefresh={refresh} scrollRef={scrollRef} />
+          <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const post = bookmarks[vi.index]!;
@@ -81,6 +86,8 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     imageDescLang={imageDescLang}
                     singleImageFill={singleImageFill}
                     client={client}
+                    previewLines={previewLines}
+                    quotedPreviewLines={quotedPreviewLines}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
                   </PostCard>
@@ -99,6 +106,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
             })}
           </div>
         </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <p className="text-text-secondary text-sm">{t('bookmarks.empty')}</p>

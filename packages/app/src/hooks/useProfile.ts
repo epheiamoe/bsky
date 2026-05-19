@@ -148,6 +148,12 @@ export function useProfile(
     if (feedCursor && !feedLoading) void loadFeed(feedCursor);
   }, [feedCursor, feedLoading, loadFeed]);
 
+  const refreshFeed = useCallback(async () => {
+    if (!actor) return;
+    loadedActor.current = '';
+    await loadProfile(false, false);
+  }, [actor, loadProfile]);
+
   // Follow / Unfollow
   const handleFollow = useCallback(async () => {
     if (!client || !profile) return;
@@ -221,7 +227,7 @@ export function useProfile(
   return {
     profile, loading, error,
     tab, setTab,
-    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed,
+    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed, refreshFeed,
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListCursor, followListLoading,
     openFollowList: loadFollowList, closeFollowList: () => setFollowList(null),

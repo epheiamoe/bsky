@@ -65,7 +65,7 @@ bsky/
 ```
 ┌──────────┐
 │ @bsky/   │  纯 TS, 零 UI 依赖
-│ core     │  BskyClient | AIAssistant | 33 tools | types
+│ core     │  BskyClient | AIAssistant | ApiAdapter | 33 tools | types
 └────┬─────┘
      │
      ├──────────────────────────────────────┐
@@ -112,3 +112,89 @@ bsky/
 12. **Auto JWT refresh via ky afterResponse hook** — `BskyClient` registers an `afterResponse` hook on the ky instance that detects `ExpiredToken`/`InvalidToken` errors (HTTP 400), calls `refreshSession` with the refresh JWT, and retries the original request with the new access token
 13. **Dual-mode translation (simple/json)** — `translateText()` supports `simple` mode (plain text output) and `json` mode (structured `{translated, source_lang}` output); includes retry with exponential backoff up to 3 attempts for empty content or parse failures
 14. **Shared FlatLine now includes imageUrls, externalLink, authorAvatar** — `FlatLine` interface (used by both TUI and PWA thread views) includes `imageUrls: string[]`, `externalLink: {uri, title, description} | null`, and `authorAvatar?: string` for rich post rendering
+
+## ApiAdapter Pattern (v0.13.9)
+
+The AI system uses a pluggable adapter pattern to support multiple LLM API formats:
+
+### Architecture
+
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌─────────────────┐
+│   AIAssistant   │────→│    ApiAdapter        │────→│  HTTP Client    │
+│   (core)        │     │  (adapter.ts)        │     │  (ky/fetch)     │
+└─────────────────┘     └──────────────────────┘     └─────────────────┘
+                              │
+        ┌─────────────────────┼─────────────────────┐
+        ▼                     ▼                     ▼
+┌───────────────┐    ┌─────────────────┐    ┌───────────────┐
+│ ChatCompletions│    │ ResponsesApi    │    │  (future)     │
+│ Adapter        │    │ Adapter         │    │               │
+│ (OpenAI fmt)   │    │ (OpenAI/xAI)    │    │               │
+└───────────────┘    └─────────────────┘    └───────────────┘
+```
+
+### Adapter Interface
+
+```typescript
+interface ApiAdapter {
+  name: string;
+  buildRequest(params: BuildRequestParams): RequestBody;
+  parseResponse(response: unknown): ParsedResponse;
+  createStreamProcessor(): StreamProcessor;
+}
+```
+
+### Supported Adapters
+
+| Adapter | API Type | Providers | File |
+|---------|----------|-----------|------|
+| ChatCompletionsAdapter | Chat Completions | DeepSeek, Mistral, Kimi, OpenRouter | `packages/core/src/ai/adapter.ts` |
+| ResponsesApiAdapter | Responses API | OpenAI, xAI Grok | `packages/core/src/ai/responses-adapter.ts` |
+
+### Provider Metadata (v0.13.9)
+
+Providers are configured via `providers.json` with metadata fields:
+
+```typescript
+interface ModelInfo {
+  id: string;
+  name: string;
+  vision?: boolean;
+  thinking?: boolean;
+  video?: boolean;              // Reserved for future video input
+  fixedParams?: Record<string, unknown>;  // Immutable params (e.g., top_p, n)
+  supportsReasoningEffort?: boolean;      // For Responses API reasoning control
+}
+
+interface ProviderInfo {
+  id: string;
+  name: string;
+  baseUrl: string;
+  apiType?: 'chat' | 'responses';
+  models: ModelInfo[];
+}
+```
+
+### Reasoning Effort
+
+Responses API models support `reasoningEffort` control (`none`/`low`/`medium`/`high`):
+
+```typescript
+// Sent in request body for Responses API
+{
+  reasoning: {
+    effort: "medium"  // or "none", "low", "high"
+  }
+}
+```
+
+Chat Completions models use `thinking: { type: "enabled" | "disabled" }` instead.
+
+### Key Files
+
+- `packages/core/src/ai/adapter.ts` — `ApiAdapter` interface, `ChatCompletionsAdapter`, registration
+- `packages/core/src/ai/responses-adapter.ts` — `ResponsesApiAdapter` + `ResponsesApiStreamProcessor`
+- `packages/core/src/ai/providers.ts` — Provider registry with metadata
+- `packages/core/src/ai/providers.json` — Provider configuration (7 providers)
+- `packages/core/src/index.ts` — Exports adapter types, auto-registers responses adapter

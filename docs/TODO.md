@@ -21,7 +21,7 @@
 | **AI 对话导出/导入** | ✅ | ✅ | JSON (bsky-chat-v1 完整格式含 tool_call_id), HTML, MD; Import with validation |
 | **AI 翻译** | ✅ | ✅ | 7 语言, simple/json 双模式, 3 次重试, TUI: `f` 键 |
 | **AI 润色** | ✅ | ✅ | PWA: PolishWidget 组件栏+浮窗; TUI: `f` 键 → polishReq 模式 → 复制/替换 |
-| **组件系统 (Widgets)** | ⬜ | ✅ | 5 个 widget: 润色/资料页预览/推荐关注/推荐动态源/趋势; 页面限定组件置顶; 启用状态持久化到 localStorage |
+| **组件系统 (Widgets)** | ⚠️ | ✅ | TUI: 2/6 widgets (AIChat + Polish) via WidgetOverlay modal; SuggestedFollows/SuggestedFeeds/Trends/ProfilePreview **deferred** |
 | **组件页** | ⬜ | ✅ | `#/components` 管理所有 widget 启用/禁用 |
 | **Markdown 渲染** | ✅ | ✅ | PWA: react-markdown+GFM, TUI: 自定义 Ink parser |
 | **草稿** | ✅ | ✅ | AT Protocol `app.bsky.draft.*` + 本地回退(IndexedDB/JSON); 退出保存提示; 帖子串草稿支持 |
@@ -49,9 +49,11 @@
 | **滚动位置恢复** | ✅ | ✅ | TUI: idx state; PWA: 像素值模式 + requestAnimationFrame |
 | **组件持久化** | ⬜ | ✅ | widgetStore.ts _onWidgetToggle 统一回调 + saveAppConfig |
 | **组件排序** | ⬜ | ✅ | 侧边栏 + 组件页 chevron-up/down 排序 |
-| **AI Chat 卡片** | ⬜ | ✅ | 折叠式思考卡片(brain SVG) + 工具调用卡片(wrench SVG, 31 工具格式化) |
+| **AI Chat 卡片** | ✅ | ✅ | 折叠式思考卡片 + 工具调用卡片(31 工具格式化) — TUI: ThinkingCard + ToolCard components |
 | **AI Chat /view** | ⬜ | ✅ | /view 命令注入当前页面上下文给 AI |
-| **AI Chat Widget** | ⬜ | ✅ | 侧边栏 AI 对话（持久化会话 + 折叠卡片 + 新对话/打开按钮） |
+| **Python 沙箱** | ✅ | ✅ | execute_python 工具，NodePythonSandbox (child_process)，stdout/stderr 捕获，文件系统，mountFile，workspace 保存 |
+| **工作区文件管理** | ✅ | ✅ | 上传/下载/删除/预览，FileWorkspaceStorage (filesystem)，chatId 隔离，MCP 已修复 |
+| **AI Chat Widget** | ✅ | ✅ | WidgetOverlay 中的 AI Chat Widget，支持 /view 命令注入上下文 |
 | **关于页面** | ✅ | ✅ | PWA(`#/about`) + TUI(`?` 键)，显示 commit hash 构建时注入 |
 | **推送通知** | N/A | ⬜ | Web Push API |
 | **资料页预览 (组件)** | ⬜ | ✅ | ProfilePreviewWidget — thread 视图置顶显示作者资料 |
@@ -60,9 +62,9 @@
 | **AT Play 热门灵感** | ⬜ | ⬜ | Future: trending posts + user's top posts + AI content strategy |
 | **资料页简介翻译** | ✅ | ✅ | TUI: f 键, PWA: 🌐 翻译按钮 |
 | **资料页头像/横幅放大** | N/A | ✅ | 点击头像/横幅 → 全屏灯箱 + 下载按钮 |
-| **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral（将弃用）, per-provider API keys, per-scenario model config |
-| **Gemini 适配** | ⬜ | ⬜ | Google Gemini vision models — 替代 Mistral 用于 AI ALT |
-| **Kimi 适配** | ⬜ | ⬜ | Moonshot Kimi — 国产视觉模型，无速率限制问题 |
+| **多提供商 AI** | ✅ | ✅ | DeepSeek + Mistral + OpenAI + xAI + Kimi + OpenRouter, per-provider API keys, per-scenario model config |
+| **Gemini 适配** | ⬜ | ⬜ | 未实现；v0.13.9 已改用 OpenAI/xAI/Kimi/OpenRouter |
+| **Kimi 适配** | ✅ | ✅ | Moonshot Kimi — 国产视觉模型，无速率限制问题 (v0.13.9) |
 | **思考/视觉模式** | ✅ | ✅ | 从 ModelInfo 自动派生，自定义模型手动设置 |
 | **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩, TUI: sharp, PWA: Canvas API |
 | **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |
@@ -70,7 +72,7 @@
 | **屏幕阅读器支持** | N/A | ✅ | 语义HTML(landmark/label/list), ARIA(aria-pressed/expanded/current/live), 焦点管理(Modal trap/skip-link), 动态lang/title |
 | **AI ALT 图像描述** | N/A | ✅ | 设置→场景→AI ALT选视觉模型, describeImage(downloadFn, targetLang), alt badge显示+Modal弹窗+缓存, 429重试+bsky.social回退 |
 | **WCAG 4.1.2 表单+状态** | N/A | ✅ | htmlFor/id标签关联(14对), aria-expanded(6), aria-describedby, aria-invalid, role=progressbar, hidden input aria-label(5) |
-| **MCP Server** | ✅ | ✅ | 已完成 v0.13.0 |
+| **MCP Server** | ✅ | ✅ | v0.13.0 + WorkspaceStorage 初始化修复 (2026-05-19) |
 | **Session 持久化修复** | N/A | ✅ | v0.13.2: auth.ts 捕获 JWT 刷新后 token，App.tsx profile guard |
 
 ## 图例

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useContext } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
@@ -6,6 +6,9 @@ import { useI18n } from '@bsky/app';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
+import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
+import { MobileHeaderCtx } from './Layout.js';
+import { Icon } from './Icon.js';
 import type { BskyClient } from '@bsky/core';
 
 interface FeedTimelineProps {
@@ -27,6 +30,8 @@ interface FeedTimelineProps {
   imageDescConfig?: import('@bsky/core').AIConfig;
   imageDescLang?: string;
   singleImageFill?: boolean;
+  previewLines?: number;
+  quotedPreviewLines?: number;
 }
 
 function SkeletonCard() {
@@ -49,8 +54,11 @@ const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 // Module-level cache: post.uri → measured pixel height (survives mount/unmount)
 const _heightCache = new Map<string, number>();
 
-export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill }: FeedTimelineProps) {
+export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
+  const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
+  const [mobileCollapsed, setMobileCollapsed] = useState(false);
+  const lastScrollY = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -99,16 +107,52 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     return () => obs.disconnect();
   }, [loadMore, cursor, posts.length]);
 
+  // ── Hide header/footer on scroll down (mobile) ──
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const st = el.scrollTop;
+      if (st > lastScrollY.current && st > 50) {
+        setMobileCollapsed(true);
+        setTabBarHidden(true);
+      } else if (st < lastScrollY.current || st < 10) {
+        setMobileCollapsed(false);
+        setTabBarHidden(false);
+      }
+      lastScrollY.current = st;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [scrollRef, setTabBarHidden]);
+
+  const menuBtn = (
+    <div className="relative">
+      <button
+        onClick={onSidebarOpen}
+        className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none"
+        aria-label={t('nav.menu')}
+      >
+        <Icon name="menu" size={20} />
+      </button>
+      {dmCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
+    </div>
+  );
+
+  const settingsBtn = null;
+
   return (
-    <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
+    <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] animate-fadeIn">
       <FeedHeader
         goTo={goTo}
         currentFeedUri={feedUri}
         refresh={refresh}
         client={client}
+        mobileMenuButton={menuBtn}
+        mobileCollapsed={mobileCollapsed}
       />
-
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={refresh ?? REFRESH_NOOP} scrollRef={scrollRef} />
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-14">
         {error && (
           <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
             {error}
@@ -169,6 +213,8 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   imageDescLang={imageDescLang}
                   singleImageFill={singleImageFill}
                   client={client}
+                  previewLines={previewLines}
+                  quotedPreviewLines={quotedPreviewLines}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

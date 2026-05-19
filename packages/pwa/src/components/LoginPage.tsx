@@ -8,6 +8,7 @@ interface LoginPageProps {
   onLogin: (handle: string, password: string, pdsUrl?: string) => Promise<void>;
   error?: string | null;
   errorLog?: LoginErrorDetail | null;
+  footer?: React.ReactNode;
 }
 
 function LoginErrorModal({
@@ -83,7 +84,7 @@ function LoginErrorModal({
   );
 }
 
-export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
+export function LoginPage({ onLogin, error, errorLog, footer }: LoginPageProps) {
   const { t } = useI18n();
   const [handle, setHandle] = useState('');
   const [password, setPassword] = useState('');
@@ -117,10 +118,11 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-background px-4 animate-fadeIn">
+    <div className="min-h-[100dvh] flex flex-col bg-background animate-fadeIn">
       {showLog && errorLog && (
         <LoginErrorModal log={errorLog} onClose={() => setShowLog(false)} />
       )}
+      <div className="flex-1 flex items-center justify-center px-4">
       <div className="relative w-full max-w-sm">
         <button
           onClick={() => setShowAbout(true)}
@@ -220,6 +222,8 @@ export function LoginPage({ onLogin, error, errorLog }: LoginPageProps) {
           {t('login.privacyNote')}
         </p>
       </div>
+      </div>
+      {footer}
     </div>
   );
 }

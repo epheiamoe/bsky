@@ -1,644 +1,84 @@
-# Lessons Learned — Session 2026-05-07
+# Lessons Learned — Bsky Project
 
-> ⚠️ 上下文压缩后的快速恢复参考。每次会话新建一个入口。
-
-## 本期重点教训
-
-### Lesson 1: Widget 排序索引与过滤列表的致命错位
-
-**问题**：WidgetPanel 箭头点击后移动了错误的组件，或完全没效果。
-
-**根因**：箭头使用 `enabledWidgets.map((w, idx) => ...)` 的 `idx`（过滤后的可见 widget 索引），但 `handleReorderWidget` 操作的是 `enabledIds`（完整启用的所有 widget ID 数组）。当某些 widget 有 `views` 限制（如 `polish` 只在 compose 页显示）时，它们不在当前视图的 `availableWidgets` 中，`enabledWidgets` 比 `enabledIds` 短，两个索引偏移。
-
-```
-enabledIds:           ['polish', 'suggestedFollows', 'profilePreview', 'trends', 'aiChat']  (5 items)
-availableWidgets:     [suggestedFollows, trends, aiChat]  (polish/profilePreview excluded)
-enabledWidgets:       [suggestedFollows, trends, aiChat]  (3 items, 按 enabledIds 顺序)
-视觉 idx:              0                    1         2
-enabledIds idx:        1                    3         4     ← 箭头用的视觉 idx=1，操作的是 enabledIds[1]='suggestedFollows'，正确！
-                                                             但点击 idx=2 的 ↓: 操作 enabledIds[3]='trends'，正确！
-                                                             但点击 idx=1 的 ↑: 操作 enabledIds[1]='suggestedFollows'，向上交换 enabledIds[0]='polish'！
-                                                             视觉上 polish 不显示，所以看似「点了没反应」或「移错了」
-```
-
-**修复**：使用 `enabledIds.indexOf(w.id)` 获取 widget 在完整数组中的真实索引。
-
-```typescript
-// ❌ 错误 — 视觉 idx
-onReorderWidget?.(idx, idx - 1);
-
-// ✅ 正确 — 真实 enabledIds 索引
-const realIdx = enabledIds.indexOf(w.id);
-onReorderWidget?.(realIdx, realIdx - 1);
-```
-
-**教训**：任何涉及「过滤后列表索引」到「完整列表索引」的映射必须显式转换，不能假设相等。
+> 详细教训记录，按类别分组。
+> 当前共 69 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM 等领域。
+>
+> **快速查找**：按类别浏览，或使用下方表格索引。
 
 ---
 
-### Lesson 2: tool_call_id 的三个死亡路径
+## Category Index
 
-**问题**：API 400 `missing field tool_call_id`，在会话恢复后反复出现。
+| Category | File | Lessons | Description |
+|----------|------|---------|-------------|
+| **UI/UX** | [lessons/ui.md](lessons/ui.md) | 1, 4, 5, 6, 7, 8, 12, 14, 16, 52, 54, 56, 64 | 组件、动画、布局、事件、无障碍 |
+| **AI/Prompting** | [lessons/ai.md](lessons/ai.md) | 2, 3, 17, 18, 68 | 工具调用、格式化、数据映射 |
+| **API/Network** | [lessons/api.md](lessons/api.md) | 9, 13, 20, 46, 47, 48 | 端点、重试、CORS、去重 |
+| **Auth/Session** | [lessons/auth.md](lessons/auth.md) | 53, 55 | JWT、认证钩子、凭证管理 |
+| **Storage** | [lessons/storage.md](lessons/storage.md) | 10, 11, 49, 50, 51, 69 | IndexedDB、文件系统、缓存、竞态 |
+| **DM/Messaging** | [lessons/dm.md](lessons/dm.md) | 19, 30, 31, 33, 35 | 私信、对话、反应、认证演进 |
+| **Worker/WASM** | [lessons/worker-wasm.md](lessons/worker-wasm.md) | 57, 58, 59, 60, 61, 62, 63, 67 | Pyodide、Worker、二进制数据、字体 |
+| **React/Hooks** | [lessons/react-hooks.md](lessons/react-hooks.md) | 66 | useCallback、闭包、依赖项 |
+| **PWA** | [lessons/pwa.md](lessons/pwa.md) | 65 | Service Worker、Cache API |
+| **Process** | [lessons/process.md](lessons/process.md) | 15, 60 | 构建顺序、增量开发、测试策略 |
 
-**根因**：`tool_call_id` 在三个独立路径上丢失：
-1. **assistant.ts:617** — 正常执行路径的 `tool_result` yield 缺少 `toolCallId: tc.id`（取消路径第 599 行有，正常路径忘了）
-2. **useAIChat.ts:137** — 会话恢复路径将 `tool_call` 和 `tool_result` **都映射为 `role: 'tool'`**，导致 API 收到一系列连续的 tool 消息，但没有前面的 `assistant { tool_calls }` 消息 → API 400
-3. **useAIChat.ts:371** — `mapMessages`（edit/undo 后恢复 UI 状态）丢失 `toolName` 和 `toolCallId`
-
-**修复**：
-1. `assistant.ts:617` 补上 `toolCallId: tc.id`
-2. `useAIChat.ts` 恢复路径重写：`tool_call` → 重建 `assistant { tool_calls[] }` 消息，`tool_result` → `tool { tool_call_id }` 消息，保持正确序列
-3. `useAIChat.ts:371` `mapMessages` 补上 `toolName: m.name, toolCallId: m.tool_call_id`
-
-**教训**：存储格式（`AIChatMessage`）和 API 格式（`ChatMessage`）的转换是高风险区。每个 field 的路线都需要端到端验证——是否存在、是否在序列化中保留、是否在恢复中还原。
-
----
-
-### Lesson 3: 双重格式化——tryJsonSummary vs formatToolResult
-
-**问题**：工具结果预览始终显示 "Profile"、"Search results" 等泛泛标签，没有实际数据。
-
-**根因**：`useAIChat.ts` 的流式处理器先用 `tryJsonSummary(event.content)` 把 JSON 压缩为短字符串（如 `"用户: @handle (name)"`），再存入 `AIChatMessage.content`。然后 `formatToolResult` 收到这个已压缩的字符串，尝试 `JSON.parse` → 失败 → 落到 fallback 显示 `"Profile"`。
-
-**修复**：
-- `useAIChat.ts` 改为直接存储原始 `event.content`（不经过 `tryJsonSummary`），让 `formatToolResult` 处理所有显示
-- `formatToolResult` 的最终 fallback 改为显示内容第一行，而非 `toolLabel(name)`
-
-**教训**：格式化层不能重复。如果有两个格式化函数，一个在数据处理层，一个在视图层，它们会互相干扰。只能保留一层——要么在数据层格式化（TUI 场景），要么在视图层（PWA 场景）。
+> **Lessons 21-45**（早期会话教训）已归档至 `docs/archive/LESSONS_ARCHIVE.md`。
+> 这些教训涵盖：AI 自动发帖防御、编辑消息回滚、Feed 删除保护、handle 链接编码、默认 Feed、搜索重构、Feed 刷新、引用帖解析、点赞计数、SVG 图标、帖子列表统一、公开 API 403、view_image 提示、浏览器 fetch 错误、DNS 污染、AI 配置更新、场景模型解析、图片上下文持久、tool_call_id 全链路修复、无限工具轮次、JSON 解析容错、组件栏互斥、持久化回调、多帖润色、草稿同步、TUI 提交、ALT 弹窗、视频播放、滚动恢复、DM 自动滚动、收藏虚拟滚动、AI 标题生成、上下文过滤、ThreadView 设计、搜索历史布局、handle 布局、emoji 分组、PDS 发现、JWT 刷新、下载 Blob、DidDocument 类型、CORS 提示、i18n 补全。
 
 ---
 
-### Lesson 4: SVG 图标必须硬编码到组件中
+## Numbered Index
 
-**问题**：ThinkingCard 和 ToolCard 中 `wrench`/`brain` 图标显示不稳定，有时出现 emoji。
-
-**根因**：`Icon.tsx` 通过 `import.meta.glob` 动态加载 SVG 文件。如果文件路径/名称有细微差异，图标就加载不到，返回 `null`（无显示）。共享 `ai/` 目录下的组件引用 `../Icon.js` 跨目录查找，更容易出错。
-
-**修复**：将 SVG path 直接硬编码为 `const WRENCH_SVG = '<path d="..." />'` 常量，用 `dangerouslySetInnerHTML` 渲染。不再依赖 `Icon.tsx` 的 glob loader。
-
-**教训**：被多个上下文引用的共享组件不能依赖动态文件加载——SVG 应该硬编码。参考 AGENTS.md：「在支持SVG的场景总是使用SVG（如Lucide）而不是emoji」，执行方式应改为**硬编码 inline SVG**。
-
----
-
-### Lesson 5: Widget 系统设计——统一 header bar**
-
-**问题**：反复出现「两个标题」、「两个关闭按钮」、「没有标题」等 UI 混乱。
-
-**根因**：WidgetPanel 和 widget 各自渲染标题和关闭按钮，反复相互重叠或缺失。设计原则来回切换（WidgetPanel 加/不加 header、widget 加/不加 header），每次改动都引入新问题。
-
-**最终设计**：
-```
-┌─ WidgetPanel 统一提供 ──────────────────┐
-│  [icon] [title]            [↑] [↓] [×]  │  ← WidgetPanel 的 inline header
-├─────────────────────────────────────────┤
-│  widget 内容（无标题、无关闭按钮）        │  ← 纯内容
-└─────────────────────────────────────────┘
-```
-
-原则：
-- **WidgetPanel 为所有 widget 提供统一的 header**（图标、标题、箭头、关闭按钮）
-- **Widget 只负责自己的内容区域**，不渲染标题或关闭按钮
-- 如果 widget 需要额外按钮（如 AIChatWidget 的 `[→]` 和 `[+]`），放在自己的内容区内
-
-**教训**：跨组件职责边界必须明确。谁负责标题/关闭？答案必须统一，不能部分 widget 自己管、部分 WidgetPanel 管。
-
----
-
-### Lesson 6: AI 卡片动画——不能条件渲染，必须 CSS transition
-
-**问题**：展开/折叠 ThinkingCard 时文字闪烁和布局跳动。
-
-**根因**：
-- `{!expanded && <preview>} {expanded && <content>}` — 条件渲染导致元素从 DOM 中完全消失/出现，无法应用 CSS transition
-- `absolute inset-x-0` 用于预览行，但父容器没有 `relative` → 相对于 viewport 定位 → 文字跳到屏幕左侧
-
-**修复**：
-- 预览行和内容始终在 DOM 中，用 `max-h-{0|600px} opacity-{0|100} invisible/visible` CSS 类控制
-- 外层容器加 `relative`，确保 `absolute` 子元素相对容器定位
-- `transition-all duration-300` 实现平滑动画
-
-**教训**：CSS transition 需要元素始终在 DOM 中、有明确的起始值（如 `max-h-0`）和结束值（如 `max-h-[600px]`）。条件渲染（`{expanded && ...}`）让元素瞬间出现/消失，transition 无法生效。
-
----
-
-### Lesson 7: 流式输出自动滚动——requestAnimationFrame 是必需的
-
-**问题**：流式输出期间底部出现空白条，内容增长后滚动位置没跟上。
-
-**根因**：React 的 `useEffect` 在 DOM 提交后触发，但此时浏览器还未完成布局/绘制。在 effect 中读 `scrollHeight` 并设 `scrollTop` 拿到的是旧值。
-
-**修复**：
-```typescript
-// ❌ React 提交后立即滚 — 高度还没更新
-container.scrollTop = container.scrollHeight;
-
-// ✅ 等浏览器完成 paint 后再滚
-requestAnimationFrame(() => {
-  container.scrollTop = container.scrollHeight;
-});
-```
-
-**教训**：`requestAnimationFrame` 延迟到浏览器完成 layout/paint 后执行，此时 DOM 尺寸已准确。`scrollIntoView({ behavior: 'smooth' })` 对流式场景不可靠——smooth 动画基于旧位置计算，新内容渲染后目标位置已改变。
+| # | Title | Category | File |
+|---|-------|----------|------|
+| 1 | Widget Sorting Index Mismatch | UI | [ui.md](lessons/ui.md) |
+| 2 | tool_call_id Loss on Three Paths | AI | [ai.md](lessons/ai.md) |
+| 3 | Double Formatting | AI | [ai.md](lessons/ai.md) |
+| 4 | SVG Icons Must Be Hardcoded | UI | [ui.md](lessons/ui.md) |
+| 5 | Widget System Unified Header | UI | [ui.md](lessons/ui.md) |
+| 6 | AI Card CSS Transition | UI | [ui.md](lessons/ui.md) |
+| 7 | Streaming Scroll RAF | UI | [ui.md](lessons/ui.md) |
+| 8 | Mobile Keyboard Viewport | UI | [ui.md](lessons/ui.md) |
+| 9 | ky Retry Config | API | [api.md](lessons/api.md) |
+| 10 | Component Persistence | Storage | [storage.md](lessons/storage.md) |
+| 11 | Array vs Set | Storage | [storage.md](lessons/storage.md) |
+| 12 | i18n Interpolation | UI | [ui.md](lessons/ui.md) |
+| 13 | AppView vs PDS Dedup | API | [api.md](lessons/api.md) |
+| 14 | Widget Temporary Disable | UI | [ui.md](lessons/ui.md) |
+| 15 | Build Order | Process | [process.md](lessons/process.md) |
+| 16 | Widget Header Buttons | UI | [ui.md](lessons/ui.md) |
+| 17 | AI Card Data Retention | AI | [ai.md](lessons/ai.md) |
+| 18 | buildToolDescription | AI | [ai.md](lessons/ai.md) |
+| 19 | markConvoRead | DM | [dm.md](lessons/dm.md) |
+| 20 | searchActors Public Endpoint | API | [api.md](lessons/api.md) |
+| 21-45 | *(archived)* | Various | [archive/LESSONS_ARCHIVE.md](archive/LESSONS_ARCHIVE.md) |
+| 46 | DuckDuckGo Sec-Fetch | API | [api.md](lessons/api.md) |
+| 47 | Wikipedia API Endpoint | API | [api.md](lessons/api.md) |
+| 48 | MediaWiki CORS | API | [api.md](lessons/api.md) |
+| 49 | ChatStorage Factory | Storage | [storage.md](lessons/storage.md) |
+| 50 | autoSave Race Condition | Storage | [storage.md](lessons/storage.md) |
+| 51 | autoSave Write Queue | Storage | [storage.md](lessons/storage.md) |
+| 52 | CVD-Friendly Palette | UI | [ui.md](lessons/ui.md) |
+| 53 | Blob Download JWT | Auth | [auth.md](lessons/auth.md) |
+| 54 | React Portal Events | UI | [ui.md](lessons/ui.md) |
+| 55 | beforeRequest Auth Hook | Auth | [auth.md](lessons/auth.md) |
+| 56 | 429 Rate-Limit Retry | UI/Perf | [ui.md](lessons/ui.md) |
+| 57 | Web Worker Module vs Classic | Worker | [worker-wasm.md](lessons/worker-wasm.md) |
+| 58 | Pyodide API Sequencing | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
+| 59 | Binary Data in Workers | Worker | [worker-wasm.md](lessons/worker-wasm.md) |
+| 60 | Incremental Feature Addition | Process | [process.md](lessons/process.md) |
+| 61 | Vite Worker Import | Worker | [worker-wasm.md](lessons/worker-wasm.md) |
+| 62 | micropip Package Batches | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
+| 63 | Matplotlib Fonts in WASM | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
+| 64 | Event Propagation in Nested UI | UI | [ui.md](lessons/ui.md) |
+| 65 | Cache API Only Supports GET | PWA | [pwa.md](lessons/pwa.md) |
+| 66 | Stale Closure in useCallback | React | [react-hooks.md](lessons/react-hooks.md) |
+| 67 | FS.readFile Encoding | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
+| 68 | Pass Context Through Tool Handlers | AI | [ai.md](lessons/ai.md) |
+| 69 | Unified File Storage | Storage | [storage.md](lessons/storage.md) |
 
 ---
 
-### Lesson 8: Mobile 键盘弹窗——100dvh 不够，用 visualViewport.height
-
-**问题**：手机端键盘弹出时聊天容器高度不变，内容被挤压上方，下方留白。
-
-**根因**：`100dvh` 是布局视口高度，键盘弹出后 visual viewport 缩小但 layout viewport 不变。`100dvh` 返回 layout viewport 高度，容器不会自动缩小。
-
-**修复**：
-```typescript
-const [visualHeight, setVisualHeight] = useState<number | null>(null);
-useEffect(() => {
-  const vv = window.visualViewport;
-  if (!vv) return;
-  const update = () => setVisualHeight(vv.height);
-  vv.addEventListener('resize', update);
-  return () => vv.removeEventListener('resize', update);
-}, []);
-
-// 然后用 visualHeight 设容器高度
-style={visualHeight ? { height: visualHeight - 48 } : { height: 'calc(100dvh - 3rem)' }}
-```
-
-**教训**：`window.visualViewport` API 提供键盘弹出后的实际可视高度。PWA 聊天等全屏应用必须使用此 API，而非 `100dvh` 或 `100vh`。
-
----
-
-### Lesson 9: ky retry 配置——显式指定 retry statusCodes
-
-**问题**：Bluesky 服务端 504（UpstreamTimeout）导致趋势 API 失败但不自动重试。
-
-**根因**：虽然 ky 默认配置了重试逻辑（`retry: { limit: 2, statusCodes: [408, 413, 429, 500, 502, 503, 504] }`），但项目中没有显式传 `retry` 配置，ky 可能因为版本差异或内部逻辑不使用默认值。实际上看到 504 时没有重试日志。
-
-**修复**：显式传入 retry 配置到所有 ky 实例：
-```typescript
-ky.create({
-  retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
-  ...
-});
-```
-
-**教训**：网络库的重试行为不应依赖默认值——显式声明所需的 retry 状态码和次数。
-
----
-
-### Lesson 10: 组件持久化——module-level toggle 需要回调
-
-**问题**：Widget 开关状态在页面刷新后会丢失。
-
-**根因**：`PostActionsRow` 和 `ProfilePage` 的 AI 按钮调用 `toggleWidget('aiChat')`（module-level 操作），只改了 `_order` 数组，没有调用 `saveAppConfig()` 写入 localStorage。只有 `Layout.handleToggleWidget`（Layout 自己的 handler）会保存。
-
-**修复**：在 `widgetStore.ts` 中引入 `_onWidgetToggle` 回调机制：
-```typescript
-let _onWidgetToggle: ((id: string) => void) | null = null;
-export function setWidgetToggleCallback(fn) { _onWidgetToggle = fn; }
-
-// toggleWidget 调用后触发回调
-export function toggleWidget(id: string): boolean {
-  if (isWidgetEnabled(id)) { disableWidget(id); }
-  else { enableWidget(id); }
-  _onWidgetToggle?.(id);
-  return !enabled;
-}
-```
-
-`Layout.tsx` mount 时注册 `saveAppConfig` 到回调：
-```typescript
-useEffect(() => {
-  setWidgetToggleCallback((id) => {
-    const updated = { ...config, enabledWidgets: getEnabledWidgetIds() };
-    saveAppConfig(updated);
-    onConfigChange(updated);
-  });
-  return () => setWidgetToggleCallback(null);
-}, [config, onConfigChange]);
-```
-
-**教训**：module-level 状态（`_order`）的变更必须有一个统一的持久化回调，确保无论从哪个入口调用 `enableWidget`/`disableWidget`/`toggleWidget`，都能触发 `saveAppConfig`。
-
----
-
-### Lesson 11: `Array.splice` vs `Set.add` — 用数组管理有序状态
-
-**问题**：Widget 顺序在多次 toggle 后逐渐错乱。
-
-**根因**：原来用 `Set` 管理 widget 启用状态。`Set` 的插入顺序会导致问题——`enableWidget` 时 `Set.add(id)` 总是追加到末尾。但 `initEnabledWidgets` 期望从 localStorage 恢复特定顺序。`Set` 的顺序不可信赖。
-
-**修复**：完全改用 `string[]` 数组：
-```typescript
-let _order: string[] = [];
-export function enableWidget(id: string): void {
-  if (getWidget(id) && !_order.includes(id)) _order.push(id);
-}
-export function disableWidget(id: string): void {
-  _order = _order.filter(x => x !== id);
-}
-```
-
-**教训**：需要顺序保持的状态应使用数组而非 Set。Set 适合「是否包含」判断，但顺序行为不可靠（特别是 clear + add 模式）。
-
----
-
-## 架构升级（本次会话新增）
-
-| 组件 | 位置 | 说明 |
-|------|------|------|
-| `packages/pwa/src/components/ai/` | 共享 AI 卡片组件 | ThinkingCard, ToolCard, UserMessage, AssistantMessage, formatToolResult |
-| `packages/pwa/src/components/widgets/AIChatWidget.tsx` | 侧边栏 AI 对话 | 持久化会话、折叠卡片、/view 命令 |
-| `packages/pwa/src/components/AboutPage.tsx` | 关于页面 | commit hash / build time（Vite define 注入） |
-| `packages/pwa/src/icons/brain.svg, wrench.svg, chevron-up.svg, grip-vertical.svg` | 新增 SVG | Lucide 官方图标 |
-| Widget 系统重构 | WidgetPanel + 5 个 widget | 统一 header bar（icon+title+^+v+x），widget 纯内容 |
-
----
-
-# Lessons Learned — Session 2026-05-08
-
-> ⚠️ 本次会话主题：列表功能全栈实现 + 大量细节修复。
-
-## 本期重点教训
-
-### Lesson 12: `{{n}}` vs `{n}` — i18n 模板插值陷阱
-
-**问题**：列表人数显示为 `{1}` 而非 `1`（花括号留在屏幕上）。
-
-**根因**：i18n 的 `interpolate()` 使用正则 `/\{(\w+)\}/g`，匹配单大括号。`'{{n}}'` 在模板中 —— 外括号不匹配 `\{` 和 `\}`（因为正则期待 `\{` 后紧跟 `\w+`），内括号被匹配 → 替换为 `1`，外括号残留 → `{1}`。
-
-**修复**：所有 i18n 模板字符串改为单大括号 `{n}`。
-```json
-// ❌ "{{n}} members"  → 显示为 "{5} members"
-// ✅ "{n} members"     → 显示为 "5 members"
-```
-
-**教训**：i18n 插值格式必须一致。项目中所有其他插值（`ai.messageCount`、`thread.replyCount`）都使用单大括号，新增键必须遵循同一约定。
-
----
-
-### Lesson 13: AppView 去重 vs PDS 不去重 — `getList` vs `listRecords`
-
-**问题**：用户被添加到列表两次（重复 listitem），`remove_from_list` 只删了第一条 → 残留记录在 PDS 但 AppView 返回「不在列表中」。
-
-**根因**：`app.bsky.graph.getList` 是 AppView 水合视图，Lexicon 规格明确规定会**去重 `(subject, list)` 对**。PDS 有两条记录，但 `getList` 只返回一条。`remove_from_list` 使用 `getList` + `find()` → 删除一条后，AppView 可能已标记为"不在列表" → 第二条残留无法删除。
-
-**修复**：改用 `com.atproto.repo.listRecords`（PDS 层，不去重）查找所有匹配记录：
-```typescript
-// ❌ AppView 去重 → 只找到一条
-const res = await client.getList(listUri);
-const item = res.items.find(i => i.subject.did === subject);
-
-// ✅ PDS 层不去重 → 找到全部重复
-const all = await client.listRecords(did, 'app.bsky.graph.listitem');
-const matches = all.records.filter(r => r.value.subject === subject && r.value.list === listUri);
-for (const m of matches) await client.removeListItem(m.uri);
-```
-
-**教训**：AppView（`app.bsky.graph.*`）提供水合视图（有去重、排序等），PDS（`com.atproto.repo.*`）提供原始数据。需要完整数据（特别是处理重复/脏数据）时，必须使用 PDS 层 API。
-
----
-
-### Lesson 14: Widget 临时禁用与恢复 — 保存 _order 快照
-
-**问题**：进入 AI 对话页面后，AI Widget 被 `disableWidget('aiChat')` 永久移除，离开后不恢复。
-
-**根因**：`disableWidget` 直接修改 `_order` 数组（内存），无恢复机制。只有页面刷新时从 localStorage 重新初始化才会恢复。
-
-**修复**：`useRef` 保存进入 AI 页面前的 `_order` 快照，离开时 `initEnabledWidgets` 恢复：
-```typescript
-const widgetOrderRef = useRef<string[]>([]);
-useEffect(() => {
-  if (currentView.type === 'aiChat') {
-    const current = getEnabledWidgetIds();
-    if (current.includes('aiChat')) {
-      widgetOrderRef.current = current;  // save
-      disableWidget('aiChat');
-    }
-  } else if (widgetOrderRef.current.length > 0) {
-    initEnabledWidgets(widgetOrderRef.current);  // restore
-    widgetOrderRef.current = [];
-  }
-}, [currentView.type]);
-```
-
-**教训**：临时状态变更必须有「保存-恢复」配对，不能仅做单向操作。使用 `useRef` 存储快照是轻量方案（不触发重渲染），适合模块级状态的临时读写。
-
----
-
-### Lesson 15: 构建顺序 — 先 commit 再 build 才能拿到正确 hash
-
-**问题**：About 页面显示的 commit hash 是旧版本的，代码改动已经生效但 hash 不对。
-
-**根因**：Vite `define: { __COMMIT_HASH__: execSync('git rev-parse HEAD') }` 在 build 时执行。如果先 `git add` + `git commit` 但用之前的 build artifact 部署，hash 就是上次 commit 的。
-
-**修复**：流程改为 `git commit` → `pnpm build` → `wrangler deploy`。确保 build 时 HEAD 就是目标 commit。
-
-**教训**：构建时注入的元数据（commit hash、build time）必须在 commit 之后产生，否则与代码不同步。
-
----
-
-### Lesson 16: Widget 按钮移到 header 行内 — `headerButtons` + module refs
-
-**问题**：AIChatWidget 的「open in page」和「new chat」按钮在消息区内（随内容滚动），不在 header 行内。
-
-**根因**：WidgetPanel header 只渲染箭头和关闭按钮，widget 自己的按钮在 `render()` 返回的 body 内。
-
-**修复**：
-1. `WidgetDefinition` 新增 `headerButtons?: React.ComponentType<{ goTo, onClose }>` 字段
-2. `WidgetPanel` header 行渲染 `headerButtons`（位于箭头左侧）
-3. `AIChatWidget` 通过 module ref 传递运行时回调（`onNewChat`、`chatId`）给 `headerButtons`
-4. `Layout` 传递 `goTo` 给 `WidgetPanel`
-
-```typescript
-// Module-level refs for header buttons
-let _widgetCallbacks = {};
-function AIChatHeaderButtons({ goTo, onClose }) {
-  return <>
-    <button onClick={() => { goTo({ type: 'aiChat', sessionId: _widgetCallbacks.chatId }); onClose(); }} />
-    <button onClick={() => _widgetCallbacks.onNewChat?.()} />
-  </>;
-}
-// In component:
-useEffect(() => { _widgetCallbacks = { onNewChat, chatId }; return () => _widgetCallbacks = {}; });
-```
-
-**教训**：Widget 的 header 按钮需要运行时 context（`goTo`、`onNewChat`），但 widget registration 是 module-level 的静态过程。Module ref 是桥梁——组件 mount 时写入，header buttons 读取。
-
----
-
-### Lesson 17: AI 卡片数据留存 — `mapMessages` 需重建 thinking/tool 序列
-
-**问题**：编辑消息后，之前的思考内容丢失，工具调用显示异常（无工具名）。
-
-**根因**：`AIChatMessage`（存储格式）缺少 `reasoning_content` 和 `tool_calls` 字段。`mapMessages`（`ChatMessage[]` → `AIChatMessage[]`）丢弃了这些字段。编辑/恢复后 UI 显示空白。
-
-**修复**：
-1. `AIChatMessage` 加 `reasoning_content?: string` + `tool_calls?: any[]`
-2. `mapMessages` 重写为遍历循环：assistant 消息有 `reasoning_content` → 先 emit thinking card；有 `tool_calls` → emit tool_call entries；然后 emit assistant 消息本身
-3. 存储恢复路径保留 `reasoning_content`
-
-**教训**：存储格式与 API 格式的字段映射必须是双向完整的。`ChatMessage`（API 格式）的每个重要字段都应在 `AIChatMessage`（存储格式）有对应字段，并且在 `mapMessages` 双向转换中保留。
-
----
-
-### Lesson 18: `buildToolDescription` — 新增 write 工具必须加确认描述
-
-**问题**：新增的 `create_list` / `add_to_list` 在确认弹窗中显示原始 JSON `{"name":"...","purpose":"..."}`，不可读。
-
-**根因**：`buildToolDescription` 只有 `create_post`、`like`、`repost`、`follow`、`upload_blob` 的 switch case。新增工具 fall through 到 default 的 `JSON.stringify(args)` 截断。
-
-**修复**：每个 `requiresWrite: true` 的工具必须在 `buildToolDescription` 添加 human-readable case：
-```typescript
-case 'create_list': return `创建列表: "${args.name}" (${args.purpose === 'moderation' ? '管理' : '精选'})`;
-case 'add_to_list': return `添加用户 ${args.subject} 到列表`;
-case 'remove_from_list': return `从列表移除用户 ${args.subject}`;
-```
-
-**教训**：确认门的三层（`requiresWrite` → `buildToolDescription` → UI 弹窗）必须完整覆盖。添加新 write 工具时，这三层都要检查。
-
----
-
-### Lesson 19: `markConvoRead` — 乐观清除未读标记，避免 30s 轮询延迟
-
-**问题**：进入 DM 对话阅读消息后，侧边栏未读标记不消失，持续显示直到 30s 后轮询刷新。
-
-**根因**：`markRead()`（`chat.bsky.convo.updateRead`）只更新服务端状态。客户端 `useConvoList.convos` 数组中的 `unreadCount` 保持旧值，直到 `silentPoll`（30s 间隔）拉回最新数据。`App.tsx` 的 `dmCount` 和 `Sidebar` 的标记均依赖此数据。
-
-**修复**：`useConvoList` 中新增 `markConvoRead(convoId)` 模块级函数：
-```typescript
-// Module-level setter — called by DMChatPage after markRead
-let _clearUnread: ((convoId: string) => void) | null = null;
-export function markConvoRead(convoId: string): void {
-  _clearUnread?.(convoId);
-}
-
-// 在 hook 内部注册
-useEffect(() => {
-  _clearUnread = (id: string) => {
-    setConvos(prev => prev.map(c =>
-      c.id === id ? { ...c, unreadCount: 0 } : c
-    ));
-  };
-  return () => { _clearUnread = null; };
-}, []);
-```
-
-`DMChatPage` mount 时：`loadConvo().then(() => { markRead(); markConvoRead(convoId); })`。
-
-**教训**：服务端状态变更必须同步反映到客户端——乐观更新是必需的，不能等到下一轮轮询。模块级函数（而非 prop drilling）适合在不同组件树分支间传递状态变更。
-
----
-
-### Lesson 20: `searchActors` — 鉴权请求 503，公共端点 200
-
-**问题**：搜索用户时 `bsky.social` 返回 503/400，但 `public.api.bsky.app` 正常返回 200。
-
-**根因**：`searchActors` 使用 `this.session ? this.ky : this.publicKy` 模式。当已登录时走 authenticated endpoint → 503。其他公共读端点（`getLikes`、`getList` 等）使用同一模式但可行——唯独 `searchActors` 在 bsky.social 上不可用。
-
-**修复**：`searchActors` 统一使用 `this.publicKy`（不需要鉴权）：
-```typescript
-// ❌ session ? ky : publicKy — ky fails with 503
-// ✅ always use publicKy — works on public.api.bsky.app
-return this.publicKy.get('app.bsky.actor.searchActors', { searchParams });
-```
-
-**教训**：不是所有公共端点都能通过 PDS 代理（`bsky.social`）正常访问。遇到 503 时先测试 `public.api.bsky.app` 是否可用——如果可用，说明端点是纯公共读，不需要走 PDS 代理。
-
----
-
-### Lesson 46: DuckDuckGo Sec-Fetch-* 检测 —— 浏览器与 CLI 的行为差异
-
-**问题**：`instant_answer` 工具在 Node.js/TUI 端正常工作，但在 PWA/浏览器端所有查询都返回空字段（HTTP 200，JSON 结构完整但值全空）。
-
-**根因**：DuckDuckGo Instant Answer API (`api.duckduckgo.com`) 使用 `Sec-Fetch-*` 系列请求头（`Sec-Fetch-Mode`, `Sec-Fetch-Site`, `Sec-Fetch-Dest`）做客户端指纹识别。当检测到这些浏览器专属头存在时，故意返回**字段值全空**的 JSON 响应（反爬/防前端直调）。这些头由浏览器自动附加且无法通过 JavaScript 删除或修改（forbidden headers）。
-
-```
-浏览器 fetch → 自动附加 Sec-Fetch-* → DDG API → HTTP 200, 全空字段
-curl/Node.js → 无 Sec-Fetch-*      → DDG API → 完整数据
-```
-
-**尝试过的方案**：
-- ❌ **JSONP**（`<script>` + callback）：仍携带 `Sec-Fetch-Dest: script`，DDG 同样返回空
-- ❌ **第三方 CORS 代理**（corsproxy.io）：从 CLI 测试正常，但在用户网络环境下浏览器仍返回空
-- ❌ **修改 User-Agent / Accept 头**：不是触发条件，从 CLI 无论设什么头都正常
-- ❌ **尝试 `html.duckduckgo.com/html/`**：无 CORS，浏览器 fetch 被跨域拦截
-- ✅ **Cloudflare Pages Function**：服务端 fetch 完全不带浏览器指纹头，DDG 返回完整数据
-
-**正确方案**：在 `packages/pwa/functions/api/proxy.js` 创建 Cloudflare Pages Function，在服务端执行 fetch，附加 CORS 响应头返回给浏览器。
-
-**教训**：遇到 curl 正常、浏览器异常的 API 调用，优先怀疑 `Sec-Fetch-*` 头。解决方案是服务端代理（Serverless Function > CORS proxy > JSONP）。
-
----
-
-### Lesson 47: Wikipedia API —— 搜索端点会选择
-
-**问题**：`search_wikipedia` 工具使用 `rest_v1/search/title` 搜索 Wikipedia，返回 404。
-
-**根因**：Wikipedia REST API 的 `/api/rest_v1/search/title` 端点**不存在**（返回 404）。正确的搜索端点是 MediaWiki API 的 `w/api.php?action=opensearch`，但需要加 `&origin=*` 参数才能返回 CORS 头。
-
-**最终方案**：完全绕过搜索步骤，直接调 `page/summary/{query}` — Wikipedia 自动处理重定向和模糊匹配：
-- `page/summary/Bluesky%20social%20network` → 返回 "Bluesky" 的正确数据和 extract
-- 不存在的查询（如 "xyzxyzxyz"）返回 404
-
-**教训**：写 Wikipedia 集成时先查 REST API 文档确认端点是否存在。`page/summary` 是直接可用的知识摘要端点，自带 CORS。
-
----
-
-### Lesson 48: `w/api.php` 的 CORS 要求
-
-**问题**：MediaWiki API (`w/api.php`) 从浏览器调用时不返回 CORS 头。
-
-**根因**：MediaWiki API 要求 URL 中显式包含 `&origin=*` 参数才会返回 `Access-Control-Allow-Origin: *`。仅靠 `Origin` 请求头是不够的。
-
-```
-https://en.wikipedia.org/w/api.php?action=opensearch&search=Bluesky&origin=*
-// ↑ origin=* 是必需的
-```
-
-**教训**：任何使用 MediaWiki API 的浏览器端调用都必须附带 `&origin=*` 参数。`page/summary` REST API 则原生支持 CORS，无需额外参数。
-
----
-
-### Lesson 49: ChatStorage 工厂模式重构
-
-**问题**：`useChatHistory` 硬编码 `new FileChatStorage()`（Node.js 文件系统），PWA 被迫在每个组件中手动 `new IndexedDBChatStorage()` 并传入参数。
-
-**修复**：参照 DraftStorage 的工厂模式，在 `chatStorage.ts` 中引入 `setChatStorageFactory()` + `getDefaultChatStorage()`。
-
-```
-TUI:  自动检测 Node.js → FileChatStorage（无需注册）
-PWA:  App.tsx 注册 setChatStorageFactory(() => new IndexedDBChatStorage())
-      AIChatPage/AIChatWidget → 无参调用 useChatHistory()
-```
-
-**教训**：写第二个类似系统时（ChatStorage 先写，DraftStorage 后写），应直接使用工厂模式而非硬编码。工厂模式消除调用方选择责任。
-
----
-
-### Lesson 50: autoSave 并发写入 IndexedDB 的竞态条件
-
-**问题**：AI 工具调用过程中页面闪烁/消息丢失，刷新后依然丢失。IndexedDB 数据不完整（仅 user 消息，无 tool_call/tool_result）。
-
-**根因**：`useAIChat` 的 `send()` 函数有两处 `void autoSave()`：
-
-```
-send():
-  1. setMessages(prev => { void autoSave(updated); return updated; })
-     ← 用户消息发出时立即保存（仅用户消息，不等待）
-  [streaming...]
-  2. setMessages(prev => { void autoSave(prev); return prev; })
-     ← 流结束后保存（完整消息，也不等待）
-```
-
-两个 `autoSave` 都对同一 `chatIdRef.current` 执行 `IndexedDB.put()`（upsert）。`void` 不等待，两个写入并发。**即便 IndexedDB 有事务排队机制，最后一个完成的写入覆盖前一个**——较小的数据包（仅用户消息）可能晚于完整数据包完成，覆盖完整数据。
-
-从浏览器控制台看到的 IndexedDB 原始数据证实了这一点：只有 `[{user}, {thinking}, {assistant}]`，无任何工具调用记录。
-
-**修复**：删除 `send()` 中的第 1 处过早保存，只保留流结束后的第 2 处保存。
-
-**代价**：用户在 AI 回复过程中刷新，最近一条用户消息可能不保存。相比"不完整数据覆盖整个对话历史"来说可以接受。
-
-**教训**：`void` + `IndexedDB.put()` + 同一个 key = 竞态。所有写入同一个 key 的异步操作必须序列化，或只保留一个写入点。
-
----
-
-### Lesson 51: autoSave 写队列防止 IndexedDB 事务乱序
-
-**问题**：Lesson 50 移除了过早保存后，PWA 中若两次 `autoSave` 并发（如 auto-analysis 与用户手动发消息同时触发），IndexedDB 事务可能乱序完成——`autoSave A`（不完整数据）在 `autoSave B`（完整数据）之后完成，覆盖掉完整数据。
-
-**根因**：与 Lesson 50 类似但不同。Lesson 50 是同一 `send()` 内的两处保存；Lesson 51 是两处 `send()` 各自的 `autoSave` 并发。
-
-```
-autoSave A: version=1, idx 写入 data_A  ← 发起
-autoSave B: version=2, idx 写入 data_B  ← 发起
-  [B 完成] → 磁盘 data_B（正确）
-  [A 完成] → 磁盘 data_A（不完整！覆盖 B）
-```
-
-版本检查 `if (version !== saveVersionRef.current)` 在写入**之后**——无法阻止已发生的覆盖。
-
-TUI (`FileChatStorage` 用 `fs.writeFileSync` 同步 I/O) 没有此问题——写入在 `await` 之前已完成。
-
-**修复**：引入 `saveQueueRef`（Promise 链），将所有 `storage.saveChat()` 串行化执行：
-
-```typescript
-const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
-
-// autoSave 中的核心变化：
-await new Promise((resolve, reject) => {
-  saveQueueRef.current = saveQueueRef.current.then(async () => {
-    if (version !== saveVersionRef.current) { resolve(); return; }
-    if (saveChatId !== chatIdRef.current) { resolve(); return; }
-    await storage.saveChat(data);       // ← 入队执行
-    // ... 标题生成等后续操作 ...
-    resolve();
-  }).catch(reject);
-});
-```
-
-队列保证 `autoSave B` 的写入始终在 `autoSave A` 的写入**完成之后**才开始。加上 `saveChatId` 快照守卫（防止会话切换时错误覆盖），三重防护。
-
-**教训**：异步 I/O 竞态不能靠"写入后检查"解决——写入本身不可逆。必须用 Promise 链（写队列）保证顺序，并在写入前做版本校验。
-
-### Lesson 52: CVD-friendly color palette architecture
-
-**问题**：DESIGN.md 声称 100% WCAG 2.1 AA 合规，但 PostActionsRow 用纯颜色（红/绿/黄）区分 like/repost/bookmark 状态；连接状态圆点为 8px 纯颜色；零 `role="alert"` 属性。颜色是色觉缺陷用户的唯一信息源。
-
-**解决**：
-- **阶段 A**（始终生效）：修复 WCAG 1.4.1 违规。PostActionsRow 为所有 3 个按钮新增 `aria-pressed`；repost 已激活时计数文字加粗（无 filled 图标变体）；title 属性国际化（`action.like/liked` 等）。连接状态圆点改为圆点 + 可见文本"已连接/未连接"。15+ 个组件中新增 `role="alert"`（错误/警告横幅）和 `role="status"`（成功 toast 和草稿标签）。
-- **阶段 B**（可选切换）：新增 `.cvd` class，用 CSS 变量将 Tailwind 的红/绿/黄工具类映射为品红（`#C2185B`）/ 蓝绿（`#00897B`）/ 琥珀（`#E65100`）——三种色觉缺陷类型均可区分的色觉安全三元组。32 条 CSS 覆盖规则处理 `.cvd` 和 `.dark.cvd` 组合。`cvdMode: boolean` 存储在 `AppConfig` 中，App.tsx 挂载时同步，设置弹窗中提供复选框。
-- **基础设施**：新增 `--color-background` CSS 变量，替换 16 个组件文件中的 24 处 `bg-white dark:bg-[#0A0A0A]` → `bg-background`。实现无需逐个组件修改的主题切换。
-
-**教训**：
-1. **色觉友好的 UI 需要双重编码**：不应仅用颜色传达信息，也不应仅依赖调色板切换。正确的做法是两步：非颜色线索（加粗、`aria-pressed`、文本标签）+ 调色板作为额外保障。
-2. **CSS 变量使主题切换架构面向未来**：在引入 `--color-background` 前，所有页面背景色以 `bg-white dark:bg-[#0A0A0A]` 硬编码。现在任何新主题（高对比度、暖色/冷色模式）都可以通过仅修改 `index.css` 实现——无需重新触碰任何组件。
-3. **`.cvd .text-red-500` 在不使用 `!important` 的情况下覆盖 Tailwind 工具类**，因为 `.cvd .text-red-500` 的特异性（0 2 0）高于 Tailwind 生成的（0 1 0）。无需使用 `!important`。
-4. **深色模式组合选择器在 CSS 中为 `.dark.cvd`**（两个 class 均作用于 `<html>`），而非 `.cvd .dark`。`.dark` 和 `.cvd` 是平级的，都会影响同一个元素。
-5. **i18n 键缺失导致运行时显示原始键名**：当 UI 语言设为英语或日语时，28 个缺失的设置/主题/通用键显示为 `settings.title`、`theme.switchDark` 等原始文本。只有 `zh.ts` 存在这些键。即使缺失，React 也不会产生控制台错误——UI 仅静默显示原始键文本。在合并前进行键审计至关重要。
-
-
-### Lesson 53: PDS blob download needs `this.ky` (JWT auto-refresh)
-
-**问题**：`BskyClient.downloadBlob()` 使用原始 `ky.get(url, { headers: this.getAuthHeaders() })` — 不经过 `this.ky`（带 `withRefresh` hook 的 `ky.create` 实例）。从 localStorage 恢复的 session JWT 可能已过期，`downloadBlob` 直接失败返回 400 ExpiredToken，无自动刷新。
-
-**修复**：`downloadBlob` 改用 `this.ky.get('com.atproto.sync.getBlob', { searchParams })`。`this.ky` 的 `afterResponse` hook 在 401/400 上触发 `withRefresh` → 刷新 JWT → 重试请求。与所有其他 XRPC 调用共享同一路径。
-
-**教训**：
-1. 所有认证请求必须通过 `this.ky` — 不可用原始 `ky.get()` 手动加 auth header
-2. CDN（`cdn.bsky.app`）对 `<img>` 可用，但不支持 `fetch()` CORS
-
-### Lesson 54: React events bubble through fiber tree, not DOM — Modal portal + propagation
-
-**问题**：ALT Modal 使用 `createPortal(document.body)` 后，点击背景仍触发 PostCard 的 `onClick` → 导航。
-
-**根因**：React 合成事件沿 **Fiber 树**（组件层级）冒泡，非 DOM 树。Portal 解决 CSS 包含块问题，不解决事件冒泡。
-
-**修复**：Modal 背景 + 居中包装器的点击均调用 `e.stopPropagation()`。
-
-**教训**：
-1. Portal 解决 CSS 问题（`fixed` 在 `transform` 内相对定位），React Fiber 树解决事件问题——两正交问题
-2. 调试时先隔离错误来源——诊断页面正确区分了 CDN CORS vs. LLM API CORS vs. PDS JWT 过期
-
-### Lesson 55: beforeRequest hook centralizes auth — eliminates per-method boilerplate
-
-**问题**：42 个方法各自手动调用 `headers: this.getAuthHeaders()`。`downloadBlob` 切换到 `this.ky` 时遗漏该行 → 所有 blob 请求无认证头 → PDS 返回 400。
-
-**修复**：为所有 `this.ky` 和 `this.chatKy` 实例新增 `beforeRequest` 钩子（`_authHook`）——当 `this.session` 存在时自动注入 `Authorization: Bearer <jwt>`。4 个 `ky.create` 调用点均已注册。未来无需任何方法手动传递认证头。
-
-**教训**：
-1. **集中化的 beforeRequest hook 比 42 个手动 auth 调用更安全**——单点控制，不会遗漏。与现有的 `afterResponse`（`_withRefresh`）钩子形成对称架构：beforeRequest 注入 JWT，afterResponse 刷新 JWT
-2. **ky.extend() 保留钩子**——`downloadBlob` 的 bsky.social 回退使用 `this.ky.extend({ prefixUrl: ... })` 创建临时实例，继承 `_authHook` 和 `_withRefresh`
-3. **`this.session` 可能为 null**——`_authHook` 仅在 session 存在时注入，`getAuthHeaders()` 返回 `{}` 而非抛出异常。登录时的竞态条件（旧代码在 `login()` 完成前调用 `getAuthHeaders()`）现已消除
-
-### Lesson 56: 429 rate-limit retry needs exponential backoff — not just UI feedback
-
-**问题**：Mistral Tier 1 限速严格（~1 req/s）。AI ALT 每次生成 2 条请求（blob + vision API），连续快速点击 → 429。错误提示不足，用户困惑。
-
-**修复**：PostCard `handleGenerateAlt` 新增 429 检测 + 指数退避重试循环（1s→2s→4s→8s，最多 4 次）。等待期间显示「达到速率限制，正在重试（2/4）」。仅 429 触发重试——其他错误直接显示。
-
-**教训**：
-1. **429 应在客户端重试，而非抛给用户**——服务器明确告知何时可重试（Retry-After header，或使用指数退避作为安全回退）
-2. **指数退避是 API 速率限制的标准模式**——起始 1 秒，每次加倍，最多 4 次（总等待 15 秒）
-3. **不要对非 429 错误重试**——401、400 等不会因等待而自愈
-
-## 架构升级（v0.13.1）
+> **完整上下文恢复**：`docs/CONTEXT.md`
+> **系统架构**：`docs/ARCHITECTURE.md`
+> **版本历史**：`CHANGELOG.md`

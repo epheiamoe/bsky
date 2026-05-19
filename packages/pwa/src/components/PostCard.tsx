@@ -90,6 +90,10 @@ interface PostCardBaseProps {
   client?: BskyClient | null;
   /** Fill single images to fixed height (true) or show at original aspect ratio (false) */
   singleImageFill?: boolean;
+  /** Number of lines for post text preview */
+  previewLines?: number;
+  /** Number of lines for quoted post text preview */
+  quotedPreviewLines?: number;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -104,7 +108,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client, singleImageFill }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -216,7 +220,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
               </>
             )}
           </div>
-          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words line-clamp-6">
+          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words" style={{ WebkitLineClamp: previewLines }}>
             {linkifyText(text)}
           </p>
           {hasImages && <ImageGrid images={images} singleImageFill={singleImageFill} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
@@ -255,7 +259,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
                 <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
                 <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
               </div>
-              <p className="text-xs text-text-primary line-clamp-3 break-words">{linkifyText(quotedPost.text)}</p>
+              <p className="text-xs text-text-primary break-words" style={{ WebkitLineClamp: quotedPreviewLines }}>{linkifyText(quotedPost.text)}</p>
               {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
                 <div className="mt-1 flex gap-1">
                   {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (

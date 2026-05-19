@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, initChatService, useConvoList } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, initChatService, useConvoList, setWorkspaceStorageFactory } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { BskyClient } from '@bsky/core';
@@ -26,6 +26,7 @@ import { DMChatPage } from './components/DMChatPage.js';
 import { ComponentsPage } from './components/ComponentsPage.js';
 import { IndexedDBDraftStorage } from './services/indexeddb-draft-storage.js';
 import { IndexedDBChatStorage } from './services/indexeddb-chat-storage.js';
+import { IndexedDBWorkspaceStorage } from './services/indexeddb-workspace-storage.js';
 import { PolishWidget } from './components/widgets/PolishWidget.js';
 import { SuggestedFollowsWidget } from './components/widgets/SuggestedFollowsWidget.js';
 import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.js';
@@ -35,13 +36,16 @@ import { AboutPage } from './components/AboutPage.js';
 import { DiagnosticPage } from './components/DiagnosticPage.js';
 import { AtPlayPage } from './components/AtPlayPage.js';
 import { AtPlaySocialCircle } from './components/AtPlaySocialCircle.js';
+import { SettingsPage } from './components/SettingsPage.js';
 import { Icon } from './components/Icon.js';
+import { AIGuidance } from './components/AIGuidance.js';
 import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
 
 export function App() {
   // Register storage factories (browser: IndexedDB)
   setDraftStorageFactory(() => new IndexedDBDraftStorage());
+  setWorkspaceStorageFactory(() => new IndexedDBWorkspaceStorage());
 
   // Initialize ChatService once (idempotent — only first call sets storage)
   useEffect(() => {
@@ -64,8 +68,7 @@ export function App() {
   const dmCount = convos.reduce((sum, c) => sum + c.unreadCount, 0);
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed'));
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed_v2'));
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedScrollTopRef = useRef(0);
@@ -100,6 +103,7 @@ export function App() {
       apiKey: appConfig.apiKeys?.[providerId] || appConfig.aiConfig.apiKey,
       provider: provider?.id,
       reasoningStyle: provider?.reasoningStyle,
+      apiType: provider?.apiType,
       thinkingEnabled: modelInfo?.thinking ?? appConfig.aiConfig.thinkingEnabled ?? true,
       visionEnabled: modelInfo?.vision ?? appConfig.aiConfig.visionEnabled ?? false,
     };
@@ -165,13 +169,14 @@ export function App() {
     }, (props) => React.createElement(AIChatWidget, props));
   }, []);
 
-  // ── Sync dark mode + CVD mode + lang on mount ──
+  // ── Sync dark mode + CVD mode + lang + theme-color ──
   useEffect(() => {
-    const cfg = getAppConfig();
-    document.documentElement.classList.toggle('dark', cfg.darkMode);
-    document.documentElement.classList.toggle('cvd', cfg.cvdMode);
-    document.documentElement.lang = cfg.targetLang || 'en';
-  }, []);
+    document.documentElement.classList.toggle('dark', appConfig.darkMode);
+    document.documentElement.classList.toggle('cvd', appConfig.cvdMode);
+    document.documentElement.lang = appConfig.targetLang || 'en';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', appConfig.darkMode ? '#000000' : '#FFFFFF');
+  }, [appConfig.darkMode, appConfig.cvdMode, appConfig.targetLang]);
 
   // ── Track last active feed URI for sidebar/home navigation ──
   useEffect(() => {
@@ -281,19 +286,23 @@ export function App() {
 
   // ── Not logged in ──
   if (!isLoggedIn || !client) {
-    return <LoginPage onLogin={handleLogin} error={authError} errorLog={errorLog} />;
+    return (
+      <LoginPage onLogin={handleLogin} error={authError} errorLog={errorLog} footer={<AIGuidance />} />
+    );
   }
 
   if (showWelcome) {
     return (
       <WelcomeCard
+        config={appConfig}
+        onConfigChange={setAppConfig}
         onGoToSettings={() => {
-          localStorage.setItem('bsky_welcomed', '1');
+          localStorage.setItem('bsky_welcomed_v2', '1');
           setShowWelcome(false);
-          setSettingsOpen(true);
+          goTo({ type: 'settings' }, true);
         }}
         onSkip={() => {
-          localStorage.setItem('bsky_welcomed', '1');
+          localStorage.setItem('bsky_welcomed_v2', '1');
           setShowWelcome(false);
         }}
       />
@@ -324,6 +333,8 @@ export function App() {
             imageDescConfig={scenarioModels.imageDescription}
             imageDescLang={appConfig.targetLang}
             singleImageFill={appConfig.singleImageFill}
+            previewLines={appConfig.postPreviewLines}
+            quotedPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'thread':
@@ -340,6 +351,8 @@ export function App() {
             imageDescConfig={scenarioModels.imageDescription}
             imageDescLang={appConfig.targetLang}
             singleImageFill={appConfig.singleImageFill}
+            threadPreviewLines={appConfig.threadPreviewLines}
+            quotedPostPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'compose':
@@ -373,6 +386,8 @@ export function App() {
             singleImageFill={appConfig.singleImageFill}
             initialScrollTop={profileScrollTopRef.current}
             onScrollTopChange={(top) => { profileScrollTopRef.current = top; }}
+            previewLines={appConfig.postPreviewLines}
+            quotedPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'notifications':
@@ -391,9 +406,13 @@ export function App() {
             initialTab={(currentView as { searchTab?: SearchTab }).searchTab}
             goBack={goBack}
             goTo={goTo}
+            initialScrollTop={searchScrollTopRef.current}
+            onScrollTopChange={(top) => { searchScrollTopRef.current = top; }}
             imageDescConfig={scenarioModels.imageDescription}
             imageDescLang={appConfig.targetLang}
             singleImageFill={appConfig.singleImageFill}
+            previewLines={appConfig.postPreviewLines}
+            quotedPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'aiChat': {
@@ -408,6 +427,7 @@ export function App() {
             contextUri={(currentView as { contextUri?: string }).contextUri}
             goTo={goTo}
             goBack={goBack}
+            userDisplayName={profile?.displayName}
           />
         );
       }
@@ -420,6 +440,8 @@ export function App() {
             imageDescConfig={scenarioModels.imageDescription}
             imageDescLang={appConfig.targetLang}
             singleImageFill={appConfig.singleImageFill}
+            previewLines={appConfig.postPreviewLines}
+            quotedPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'lists':
@@ -438,6 +460,8 @@ export function App() {
             onScrollTopChange={(top) => { listDetailFeedScrollTopRef.current = top; }}
             membersScrollTop={listDetailMemberScrollTopRef.current}
             onMembersScrollTop={(top) => { listDetailMemberScrollTopRef.current = top; }}
+            previewLines={appConfig.postPreviewLines}
+            quotedPreviewLines={appConfig.quotedPreviewLines}
           />
         );
       case 'drafts':
@@ -456,6 +480,19 @@ export function App() {
         return <AtPlayPage client={client} goBack={goBack} goTo={goTo} />;
       case 'atplaySocialCircle':
         return <AtPlaySocialCircle client={client} goBack={goBack} goTo={goTo} />;
+      case 'settings':
+        return (
+          <SettingsPage
+            config={appConfig}
+            onConfigChange={setAppConfig}
+            onRelogin={handleRelogin}
+            onLogout={handleLogout}
+            onRestartWelcome={() => {
+              localStorage.removeItem('bsky_welcomed_v2');
+              setShowWelcome(true);
+            }}
+          />
+        );
       default:
         return <div className="p-6 text-text-secondary">{t('common.unknownPage')}</div>;
     }
@@ -478,9 +515,7 @@ export function App() {
       dmCount={dmCount}
       polishConfig={scenarioModels.polish}
       aiConfig={effectiveAiConfig}
-      settingsOpen={settingsOpen}
-      onSettingsClose={() => setSettingsOpen(false)}
-      onSettingsOpen={() => setSettingsOpen(true)}
+      userDisplayName={profile?.displayName}
     >
       {renderView()}
     </Layout>

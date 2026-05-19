@@ -185,7 +185,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   }, [showEmojiConfig, allEmojis.length, emojiConfigLoading]);
 
   return (
-    <div className="flex flex-col h-full animate-fadeIn relative">
+    <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn relative">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
         <button onClick={goBack} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('a11y.back')}>
@@ -220,7 +220,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-3 space-y-2"
+        className="flex-1 overflow-y-auto px-4 py-3 space-y-2 min-h-0"
       >
         {loading && messages.length === 0 && (
           <div className="text-center text-text-secondary py-8 animate-pulse">{t('common.loading')}</div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useContext } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
 import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget } from '@bsky/app';
@@ -9,6 +9,8 @@ import { EditProfileModal } from './EditProfileModal.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 import { Icon } from './Icon.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { MobileHeaderCtx } from './Layout.js';
+import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
 
 interface ProfilePageProps {
   client: BskyClient;
@@ -25,6 +27,8 @@ interface ProfilePageProps {
   singleImageFill?: boolean;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
+  previewLines?: number;
+  quotedPreviewLines?: number;
 }
 
 
@@ -33,12 +37,13 @@ function avatarLetter(name: string): string {
   return name.charAt(0).toUpperCase();
 }
 
-export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill, initialScrollTop, onScrollTopChange }: ProfilePageProps) {
+export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill, initialScrollTop, onScrollTopChange, previewLines = 10, quotedPreviewLines = 8 }: ProfilePageProps) {
   const { t } = useI18n();
+  const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const {
     profile, loading, error,
     tab, setTab,
-    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed,
+    posts, repostReasons, feedCursor, feedLoading, loadMoreFeed, refreshFeed,
     isFollowing, handleFollow, handleUnfollow,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
@@ -124,21 +129,30 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     const isFollowers = followList === 'followers';
     const count = isFollowers ? profile.followersCount : profile.followsCount;
     return (
-      <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
+      <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
         <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
           <button
-            onClick={closeFollowList}
-            className="text-text-secondary hover:text-text-primary transition-colors text-lg"
+            onClick={onSidebarOpen}
+            className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none relative"
+            aria-label={t('nav.menu')}
           >
-            ←
+            <Icon name="menu" size={20} />
+            {dmCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
           </button>
-          <span className="text-text-primary font-semibold text-lg truncate">
+          <button
+            onClick={closeFollowList}
+            className="text-text-secondary hover:text-text-primary transition-colors"
+            aria-label={t('a11y.back')}
+          >
+            <Icon name="arrow-big-left" size={20} />
+          </button>
+          <span className="text-text-primary font-semibold text-lg truncate flex-1">
             {isFollowers ? t('profile.followers') : t('profile.following')}
             {count != null ? ` (${count})` : ''}
           </span>
         </div>
 
-        <div ref={followScrollRef} className="flex-1 overflow-y-auto">
+        <div ref={followScrollRef} className="flex-1 overflow-y-auto pb-14">
           {followListLoading && followItems.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -197,22 +211,32 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
 
   // ── Main profile view ──
   return (
-    <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
+    <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
       {/* Header bar */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
         <button
-          onClick={goBack}
-          className="text-text-secondary hover:text-text-primary transition-colors text-lg"
+          onClick={onSidebarOpen}
+          className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none relative"
+          aria-label={t('nav.menu')}
         >
-          ←
+          <Icon name="menu" size={20} />
+          {dmCount > 0 && <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" aria-hidden="true" />}
         </button>
-        <span className="text-text-primary font-semibold text-lg truncate">
-          {profile.displayName || profile.handle}
-        </span>
-      </div>
+        <button
+          onClick={goBack}
+          className="text-text-secondary hover:text-text-primary transition-colors"
+          aria-label={t('a11y.back')}
+        >
+          <Icon name="arrow-big-left" size={20} />
+        </button>
+          <span className="text-text-primary font-semibold text-lg truncate flex-1">
+            {profile.displayName || profile.handle}
+          </span>
+        </div>
 
       {/* Scrollable content: profile info + feed */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <PullToRefresh onRefresh={refreshFeed ?? REFRESH_NOOP} scrollRef={scrollRef} />
+      <div ref={scrollRef} className="flex-1 overflow-y-auto pb-14">
         {/* Banner */}
         {profile.banner ? (
           <button ref={bannerRef} className="h-32 bg-primary/20 w-full border-none cursor-pointer p-0" onClick={() => {
@@ -471,6 +495,8 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   imageDescLang={imageDescLang}
                   singleImageFill={singleImageFill}
                   client={client}
+                  previewLines={previewLines}
+                  quotedPreviewLines={quotedPreviewLines}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

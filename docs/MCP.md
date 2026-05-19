@@ -92,13 +92,13 @@ OpenCode supports `{env:VAR}` references in config to pass env vars to MCP subpr
 
 ### Solution: Launcher script
 
-`scripts/start-mcp.mjs` — loads `.env` before spawning the MCP server:
+`packages/mcp/dist/start-with-env.js` — loads `.env` before starting the MCP server:
 
 ```
 opencode.jsonc
-  └─ "command": ["node", "scripts/start-mcp.mjs"]
+  └─ "command": ["node", "packages/mcp/dist/start-with-env.js"]
        ├─ Reads .env → maps BLUESKY_HANDLE → BSKY_HANDLE
-       └─ spawns npx @epheiamoe/bsky-mcp with stdio inherit
+       └─ starts MCP server with credentials
 ```
 
 OpenCode config (`opencode.jsonc`):
@@ -108,7 +108,7 @@ OpenCode config (`opencode.jsonc`):
   "mcp": {
     "bsky": {
       "type": "local",
-      "command": ["node", "scripts/start-mcp.mjs"],
+      "command": ["node", "packages/mcp/dist/start-with-env.js"],
       "enabled": true
     }
   }
@@ -119,6 +119,7 @@ This approach is simpler than the `{env:VAR}` method because:
 - No system env vars needed
 - Works cross-platform (Windows/Linux/macOS)
 - `.env` is the single source of truth for credentials
+- Handles both `BSKY_HANDLE` and `BLUESKY_HANDLE` naming conventions
 
 ---
 
@@ -155,6 +156,33 @@ On Windows, `npm publish` emits `"bin[bsky-mcp]" script name dist/index.js was i
 
 ### Workspace dependency handling
 `@bsky/core` uses `workspace:*` protocol (pnpm-only). Publishing directly would fail for end users. Solution: esbuild bundles workspace deps into dist, leaving only npm-registry packages as runtime dependencies.
+
+### Python sandbox differences (PWA vs MCP)
+
+| Feature | PWA (Browser) | MCP/TUI (Node.js) |
+|---------|---------------|-------------------|
+| Implementation | Pyodide WASM | System Python (child_process) |
+| Third-party packages | Auto-installed via micropip | Must be pre-installed via pip |
+| matplotlib | ✅ Available | ⚠️ Install manually: `pip install matplotlib` |
+| File paths | `/workspace/output/` | `os.environ['BSKY_WORKSPACE']` |
+| Path portability | Hard-coded Unix paths | Use `os.path.join()` |
+
+**Best practice for cross-platform Python code:**
+```python
+import os
+workspace = os.environ['BSKY_WORKSPACE']
+output_path = os.path.join(workspace, 'output', 'data.csv')
+```
+
+---
+
+## Troubleshooting
+
+See [MCP_TROUBLESHOOTING.md](MCP_TROUBLESHOOTING.md) for detailed error diagnosis:
+- Environment variable issues
+- Network connection problems
+- Python sandbox errors
+- Write tool permissions
 
 ---
 

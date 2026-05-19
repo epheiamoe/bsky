@@ -66,7 +66,12 @@ export type {
 // AI exports
 export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft, generateChatTitle, describeImage } from './ai/assistant.js';
 export type { TranslationResult } from './ai/assistant.js';
-export type { AIConfig, ChatMessage, ToolCall } from './ai/assistant.js';
+export type { AIConfig, ChatMessage, ToolCall } from './ai/adapter.js';
+export { getAdapter, registerAdapter } from './ai/adapter.js';
+export type { ApiAdapter, StreamProcessor } from './ai/adapter.js';
+
+// Adapter implementations (auto-register on import)
+import './ai/responses-adapter.js';
 
 // AI prompts (centralized, single source of truth)
 export {
@@ -96,3 +101,7 @@ export {
 } from './ai/providers.js';
 export type { ProviderInfo, ModelInfo } from './ai/providers.js';
 export type { LoginErrorDetail } from './at/client.js';
+
+// Python Sandbox
+export type { PythonSandboxEngine, PythonExecutionResult, PythonFile } from './ai/python-sandbox.js';
+export { setGlobalPythonSandbox, getGlobalPythonSandbox } from './ai/python-sandbox.js';

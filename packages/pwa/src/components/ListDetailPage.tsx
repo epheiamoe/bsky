@@ -18,9 +18,11 @@ interface ListDetailPageProps {
   onScrollTopChange?: (top: number) => void;
   membersScrollTop?: number;
   onMembersScrollTop?: (top: number) => void;
+  previewLines?: number;
+  quotedPreviewLines?: number;
 }
 
-export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, initialScrollTop, onScrollTopChange, membersScrollTop, onMembersScrollTop }: ListDetailPageProps) {
+export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, initialScrollTop, onScrollTopChange, membersScrollTop, onMembersScrollTop, previewLines = 10, quotedPreviewLines = 8 }: ListDetailPageProps) {
   const { t } = useI18n();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
@@ -215,7 +217,8 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                         ref={(el) => feedMeasureAndCache(el, post)}
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                       >
-                        <PostCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}>
+                        <PostCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
+                          previewLines={previewLines} quotedPreviewLines={quotedPreviewLines}>
                           <PostActionsRow client={client} goTo={goTo} post={post} />
                         </PostCard>
                       </div>

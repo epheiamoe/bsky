@@ -3,6 +3,7 @@ import type { BskyClient, Notification } from '@bsky/core';
 import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { PullToRefresh } from './PullToRefresh.js';
 
 interface NotifsPageProps {
   client: BskyClient;
@@ -133,7 +134,9 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       ) : notifications.length > 0 ? (
-        <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
+        <>
+          <PullToRefresh onRefresh={refresh} scrollRef={scrollRef} />
+          <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
               const n = notifications[vi.index]!;
@@ -154,6 +157,7 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
             })}
           </div>
         </div>
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">
           <p className="text-text-secondary text-sm">{t('notifications.empty')}</p>

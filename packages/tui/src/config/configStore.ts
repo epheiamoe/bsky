@@ -14,6 +14,8 @@ export interface TuiConfig {
     model: string;
     provider?: string;
     reasoningStyle?: 'reasoning_content' | 'structured_content' | 'none';
+    apiType?: 'chat' | 'responses';
+    reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
     thinkingEnabled?: boolean;
     visionEnabled?: boolean;
     customSystemPrompt?: string;
@@ -27,6 +29,8 @@ export interface TuiConfig {
     polish: string;
     imageDescription: string;
   };
+  /** User pronouns for AI reference. ''=skip, 'neutral'=use neutral terms, any other value=use as-is */
+  userPronouns?: string;
   /** Custom emojis for DM reactions */
   dmEmojis?: string[];
 }
