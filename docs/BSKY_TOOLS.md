@@ -19,8 +19,12 @@
 
 ## Quick Start
 
+### Initialization
+
+`bsky_tools` is pre-initialized in the Python sandbox. Simply use it directly:
+
 ```python
-# Search for posts and analyze them
+# bsky_tools is already available — no import needed
 posts = bsky_tools.search_posts("AI", limit=50)
 for post in posts['posts']:
     if post['likeCount'] > 100:
@@ -35,6 +39,13 @@ for post in posts['posts']:
     if profile['followersCount'] < 1000:
         bsky_tools.follow(profile['did'])
         print(f"Followed {profile['handle']}")
+```
+
+**Note**: If you see `BskyToolsError: BskyTools not initialized`, the bridge may not be ready. In rare cases, you can manually connect it:
+```python
+# Manual initialization (only if auto-init fails)
+if hasattr(globals(), 'bskyToolsBridge'):
+    bsky_tools._bridge = bskyToolsBridge
 ```
 
 ---
@@ -90,17 +101,27 @@ for post in posts['posts']:
 
 ## Fields Parameter
 
-Use `fields` to filter the JSON response and reduce token usage:
+Use `fields` to filter the JSON response and reduce token usage.
+
+### Supported Formats
 
 ```python
-# Only get essential fields
+# List of field names
 posts = bsky_tools.search_posts("AI", limit=50, fields=["uri", "author", "likeCount", "text"])
 
+# Comma-separated string (auto-converted)
+profile = bsky_tools.get_profile("alice.bsky.social", fields="handle,displayName,followersCount")
+
 # Nested fields supported
-profile = bsky_tools.get_profile("alice.bsky.social", fields=["handle", "displayName", "followersCount"])
+thread = bsky_tools.get_post_thread(uri, fields=["post.uri", "post.author.handle", "replies"])
 ```
 
-Without `fields`, the full API response is returned (same as individual tool calls).
+### Important Notes
+
+- `fields` filters the **returned data**, not the API request — all data is still fetched, only the output is filtered
+- Without `fields`, the full API response is returned (same as individual tool calls)
+- Invalid field names are silently ignored
+- Works with all methods except `fetch_web_markdown` and `search_web_ddg` (which return raw text)
 
 ---
 
@@ -169,6 +190,32 @@ for acc in inactive[:10]:
 
 ---
 
+## Error Handling
+
+All bsky_tools methods raise `BskyToolsError` on failure. Always wrap calls in try/except:
+
+```python
+from bsky_tools import BskyToolsError
+
+try:
+    profile = bsky_tools.get_profile("nonexistent.handle")
+    print(f"Found: {profile['displayName']}")
+except BskyToolsError as e:
+    print(f"Error: {e}")
+except Exception as e:
+    print(f"Unexpected error: {e}")
+```
+
+Common errors:
+- `BskyToolsError: BskyTools not initialized. Auth required.` — Bridge not ready, try manual init
+- `BskyToolsError: HTTP 400: ...` — Invalid parameters or API error
+- `BskyToolsError: HTTP 404: ...` — Resource not found
+- `BskyToolsError: Handle not found` — resolve_handle failed to resolve
+
+**Tip**: Check `hasattr(globals(), 'bskyToolsBridge')` before using if you encounter init errors.
+
+---
+
 ## Platform Differences
 
 | Feature | PWA (Browser) | TUI/MCP (Node.js) |
@@ -190,18 +237,16 @@ for acc in inactive[:10]:
 
 ---
 
-## Error Handling
+## Known Limitations
 
-```python
-try:
-    profile = bsky_tools.get_profile("nonexistent.handle")
-    if 'error' in profile:
-        print(f"Error: {profile['error']}")
-    else:
-        print(f"Found: {profile['displayName']}")
-except Exception as e:
-    print(f"Exception: {e}")
-```
+| # | Limitation | Workaround |
+|---|-----------|-----------|
+| 1 | `fields` filters **returned data**, not the API request | All data is fetched; filtering happens before returning to Python |
+| 2 | `get_post_thread` in PWA lacks `format`/`maxReplies` | Use `depth` parameter only; for flat format, use `get_post_context` |
+| 3 | `list_records` may return empty for large repos | Use `cursor` pagination; verify actor's PDS |
+| 4 | `get_suggested_follows` may return empty for new accounts | Normal behavior for accounts with few connections |
+| 5 | `import bsky_tools` does not work | Use the pre-initialized `bsky_tools` global directly |
+| 6 | Write operations on PWA require browser `confirm()` dialog | Use TUI/MCP for programmatic write workflows |
 
 ---
 
@@ -210,7 +255,7 @@ except Exception as e:
 1. **Use `fields`**: Always filter fields to reduce output size and token usage
 2. **Batch wisely**: Group related operations to minimize API calls
 3. **Handle pagination**: Use `cursor` parameter for large result sets
-4. **Check errors**: API errors are returned as dicts with `"error"` key
+4. **Use try/except**: Wrap calls in `try/except BskyToolsError` for robust error handling
 5. **Rate limits**: Respect Bluesky rate limits (errors returned as exceptions)
 
 ---
