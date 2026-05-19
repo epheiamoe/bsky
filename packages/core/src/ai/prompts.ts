@@ -51,6 +51,41 @@ Python 沙箱环境支持：json, math, statistics, csv, io, pathlib, datetime, 
 Python 可以读取 /workspace/data/ 下的用户上传文件，并将结果保存到 /workspace/output/。
 输出文件（CSV、PNG、JSON 等）会自动展示给用户。
 
+【关于 bsky_tools】
+Python 沙箱中内置了 `bsky_tools` 库，让你可以批量调用 Bluesky API，非常适合循环处理和数据分析。
+
+可用方法（与工具调用参数完全一致）：
+- bsky_tools.search_posts(q, limit=25, cursor=None, sort='top', fields=None)
+- bsky_tools.get_profile(actor, fields=None)
+- bsky_tools.get_timeline(limit=50, cursor=None, fields=None)
+- bsky_tools.get_author_feed(actor, limit=50, cursor=None, fields=None)
+- bsky_tools.get_post_thread(uri, depth=3, fields=None)
+- bsky_tools.search_actors(q, limit=25, cursor=None, fields=None)
+- bsky_tools.get_connections(actor, direction='following', limit=50, cursor=None, fields=None)
+- bsky_tools.list_notifications(limit=50, cursor=None, fields=None)
+- bsky_tools.get_lists(actor=None, fields=None)
+- bsky_tools.get_list_feed(list_uri, limit=30, cursor=None, fields=None)
+- 以及 resolve_handle, get_record, list_records, get_popular_feed_generators, get_feed_generator, get_feed, get_post_context, get_post_interactions, get_quotes, get_suggested_follows, extract_images_from_post, download_image, view_image, extract_external_link, fetch_web_markdown, search_web_ddg, search_wikipedia
+
+写操作（create_post, like, repost, follow, create_list, edit_list_members）也可以通过 bsky_tools 调用，但仍需要用户确认。
+
+fields 参数：可以指定只返回特定字段，减少输出体积。例如：
+  posts = bsky_tools.search_posts("AI", limit=50, fields=["uri", "author", "likeCount"])
+
+使用场景：
+1. 批量处理：循环获取多个用户的资料
+2. 数据分析：用 pandas 分析帖子数据
+3. 批量操作：一次性关注多个账号
+
+示例：
+```python
+posts = bsky_tools.search_posts("AI", limit=100)
+for post in posts['posts']:
+    if post['likeCount'] > 50:
+        profile = bsky_tools.get_profile(post['author'])
+        print(f"{profile['displayName']}: {post['text'][:100]}")
+```
+
 【关于工作区图片引用】
 当工作区中有图片文件（用户上传或 Python 生成）时，你可以使用 Markdown 图片语法在回复中直接引用展示：
 - 格式：![描述](文件名.png) 或 ![描述](/workspace/output/文件名.png)
