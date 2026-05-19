@@ -28,6 +28,12 @@ export interface PythonExecutionResult {
   success: boolean;
   executionTime: number;
   executionTimestamp: number; // Unix timestamp when execution started, for filtering recent files
+  /** If true, the code contains write operations and requires user confirmation before execution */
+  requiresConfirmation?: boolean;
+  /** List of write operations detected by AST analysis (only present when requiresConfirmation is true) */
+  writeOperations?: Array<{ tool: string; count: number; lineNumbers: number[] }>;
+  /** Error message if execution failed before running code */
+  error?: string;
 }
 
 export interface PythonSandboxEngine {

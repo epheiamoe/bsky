@@ -105,3 +105,29 @@ export type { LoginErrorDetail } from './at/client.js';
 // Python Sandbox
 export type { PythonSandboxEngine, PythonExecutionResult, PythonFile } from './ai/python-sandbox.js';
 export { setGlobalPythonSandbox, getGlobalPythonSandbox } from './ai/python-sandbox.js';
+
+// Web fetch utilities
+export { fetchViaJina } from './ai/fetchViaJina.js';
+
+// Bsky Tools (Python batch calling)
+export {
+  BSKY_TOOLS,
+  WRITE_TOOLS,
+  isWriteTool,
+  generatePyodideWrapper,
+  generateNodeWrapper,
+  generateASTAnalysisCode,
+} from './ai/bsky-tools-definitions.js';
+export type {
+  BskyToolDefinition,
+  BskyToolParameter,
+  WriteOperationSummary,
+  ASTAnalysisResult,
+} from './ai/bsky-tools-definitions.js';
+export {
+  filterFields,
+} from './ai/bsky-tools-api.js';
+export type {
+  BskyToolsAPI,
+  BskyToolsBaseOptions,
+} from './ai/bsky-tools-api.js';

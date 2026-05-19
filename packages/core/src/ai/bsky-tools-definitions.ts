@@ -452,13 +452,22 @@ export function generatePyodideWrapper(): string {
       .concat(['fields=None'])
       .join(', ');
 
+    const kwargsEntries = tool.parameters
+      .filter(p => p.name !== 'fields')
+      .map(p => `"${p.name}": ${p.name}`)
+      .concat(['"fields": fields'])
+      .join(', ');
+
     return `
-    def ${tool.name}(self, ${args}):
+    async def ${tool.name}(self, ${args}):
         """${tool.description}
         
         Returns: ${tool.returns}
         """
-        result = self._bridge.${tool.name}(${params}${params ? ', ' : ''}fields)
+        kwargs = {${kwargsEntries}}
+        # Remove None values to let JS use defaults
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        result = await self._bridge.${tool.name}(kwargs)
         return result.to_py() if hasattr(result, 'to_py') else result`;
   }).join('\n');
 

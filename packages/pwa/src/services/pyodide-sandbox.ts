@@ -128,9 +128,12 @@ export class PyodideSandbox implements PythonSandboxEngine {
         reject(new Error('Worker error: ' + details + ' at ' + filename + ':' + lineno));
       };
 
-      console.debug('[Pyodide] Sending init message to Worker');
-      this.worker.postMessage({ type: 'init' });
-    });
+    console.debug('[Pyodide] Sending init message to Worker');
+    this.worker.postMessage({ type: 'init' });
+
+    // Send auth config if available
+    this._sendAuthConfig();
+  });
 
     await this._initPromise;
     yield { stage: 'ready', progress: 1, message: 'Python sandbox ready' };
@@ -250,6 +253,40 @@ export class PyodideSandbox implements PythonSandboxEngine {
     const pending = this._pendingExecutions.shift();
     if (pending) {
       pending.resolve(result);
+    }
+  }
+
+  private _sendAuthConfig(): void {
+    try {
+      const auth = this._getAuthConfig();
+      if (auth && this.worker) {
+        console.debug('[Pyodide] Sending auth config to Worker');
+        this.worker.postMessage({
+          type: 'setAuth',
+          jwt: auth.jwt,
+          did: auth.did,
+          handle: auth.handle,
+          pds: auth.pds,
+        });
+      }
+    } catch (err) {
+      console.debug('[Pyodide] Failed to send auth config:', err);
+    }
+  }
+
+  private _getAuthConfig(): { jwt: string; did: string; handle: string; pds: string } | null {
+    try {
+      const session = localStorage.getItem('bsky_session');
+      if (!session) return null;
+      const parsed = JSON.parse(session);
+      return {
+        jwt: parsed.accessJwt || parsed.refreshJwt || '',
+        did: parsed.did || '',
+        handle: parsed.handle || '',
+        pds: parsed.pds || 'https://api.bsky.app',
+      };
+    } catch {
+      return null;
     }
   }
 
