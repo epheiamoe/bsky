@@ -396,6 +396,45 @@ Note: Write operations (create_post, like, repost, follow) still require user co
 
 ---
 
+## Post-Implementation Fixes (v0.15.1)
+
+After initial deployment to staging, AI testing revealed critical issues:
+
+### Critical Issue: `bsky_tools` Not a Real Python Module
+
+**Problem**: `bsky_tools` was only injected as a global variable, not registered in `sys.modules`. This caused `ModuleNotFoundError: No module named 'bsky_tools'` when AI tried `import bsky_tools`.
+
+**Root Cause**: The Python wrapper was injected via `pyodide.globals.set('bsky_tools', ...)` but not added to `sys.modules['bsky_tools']`.
+
+**Fix Plan**:
+1. Register `bsky_tools` in `sys.modules['bsky_tools']` during initialization
+2. Ensure injection happens at Pyodide init time, not just at execute time
+3. Make `bsky_tools` importable: `import bsky_tools` and `from bsky_tools import search_posts`
+4. Support both global variable and module import patterns
+
+**Files to modify**:
+- `packages/pwa/src/services/pyodide.worker.ts` — Add `sys.modules['bsky_tools'] = bsky_tools` after wrapper injection
+- `packages/pwa/src/services/pyodide.worker.ts` — Move injection to `loadPyodideRuntime()` completion
+
+### Major Issues Fixed in v0.15.0
+
+1. **Auto-initialization**: `BskyTools.__init__` now auto-detects `bskyToolsBridge` from `globals()`
+2. **Fields parameter**: Supports both list `fields=["handle"]` and string `fields="handle,displayName"`
+3. **Error handling**: `_call()` raises `BskyToolsError` on API errors instead of returning dicts
+4. **DID handling**: `resolve_handle()` detects DID input and returns directly without API call
+5. **Write confirmation**: PWA shows `window.confirm()` dialog with operation summary
+
+### Testing Status
+
+| Round | Date | Result | Key Findings |
+|-------|------|--------|--------------|
+| 1 | 2026-05-19 | 30/33 pass | fields broken, no error handling, DID issue |
+| 2 | 2026-05-19 | Build pass | Fixed fields, errors, DID, auto-init |
+| 3 | 2026-05-19 | ❌ Module not found | `bsky_tools` not in `sys.modules` |
+| 4 | (planned) | TBD | Will test `import bsky_tools` |
+
+---
+
 ## Context Recovery Notes
 
 **If this document is the only reference after context compression:**
@@ -410,4 +449,4 @@ Note: Write operations (create_post, like, repost, follow) still require user co
 
 ---
 
-*Created: 2026-05-19 | Status: Planned | Target: Post-v0.14.0 release*
+*Created: 2026-05-19 | Status: In Progress (v0.15.1 fixes) | Target: Staging deployment*
