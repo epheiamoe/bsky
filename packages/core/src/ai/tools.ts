@@ -91,6 +91,19 @@ Available standard libraries: json, math, statistics, csv, io, pathlib, datetime
 External libraries (PWA only, auto-installed): pandas, numpy, matplotlib.
 MCP/TUI: Only system Python packages are available. To use pandas/numpy/matplotlib in MCP/TUI, install them in your system Python first: pip install pandas numpy matplotlib
 
+Bsky Tools Library:
+The sandbox includes a bsky_tools library for batch-calling Bluesky API methods:
+- bsky_tools.search_posts(q, limit=25, cursor=None, sort='top', fields=None)
+- bsky_tools.get_profile(actor, fields=None)
+- bsky_tools.get_timeline(limit=50, cursor=None, fields=None)
+- bsky_tools.get_author_feed(actor, limit=50, cursor=None, fields=None)
+- bsky_tools.search_actors(q, limit=25, cursor=None, fields=None)
+- bsky_tools.get_connections(actor, direction='following', limit=50, cursor=None, fields=None)
+- bsky_tools.list_notifications(limit=50, cursor=None, fields=None)
+- ... and 24 more methods (see system prompt for full list)
+- Write operations (create_post, like, repost, follow, create_list, edit_list_members) require user confirmation
+- fields parameter filters response JSON to only include specified fields
+
 Best practices:
 1. Use print() for brief status messages
 2. Save data results to os.path.join(os.environ['BSKY_WORKSPACE'], 'output') as .csv, .json, or .png
