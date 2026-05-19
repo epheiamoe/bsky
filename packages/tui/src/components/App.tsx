@@ -21,6 +21,7 @@ import type { MouseEvent } from '../utils/mouse.js';
 import { ComposeView } from './ComposeView.jsx';
 import { DMListView } from './DMListView.jsx';
 import { DMChatView } from './DMChatView.jsx';
+import { WidgetOverlay } from './WidgetOverlay.js';
 
 interface AppConfig {
   blueskyHandle: string;
@@ -56,6 +57,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   }, [stdout]);
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useNavigation();
+  const [showWidgets, setShowWidgets] = useState(false);
   const { client, loading: authLoading, login } = useAuth();
   const { unreadCount } = useNotifications(client);
   const bookmarks = useBookmarks(client);
@@ -515,6 +517,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'L') { goTo({ type: 'lists' }); return; }
     if (k === 'm') { if (currentView.type !== 'feed') { goTo({ type: 'dm' }); } return; }
     if (k === '?') { goTo({ type: 'about' }); return; }
+    if (k === 'w') { setShowWidgets(true); return; }
 
     // ── Feed-specific ──
     if (currentView.type === 'feed') {
@@ -908,6 +911,17 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       {!isRawModeSupported && (
         <Box width={cols} height={1}><Text backgroundColor="#92400e" color="yellow">{'⚠ '}{t('common.rawModeWarning')}</Text></Box>
       )}
+      {showWidgets && (
+        <WidgetOverlay
+          open={showWidgets}
+          onClose={() => setShowWidgets(false)}
+          viewType={currentView.type}
+          client={client}
+          goTo={goTo}
+          cols={cols}
+          rows={rows}
+        />
+      )}
     </Box>
   );
 }
@@ -1028,7 +1042,8 @@ function footerHint(v: { type: string }, canGoBack: boolean, focusedPanel: Focus
   const back = canGoBack ? ' Esc:' + t('nav.back') : '';
   const key = v.type === 'aiChat' ? (focusedPanel === 'ai' ? KEY_MAP['aiChat'] : 'keys.aiMain') : KEY_MAP[v.type];
   const hint = key ? t(key) : '';
-  return hint ? back + ' ' + hint : back;
+  const widgetsHint = ' w:widgets';
+  return (hint ? back + ' ' + hint : back) + widgetsHint;
 }
 
 function formatSize(bytes: number): string {

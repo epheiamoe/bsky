@@ -13,10 +13,11 @@ import { Readable } from 'stream';
 import type { ReadStream } from 'tty';
 import { getProviderById, setGlobalPythonSandbox } from '@bsky/core';
 import { NodePythonSandbox } from '@bsky/app/services/node-python-sandbox';
-import { setDraftStorageFactory, FileDraftStorage, initChatService, FileChatStorage } from '@bsky/app';
+import { setDraftStorageFactory, FileDraftStorage, initChatService, FileChatStorage, setWorkspaceStorageFactory, FileWorkspaceStorage } from '@bsky/app';
 
 setDraftStorageFactory(() => new FileDraftStorage());
 initChatService(new FileChatStorage());
+setWorkspaceStorageFactory(() => new FileWorkspaceStorage());
 
 // Initialize Python sandbox for execute_python tool
 const sandbox = new NodePythonSandbox();

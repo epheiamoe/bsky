@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useAIChat, useChatHistory, useI18n } from '@bsky/app';
 import type { BskyClient, AIConfig } from '@bsky/core';
+import type { AIChatMessage } from '@bsky/app';
 import { wrapLines } from '../utils/text.js';
 import { renderMarkdown } from '../utils/markdown.js';
 import Spinner from 'ink-spinner';
 import TextInput from 'ink-text-input';
 import clipboard from 'clipboardy';
 import { readFileSync, existsSync, writeFileSync } from 'fs';
+import { ThinkingCard } from './ThinkingCard.js';
+import { ToolCard } from './ToolCard.js';
+import { WorkspaceModal } from './WorkspaceModal.js';
 
 interface AIChatViewProps {
   client: BskyClient | null;
@@ -43,6 +47,7 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   const [imageInput, setImageInput] = useState<ImageInput>(null);
   const [lastCopied, setLastCopied] = useState(false);
   const [exported, setExported] = useState<string | null>(null);
+  const [showWorkspace, setShowWorkspace] = useState(false);
   const visionEnabled = aiConfig.visionEnabled ?? false;
   const prevMsgCount = useRef(0);
   const wasAtBottom = useRef(true);
@@ -65,45 +70,100 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
   const baseMaxVisible = Math.max(10, rows - 6);
   const maxVisible = pickMode ? baseMaxVisible - Math.min(assistantMessages.length + 2, rows - 2) - 2 : baseMaxVisible;
 
-  const allMessageLines = useMemo((): Array<string | React.ReactNode> => {
-    const lines: Array<string | React.ReactNode> = [];
+  // ── Grouped message rendering ──
+  const messageGroups = useMemo(() => {
+    const groups: Array<{
+      type: 'thinking' | 'tool' | 'user' | 'assistant';
+      msg: AIChatMessage;
+      result?: AIChatMessage;
+    }> = [];
+    let pendingTool: AIChatMessage | null = null;
+
     for (const msg of messages) {
-      const isError = (msg as any).isError === true;
-      if (isError) {
-        lines.push(<Text key={`err-${lines.length}`} color="red">❌ {msg.content}</Text>);
-        continue;
-      }
-      if (msg.role === 'tool_call') {
-        lines.push(`\u{1f527} ${t('ai.toolUsed')} ${msg.toolName ?? ''}`);
+      if (msg.role === 'thinking') {
+        groups.push({ type: 'thinking', msg });
+      } else if (msg.role === 'tool_call') {
+        pendingTool = msg;
       } else if (msg.role === 'tool_result') {
-        for (const l of wrapLines(msg.content, maxCols, 4)) {
-          lines.push(`  \u21a1  ${l}`);
-        }
-      } else if (msg.role === 'thinking') {
-        const prefix = '| Thinking: ';
-        const contPrefix = '|           ';
-        const innerWidth = Math.max(1, maxCols - 13);
-        const wrapped = wrapLines(msg.content, innerWidth, 0);
-        for (let i = 0; i < wrapped.length; i++) {
-          const p = i === 0 ? prefix : contPrefix;
-          lines.push(<Text key={`think-${lines.length}`} color="gray" dimColor>{p + wrapped[i]}</Text>);
+        if (pendingTool) {
+          groups.push({ type: 'tool', msg: pendingTool, result: msg });
+          pendingTool = null;
+        } else {
+          groups.push({ type: 'tool', msg: { ...msg, role: 'tool_call', toolName: 'result', content: '{}' }, result: msg });
         }
       } else if (msg.role === 'user') {
-        for (const l of wrapLines(msg.content, maxCols, 2)) {
-          lines.push('\u25b8 ' + l);
+        if (pendingTool) {
+          groups.push({ type: 'tool', msg: pendingTool });
+          pendingTool = null;
         }
-      } else {
-        lines.push(<Text key={`ml-${lines.length}`} color="cyan">🤖</Text>);
-        const elements = renderMarkdown(msg.content);
+        groups.push({ type: 'user', msg });
+      } else if (msg.role === 'assistant') {
+        if (pendingTool) {
+          groups.push({ type: 'tool', msg: pendingTool });
+          pendingTool = null;
+        }
+        groups.push({ type: 'assistant', msg });
+      }
+    }
+    if (pendingTool) {
+      groups.push({ type: 'tool', msg: pendingTool });
+    }
+    return groups;
+  }, [messages]);
+
+  const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  const toggleCard = useCallback((index: number) => {
+    setExpandedCards(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }, []);
+
+  const allMessageLines = useMemo((): Array<React.ReactNode> => {
+    const lines: Array<React.ReactNode> = [];
+
+    for (let gi = 0; gi < messageGroups.length; gi++) {
+      const group = messageGroups[gi]!;
+      if (group.type === 'thinking') {
+        lines.push(
+          <ThinkingCard
+            key={`think-${gi}`}
+            content={group.msg.content}
+            expanded={expandedCards.has(gi)}
+            onToggle={() => toggleCard(gi)}
+          />
+        );
+      } else if (group.type === 'tool') {
+        lines.push(
+          <ToolCard
+            key={`tool-${gi}`}
+            toolName={group.msg.toolName || 'unknown'}
+            args={group.msg.content}
+            resultContent={group.result?.content}
+            expanded={expandedCards.has(gi)}
+            onToggle={() => toggleCard(gi)}
+            chatId={sessionId}
+          />
+        );
+      } else if (group.type === 'user') {
+        for (const l of wrapLines(group.msg.content, maxCols, 2)) {
+          lines.push(<Text key={`user-${gi}-${lines.length}`}>{'▸ ' + l}</Text>);
+        }
+      } else if (group.type === 'assistant') {
+        lines.push(<Text key={`ai-${gi}`} color="cyan">{'🤖'}</Text>);
+        const elements = renderMarkdown(group.msg.content);
         for (const el of elements) {
-          lines.push(el);
+          lines.push(<Text key={`ai-${gi}-${lines.length}`}>{el}</Text>);
         }
       }
       lines.push(' ');
     }
+
     if (loading) lines.push('... ' + t('ai.thinking'));
     return lines;
-  }, [messages, loading, maxCols, t]);
+  }, [messageGroups, expandedCards, toggleCard, loading, maxCols, t, sessionId]);
 
   // Only auto-scroll to bottom if user was already at bottom
   const totalMsgCount = useMemo(() => messages.length, [messages]);
@@ -240,6 +300,10 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
       }
       if (input === 'i' || input === 'I') {
         setImageInput({ path: '' });
+        return;
+      }
+      if (input === 'w' || input === 'W') {
+        if (sessionId) setShowWorkspace(true);
         return;
       }
     }
@@ -380,6 +444,9 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
           <Text dimColor>{t('ai.tabFocus')}</Text>
         )}
       </Box>
+      {showWorkspace && sessionId && (
+        <WorkspaceModal open={showWorkspace} onClose={() => setShowWorkspace(false)} chatId={sessionId} />
+      )}
     </Box>
   );
 }
