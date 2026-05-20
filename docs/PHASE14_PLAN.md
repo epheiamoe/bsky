@@ -432,10 +432,10 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 
 | # | Issue | Severity | Status |
 |---|-------|----------|--------|
-| 1 | `fields` parameter returns `{}` for array responses | 🔴 Critical | Partial fix applied, needs proper refactor |
-| 2 | `BSKY_WORKSPACE` not set in Pyodide | 🔴 Critical | Not fixed |
-| 3 | `search_web_ddg` CORS error in PWA | 🔴 Critical | Architecture issue — should use tools.ts handler |
-| 4 | Module namespace pollution (`globals()` leak) | 🔴 Critical | Not fixed |
+| 1 | `fields` parameter returns `{}` for array responses | 🔴 Critical | Unified handler deployed; blocked by DataCloneError |
+| 2 | `BSKY_WORKSPACE` not set in Pyodide | 🔴 Critical | ✅ Fixed — injected in executePython |
+| 3 | `search_web_ddg` CORS error in PWA | 🔴 Critical | ✅ Fixed — now uses tools.ts handler via ToolDispatcher |
+| 4 | Module namespace pollution (`globals()` leak) | 🔴 Critical | ✅ Fixed — removed `__dict__.update(globals())` |
 | 5 | Write op parameter names mismatched (camelCase vs snake_case) | 🟡 Medium | Partially fixed |
 | 6 | `get_feed` 401 (JWT expired) | 🟡 Medium | Documented limitation |
 | 7 | `download_image`/`view_image` 501 | 🟡 Medium | PDS limitation |
@@ -451,6 +451,10 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 6. ✅ **snake_case parameters** — Python wrapper uses snake_case with camelCase kwargs
 7. ✅ **Response structure reference** — added to `docs/BSKY_TOOLS.md`
 8. ✅ **Known limitations updated** — documented 501/401/CORS issues
+9. ✅ **Unified ToolDispatcher** — PWA/TUI/MCP share same handler layer
+10. ✅ **COEP workaround** — `fetch()` + `eval()` replaces `importScripts()`
+11. ❌ **DataCloneError** — `undefined` values in params break `postMessage`
+12. ❌ **TextDecoder SAB** — cannot decode SharedArrayBuffer views
 
 ### Testing Status
 
@@ -460,6 +464,8 @@ See `docs/PHASE14_REFACTOR.md` for detailed refactor plan.
 | 2 | 2026-05-19 | Build pass | Fixed fields, errors, DID, auto-init |
 | 3 | 2026-05-19 | ❌ Module not found | `bsky_tools` not in `sys.modules` |
 | 4 | 2026-05-20 | 20/27 pass | fields still broken, BSKY_WORKSPACE missing, namespace pollution |
+| 5 | 2026-05-20 | Refactor deployed | Unified ToolDispatcher implemented; SAB serialization bugs found |
+| 6 | 2026-05-20 | 2/6 pass | BSKY_WORKSPACE ✅, namespace pollution ✅; DataCloneError + TextDecoder SAB issues ❌ |
 
 ---
 

@@ -1,12 +1,84 @@
 # Phase 14 Refactor Plan: Unify API Handler Layer
 
-> **Status**: 📋 PLANNED  
+> **Status**: 🚧 IN PROGRESS — Refactor implemented, bugs found, fixes planned  
 > **Target**: Complete before merging feat/phase14-bsky-tools to main  
-> **Estimated Effort**: 2-3 days  
+> **Estimated Effort**: 2-3 days initial + 1 day fixes  
 > **Priority**: 🔴 Critical — Blocks stable release  
 > **Depends on**: Current Phase 14 implementation (bsky_tools in development)  
 > **Created**: 2026-05-20  
 > **Last Updated**: 2026-05-20
+
+---
+
+## Testing Results (2026-05-20)
+
+### ✅ Verified Fixes
+
+| Fix | Status | Evidence |
+|-----|--------|----------|
+| `BSKY_WORKSPACE` env var | ✅ | `os.environ['BSKY_WORKSPACE']` returns `/workspace` |
+| Module namespace pollution | ✅ | No leaked user variables (`pd`, `np`, `plt`, etc.) in `bsky_tools` |
+| COEP + fetch workaround | ✅ | Worker loads via `fetch()` + `eval()` instead of `importScripts()` |
+
+### ❌ Remaining Bugs
+
+All API calls fail due to **two data serialization issues** in Worker ↔ Main Thread communication:
+
+#### Bug 1: `DataCloneError` (fields parameter)
+
+**Error**:
+```
+DataCloneError: Failed to execute 'postMessage' on 'DedicatedWorkerGlobalScope':
+[object Object] could not be cloned.
+```
+
+**Root cause**: `dispatchToMainThread` calls `self.postMessage({ params })` with `undefined` values in params (e.g., `cursor: undefined`). Structured clone algorithm cannot serialize `undefined`.
+
+**Example**: Python calls `search_posts("AI", limit=3, fields=[...])` → JS bridge receives `{q: "AI", limit: 3, cursor: undefined, sort: undefined, fields: [...]}` → `postMessage` fails.
+
+**Fix**: Filter `undefined` values from params before `postMessage`.
+
+```javascript
+const cleanParams = {};
+for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) cleanParams[key] = value;
+}
+self.postMessage({ type: 'toolCall', id, method, params: cleanParams, sab });
+```
+
+#### Bug 2: `TextDecoder` cannot decode SharedArrayBuffer
+
+**Error**:
+```
+TypeError: Failed to execute 'decode' on 'TextDecoder':
+The provided ArrayBufferView value must not be shared.
+```
+
+**Root cause**: `TextDecoder.decode()` does not accept views of `SharedArrayBuffer`.
+
+**Current code**:
+```javascript
+const byteView = new Uint8Array(toolSab); // toolSab is SharedArrayBuffer
+const jsonStr = decoder.decode(byteView.subarray(4)); // ❌ fails
+```
+
+**Fix**: Copy data to a regular `ArrayBuffer` before decoding.
+
+```javascript
+const rawBytes = byteView.subarray(4);
+const bytes = new Uint8Array(rawBytes.length); // regular ArrayBuffer
+bytes.set(rawBytes);
+const jsonStr = decoder.decode(bytes).replace(/\0/g, '');
+```
+
+### Files to Fix
+
+| File | Lines | Fix |
+|------|-------|-----|
+| `packages/pwa/src/services/pyodide.worker.ts` | ~348 | Filter `undefined` from params before `postMessage` |
+| `packages/pwa/src/services/pyodide.worker.ts` | ~354-355 | Copy SAB data to regular buffer before `TextDecoder.decode()` |
+
+---
 
 ---
 
