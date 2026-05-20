@@ -1,7 +1,25 @@
 # Python Sandbox Status Tracker
 
-> **Version**: v0.14.0 — Development (Phase 1-13.5 completed, Phase 14 planned)
-> **Last Updated**: 2026-05-19
+> **Version**: v0.14.0 — Development (Phase 14 in progress)
+> **Last Updated**: 2026-05-20
+
+## Known Architecture Decisions
+
+### COEP + fetch workaround for Pyodide loading
+
+**Problem**: Adding `Cross-Origin-Embedder-Policy: require-corp` enables `SharedArrayBuffer` (needed for Worker↔Main Thread sync communication), but blocks `importScripts()` for cross-origin CDN resources without CORP headers.
+
+**Solution**: Use `fetch(url, {mode: 'cors'})` + `(0, eval)(code)` instead of `importScripts()` in the Web Worker. This is compatible with COEP while allowing Pyodide loading from jsdelivr CDN.
+
+**Files**:
+- `packages/pwa/public/_headers` — COOP/COEP headers
+- `packages/pwa/src/services/pyodide.worker.ts` — fetch+eval loader
+
+**Trade-offs**:
+- ✅ Enables SharedArrayBuffer for sync Worker↔Main Thread communication
+- ✅ Unified ToolDispatcher architecture (single source of truth)
+- ⚠️ Requires COEP headers on all responses
+- ⚠️ All cross-origin resources must support CORS
 
 ## Overview
 

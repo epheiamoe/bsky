@@ -51,21 +51,21 @@ async function loadPyodideRuntime() {
       console.debug('[PyodideWorker] Trying CDN: ' + url);
       self.postMessage({ type: 'initProgress', stage: 'downloading', progress: 0.1, message: 'Downloading Pyodide loader...' });
 
-      // Classic Worker: use importScripts instead of dynamic import
-      console.debug('[PyodideWorker] Calling importScripts...');
+      // Fetch Pyodide loader via CORS (compatible with COEP)
+      console.debug('[PyodideWorker] Fetching Pyodide loader...');
       await withTimeout(
-        new Promise<void>((resolve, reject) => {
-          try {
-            self.importScripts(url);
-            console.debug('[PyodideWorker] importScripts succeeded');
-            resolve();
-          } catch (err) {
-            console.debug('[PyodideWorker] importScripts failed: ' + String(err));
-            reject(err);
+        (async () => {
+          const response = await fetch(url, { mode: 'cors' });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
-        }),
+          const code = await response.text();
+          // Use eval instead of importScripts (COEP-compatible)
+          (0, eval)(code);
+          console.debug('[PyodideWorker] Pyodide loader loaded via fetch+eval');
+        })(),
         30000,
-        'Download pyodide.js via importScripts'
+        'Download pyodide.js via fetch'
       );
 
       console.debug('[PyodideWorker] Looking for loadPyodide function...');
