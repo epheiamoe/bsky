@@ -224,11 +224,12 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
   // Initialize Python sandbox — lazy init, background loading
   useEffect(() => {
     const sandbox = new PyodideSandbox();
+    sandbox.setClient(client);
     setGlobalPythonSandbox(sandbox);
     return () => {
       sandbox.dispose();
     };
-  }, []);
+  }, [client]);
 
   // Sync current chat session ID with sandbox for workspace file isolation
   useEffect(() => {

@@ -23,7 +23,13 @@
 
 ## 当前版本
 
-**v0.14.0** — Python 沙箱 + 工作区：`execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）。支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区（IndexedDB/PWA 或文件系统/TUI）。Vite `?worker` 导入的独立 Worker chunk（替代 inline Blob URL），jsdelivr CDN，多阶段初始化（downloading/loading/packages/ready）。60 秒超时，实时进度汇报。结果以代码卡片化展示（stdout/stderr/CSV/图片/JSON）。
+**v0.14.0** — Python 沙箱 + 工作区 + bsky_tools：
+- `execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）
+- bsky_tools Python 库：AI 从 Python 批量调用 Bluesky API（33 个方法）
+- **统一 handler 架构**：PWA Worker → Main Thread → `ToolDispatcher` → `tools.ts` → `BskyClient`
+- 复用 function calling 的 handler 逻辑，零重复实现
+- 支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区
+- SharedArrayBuffer + Atomics.wait/notify 实现 Worker ↔ Main Thread 同步通信
 
 **v0.13.9** — API Adapter 模式：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个提供商（OpenAI/xAI/Kimi/OpenRouter）。`fixedParams`/`supportsReasoningEffort` 元数据。`reasoningEffort` 支持。Welcome 设置 6 厂商展示卡。
 
@@ -186,7 +192,13 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/ConvoListPage.tsx` | DM 会话列表 |
 | `packages/pwa/src/components/DMChatPage.tsx` | DM 对话视图（气泡 + 反应 + 引用 + 删除 + 静音） |
 | `packages/pwa/src/components/ai/` | AI 共享组件（ThinkingCard, ToolCard, formatToolResult） |
-| `packages/core/src/ai/tools.ts` | 33 个 AI 工具定义 |
+| `packages/core/src/ai/tools.ts` | 33 个 AI 工具定义（单一真相源） |
+| `packages/core/src/ai/tool-dispatcher.ts` | 统一工具调度器（PWA/TUI/MCP 共用） |
+| `packages/core/src/ai/bsky-tools-api.ts` | bsky_tools API 类型定义 + filterFields |
+| `packages/core/src/ai/bsky-tools-definitions.ts` | 工具元数据 + Python wrapper 生成 |
+| `packages/pwa/src/services/pyodide.worker.ts` | Pyodide Web Worker（transport-only） |
+| `packages/pwa/src/services/pyodide-sandbox.ts` | PWA 主线程：ToolDispatcher + SAB 通信 |
+| `packages/app/src/services/node-python-sandbox.ts` | TUI/MCP Python 沙箱（JSON-RPC） |
 | `packages/core/src/ai/prompts.ts` | AI 系统提示词 |
 | `packages/core/src/ai/assistant.ts` | AI 对话引擎 |
 | `packages/core/src/ai/adapter.ts` | ApiAdapter 接口 + ChatCompletionsAdapter |

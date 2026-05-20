@@ -1,4 +1,5 @@
-import type { PythonSandboxEngine, PythonExecutionResult } from '@bsky/core';
+import type { PythonSandboxEngine, PythonExecutionResult, BskyClient } from '@bsky/core';
+import { ToolDispatcher } from '@bsky/core';
 import { getDefaultWorkspaceStorage } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
@@ -38,9 +39,14 @@ export class PyodideSandbox implements PythonSandboxEngine {
   }> = [];
   private _initReject: ((error: Error) => void) | null = null;
   private _onProgress: ((msg: { stage: string; progress: number; message: string }) => void) | null = null;
+  private _dispatcher: ToolDispatcher | null = null;
 
   constructor() {
     console.debug('[Pyodide] Sandbox instance created');
+  }
+
+  setClient(client: BskyClient): void {
+    this._dispatcher = new ToolDispatcher(client);
   }
 
   isReady(): boolean {
@@ -112,6 +118,8 @@ export class PyodideSandbox implements PythonSandboxEngine {
           reject(new Error(msg.error));
         } else if (msg.type === 'result') {
           this._handleResult(msg.result);
+        } else if (msg.type === 'toolCall') {
+          this._handleToolCall(msg);
         }
       };
 
@@ -351,6 +359,52 @@ export class PyodideSandbox implements PythonSandboxEngine {
       };
     } catch {
       return null;
+    }
+  }
+
+  private async _handleToolCall(msg: any): Promise<void> {
+    const { id, method, params, sab } = msg;
+
+    if (!this._dispatcher) {
+      console.error('[Pyodide] ToolDispatcher not initialized. Call setClient() first.');
+      this._writeToolResult(sab, { success: false, error: 'ToolDispatcher not initialized' });
+      return;
+    }
+
+    try {
+      const response = await this._dispatcher.dispatch({ method, params });
+      this._writeToolResult(sab, response);
+    } catch (err) {
+      console.error('[Pyodide] Tool call failed:', err);
+      this._writeToolResult(sab, {
+        success: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  private _writeToolResult(sab: SharedArrayBuffer, response: { success: boolean; result?: unknown; error?: string }): void {
+    try {
+      const int32View = new Int32Array(sab);
+      const byteView = new Uint8Array(sab);
+
+      // Clear SAB
+      byteView.fill(0);
+
+      // Write JSON result after first 4 bytes
+      const jsonStr = JSON.stringify(response);
+      const encoder = new TextEncoder();
+      const encoded = encoder.encode(jsonStr);
+
+      // Write length at bytes 0-3
+      const dataLength = Math.min(encoded.length, byteView.length - 4);
+      byteView.set(encoded.subarray(0, dataLength), 4);
+
+      // Signal worker that result is ready
+      Atomics.store(int32View, 0, 1);
+      Atomics.notify(int32View, 0, 1);
+    } catch (err) {
+      console.error('[Pyodide] Failed to write tool result:', err);
     }
   }
 

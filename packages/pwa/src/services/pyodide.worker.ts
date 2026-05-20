@@ -15,8 +15,6 @@ const CDN_URLS = [
 
 let pyodide: any = null;
 let initAborted = false;
-let authConfig: { jwt: string; did: string; handle: string; pds: string } | null = null;
-let bskyToolsBridge: any = null;
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -312,273 +310,135 @@ async function scanOutputFiles(): Promise<Array<{ name: string; type: string; si
 }
 
 // ══════════════════════════════════════════════════════════════════
-// BskyTools Bridge (synchronous XHR in Worker)
+// Tool Dispatcher Transport (Worker ↔ Main Thread)
 // ══════════════════════════════════════════════════════════════════
 
-function syncRequest(method: 'GET' | 'POST', url: string, headers: Record<string, string>, body?: string): { ok: boolean; data?: any; error?: string; status: number } {
-  const xhr = new XMLHttpRequest();
-  xhr.open(method, url, false);
-  for (const [key, value] of Object.entries(headers)) {
-    xhr.setRequestHeader(key, value);
-  }
-  try {
-    xhr.send(body || null);
-    if (xhr.status >= 200 && xhr.status < 300) {
-      let data: any = xhr.responseText;
-      // Try JSON parse, fall back to raw text for non-JSON responses
-      if (xhr.responseText) {
-        try {
-          data = JSON.parse(xhr.responseText);
-        } catch {
-          // Not JSON, keep as raw string
-        }
-      }
-      return { ok: true, data, status: xhr.status };
-    }
-    return { ok: false, error: `HTTP ${xhr.status}: ${xhr.statusText}`, status: xhr.status };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err), status: 0 };
-  }
+let requestIdCounter = 0;
+const pendingResults = new Map<number, any>();
+
+// SharedArrayBuffer for synchronous blocking between worker and main thread.
+// The main thread writes the JSON result into the SAB starting at byte 4,
+// then calls Atomics.notify on the first Int32 to wake the worker.
+const TOOL_SAB_SIZE = 1048576; // 1MB
+let toolSab: SharedArrayBuffer | null = null;
+let toolSabInt32: Int32Array | null = null;
+
+try {
+  toolSab = new SharedArrayBuffer(TOOL_SAB_SIZE);
+  toolSabInt32 = new Int32Array(toolSab);
+} catch (e) {
+  console.warn('[PyodideWorker] SharedArrayBuffer not available. Tool dispatcher requires COOP/COEP headers.');
 }
 
-function createBskyToolsBridge(auth: typeof authConfig, enableWrite: boolean = false) {
-  if (!auth) return null;
-  const headers = { 'Authorization': `Bearer ${auth.jwt}`, 'Content-Type': 'application/json' };
-  const pds = auth.pds || 'https://api.bsky.app';
-
-  const get = (endpoint: string, params?: Record<string, any>) => {
-    const url = new URL(`${pds}/xrpc/${endpoint}`);
-    if (params) {
-      for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
-      }
-    }
-    return syncRequest('GET', url.toString(), headers);
-  };
-
-  const post = (endpoint: string, body?: Record<string, any>) => {
-    return syncRequest('POST', `${pds}/xrpc/${endpoint}`, headers, JSON.stringify(body));
-  };
-
-  // Field filtering utility
-  function filterFields(obj: unknown, fields: string[] | undefined): unknown {
-    if (!fields || fields.length === 0) return obj;
-    if (obj === null || obj === undefined) return obj;
-    if (Array.isArray(obj)) return obj.map(item => filterFields(item, fields));
-    if (typeof obj !== 'object') return obj;
-    
-    const result: Record<string, unknown> = {};
-    for (const field of fields) {
-      const parts = field.split('.');
-      if (parts.length === 1) {
-        if (field in (obj as Record<string, unknown>)) {
-          result[field] = (obj as Record<string, unknown>)[field];
-        }
-      } else {
-        const root = parts[0];
-        const rest = parts.slice(1).join('.');
-        if (root && root in (obj as Record<string, unknown>)) {
-          result[root] = filterFields((obj as Record<string, unknown>)[root], [rest]);
-        }
-      }
-    }
-    return result;
+function dispatchToMainThread(method: string, params: Record<string, any>): any {
+  if (!toolSab || !toolSabInt32) {
+    throw new Error(
+      'SharedArrayBuffer not available. The tool dispatcher requires COOP/COEP headers to be set. ' +
+      'Please ensure your server sends Cross-Origin-Opener-Policy: same-origin and Cross-Origin-Embedder-Policy: require-corp.'
+    );
   }
 
+  const id = ++requestIdCounter;
+
+  // Clear previous result from SAB
+  const byteView = new Uint8Array(toolSab);
+  byteView.fill(0);
+
+  // Send request to main thread with SAB reference
+  self.postMessage({ type: 'toolCall', id, method, params, sab: toolSab });
+
+  // Block until main thread signals completion via Atomics.notify
+  Atomics.wait(toolSabInt32, 0, 0);
+
+  // Read result from SAB (JSON string starts after the first 4 bytes)
+  const decoder = new TextDecoder();
+  const jsonStr = decoder.decode(byteView.subarray(4)).replace(/\0/g, '');
+  const result = JSON.parse(jsonStr);
+
+  // Reset signal for next call
+  Atomics.store(toolSabInt32, 0, 0);
+
+  if (result && result.success === false) {
+    return { error: result.error || `Tool '${method}' failed` };
+  }
+
+  return result.data;
+}
+
+// Create simplified transport-only bridge (no auth, no API logic).
+// All tool calls are forwarded to the main thread via dispatchToMainThread.
+function createToolBridge() {
   const bridge: Record<string, (...args: any[]) => any> = {};
 
   // Read operations
-  bridge.resolve_handle = (handle: string, fields?: string[]) => { const res = get('com.atproto.identity.resolveHandle', { handle }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_record = (uri: string, fields?: string[]) => { const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/); if (!match) return { error: 'Invalid AT URI' }; const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('com.atproto.repo.listRecords', { repo, collection, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.search_posts = (q: string, limit?: number, cursor?: string, sort?: string, fields?: string[]) => { const res = get('app.bsky.feed.searchPosts', { q, limit, cursor, sort }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_timeline = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getTimeline', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_author_feed = (actor: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getAuthorFeed', { actor, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_popular_feed_generators = (limit?: number, fields?: string[]) => { const res = get('app.bsky.unspecced.getPopularFeedGenerators', { limit }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_feed_generator = (feed: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeedGenerator', { feed }); return res.ok ? filterFields(res.data.view || res.data, fields) : { error: res.error }; };
-  bridge.get_feed = (feed: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getFeed', { feed, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_post_thread = (uri: string, depth?: number, format?: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_post_context = (uri: string, maxReplies?: number, fields?: string[]) => { const res = get('app.bsky.feed.getPostThread', { uri, depth: 3 }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_post_interactions = (uri: string, type?: string, limit?: number, cursor?: string, fields?: string[]) => { if (type === 'reposts') { const res = get('app.bsky.feed.getRepostedBy', { uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; } const res = get('app.bsky.feed.getLikes', { uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_quotes = (uri: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.searchPosts', { q: uri, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.search_actors = (q: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.actor.searchActors', { q, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_profile = (actor: string, fields?: string[]) => { const res = get('app.bsky.actor.getProfile', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) => {
-    const resolvedActor = actor === 'me' ? auth.handle : actor;
-    if (direction === 'followers') {
-      const res = get('app.bsky.graph.getFollowers', { actor: resolvedActor, limit, cursor });
-      if (!res.ok) return { error: res.error };
-      const data = res.data as any;
-      const normalized = {
-        direction: 'followers',
-        items: data.followers.map((f: any) => ({ handle: f.handle, displayName: f.displayName })),
-        total: data.followers.length,
-        cursor: data.cursor
-      };
-      return filterFields(normalized, fields);
-    }
-    const res = get('app.bsky.graph.getFollows', { actor: resolvedActor, limit, cursor });
-    if (!res.ok) return { error: res.error };
-    const data = res.data as any;
-    const normalized = {
-      direction: 'following',
-      items: data.follows.map((f: any) => ({ handle: f.handle, displayName: f.displayName })),
-      total: data.follows.length,
-      cursor: data.cursor
-    };
-    return filterFields(normalized, fields);
-  };
-  bridge.get_suggested_follows = (actor: string, fields?: string[]) => { const res = get('app.bsky.graph.getSuggestedFollows', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.list_notifications = (limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.notification.listNotifications', { limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_lists = (actor?: string, fields?: string[]) => { const res = get('app.bsky.graph.getLists', { actor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
-  bridge.get_list_feed = (list: string, limit?: number, cursor?: string, fields?: string[]) => { const res = get('app.bsky.feed.getListFeed', { list, limit, cursor }); return res.ok ? filterFields(res.data, fields) : { error: res.error }; };
+  bridge.resolve_handle = (handle: string, fields?: string[]) =>
+    dispatchToMainThread('resolve_handle', { handle, fields });
+  bridge.get_record = (uri: string, fields?: string[]) =>
+    dispatchToMainThread('get_record', { uri, fields });
+  bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('list_records', { repo, collection, limit, cursor, fields });
+  bridge.search_posts = (q: string, limit?: number, cursor?: string, sort?: string, fields?: string[]) =>
+    dispatchToMainThread('search_posts', { q, limit, cursor, sort, fields });
+  bridge.get_timeline = (limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_timeline', { limit, cursor, fields });
+  bridge.get_author_feed = (actor: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_author_feed', { actor, limit, cursor, fields });
+  bridge.get_popular_feed_generators = (limit?: number, fields?: string[]) =>
+    dispatchToMainThread('get_popular_feed_generators', { limit, fields });
+  bridge.get_feed_generator = (feed: string, fields?: string[]) =>
+    dispatchToMainThread('get_feed_generator', { feed, fields });
+  bridge.get_feed = (feed: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_feed', { feed, limit, cursor, fields });
+  bridge.get_post_thread = (uri: string, depth?: number, format?: string, maxReplies?: number, fields?: string[]) =>
+    dispatchToMainThread('get_post_thread', { uri, depth, format, maxReplies, fields });
+  bridge.get_post_context = (uri: string, maxReplies?: number, fields?: string[]) =>
+    dispatchToMainThread('get_post_context', { uri, maxReplies, fields });
+  bridge.get_post_interactions = (uri: string, type?: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_post_interactions', { uri, type, limit, cursor, fields });
+  bridge.get_quotes = (uri: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_quotes', { uri, limit, cursor, fields });
+  bridge.search_actors = (q: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('search_actors', { q, limit, cursor, fields });
+  bridge.get_profile = (actor: string, fields?: string[]) =>
+    dispatchToMainThread('get_profile', { actor, fields });
+  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('get_connections', { actor, direction, limit, cursor, fields });
+  bridge.get_suggested_follows = (actor: string, fields?: string[]) =>
+    dispatchToMainThread('get_suggested_follows', { actor, fields });
+  bridge.list_notifications = (limit?: number, cursor?: string, fields?: string[]) =>
+    dispatchToMainThread('list_notifications', { limit, cursor, fields });
+  bridge.extract_images_from_post = (uri: string, fields?: string[]) =>
+    dispatchToMainThread('extract_images_from_post', { uri, fields });
+  bridge.download_image = (did: string, cid: string, filename?: string, fields?: string[]) =>
+    dispatchToMainThread('download_image', { did, cid, filename, fields });
+  bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number, fields?: string[]) =>
+    dispatchToMainThread('view_image', { did, cid, alt, uploadIndex, fields });
+  bridge.extract_external_link = (uri: string) =>
+    dispatchToMainThread('extract_external_link', { uri });
+  bridge.fetch_web_markdown = (url: string) =>
+    dispatchToMainThread('fetch_web_markdown', { url });
+  bridge.search_web_ddg = (query: string) =>
+    dispatchToMainThread('search_web_ddg', { query });
+  bridge.search_wikipedia = (query: string, lang?: string) =>
+    dispatchToMainThread('search_wikipedia', { query, lang });
+  bridge.get_lists = (actor?: string) =>
+    dispatchToMainThread('get_lists', { actor });
+  bridge.get_list_feed = (listUri: string, limit?: number, cursor?: string) =>
+    dispatchToMainThread('get_list_feed', { listUri, limit, cursor });
 
-  // Extract images from post
-  bridge.extract_images_from_post = (uri: string) => {
-    const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/);
-    if (!match) return { error: 'Invalid AT URI' };
-    const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] });
-    if (!res.ok) return { error: res.error };
-    const record = res.data as any;
-    const images: Array<{ did: string; cid: string; mimeType: string; alt: string }> = [];
-    if (record.value?.embed?.$type === 'app.bsky.embed.images') {
-      for (const img of record.value.embed.images) {
-        images.push({
-          did: match[1],
-          cid: img.image?.ref?.$link || '',
-          mimeType: img.image?.mimeType || 'image/jpeg',
-          alt: img.alt || '',
-        });
-      }
-    }
-    return { images, count: images.length };
-  };
-
-  // Download image
-  bridge.download_image = (did: string, cid: string, filename?: string) => {
-    const blobRes = syncRequest('GET', `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`, headers);
-    if (!blobRes.ok) return { error: blobRes.error };
-    const data = blobRes.data as string;
-    const ext = (blobRes.status === 200 && (blobRes as any).headers?.['content-type']?.includes('png')) ? 'png' : 'jpg';
-    const fname = filename || `bsky_image_${Date.now()}.${ext}`;
-    try {
-      pyodide.FS.writeFile(`/workspace/output/${fname}`, data);
-      return { saved: `/workspace/output/${fname}`, size: data.length, mimeType: `image/${ext}` };
-    } catch (e) {
-      return { error: `Failed to save image: ${e}` };
-    }
-  };
-
-  // View image
-  bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number) => {
-    if (!did || !cid) return { error: 'did and cid are required' };
-    const blobRes = syncRequest('GET', `${pds}/xrpc/com.atproto.sync.getBlob?did=${encodeURIComponent(did)}&cid=${encodeURIComponent(cid)}`, headers);
-    if (!blobRes.ok) return { error: blobRes.error };
-    // Return as base64 for display
-    const bytes = new Uint8Array(blobRes.data as any);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]!);
-    }
-    const base64 = btoa(binary);
-    return { data: base64, alt: alt || '', size: bytes.length };
-  };
-
-  // Extract external link
-  bridge.extract_external_link = (uri: string) => {
-    const match = uri.match(/at:\/\/([^/]+)\/([^/]+)\/(.+)/);
-    if (!match) return { error: 'Invalid AT URI' };
-    const res = get('com.atproto.repo.getRecord', { repo: match[1], collection: match[2], rkey: match[3] });
-    if (!res.ok) return { error: res.error };
-    const record = res.data as any;
-    if (record.value?.embed?.$type === 'app.bsky.embed.external') {
-      const ext = record.value.embed.external;
-      return { uri: ext.uri, title: ext.title, description: ext.description };
-    }
-    return { link: null, message: 'No external link embed found' };
-  };
-
-  // Fetch web markdown
-  bridge.fetch_web_markdown = (url: string) => {
-    const res = syncRequest('GET', `https://r.jina.ai/${encodeURIComponent(url)}`, {});
-    if (!res.ok) return { error: res.error, url };
-    const content = res.data as string;
-    const trimmed = content.length > 10000 ? content.slice(0, 10000) + '\n\n... (truncated)' : content;
-    const titleMatch = trimmed.match(/#\s+(.+)/);
-    return { url, title: titleMatch ? titleMatch[1] : '', content: trimmed };
-  };
-
-  // Search web DDG
-  bridge.search_web_ddg = (query: string) => {
-    const res = syncRequest('GET', `https://html.duckduckgo.com/html?q=${encodeURIComponent(query)}`, {});
-    if (!res.ok) return { error: res.error };
-    // Simple HTML parsing - extract results
-    const html = res.data as string;
-    const results: Array<{ title: string; url: string; snippet: string }> = [];
-    const resultRegex = /class="result__a" href="([^"]+)"[^>]*>([^<]+)/g;
-    const snippetRegex = /class="result__snippet"[^>]*>([^<]+)/g;
-    let match;
-    while ((match = resultRegex.exec(html)) !== null && results.length < 10) {
-      const urlMatch = match[1];
-      const title = match[2];
-      const snippetMatch = snippetRegex.exec(html);
-      results.push({
-        title: title.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
-        url: urlMatch,
-        snippet: snippetMatch ? snippetMatch[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') : '',
-      });
-    }
-    return { results, query };
-  };
-
-  // Search Wikipedia
-  bridge.search_wikipedia = (query: string, lang: string = 'en') => {
-    const res = syncRequest('GET', `https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`, {});
-    if (res.status === 404) return { error: 'No Wikipedia article found matching that query.' };
-    if (!res.ok) return { error: `Wikipedia API error: HTTP ${res.status}` };
-    const summary = res.data as any;
-    return {
-      title: summary.title,
-      displayTitle: summary.displaytitle,
-      description: summary.description,
-      extract: summary.extract,
-      thumbnail: summary.thumbnail,
-      url: summary.content_urls?.desktop?.page,
-    };
-  };
-
-  // Write operations
-  if (enableWrite) {
-    bridge.create_post = (text: string, replyTo?: string, quoteUri?: string, images?: any[], threadgate?: any) => {
-      const res = post('app.bsky.feed.post', { text, replyTo, quoteUri, images, threadgate });
-      return res.ok ? res.data : { error: res.error };
-    };
-    bridge.like = (uri: string) => {
-      const res = post('app.bsky.feed.like', { uri });
-      return res.ok ? res.data : { error: res.error };
-    };
-    bridge.repost = (uri: string) => {
-      const res = post('app.bsky.feed.repost', { uri });
-      return res.ok ? res.data : { error: res.error };
-    };
-    bridge.follow = (subject: string) => {
-      const res = post('app.bsky.graph.follow', { subject });
-      return res.ok ? res.data : { error: res.error };
-    };
-    bridge.create_list = (name: string, purpose: string, description?: string) => {
-      const res = post('app.bsky.graph.list', { name, purpose, description });
-      return res.ok ? res.data : { error: res.error };
-    };
-    bridge.edit_list_members = (listUri: string, subject: string, action: string = 'add') => {
-      const res = post('app.bsky.graph.listitem', { listUri, subject, action });
-      return res.ok ? res.data : { error: res.error };
-    };
-  } else {
-    const writeTools = ['create_post', 'like', 'repost', 'follow', 'create_list', 'edit_list_members'];
-    for (const tool of writeTools) {
-      bridge[tool] = () => ({ error: `Write operation '${tool}' requires user confirmation. Set enableWrite=true.` });
-    }
-  }
+  // Write operations (main thread handles confirmation)
+  bridge.create_post = (text: string, replyTo?: string, quoteUri?: string, images?: any[], threadgate?: any) =>
+    dispatchToMainThread('create_post', { text, replyTo, quoteUri, images, threadgate });
+  bridge.like = (uri: string) =>
+    dispatchToMainThread('like', { uri });
+  bridge.repost = (uri: string) =>
+    dispatchToMainThread('repost', { uri });
+  bridge.follow = (subject: string) =>
+    dispatchToMainThread('follow', { subject });
+  bridge.create_list = (name: string, purpose: string, description?: string) =>
+    dispatchToMainThread('create_list', { name, purpose, description });
+  bridge.edit_list_members = (listUri: string, subject: string, action?: string) =>
+    dispatchToMainThread('edit_list_members', { listUri, subject, action });
 
   return bridge;
 }
@@ -749,7 +609,7 @@ _bsky_tools_instance = BskyTools()
 # Register as a proper Python module so 'import bsky_tools' works
 import types
 _bsky_tools_module = types.ModuleType('bsky_tools')
-_bsky_tools_module.__dict__.update(globals())
+# Only export public methods and classes, NOT all globals
 _bsky_tools_module.bsky_tools = _bsky_tools_instance
 _bsky_tools_module.BskyTools = BskyTools
 _bsky_tools_module.BskyToolsError = BskyToolsError
@@ -799,13 +659,17 @@ async function executePython(code: string, enableWrite: boolean = false) {
       ].join('\n')
     );
 
+    // Set BSKY_WORKSPACE environment variable
+    pyodide.runPython(`
+import os
+os.environ['BSKY_WORKSPACE'] = '/workspace'
+    `.trim());
+
     // Inject bsky_tools — always do this so `import bsky_tools` works
-    // If auth is not available yet, the module exists but methods will raise BskyToolsError
+    // All tool calls are forwarded to the main thread via ToolDispatcher
     try {
-      if (authConfig) {
-        const bridge = createBskyToolsBridge(authConfig, enableWrite);
-        pyodide.globals.set('bskyToolsBridge', bridge);
-      }
+      const bridge = createToolBridge();
+      pyodide.globals.set('bskyToolsBridge', bridge);
       await pyodide.runPythonAsync(BSKY_TOOLS_PYTHON_WRAPPER);
       console.debug('[PyodideWorker] bsky_tools module registered');
     } catch (injectErr) {
@@ -912,16 +776,12 @@ self.onmessage = async function (e: MessageEvent) {
   } else if (msg.type === 'unmountFile') {
     const result = unmountFile(msg.name);
     self.postMessage({ type: 'unmountResult', result: result });
+  } else if (msg.type === 'toolResult') {
+    // Store result for any async handling (SAB is the primary sync mechanism)
+    pendingResults.set(msg.id, msg.result);
   } else if (msg.type === 'setAuth') {
-    console.debug('[PyodideWorker] Auth config received');
-    authConfig = {
-      jwt: msg.jwt,
-      did: msg.did,
-      handle: msg.handle,
-      pds: msg.pds,
-    };
-    bskyToolsBridge = createBskyToolsBridge(authConfig);
-    console.debug('[PyodideWorker] BskyTools bridge created');
+    // No-op: auth is managed by main thread; kept for backward compatibility
+    console.debug('[PyodideWorker] Auth config received (ignored — main thread manages auth)');
   } else if (msg.type === 'abort') {
     console.debug('[PyodideWorker] Abort received');
     initAborted = true;

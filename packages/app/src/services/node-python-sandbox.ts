@@ -6,9 +6,8 @@ import type { PythonSandboxEngine, PythonExecutionResult, PythonFile, BskyClient
 import {
   generateNodeWrapper,
   generateASTAnalysisCode,
-  filterFields,
+  ToolDispatcher,
 } from '@bsky/core';
-import { createTools, type ToolHandler } from '@bsky/core';
 import { getDefaultWorkspaceStorage } from './workspaceStorage.js';
 
 const MIME_TYPE_MAP: Record<string, string> = {
@@ -69,23 +68,12 @@ export class NodePythonSandbox implements PythonSandboxEngine {
   private baseDir: string;
   private _isReady = true;  // Always ready — no async init needed
   private _initFailed = false;
-  private client: BskyClient | null;
-  private toolHandlers: Map<string, ToolHandler>;
+  private dispatcher: ToolDispatcher | null;
 
   constructor(client?: BskyClient) {
     this.baseDir = mkdtempSync(join(tmpdir(), 'bsky-python-'));
     this.ensureWorkspaceDirs();
-    this.client = client ?? null;
-    this.toolHandlers = new Map();
-
-    if (client) {
-      const tools = createTools(client);
-      for (const tool of tools) {
-        if (tool.definition.name !== 'execute_python') {
-          this.toolHandlers.set(tool.definition.name, tool.handler);
-        }
-      }
-    }
+    this.dispatcher = client ? new ToolDispatcher(client) : null;
   }
 
   private ensureWorkspaceDirs(): void {
@@ -387,7 +375,7 @@ export class NodePythonSandbox implements PythonSandboxEngine {
   private async handleJSONRPCRequest(request: JSONRPCRequest): Promise<JSONRPCResponse> {
     const { method, params, id } = request;
 
-    if (!this.client) {
+    if (!this.dispatcher) {
       return {
         jsonrpc: '2.0',
         error: { code: -32603, message: 'BskyClient not available. Sandbox was initialized without a client.' },
@@ -395,48 +383,19 @@ export class NodePythonSandbox implements PythonSandboxEngine {
       };
     }
 
-    const handler = this.toolHandlers.get(method);
-    if (!handler) {
-      return {
-        jsonrpc: '2.0',
-        error: { code: -32601, message: `Method not found: ${method}` },
-        id,
-      };
-    }
+    const response = await this.dispatcher.dispatch({
+      method,
+      params,
+    });
 
-    try {
-      // Extract fields before passing to handler (handlers don't know about fields)
-      const fields = params.fields as string[] | undefined;
-      const handlerParams = { ...params };
-      delete handlerParams.fields;
-
-      // Special case: resolve_handle with DID input
-      if (method === 'resolve_handle' && handlerParams.handle && typeof handlerParams.handle === 'string' && handlerParams.handle.startsWith('did:')) {
-        const result = { did: handlerParams.handle };
-        const filteredResult = fields && fields.length > 0 ? filterFields(result, fields) : result;
-        return { jsonrpc: '2.0', result: filteredResult, id };
-      }
-
-      // Execute tool handler — result is a JSON string
-      const resultJson = await handler(handlerParams, {});
-      const result = JSON.parse(resultJson);
-
-      // Apply field filtering if requested
-      const filteredResult = fields && fields.length > 0
-        ? filterFields(result, fields)
-        : result;
-
-      return {
-        jsonrpc: '2.0',
-        result: filteredResult,
-        id,
-      };
-    } catch (err) {
+    if (response.success) {
+      return { jsonrpc: '2.0', result: response.result, id };
+    } else {
       return {
         jsonrpc: '2.0',
         error: {
           code: -32603,
-          message: err instanceof Error ? err.message : String(err),
+          message: response.error || 'Unknown error',
         },
         id,
       };
