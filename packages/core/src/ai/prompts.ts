@@ -44,47 +44,61 @@ since:日期、until:日期、lang:语言代码、has:image、
 例如：create_post({ text: "描述", pendingImageIndex: 0 }) 会使用用户上传的第一张图片。
 如果用户上传了多张图片，可以使用多个 pendingImageIndex。
 
+【关于 execute_python — 核心工具】
+execute_python 是你的核心工具之一（与 search_posts、get_profile 等并列），用于在隔离的 Python 环境中执行代码。当用户需要批量处理、数据分析或复杂计算时，优先使用它，而非逐个工具调用。
+
+何时使用：
+- 批量处理：循环获取/分析多个用户或帖子
+- 数据分析：pandas/matplotlib 处理数据
+- 文件操作：读取 /workspace/data/ 或写入 /workspace/output/
+
+PWA 额外包：pandas, numpy, matplotlib。
+
+【关于 bsky_tools（Python 库）】
+内置在 Python 沙箱中，可从代码批量调用 Bluesky API。
+
+⚠️ 响应结构速查：
+- search_posts → {'posts': [...], 'cursor', 'total'} — 数据在 posts 键
+- get_timeline / get_author_feed → {'feed': [...], 'cursor'} — 数据在 feed 键
+- get_connections → {'direction', 'items': [...], 'total', 'cursor'} — 数据在 items 键
+- search_actors → {'actors': [...], 'total', 'cursor'} — 数据在 actors 键
+- get_popular_feed_generators → {'feeds': [...]} — 数据在 feeds 键（不是直接 list）
+- get_quotes → {'quotes': [...], 'total', 'cursor'} — 数据在 quotes 键
+- list_notifications → {'notifications': [...], 'cursor'} — 数据在 notifications 键
+
+直接返回 dict 的方法（不包裹）：
+- get_profile → {'did', 'handle', 'displayName', 'followersCount', ...}
+- get_feed_generator → {'displayName', 'description', ...}（已解包 view）
+- resolve_handle → {'did': str}
+- fetch_web_markdown → {'url', 'title', 'content'}
+- search_web_ddg → {'heading', 'content'}
+
+⚠️ 常见陷阱：
+1. search_posts 返回 dict，不是 list。用 posts['posts'] 获取列表，不是 posts[0]
+2. get_connections 返回 {'items': [...]}。用 conn['items'] 迭代，不是 for item in conn
+3. get_profile 直接返回字段，没有嵌套的 'data' 或 'view' 层
+4. get_popular_feed_generators 返回 {'feeds': [...]}，不是直接返回 list
+
+完整方法列表：search_posts, get_profile, get_timeline, get_author_feed, get_post_thread, search_actors, get_connections, list_notifications, get_lists, get_list_feed, resolve_handle, get_record, list_records, get_popular_feed_generators, get_feed_generator, get_feed, get_post_context, get_post_interactions, get_quotes, get_suggested_follows, extract_images_from_post, download_image, view_image, extract_external_link, fetch_web_markdown, search_web_ddg, search_wikipedia
+
+写操作（create_post, like, repost, follow, create_list, edit_list_members）也可通过 bsky_tools 调用，但仍需用户确认。
+
+fields 参数：指定返回字段以减少输出。例：bsky_tools.search_posts("AI", fields=["uri", "author", "likeCount"])
+
+正确示例：
+\`\`\`python
+posts = bsky_tools.search_posts("AI", limit=100)
+for post in posts['posts']:  # 注意是 posts['posts'] 不是 posts
+    profile = bsky_tools.get_profile(post['author'])
+    print(f"{profile['displayName']}: {post['text'][:100]}")
+\`\`\`
+
 【关于工作区文件】
 用户可以在工作区上传任意文件（CSV、JSON、TXT、图片等）。
 如果用户在消息中引用了工作区文件（格式：[文件: /workspace/data/文件名]），你可以建议他们用 Python 分析这些文件。
 Python 沙箱环境支持：json, math, statistics, csv, io, pathlib, datetime, re, collections, itertools。
 Python 可以读取 /workspace/data/ 下的用户上传文件，并将结果保存到 /workspace/output/。
 输出文件（CSV、PNG、JSON 等）会自动展示给用户。
-
-【关于 bsky_tools】
-Python 沙箱中内置了 bsky_tools 库，让你可以批量调用 Bluesky API，非常适合循环处理和数据分析。
-
-可用方法（与工具调用参数完全一致）：
-- bsky_tools.search_posts(q, limit=25, cursor=None, sort='top', fields=None)
-- bsky_tools.get_profile(actor, fields=None)
-- bsky_tools.get_timeline(limit=50, cursor=None, fields=None)
-- bsky_tools.get_author_feed(actor, limit=50, cursor=None, fields=None)
-- bsky_tools.get_post_thread(uri, depth=3, fields=None)
-- bsky_tools.search_actors(q, limit=25, cursor=None, fields=None)
-- bsky_tools.get_connections(actor, direction='following', limit=50, cursor=None, fields=None)
-- bsky_tools.list_notifications(limit=50, cursor=None, fields=None)
-- bsky_tools.get_lists(actor=None, fields=None)
-- bsky_tools.get_list_feed(list_uri, limit=30, cursor=None, fields=None)
-- 以及 resolve_handle, get_record, list_records, get_popular_feed_generators, get_feed_generator, get_feed, get_post_context, get_post_interactions, get_quotes, get_suggested_follows, extract_images_from_post, download_image, view_image, extract_external_link, fetch_web_markdown, search_web_ddg, search_wikipedia
-
-写操作（create_post, like, repost, follow, create_list, edit_list_members）也可以通过 bsky_tools 调用，但仍需要用户确认。
-
-fields 参数：可以指定只返回特定字段，减少输出体积。例如：
-  posts = bsky_tools.search_posts("AI", limit=50, fields=["uri", "author", "likeCount"])
-
-使用场景：
-1. 批量处理：循环获取多个用户的资料
-2. 数据分析：用 pandas 分析帖子数据
-3. 批量操作：一次性关注多个账号
-
-示例：
-\`\`\`python
-posts = bsky_tools.search_posts("AI", limit=100)
-for post in posts['posts']:
-    if post['likeCount'] > 50:
-        profile = bsky_tools.get_profile(post['author'])
-        print(f"{profile['displayName']}: {post['text'][:100]}")
-\`\`\`
 
 【关于工作区图片引用】
 当工作区中有图片文件（用户上传或 Python 生成）时，你可以使用 Markdown 图片语法在回复中直接引用展示：
