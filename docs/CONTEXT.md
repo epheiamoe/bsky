@@ -32,7 +32,12 @@
 - **已知限制**: `get_popular_feed_generators` 返回 `{feeds, cursor}` 而非直接 list；`get_post_thread` format="flat" 返回人类可读字符串
 - 支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区
 - SharedArrayBuffer + Atomics.wait/notify 实现 Worker ↔ Main Thread 同步通信
-- **最新修复**: Pyodide proxy 序列化、result key 修正、get_list_feed 参数名、list_records handle→DID 自动解析
+- **安全修复** (2026-05-21): 
+  - AST 分析代码读取不存在的 `_stdout_lines` 导致确认被跳过（严重漏洞）
+  - 修复: 使用 `pyodide.runPython()` 返回值，错误时默认安全（hasWriteOperations=true）
+  - Worker 层增加 enableWrite 拦截作为第二道防线
+  - COEP: `require-corp` → `credentialless` 修复图片加载
+- **i18n**: Python 写入确认对话框支持 zh/en/ja 三语言
 
 **v0.13.9** — API Adapter 模式：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个提供商（OpenAI/xAI/Kimi/OpenRouter）。`fixedParams`/`supportsReasoningEffort` 元数据。`reasoningEffort` 支持。Welcome 设置 6 厂商展示卡。
 

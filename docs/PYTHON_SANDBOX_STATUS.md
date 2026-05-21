@@ -1,7 +1,7 @@
 # Python Sandbox Status Tracker
 
-> **Version**: v0.14.0 — Development (Phase 14 in progress)
-> **Last Updated**: 2026-05-20
+> **Version**: v0.14.0 — Complete (Phase 14 done)
+> **Last Updated**: 2026-05-21
 
 ## Known Architecture Decisions
 
@@ -123,42 +123,43 @@ AI can reference workspace images using Markdown `![]()` syntax:
 - TrendsWidget
 - ProfilePreviewWidget
 
-### Phase 14: AI Batch AT Tool Calls ⏳
+### Phase 14: AI Batch AT Tool Calls ✅
 
-**Status**: PLANNED — Next major feature after v0.14.0 release
+**Status**: COMPLETED (2026-05-21)
 
-**📄 Full implementation plan**: `docs/PHASE14_PLAN.md` — Complete technical specification with architecture decisions, file checklist, and risk assessment
+**📄 Implementation docs**: 
+- `docs/PHASE14_PLAN.md` — Original specification
+- `docs/PHASE14_REFACTOR.md` — Refactor plan + test results (51 tests, 95.7% pass)
+- `docs/BSKY_TOOLS.md` — User-facing API documentation
 
-**Vision**: Enable AI to write Python scripts that batch-call AT Protocol tools
+**Features delivered**:
+- **33 API methods** exposed to Python via `bsky_tools` library
+- **PWA**: Pyodide JS bridge → Worker postMessage → ToolDispatcher → BskyClient
+- **TUI/MCP**: JSON-RPC over stdin/stdout → ToolDispatcher → BskyClient
+- **fields parameter**: Filter JSON responses to reduce token usage
+- **Response structure**: All methods return dict (not list) — see BSKY_TOOLS.md
+- **Write operation confirmation**: AST analysis detects write calls, requires batch confirmation
+- **Security**: Worker-level enableWrite gate + fail-safe error handling
+- **i18n**: Write confirmation dialog localized (zh/en/ja)
 
 **Example**:
 ```python
-from bsky_tools import search_posts, get_profile, follow
-posts = search_posts(q="AI", limit=100)
-for post in posts:
-    profile = get_profile(post['author'])
+import bsky_tools
+posts = bsky_tools.search_posts("AI", limit=100)
+for post in posts['posts']:
+    profile = bsky_tools.get_profile(post['author'])
     if profile['followersCount'] < 1000:
-        follow(profile['did'])
+        bsky_tools.follow(profile['did'])
         print(f"Followed {profile['handle']}")
 ```
 
-**Technical approach**: JS Proxy Bridge (PWA) / JSON-RPC (TUI/MCP)
-- **PWA**: Pyodide `js` interop module → Worker postMessage → BskyClient
-- **TUI/MCP**: JSON-RPC over stdin/stdout → BskyClient
+**Critical security fixes** (2026-05-21):
+- **AST analysis bug**: `analyzePythonCode()` read non-existent `_stdout_lines`, causing analysis to always fail and skip confirmation. Fixed by using `pyodide.runPython()` return value.
+- **Fail-safe handling**: Analysis errors now return `hasWriteOperations: true` (was `false`), forcing confirmation.
+- **Worker gate**: `createToolBridge(enableWrite)` blocks write operations unless user confirmed.
+- **COEP fix**: Changed `require-corp` to `credentialless` to prevent image loading breakage.
 
-**Key design decisions** (see PHASE14_PLAN.md for details):
-- Blocking API calls (not async) for simplicity
-- Simplified dict results (not raw JSON) for token efficiency
-- Pre-execution confirmation for batch write operations
-- Let Bluesky API handle rate limiting (client-side in future)
-
-**Implementation steps**:
-1. Define `bsky_tools` Python API surface in `@bsky/core`
-2. PWA: Pyodide JS bridge + Python wrapper injection
-3. TUI/MCP: JSON-RPC bridge in NodePythonSandbox
-4. Write operation confirmation (batch summary before execution)
-5. Update AI prompts with `bsky_tools` usage instructions
-6. Error handling, timeouts, and testing
+**Test coverage**: 51 comprehensive tests covering all methods, fields, edge cases, batch calls.
 
 ---
 
@@ -186,6 +187,7 @@ for post in posts:
 | **MCP/TUI** | Third-party packages not auto-installed | Pre-install with `pip install pandas numpy matplotlib` |
 | **MCP/TUI** | Matplotlib may not be available | Install manually: `pip install matplotlib` |
 | **All** | 30-second timeout per execution | Break tasks into smaller chunks |
+| **All** | `window.confirm()` buttons are browser-native (OK/Cancel), not i18n'd | Message text is localized; buttons follow browser language |
 
 ---
 
