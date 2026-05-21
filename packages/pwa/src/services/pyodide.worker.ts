@@ -330,6 +330,29 @@ try {
   console.warn('[PyodideWorker] SharedArrayBuffer not available. Tool dispatcher requires COOP/COEP headers.');
 }
 
+/**
+ * Convert Pyodide proxy objects to plain JS objects.
+ * Pyodide proxies (from Python lists/dicts) cannot be serialized via postMessage.
+ */
+function toPlainJs(value: any): any {
+  if (value === null || value === undefined) return value;
+  // Pyodide proxy objects have .toJs() method
+  if (typeof value.toJs === 'function') {
+    return toPlainJs(value.toJs());
+  }
+  if (Array.isArray(value)) {
+    return value.map(toPlainJs);
+  }
+  if (typeof value === 'object') {
+    const result: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = toPlainJs(v);
+    }
+    return result;
+  }
+  return value;
+}
+
 function dispatchToMainThread(method: string, params: Record<string, any>): any {
   if (!toolSab || !toolSabInt32) {
     throw new Error(
@@ -344,11 +367,11 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
   const byteView = new Uint8Array(toolSab);
   byteView.fill(0);
 
-  // Filter undefined values to avoid DataCloneError in postMessage
+  // Filter undefined values and convert Pyodide proxies to plain JS objects
   const cleanParams: Record<string, any> = {};
   for (const [key, value] of Object.entries(params)) {
     if (value !== undefined) {
-      cleanParams[key] = value;
+      cleanParams[key] = toPlainJs(value);
     }
   }
 
@@ -374,7 +397,8 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
     return { error: result.error || `Tool '${method}' failed` };
   }
 
-  return result.data;
+  // ToolDispatcher returns { success: true, result: <data> }
+  return result.result !== undefined ? result.result : result.data;
 }
 
 // Create simplified transport-only bridge (no auth, no API logic).
