@@ -344,15 +344,27 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
   const byteView = new Uint8Array(toolSab);
   byteView.fill(0);
 
+  // Filter undefined values to avoid DataCloneError in postMessage
+  const cleanParams: Record<string, any> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) {
+      cleanParams[key] = value;
+    }
+  }
+
   // Send request to main thread with SAB reference
-  self.postMessage({ type: 'toolCall', id, method, params, sab: toolSab });
+  self.postMessage({ type: 'toolCall', id, method, params: cleanParams, sab: toolSab });
 
   // Block until main thread signals completion via Atomics.notify
   Atomics.wait(toolSabInt32, 0, 0);
 
   // Read result from SAB (JSON string starts after the first 4 bytes)
+  // Must copy to regular ArrayBuffer because TextDecoder cannot decode SAB views
+  const rawBytes = byteView.subarray(4);
+  const bytes = new Uint8Array(rawBytes.length);
+  bytes.set(rawBytes);
   const decoder = new TextDecoder();
-  const jsonStr = decoder.decode(byteView.subarray(4)).replace(/\0/g, '');
+  const jsonStr = decoder.decode(bytes).replace(/\0/g, '');
   const result = JSON.parse(jsonStr);
 
   // Reset signal for next call
