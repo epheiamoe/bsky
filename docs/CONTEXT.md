@@ -23,11 +23,12 @@
 
 ## 当前版本
 
-**v0.14.0** — Python 沙箱 + 工作区 + bsky_tools：
+**v0.14.0** — Python 沙箱 + 工作区 + bsky_tools（开发中）：
 - `execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）
 - bsky_tools Python 库：AI 从 Python 批量调用 Bluesky API（33 个方法）
 - **统一 handler 架构**：PWA Worker → Main Thread → `ToolDispatcher` → `tools.ts` → `BskyClient`
 - 复用 function calling 的 handler 逻辑，零重复实现
+- **已知问题**：Worker ↔ Main Thread 数据序列化仍有 bug（DataCloneError/TextDecoder SAB），API 调用全部失败
 - 支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区
 - SharedArrayBuffer + Atomics.wait/notify 实现 Worker ↔ Main Thread 同步通信
 

@@ -62,7 +62,7 @@ const byteView = new Uint8Array(toolSab); // toolSab is SharedArrayBuffer
 const jsonStr = decoder.decode(byteView.subarray(4)); // ❌ fails
 ```
 
-**Fix**: Copy data to a regular `ArrayBuffer` before decoding.
+**Fix Applied**: Copy data to a regular `ArrayBuffer` before decoding.
 
 ```javascript
 const rawBytes = byteView.subarray(4);
@@ -71,12 +71,21 @@ bytes.set(rawBytes);
 const jsonStr = decoder.decode(bytes).replace(/\0/g, '');
 ```
 
-### Files to Fix
+**Status**: ❌ Fix applied but **still failing**. Need to investigate further.
 
-| File | Lines | Fix |
-|------|-------|-----|
-| `packages/pwa/src/services/pyodide.worker.ts` | ~348 | Filter `undefined` from params before `postMessage` |
-| `packages/pwa/src/services/pyodide.worker.ts` | ~354-355 | Copy SAB data to regular buffer before `TextDecoder.decode()` |
+### Files Fixed (but issue persists)
+
+| File | Lines | Fix | Status |
+|------|-------|-----|--------|
+| `packages/pwa/src/services/pyodide.worker.ts` | ~348 | Filter `undefined` from params before `postMessage` | Applied |
+| `packages/pwa/src/services/pyodide.worker.ts` | ~354-355 | Copy SAB data to regular buffer before `TextDecoder.decode()` | Applied |
+
+### Next Steps (TODO)
+
+- [ ] Debug actual runtime error after fixes
+- [ ] Verify fixes are in deployed build
+- [ ] Check if there are additional serialization issues
+- [ ] Consider alternative: MessageChannel instead of SAB
 
 ---
 
