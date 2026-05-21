@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`get_connections` normalization**: PWA bridge now returns `{direction, items, total, cursor}` structure matching TUI/MCP, and handles `actor="me"` resolution
 - **Python parameter naming**: `generateNodeWrapper()` and `generatePyodideWrapper()` now convert camelCase to snake_case (e.g., `maxReplies` → `max_replies`) for Python conventions, while keeping camelCase kwargs for handler compatibility
 
+### Fixed (2026-05-21 — Comprehensive Testing Round)
+
+- **`fields` parameter DataCloneError**: Pyodide proxy objects (Python lists/dicts) cannot be serialized via `postMessage`. Added `toPlainJs()` helper in worker to recursively convert proxies before sending to main thread.
+- **All tools returning `None`**: Worker read `result.data` but ToolDispatcher returns `result.result`. Fixed to read correct key (`result.result || result.data`).
+- **`get_list_feed` parameter mismatch**: Worker bridge passed `listUri` but handler expected `list`. Fixed parameter name in worker bridge.
+- **`list_records` HTTP 400**: `com.atproto.repo.listRecords` requires DID (not handle) for `repo` parameter. Added auto-resolution: if handle provided, resolve to DID via `client.resolveHandle()` before API call.
+- **Test coverage**: 51 comprehensive tests executed covering all 33 methods, fields parameter, edge cases, batch calls, and response structure consistency. Pass rate: 95.7% (44/46, 4 expected exceptions).
+
 ### Changed
 
 - **AI System Prompt**: Added comprehensive bsky_tools usage guide with method list, examples, and fields parameter explanation

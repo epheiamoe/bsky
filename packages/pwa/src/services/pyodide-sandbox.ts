@@ -174,10 +174,12 @@ export class PyodideSandbox implements PythonSandboxEngine {
     let enableWrite = options?.enableWrite ?? false;
     if (!enableWrite) {
       const analysis = await this._analyzeCode(code);
-      if (analysis.error) {
-        console.warn('[Pyodide] AST analysis error:', analysis.error);
-      }
-      if (analysis.hasDynamicCalls) {
+    if (analysis.error) {
+      console.warn('[Pyodide] AST analysis error:', analysis.error);
+      // Fail-safe: if analysis fails, assume write operations exist and require confirmation
+      // The worker analyzePythonCode now returns hasWriteOperations=true on error
+    }
+    if (analysis.hasDynamicCalls) {
         return {
           stdout: '',
           stderr: 'Security error: Dynamic method calls (getattr) are not allowed for safety reasons.',

@@ -403,97 +403,128 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
 
 // Create simplified transport-only bridge (no auth, no API logic).
 // All tool calls are forwarded to the main thread via dispatchToMainThread.
-function createToolBridge() {
+// Write operations are blocked unless enableWrite=true (set after user confirmation).
+function createToolBridge(enableWrite: boolean = false) {
   const bridge: Record<string, (...args: any[]) => any> = {};
+  const writeTools = new Set(['create_post', 'like', 'repost', 'follow', 'create_list', 'edit_list_members']);
 
-  // Read operations
-  bridge.resolve_handle = (handle: string, fields?: string[]) =>
-    dispatchToMainThread('resolve_handle', { handle, fields });
-  bridge.get_record = (uri: string, fields?: string[]) =>
-    dispatchToMainThread('get_record', { uri, fields });
-  bridge.list_records = (repo: string, collection: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('list_records', { repo, collection, limit, cursor, fields });
-  bridge.search_posts = (q: string, limit?: number, cursor?: string, sort?: string, fields?: string[]) =>
-    dispatchToMainThread('search_posts', { q, limit, cursor, sort, fields });
-  bridge.get_timeline = (limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_timeline', { limit, cursor, fields });
-  bridge.get_author_feed = (actor: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_author_feed', { actor, limit, cursor, fields });
-  bridge.get_popular_feed_generators = (limit?: number, fields?: string[]) =>
-    dispatchToMainThread('get_popular_feed_generators', { limit, fields });
-  bridge.get_feed_generator = (feed: string, fields?: string[]) =>
-    dispatchToMainThread('get_feed_generator', { feed, fields });
-  bridge.get_feed = (feed: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_feed', { feed, limit, cursor, fields });
-  bridge.get_post_thread = (uri: string, depth?: number, format?: string, maxReplies?: number, fields?: string[]) =>
-    dispatchToMainThread('get_post_thread', { uri, depth, format, maxReplies, fields });
-  bridge.get_post_context = (uri: string, maxReplies?: number, fields?: string[]) =>
-    dispatchToMainThread('get_post_context', { uri, maxReplies, fields });
-  bridge.get_post_interactions = (uri: string, type?: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_post_interactions', { uri, type, limit, cursor, fields });
-  bridge.get_quotes = (uri: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_quotes', { uri, limit, cursor, fields });
-  bridge.search_actors = (q: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('search_actors', { q, limit, cursor, fields });
-  bridge.get_profile = (actor: string, fields?: string[]) =>
-    dispatchToMainThread('get_profile', { actor, fields });
-  bridge.get_connections = (actor: string, direction?: string, limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('get_connections', { actor, direction, limit, cursor, fields });
-  bridge.get_suggested_follows = (actor: string, fields?: string[]) =>
-    dispatchToMainThread('get_suggested_follows', { actor, fields });
-  bridge.list_notifications = (limit?: number, cursor?: string, fields?: string[]) =>
-    dispatchToMainThread('list_notifications', { limit, cursor, fields });
-  bridge.extract_images_from_post = (uri: string, fields?: string[]) =>
-    dispatchToMainThread('extract_images_from_post', { uri, fields });
-  bridge.download_image = (did: string, cid: string, filename?: string, fields?: string[]) =>
-    dispatchToMainThread('download_image', { did, cid, filename, fields });
-  bridge.view_image = (did?: string, cid?: string, alt?: string, uploadIndex?: number, fields?: string[]) =>
-    dispatchToMainThread('view_image', { did, cid, alt, uploadIndex, fields });
-  bridge.extract_external_link = (uri: string) =>
-    dispatchToMainThread('extract_external_link', { uri });
-  bridge.fetch_web_markdown = (url: string) =>
-    dispatchToMainThread('fetch_web_markdown', { url });
-  bridge.search_web_ddg = (query: string) =>
-    dispatchToMainThread('search_web_ddg', { query });
-  bridge.search_wikipedia = (query: string, lang?: string) =>
-    dispatchToMainThread('search_wikipedia', { query, lang });
-  bridge.get_lists = (actor?: string) =>
-    dispatchToMainThread('get_lists', { actor });
-  bridge.get_list_feed = (listUri: string, limit?: number, cursor?: string) =>
-    dispatchToMainThread('get_list_feed', { list: listUri, limit, cursor });
+  function createBridgeMethod(method: string) {
+    return (...args: any[]) => {
+      if (writeTools.has(method) && !enableWrite) {
+        throw new Error(`Write operation '${method}' blocked: requires user confirmation. The Python script must be approved before write operations are allowed.`);
+      }
+      return dispatchToMainThread(method, argsToParams(method, args));
+    };
+  }
 
-  // Write operations (main thread handles confirmation)
-  bridge.create_post = (text: string, replyTo?: string, quoteUri?: string, images?: any[], threadgate?: any) =>
-    dispatchToMainThread('create_post', { text, replyTo, quoteUri, images, threadgate });
-  bridge.like = (uri: string) =>
-    dispatchToMainThread('like', { uri });
-  bridge.repost = (uri: string) =>
-    dispatchToMainThread('repost', { uri });
-  bridge.follow = (subject: string) =>
-    dispatchToMainThread('follow', { subject });
-  bridge.create_list = (name: string, purpose: string, description?: string) =>
-    dispatchToMainThread('create_list', { name, purpose, description });
-  bridge.edit_list_members = (listUri: string, subject: string, action?: string) =>
-    dispatchToMainThread('edit_list_members', { listUri, subject, action });
+  // Read operations (always allowed)
+  bridge.resolve_handle = createBridgeMethod('resolve_handle');
+  bridge.get_record = createBridgeMethod('get_record');
+  bridge.list_records = createBridgeMethod('list_records');
+  bridge.search_posts = createBridgeMethod('search_posts');
+  bridge.get_timeline = createBridgeMethod('get_timeline');
+  bridge.get_author_feed = createBridgeMethod('get_author_feed');
+  bridge.get_popular_feed_generators = createBridgeMethod('get_popular_feed_generators');
+  bridge.get_feed_generator = createBridgeMethod('get_feed_generator');
+  bridge.get_feed = createBridgeMethod('get_feed');
+  bridge.get_post_thread = createBridgeMethod('get_post_thread');
+  bridge.get_post_context = createBridgeMethod('get_post_context');
+  bridge.get_post_interactions = createBridgeMethod('get_post_interactions');
+  bridge.get_quotes = createBridgeMethod('get_quotes');
+  bridge.search_actors = createBridgeMethod('search_actors');
+  bridge.get_profile = createBridgeMethod('get_profile');
+  bridge.get_connections = createBridgeMethod('get_connections');
+  bridge.get_suggested_follows = createBridgeMethod('get_suggested_follows');
+  bridge.list_notifications = createBridgeMethod('list_notifications');
+  bridge.extract_images_from_post = createBridgeMethod('extract_images_from_post');
+  bridge.download_image = createBridgeMethod('download_image');
+  bridge.view_image = createBridgeMethod('view_image');
+  bridge.extract_external_link = createBridgeMethod('extract_external_link');
+  bridge.fetch_web_markdown = createBridgeMethod('fetch_web_markdown');
+  bridge.search_web_ddg = createBridgeMethod('search_web_ddg');
+  bridge.search_wikipedia = createBridgeMethod('search_wikipedia');
+  bridge.get_lists = createBridgeMethod('get_lists');
+  bridge.get_list_feed = createBridgeMethod('get_list_feed');
+
+  // Write operations (blocked unless enableWrite=true)
+  bridge.create_post = createBridgeMethod('create_post');
+  bridge.like = createBridgeMethod('like');
+  bridge.repost = createBridgeMethod('repost');
+  bridge.follow = createBridgeMethod('follow');
+  bridge.create_list = createBridgeMethod('create_list');
+  bridge.edit_list_members = createBridgeMethod('edit_list_members');
 
   return bridge;
 }
 
+// Helper to convert positional args to named params for each method
+function argsToParams(method: string, args: any[]): Record<string, any> {
+  const paramMap: Record<string, string[]> = {
+    resolve_handle: ['handle', 'fields'],
+    get_record: ['uri', 'fields'],
+    list_records: ['repo', 'collection', 'limit', 'cursor', 'fields'],
+    search_posts: ['q', 'limit', 'cursor', 'sort', 'fields'],
+    get_timeline: ['limit', 'cursor', 'fields'],
+    get_author_feed: ['actor', 'limit', 'cursor', 'fields'],
+    get_popular_feed_generators: ['limit', 'fields'],
+    get_feed_generator: ['feed', 'fields'],
+    get_feed: ['feed', 'limit', 'cursor', 'fields'],
+    get_post_thread: ['uri', 'depth', 'format', 'maxReplies', 'fields'],
+    get_post_context: ['uri', 'maxReplies', 'fields'],
+    get_post_interactions: ['uri', 'type', 'limit', 'cursor', 'fields'],
+    get_quotes: ['uri', 'limit', 'cursor', 'fields'],
+    search_actors: ['q', 'limit', 'cursor', 'fields'],
+    get_profile: ['actor', 'fields'],
+    get_connections: ['actor', 'direction', 'limit', 'cursor', 'fields'],
+    get_suggested_follows: ['actor', 'fields'],
+    list_notifications: ['limit', 'cursor', 'fields'],
+    extract_images_from_post: ['uri', 'fields'],
+    download_image: ['did', 'cid', 'filename', 'fields'],
+    view_image: ['did', 'cid', 'alt', 'uploadIndex', 'fields'],
+    extract_external_link: ['uri'],
+    fetch_web_markdown: ['url'],
+    search_web_ddg: ['query'],
+    search_wikipedia: ['query', 'lang'],
+    get_lists: ['actor'],
+    get_list_feed: ['listUri', 'limit', 'cursor'],
+    create_post: ['text', 'replyTo', 'quoteUri', 'images', 'threadgate'],
+    like: ['uri'],
+    repost: ['uri'],
+    follow: ['subject'],
+    create_list: ['name', 'purpose', 'description'],
+    edit_list_members: ['listUri', 'subject', 'action'],
+  };
+  
+  const params: Record<string, any> = {};
+  const names = paramMap[method] || [];
+  for (let i = 0; i < args.length && i < names.length; i++) {
+    if (args[i] !== undefined) {
+      params[names[i]] = args[i];
+    }
+  }
+  return params;
+}
+
 function analyzePythonCode(code: string): { hasWriteOperations: boolean; writeOperations: Array<{ tool: string; count: number }>; hasDynamicCalls: boolean; error?: string } {
-  if (!pyodide) return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Pyodide not initialized' };
+  if (!pyodide) return { hasWriteOperations: true, writeOperations: [{ tool: 'unknown', count: 1 }], hasDynamicCalls: false, error: 'Pyodide not initialized' };
   
   try {
-    const result = pyodide.runPython(`
+    // Use JSON.stringify for proper escaping instead of manual replace
+    const codeJson = JSON.stringify(code);
+    
+    // runPython returns the value of the last expression (the json.dumps call)
+    // We do NOT depend on _stdout_lines which is only set during executePython
+    const pyResult = pyodide.runPython(`
 import ast
 import json
+from collections import Counter
 
-code = """${code.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"""
+code = ${codeJson}
 
 try:
     tree = ast.parse(code)
 except SyntaxError as e:
-    print(json.dumps({"error": str(e)}))
-    exit()
+    json.dumps({"hasWriteOperations": True, "writeOperations": [{"tool": "unknown", "count": 1}], "hasDynamicCalls": False, "error": str(e)})
 
 write_tools = {"create_post", "like", "repost", "follow", "create_list", "edit_list_members"}
 write_ops = []
@@ -508,24 +539,21 @@ for node in ast.walk(tree):
         elif isinstance(node.func, ast.Name) and node.func.id == 'getattr':
             dynamic_calls.append(node.lineno)
 
-from collections import Counter
 counts = Counter(op["tool"] for op in write_ops)
 
-result = {
+json.dumps({
     "hasWriteOperations": len(write_ops) > 0,
     "writeOperations": [{"tool": tool, "count": count} for tool, count in counts.items()],
     "hasDynamicCalls": len(dynamic_calls) > 0,
-}
-
-print(json.dumps(result))
+})
     `);
     
-    const output = pyodide.globals.get('_stdout_lines');
-    const lines = output.toJs ? output.toJs() : output;
-    const jsonStr = Array.isArray(lines) ? lines.join('') : String(lines);
+    // pyodide.runPython returns the last expression value (a Python string object)
+    const jsonStr = String(pyResult);
     return JSON.parse(jsonStr);
   } catch (err) {
-    return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: String(err) };
+    // Fail-safe: if analysis crashes, assume write operations exist and require confirmation
+    return { hasWriteOperations: true, writeOperations: [{ tool: 'unknown', count: 1 }], hasDynamicCalls: false, error: String(err) };
   }
 }
 
@@ -703,8 +731,9 @@ os.environ['BSKY_WORKSPACE'] = '/workspace'
 
     // Inject bsky_tools — always do this so `import bsky_tools` works
     // All tool calls are forwarded to the main thread via ToolDispatcher
+    // Write operations are blocked unless enableWrite=true (user confirmed)
     try {
-      const bridge = createToolBridge();
+      const bridge = createToolBridge(enableWrite);
       pyodide.globals.set('bskyToolsBridge', bridge);
       await pyodide.runPythonAsync(BSKY_TOOLS_PYTHON_WRAPPER);
       console.debug('[PyodideWorker] bsky_tools module registered');
