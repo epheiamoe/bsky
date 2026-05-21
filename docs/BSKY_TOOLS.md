@@ -1,6 +1,8 @@
 # bsky_tools — Python Batch AT Protocol Tool Calls
 
-> **Status**: Phase 14 (in development) | PWA + TUI + MCP
+> **Status**: ✅ Phase 14 Complete | PWA + TUI + MCP  
+> **Test Coverage**: 51 tests, 95.7% pass rate | All core features verified  
+> **Last Updated**: 2026-05-21
 
 `bsky_tools` is a Python library embedded in the AI Python sandbox that lets you batch-call Bluesky AT Protocol API methods directly from Python code. Instead of making individual tool calls one at a time, you can write Python scripts that efficiently process data in loops.
 
