@@ -460,7 +460,7 @@ function createToolBridge() {
   bridge.get_lists = (actor?: string) =>
     dispatchToMainThread('get_lists', { actor });
   bridge.get_list_feed = (listUri: string, limit?: number, cursor?: string) =>
-    dispatchToMainThread('get_list_feed', { listUri, limit, cursor });
+    dispatchToMainThread('get_list_feed', { list: listUri, limit, cursor });
 
   // Write operations (main thread handles confirmation)
   bridge.create_post = (text: string, replyTo?: string, quoteUri?: string, images?: any[], threadgate?: any) =>

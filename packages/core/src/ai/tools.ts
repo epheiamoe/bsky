@@ -217,7 +217,17 @@ print(f"Processed {len(df)} rows")`,
         },
       },
       handler: async (p) => {
-        const res = await client.listRecords(p.repo as string, p.collection as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
+        let repo = p.repo as string;
+        // listRecords endpoint requires DID, not handle — auto-resolve if needed
+        if (repo && !repo.startsWith('did:')) {
+          try {
+            const resolved = await client.resolveHandle(repo);
+            repo = resolved.did;
+          } catch (resolveErr) {
+            return JSON.stringify({ error: `Failed to resolve handle '${repo}': ${resolveErr instanceof Error ? resolveErr.message : String(resolveErr)}` });
+          }
+        }
+        const res = await client.listRecords(repo, p.collection as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
         return JSON.stringify(res);
       },
       requiresWrite: false,
