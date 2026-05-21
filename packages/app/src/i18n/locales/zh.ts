@@ -301,6 +301,8 @@ const zh: LocaleMessages = {
   'ai.widgetTitle': 'AI 对话',
   'ai.viewHint': '在受支持的页面使用 /view 让 AI 了解上下文',
   'ai.sandboxInit': 'Python 沙箱正在初始化，首次使用最多可能需要 60 秒...',
+  'python.confirmWrite': '该 Python 脚本将执行以下写入操作：\n\n{operations}\n\n是否允许这些操作？',
+  'python.writeCancelled': '写入操作已被用户取消。脚本原本将执行：{operations}',
 
   // ── Workspace ──
   'workspace.title': '工作区',

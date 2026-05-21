@@ -9,6 +9,8 @@ const en: LocaleMessages = {
   'nav.aiChat': 'AI Chat',
   'ai.repaired': 'This conversation was automatically repaired. Refresh the page to complete the fix.',
   'ai.sandboxInit': 'Python sandbox is initializing. First use may take up to 60 seconds...',
+  'python.confirmWrite': 'This Python script will perform the following write operations:\n\n{operations}\n\nDo you want to allow these operations?',
+  'python.writeCancelled': 'Write operations cancelled by user. The script would have: {operations}',
   'ai.consentTitle': 'AI will act on your behalf',
   'ai.consentDesc': 'AI can read your timeline, search posts, and view profiles. Actions like posting, liking, reposting, and following require your confirmation. AI will never act without your permission.',
   'ai.consentAccept': 'I understand, start chatting',

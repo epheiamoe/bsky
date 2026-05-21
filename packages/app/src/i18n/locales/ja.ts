@@ -9,6 +9,8 @@ const ja: LocaleMessages = {
   'nav.aiChat': 'AI チャット',
   'ai.repaired': 'この会話は自動修復されました。ページを更新して修正を完了してください。',
   'ai.sandboxInit': 'Python サンドボックスを初期化中です。初回使用は最大 60 秒かかる場合があります...',
+  'python.confirmWrite': 'この Python スクリプトは以下の書き込み操作を実行します：\n\n{operations}\n\nこれらの操作を許可しますか？',
+  'python.writeCancelled': '書き込み操作はユーザーによってキャンセルされました。スクリプトは以下を実行する予定でした：{operations}',
   'ai.consentTitle': 'AI はあなたに代わって操作します',
   'ai.consentDesc': 'AI はタイムラインの読み取り、投稿の検索、プロフィールの表示ができます。投稿、いいね、リポスト、フォローなどの操作はあなたの確認が必要です。AI は許可なくあなたに代わって行動することはありません。',
   'ai.consentAccept': '理解しました、チャットを開始',

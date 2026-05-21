@@ -1,6 +1,7 @@
 import type { PythonSandboxEngine, PythonExecutionResult, BskyClient } from '@bsky/core';
 import { ToolDispatcher } from '@bsky/core';
 import { getDefaultWorkspaceStorage } from '@bsky/app';
+import { getI18nStore } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
 const MIME_TYPE_MAP: Record<string, string> = {
@@ -192,13 +193,13 @@ export class PyodideSandbox implements PythonSandboxEngine {
       }
       if (analysis.hasWriteOperations) {
         const opsDesc = analysis.writeOperations.map(op => `${op.tool} ×${op.count}`).join(', ');
-        const confirmed = window.confirm(
-          `This Python script will perform the following write operations:\n\n${opsDesc}\n\nDo you want to allow these operations?`
-        );
+        const i18n = getI18nStore();
+        const message = i18n.t('python.confirmWrite', { operations: opsDesc });
+        const confirmed = window.confirm(message);
         if (!confirmed) {
           return {
             stdout: '',
-            stderr: `Write operations cancelled by user. The script would have: ${opsDesc}`,
+            stderr: i18n.t('python.writeCancelled', { operations: opsDesc }),
             returnValue: null,
             files: [],
             success: false,
