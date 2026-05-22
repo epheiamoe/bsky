@@ -76,6 +76,10 @@ export class NodePythonSandbox implements PythonSandboxEngine {
     this.dispatcher = client ? new ToolDispatcher(client) : null;
   }
 
+  setClient(client: BskyClient): void {
+    this.dispatcher = new ToolDispatcher(client);
+  }
+
   private ensureWorkspaceDirs(): void {
     const dirs = ['data', 'output', 'temp'];
     for (const dir of dirs) {

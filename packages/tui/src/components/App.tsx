@@ -22,6 +22,7 @@ import { ComposeView } from './ComposeView.jsx';
 import { DMListView } from './DMListView.jsx';
 import { DMChatView } from './DMChatView.jsx';
 import { WidgetOverlay } from './WidgetOverlay.js';
+import { sandbox } from '../cli.js';
 
 interface AppConfig {
   blueskyHandle: string;
@@ -170,6 +171,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     } else if (wasAuthenticated) {
       setWasAuthenticated(false);
       login(config.blueskyHandle, config.blueskyPassword, config.blueskyPds);
+    }
+  }, [client]);
+
+  // Inject BskyClient into Python sandbox for bsky_tools
+  useEffect(() => {
+    if (client) {
+      sandbox.setClient(client);
     }
   }, [client]);
 

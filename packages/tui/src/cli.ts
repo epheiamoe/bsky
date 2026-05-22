@@ -20,7 +20,7 @@ initChatService(new FileChatStorage());
 setWorkspaceStorageFactory(() => new FileWorkspaceStorage());
 
 // Initialize Python sandbox for execute_python tool
-const sandbox = new NodePythonSandbox();
+export const sandbox = new NodePythonSandbox();
 setGlobalPythonSandbox(sandbox);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
