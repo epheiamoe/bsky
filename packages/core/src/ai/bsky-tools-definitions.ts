@@ -505,6 +505,10 @@ _bridge = globals().get('bskyToolsBridge')
 if _bridge is None:
     raise RuntimeError("bskyToolsBridge not found in Python globals. Ensure it is set via pyodide.globals.set() before injecting wrapper.")
 bsky_tools = BskyTools(_bridge)
+
+# Register as module so import bsky_tools works
+import sys
+sys.modules['bsky_tools'] = bsky_tools
 `;
 }
 
