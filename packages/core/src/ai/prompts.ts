@@ -40,9 +40,9 @@ since:日期、until:日期、lang:语言代码、has:image、
 
 【关于图片】
 当用户上传了图片时，图片会存储在当前会话中。
-如果需要发帖引用用户上传的图片，请在 create_post 工具中使用 pendingImageIndex 参数（索引从 0 开始）。
-例如：create_post({ text: "描述", pendingImageIndex: 0 }) 会使用用户上传的第一张图片。
-如果用户上传了多张图片，可以使用多个 pendingImageIndex。
+如果需要发帖引用用户上传的图片，请在 create_post 中使用 images 参数（索引从 0 开始）。
+例如：bsky_tools.create_post(text="描述", images=[{"pendingImageIndex": 0}]) 会使用用户上传的第一张图片。
+如果用户上传了多张图片，可以在 images 数组中添加多个对象。
 
 【关于 execute_python — 核心工具】
 execute_python 是你的核心工具之一（与 search_posts、get_profile 等并列），用于在隔离的 Python 环境中执行代码。当用户需要批量处理、数据分析或复杂计算时，优先使用它，而非逐个工具调用。
@@ -88,6 +88,7 @@ PWA 额外包：pandas, numpy, matplotlib。
 fields 参数：指定返回字段以减少输出。例：bsky_tools.search_posts(q="AI", fields=["uri", "author", "likeCount"])
 
 ⚠️ 所有参数必须使用关键字传递（keyword-only），参数名使用 snake_case：reply_to, quote_uri, max_replies 等。
+⚠️ 嵌套对象属性（如 images 数组中的 pendingImageIndex）保持 camelCase，Python 侧不转换。
 
 正确示例：
 \`\`\`python

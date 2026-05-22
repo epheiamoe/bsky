@@ -93,13 +93,14 @@ MCP/TUI: Only system Python packages are available. To use pandas/numpy/matplotl
 
 Bsky Tools Library:
 The sandbox includes a bsky_tools library for batch-calling Bluesky API methods:
-- bsky_tools.search_posts(q, limit=25, cursor=None, sort='top', fields=None)
-- bsky_tools.get_profile(actor, fields=None)
+- bsky_tools.search_posts(q="...", limit=25, cursor=None, sort='top', fields=None)
+- bsky_tools.get_profile(actor="...", fields=None)
 - bsky_tools.get_timeline(limit=50, cursor=None, fields=None)
-- bsky_tools.get_author_feed(actor, limit=50, cursor=None, fields=None)
-- bsky_tools.search_actors(q, limit=25, cursor=None, fields=None)
-- bsky_tools.get_connections(actor, direction='following', limit=50, cursor=None, fields=None)
+- bsky_tools.get_author_feed(actor="...", limit=50, cursor=None, fields=None)
+- bsky_tools.search_actors(q="...", limit=25, cursor=None, fields=None)
+- bsky_tools.get_connections(actor="...", direction='following', limit=50, cursor=None, fields=None)
 - bsky_tools.list_notifications(limit=50, cursor=None, fields=None)
+- All parameters are keyword-only. Use snake_case names: reply_to, quote_uri, max_replies
 - ... and 24 more methods (see system prompt for full list)
 - Write operations (create_post, like, repost, follow, create_list, edit_list_members) require user confirmation
 - fields parameter filters response JSON to only include specified fields
