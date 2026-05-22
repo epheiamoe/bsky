@@ -115,6 +115,9 @@ else: print(str(r)[:200])
 7. get_lists 直接返回 list，不是 {'lists': [...]}
 8. get_popular_feed_generators 可能返回 list 或 dict，先用 isinstance 判断
 9. 每个帖子条目包含 indexedAt（索引时间）和 createdAt（发帖时间），可用于时间分析
+10. get_post_thread 支持 format='json' 返回结构化 JSON（含 depth, author, text, replies），适合程序处理
+11. search_posts 的 count 字段表示返回数量，不是总匹配数（API 不返回总数）
+12. 所有方法出错时返回 {'error': {'type': '...', 'message': '...'}} 结构，不是抛出异常
 
 完整 bsky_tools 方法列表：search_posts, get_profile, get_timeline, get_author_feed, get_post_thread, search_actors, get_connections, list_notifications, get_lists, get_list_feed, resolve_handle, get_record, list_records, get_popular_feed_generators, get_feed_generator, get_feed, get_post_context, get_post_interactions, get_quotes, get_suggested_follows, fetch_web_markdown, search_web_ddg, search_wikipedia
 
@@ -175,6 +178,17 @@ for item in author_feed['feed']:
 Python 沙箱环境支持：json, math, statistics, csv, io, pathlib, datetime, re, collections, itertools。
 Python 可以读取 /workspace/data/ 下的用户上传文件，并将结果保存到 /workspace/output/。
 输出文件（CSV、PNG、JSON 等）会自动展示给用户。
+
+⚠️ 工作区路径结构（MCP/TUI 模式）：
+- BSKY_WORKSPACE 指向 output/{chatId}/ 目录
+- 用户上传文件在 baseDir/data/（与 output/ 同级）
+- 要访问用户上传文件，使用：os.path.join(os.path.dirname(os.path.dirname(BSKY_WORKSPACE)), 'data', '文件名')
+- 输出文件保存到：os.path.join(BSKY_WORKSPACE, '文件名')
+
+⚠️ 外部库可用性：
+- PWA（浏览器）：pandas, numpy, matplotlib 自动安装
+- MCP/TUI（本地 Python）：需手动安装 pip install pandas numpy matplotlib
+  如果 import matplotlib 失败，提示用户运行上述命令安装。
 
 【关于工作区图片引用】
 当工作区中有图片文件（用户上传或 Python 生成）时，你可以使用 Markdown 图片语法在回复中直接引用展示：
