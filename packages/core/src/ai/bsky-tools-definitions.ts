@@ -607,6 +607,9 @@ class BskyTools:
 ${methods}
 
 bsky_tools = BskyTools()
+
+# Register as module so import bsky_tools works
+sys.modules['bsky_tools'] = bsky_tools
 `;
 }
 
