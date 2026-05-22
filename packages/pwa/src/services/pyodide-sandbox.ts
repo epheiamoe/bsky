@@ -1,5 +1,5 @@
 import type { PythonSandboxEngine, PythonExecutionResult, BskyClient } from '@bsky/core';
-import { ToolDispatcher } from '@bsky/core';
+import { ToolDispatcher, generatePyodideWrapper } from '@bsky/core';
 import { getDefaultWorkspaceStorage, getI18nStore } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
@@ -107,18 +107,6 @@ export class PyodideSandbox implements PythonSandboxEngine {
           this._onProgress?.(msg);
         } else if (msg.type === 'initComplete') {
           console.debug('[Pyodide] Worker init complete');
-          
-          // [REFACTOR] Send dynamically generated wrapper from core
-          (async () => {
-            try {
-              const { generatePyodideWrapper } = await import('@bsky/core');
-              const wrapperCode = generatePyodideWrapper();
-              this.worker!.postMessage({ type: 'injectWrapper', code: wrapperCode });
-            } catch (err) {
-              console.error('[Pyodide] Failed to generate/send wrapper:', err);
-            }
-          })();
-          
           this._isReady = true;
           this._initReject = null;
           resolve();
@@ -149,7 +137,10 @@ export class PyodideSandbox implements PythonSandboxEngine {
       };
 
     console.debug('[Pyodide] Sending init message to Worker');
-    this.worker.postMessage({ type: 'init' });
+    // [FIX] Generate wrapper from core and send with init message so Worker
+    // injects bsky_tools before initComplete (no race with execute calls).
+    const wrapperCode = generatePyodideWrapper();  // synchronous, already imported via dynamic import above
+    this.worker.postMessage({ type: 'init', wrapperCode });
 
     // Send auth config if available
     this._sendAuthConfig();

@@ -402,8 +402,6 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
   return result.result !== undefined ? result.result : result.data;
 }
 
-let bskyToolsWrapperCode = '';
-
 // Create simplified transport-only bridge (no auth, no API logic).
 // All tool calls are forwarded to the main thread via dispatchToMainThread.
 // Write operations are blocked unless enableWrite=true (set after user confirmation).
@@ -604,20 +602,15 @@ import os
 os.environ['BSKY_WORKSPACE'] = '/workspace'
     `.trim());
 
-    // Inject bsky_tools — always do this so `import bsky_tools` works
-    // All tool calls are forwarded to the main thread via ToolDispatcher
-    // Write operations are blocked unless enableWrite=true (user confirmed)
-    if (bskyToolsWrapperCode) {
-      try {
-        const bridge = createToolBridge(enableWrite);
-        pyodide.globals.set('bskyToolsBridge', bridge);
-        await pyodide.runPythonAsync(bskyToolsWrapperCode);
-        console.debug('[PyodideWorker] bsky_tools module registered (from core)');
-      } catch (injectErr) {
-        console.warn('[PyodideWorker] Failed to inject bsky_tools:', injectErr);
-      }
-    } else {
-      console.error('[PyodideWorker] bsky_tools wrapper not available');
+    // [FIX] Update bridge reference (enableWrite may have changed since init).
+    // The wrapper code was already injected during init; we only need to
+    // refresh the bridge object in Python globals.
+    try {
+      const bridge = createToolBridge(enableWrite);
+      pyodide.globals.set('bskyToolsBridge', bridge);
+      console.debug('[PyodideWorker] Bridge updated for enableWrite=', enableWrite);
+    } catch (injectErr) {
+      console.error('[PyodideWorker] Failed to update bridge:', injectErr);
     }
 
     // Execute user code
@@ -683,6 +676,20 @@ self.onmessage = async function (e: MessageEvent) {
       console.debug('[PyodideWorker] Init message received, starting loadPyodide...');
       await loadPyodideRuntime();
       console.debug('[PyodideWorker] loadPyodide completed successfully');
+      
+      // [FIX] Inject bsky_tools wrapper during init (before initComplete)
+      // so it's available before any execute calls.
+      if (msg.wrapperCode) {
+        try {
+          const bridge = createToolBridge(false);  // default: no write until confirmed
+          pyodide.globals.set('bskyToolsBridge', bridge);
+          await pyodide.runPythonAsync(msg.wrapperCode);
+          console.debug('[PyodideWorker] bsky_tools injected during init');
+        } catch (injectErr) {
+          console.error('[PyodideWorker] Failed to inject bsky_tools during init:', injectErr);
+        }
+      }
+      
       self.postMessage({ type: 'initComplete' });
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
@@ -728,11 +735,6 @@ self.onmessage = async function (e: MessageEvent) {
   } else if (msg.type === 'setAuth') {
     // No-op: auth is managed by main thread; kept for backward compatibility
     console.debug('[PyodideWorker] Auth config received (ignored — main thread manages auth)');
-  } else if (msg.type === 'injectWrapper') {
-    bskyToolsWrapperCode = msg.code;
-    console.debug('[PyodideWorker] Wrapper code received, length:', msg.code.length);
-  } else if (msg.type === 'injectMetadata') {
-    console.debug('[PyodideWorker] Tool metadata received, count:', msg.tools?.length);
   } else if (msg.type === 'abort') {
     console.debug('[PyodideWorker] Abort received');
     initAborted = true;
