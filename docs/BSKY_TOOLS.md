@@ -170,7 +170,7 @@ Different methods return data under different keys. Use this table to know what 
 | Method | Data Key | Metadata Keys | Notes |
 |--------|----------|---------------|-------|
 | `search_posts` | `posts` | `cursor`, `total`, `hitsTotal` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt` |
-| `get_timeline` | `feed` | `cursor` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount` |
+| `get_timeline` | `feed` | `cursor` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt`, `createdAt` |
 | `get_author_feed` | `feed` | `cursor` | Same structure as `get_timeline` |
 | `get_connections` | `items` | `direction`, `total`, `cursor` | Each item has `handle`, `displayName`. Use `direction="followers"` or `direction="following"` |
 | `get_post_interactions` | `items` | `direction`, `total`, `cursor` | `direction` is `"likes"` or `"reposts"` |
@@ -179,7 +179,7 @@ Different methods return data under different keys. Use this table to know what 
 | `get_popular_feed_generators` | `feeds` | — | Each item has `uri`, `displayName`, `description`, `creator` |
 | `get_feed_generator` | — | — | Returns feed info directly (unwrapped): `uri`, `did`, `creator`, `displayName`, `description`, `likeCount` |
 | `get_lists` | `lists` | — | Each item has `uri`, `name`, `purpose`, `memberCount` |
-| `get_list_feed` | `feed` | `cursor` | Same structure as `get_timeline` |
+| `get_list_feed` | `feed` | `cursor` | Same structure as `get_timeline` (includes `indexedAt` and `createdAt`) |
 | `get_record` | `uri`, `cid`, `value` | — | `value` contains the actual record data |
 | `resolve_handle` | `did` | — | Returns `{did: "did:plc:..."}` |
 | `get_profile` | — | — | Returns profile directly: `did`, `handle`, `displayName`, `followersCount`, `followsCount`, `postsCount` |

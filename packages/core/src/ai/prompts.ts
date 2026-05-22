@@ -78,6 +78,8 @@ PWA 额外包：pandas, numpy, matplotlib。
 2. get_connections 返回 {'items': [...]}。用 conn['items'] 迭代，不是 for item in conn
 3. get_profile 直接返回字段，没有嵌套的 'data' 或 'view' 层
 4. get_popular_feed_generators 返回 {'feeds': [...]}，不是直接返回 list
+5. get_timeline / get_author_feed 返回 {'feed': [...]}，不是 {'posts': [...]}。数据在 feed 键
+6. 每个帖子条目都包含 indexedAt（索引时间）和 createdAt（发帖时间），可用于时间分析
 
 完整方法列表：search_posts, get_profile, get_timeline, get_author_feed, get_post_thread, search_actors, get_connections, list_notifications, get_lists, get_list_feed, resolve_handle, get_record, list_records, get_popular_feed_generators, get_feed_generator, get_feed, get_post_context, get_post_interactions, get_quotes, get_suggested_follows, extract_images_from_post, download_image, view_image, extract_external_link, fetch_web_markdown, search_web_ddg, search_wikipedia
 

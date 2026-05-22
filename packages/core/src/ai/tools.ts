@@ -273,7 +273,7 @@ print(f"Processed {len(df)} rows")`,
     {
       definition: {
         name: 'get_timeline',
-        description: "Get the authenticated user's home timeline — the main feed of posts from people they follow. Returns recent posts with author, text, like/repost counts, and a cursor for pagination. Use cursor to load more (second page, third page, etc.).",
+        description: "Get the authenticated user's home timeline — the main feed of posts from people they follow. Returns recent posts with author, text, like/repost counts, indexedAt, createdAt, and a cursor for pagination. Use cursor to load more (second page, third page, etc.).",
         inputSchema: {
           type: 'object',
           properties: {
@@ -291,6 +291,8 @@ print(f"Processed {len(df)} rows")`,
           text: (f.post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
           likeCount: f.post.likeCount,
           repostCount: f.post.repostCount,
+          indexedAt: f.post.indexedAt,
+          createdAt: (f.post.record as unknown as PostRecord)?.createdAt,
         }));
         return JSON.stringify({ feed: posts, cursor: res.cursor });
       },
@@ -299,7 +301,7 @@ print(f"Processed {len(df)} rows")`,
     {
       definition: {
         name: 'get_author_feed',
-        description: "Get a user's post feed — all posts from a specific user. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns posts with text, like/repost counts, and a cursor for pagination.",
+        description: "Get a user's post feed — all posts from a specific user. The actor parameter accepts a handle (alice.bsky.social) or DID (did:plc:xxx). Use actor='me' for the current logged-in user. Returns posts with text, like/repost counts, indexedAt, createdAt, and a cursor for pagination.",
         inputSchema: {
           type: 'object',
           properties: {
@@ -319,6 +321,8 @@ print(f"Processed {len(df)} rows")`,
           text: (f.post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
           likeCount: f.post.likeCount,
           repostCount: f.post.repostCount,
+          indexedAt: f.post.indexedAt,
+          createdAt: (f.post.record as unknown as PostRecord)?.createdAt,
         }));
         return JSON.stringify({ feed: posts, cursor: res.cursor });
       },
@@ -1146,7 +1150,7 @@ print(f"Processed {len(df)} rows")`,
     {
       definition: {
         name: 'get_list_feed',
-        description: 'Get recent posts from members of a specific list. The list parameter is the AT URI of the list (e.g., from get_lists). Returns posts with author, text, and indexedAt. Supports cursor-based pagination.',
+        description: 'Get recent posts from members of a specific list. The list parameter is the AT URI of the list (e.g., from get_lists). Returns posts with author, text, indexedAt, and createdAt. Supports cursor-based pagination.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -1157,7 +1161,7 @@ print(f"Processed {len(df)} rows")`,
           required: ['list'],
         },
       },
-      handler: async (p) => {
+        handler: async (p) => {
         const limit = (p.limit as number) ?? 30;
         const res = await client.getListFeed(p.list as string, limit, p.cursor as string | undefined);
         const posts = res.feed.map(f => {
@@ -1167,6 +1171,7 @@ print(f"Processed {len(df)} rows")`,
             author: post?.author?.handle,
             text: (post?.record?.text || '').slice(0, 140),
             indexedAt: post?.indexedAt,
+            createdAt: post?.record?.createdAt,
           };
         });
         return JSON.stringify(posts);

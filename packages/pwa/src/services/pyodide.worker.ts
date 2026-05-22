@@ -187,9 +187,10 @@ await micropip.install(${JSON.stringify(heavyPackages)})
           pyodide.FS.writeFile(fontPath, new Uint8Array(fontBuffer));
           console.debug('[PyodideWorker] Font downloaded and saved to: ' + fontPath);
 
-          // Configure matplotlib to use the downloaded font
+          // Configure matplotlib backend and font
           pyodide.runPython(`
 import matplotlib
+matplotlib.use('Agg')  # Headless backend — required in WASM, no GUI dependencies
 import matplotlib.font_manager as fm
 matplotlib.rcParams['axes.unicode_minus'] = False
 
