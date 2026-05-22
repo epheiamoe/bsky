@@ -401,11 +401,16 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
   const byteView = new Uint8Array(toolSab);
   byteView.fill(0);
 
-  // Filter undefined values and convert Pyodide proxies to plain JS objects
+  // Convert Pyodide proxy objects to plain JS objects before iteration.
+  // Pyodide dict proxies don't have enumerable string keys, so
+  // Object.entries(params) returns [] and all kwargs are silently lost.
+  const plainParams = toPlainJs(params);
+
+  // Filter undefined values
   const cleanParams: Record<string, any> = {};
-  for (const [key, value] of Object.entries(params)) {
+  for (const [key, value] of Object.entries(plainParams)) {
     if (value !== undefined) {
-      cleanParams[key] = toPlainJs(value);
+      cleanParams[key] = value;
     }
   }
 

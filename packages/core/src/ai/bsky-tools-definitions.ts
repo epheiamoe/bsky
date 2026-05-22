@@ -477,7 +477,7 @@ export function generatePyodideWrapper(): string {
       .join(', ');
 
     return `
-    def ${tool.name}(self, ${args}):
+    def ${tool.name}(self, *, ${args}):
         """${tool.description}
         
         Returns: ${tool.returns}
@@ -544,7 +544,7 @@ export function generateNodeWrapper(): string {
       .join(', ');
 
     return `
-    def ${tool.name}(self, ${args}):
+    def ${tool.name}(self, *, ${args}):
         """${tool.description}
         
         Returns: ${tool.returns}
