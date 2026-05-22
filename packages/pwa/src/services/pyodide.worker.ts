@@ -402,19 +402,21 @@ function dispatchToMainThread(method: string, params: Record<string, any>): any 
   return result.result !== undefined ? result.result : result.data;
 }
 
+let bskyToolsWrapperCode = '';
+
 // Create simplified transport-only bridge (no auth, no API logic).
 // All tool calls are forwarded to the main thread via dispatchToMainThread.
 // Write operations are blocked unless enableWrite=true (set after user confirmation).
 function createToolBridge(enableWrite: boolean = false) {
-  const bridge: Record<string, (...args: any[]) => any> = {};
+  const bridge: Record<string, (kwargs: any) => any> = {};
   const writeTools = new Set(['create_post', 'like', 'repost', 'follow', 'create_list', 'edit_list_members']);
 
   function createBridgeMethod(method: string) {
-    return (...args: any[]) => {
+    return (kwargs: any) => {
       if (writeTools.has(method) && !enableWrite) {
         throw new Error(`Write operation '${method}' blocked: requires user confirmation. The Python script must be approved before write operations are allowed.`);
       }
-      return dispatchToMainThread(method, argsToParams(method, args));
+      return dispatchToMainThread(method, toPlainJs(kwargs));
     };
   }
 
@@ -456,54 +458,6 @@ function createToolBridge(enableWrite: boolean = false) {
   bridge.edit_list_members = createBridgeMethod('edit_list_members');
 
   return bridge;
-}
-
-// Helper to convert positional args to named params for each method
-function argsToParams(method: string, args: any[]): Record<string, any> {
-  const paramMap: Record<string, string[]> = {
-    resolve_handle: ['handle', 'fields'],
-    get_record: ['uri', 'fields'],
-    list_records: ['repo', 'collection', 'limit', 'cursor', 'fields'],
-    search_posts: ['q', 'limit', 'cursor', 'sort', 'fields'],
-    get_timeline: ['limit', 'cursor', 'fields'],
-    get_author_feed: ['actor', 'limit', 'cursor', 'fields'],
-    get_popular_feed_generators: ['limit', 'fields'],
-    get_feed_generator: ['feed', 'fields'],
-    get_feed: ['feed', 'limit', 'cursor', 'fields'],
-    get_post_thread: ['uri', 'depth', 'format', 'maxReplies', 'fields'],
-    get_post_context: ['uri', 'maxReplies', 'fields'],
-    get_post_interactions: ['uri', 'type', 'limit', 'cursor', 'fields'],
-    get_quotes: ['uri', 'limit', 'cursor', 'fields'],
-    search_actors: ['q', 'limit', 'cursor', 'fields'],
-    get_profile: ['actor', 'fields'],
-    get_connections: ['actor', 'direction', 'limit', 'cursor', 'fields'],
-    get_suggested_follows: ['actor', 'fields'],
-    list_notifications: ['limit', 'cursor', 'fields'],
-    extract_images_from_post: ['uri', 'fields'],
-    download_image: ['did', 'cid', 'filename', 'fields'],
-    view_image: ['did', 'cid', 'alt', 'uploadIndex', 'fields'],
-    extract_external_link: ['uri'],
-    fetch_web_markdown: ['url'],
-    search_web_ddg: ['query'],
-    search_wikipedia: ['query', 'lang'],
-    get_lists: ['actor'],
-    get_list_feed: ['listUri', 'limit', 'cursor'],
-    create_post: ['text', 'replyTo', 'quoteUri', 'images', 'threadgate'],
-    like: ['uri'],
-    repost: ['uri'],
-    follow: ['subject'],
-    create_list: ['name', 'purpose', 'description'],
-    edit_list_members: ['listUri', 'subject', 'action'],
-  };
-  
-  const params: Record<string, any> = {};
-  const names = paramMap[method] || [];
-  for (let i = 0; i < args.length && i < names.length; i++) {
-    if (args[i] !== undefined) {
-      params[names[i]] = args[i];
-    }
-  }
-  return params;
 }
 
 function analyzePythonCode(code: string): { hasWriteOperations: boolean; writeOperations: Array<{ tool: string; count: number }>; hasDynamicCalls: boolean; error?: string } {
@@ -563,137 +517,6 @@ else:
     return { hasWriteOperations: true, writeOperations: [{ tool: 'unknown', count: 1 }], hasDynamicCalls: false, error: String(err) };
   }
 }
-
-const BSKY_TOOLS_PYTHON_WRAPPER = `
-import js
-import sys
-from typing import List, Dict, Any, Optional, Union
-
-class BskyToolsError(Exception):
-    pass
-
-class BskyTools:
-    def __init__(self):
-        # Auto-detect bridge from globals
-        self._bridge = js.bskyToolsBridge if hasattr(js, 'bskyToolsBridge') else None
-        if not self._bridge and 'bskyToolsBridge' in globals():
-            self._bridge = globals()['bskyToolsBridge']
-
-    def _call(self, method: str, *args, fields: Optional[Union[List[str], str]] = None):
-        if not self._bridge:
-            raise BskyToolsError("BskyTools not initialized. Auth required.")
-        
-        # Convert fields string to list
-        if isinstance(fields, str):
-            fields = [f.strip() for f in fields.split(',') if f.strip()]
-        
-        # Pass fields as last argument if provided
-        if fields is not None:
-            args = args + (fields,)
-        
-        result = getattr(self._bridge, method)(*args)
-        if hasattr(result, 'to_py'):
-            result = result.to_py()
-        
-        # Check for errors
-        if isinstance(result, dict) and 'error' in result:
-            raise BskyToolsError(result['error'])
-        
-        return result
-
-    def resolve_handle(self, handle: str, fields: Optional[Union[List[str], str]] = None):
-        # If input is already a DID, return it directly
-        if handle.startswith('did:'):
-            result = {'did': handle}
-            if fields:
-                result = {k: v for k, v in result.items() if k in (fields if isinstance(fields, list) else [f.strip() for f in fields.split(',')])}
-            return result
-        return self._call('resolve_handle', handle, fields=fields)
-    def get_record(self, uri: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_record', uri, fields=fields)
-    def list_records(self, repo: str, collection: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('list_records', repo, collection, limit, cursor, fields=fields)
-    def search_posts(self, q: str, limit: int = 25, cursor: Optional[str] = None, sort: str = 'top', fields: Optional[Union[List[str], str]] = None):
-        return self._call('search_posts', q, limit, cursor, sort, fields=fields)
-    def get_timeline(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_timeline', limit, cursor, fields=fields)
-    def get_author_feed(self, actor: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_author_feed', actor, limit, cursor, fields=fields)
-    def get_popular_feed_generators(self, limit: int = 50, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_popular_feed_generators', limit, fields=fields)
-    def get_feed_generator(self, feed: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_feed_generator', feed, fields=fields)
-    def get_feed(self, feed: str, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_feed', feed, limit, cursor, fields=fields)
-    def get_post_thread(self, uri: str, depth: int = 3, format: str = 'flat', max_replies: int = 5, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_post_thread', uri, depth, format, max_replies, fields=fields)
-    def get_post_context(self, uri: str, max_replies: int = 5, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_post_context', uri, max_replies, fields=fields)
-    def get_post_interactions(self, uri: str, type: str = 'likes', limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_post_interactions', uri, type, limit, cursor, fields=fields)
-    def get_quotes(self, uri: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_quotes', uri, limit, cursor, fields=fields)
-    def search_actors(self, q: str, limit: int = 25, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('search_actors', q, limit, cursor, fields=fields)
-    def get_profile(self, actor: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_profile', actor, fields=fields)
-    def get_connections(self, actor: str, direction: str = 'following', limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_connections', actor, direction, limit, cursor, fields=fields)
-    def get_suggested_follows(self, actor: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('get_suggested_follows', actor, fields=fields)
-    def list_notifications(self, limit: int = 50, cursor: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('list_notifications', limit, cursor, fields=fields)
-    def extract_images_from_post(self, uri: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('extract_images_from_post', uri, fields=fields)
-    def download_image(self, did: str, cid: str, filename: Optional[str] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('download_image', did, cid, filename, fields=fields)
-    def view_image(self, did: Optional[str] = None, cid: Optional[str] = None, alt: Optional[str] = None, upload_index: Optional[int] = None, fields: Optional[Union[List[str], str]] = None):
-        return self._call('view_image', did, cid, alt, upload_index, fields=fields)
-    def extract_external_link(self, uri: str, fields: Optional[Union[List[str], str]] = None):
-        return self._call('extract_external_link', uri)
-    def fetch_web_markdown(self, url: str, fields: Optional[List[str]] = None):
-        return self._call('fetch_web_markdown', url)
-    def search_web_ddg(self, query: str, fields: Optional[List[str]] = None):
-        return self._call('search_web_ddg', query)
-    def search_wikipedia(self, query: str, lang: str = 'en', fields: Optional[List[str]] = None):
-        return self._call('search_wikipedia', query, lang)
-    def get_lists(self, actor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_lists', actor)
-    def get_list_feed(self, list_uri: str, limit: int = 30, cursor: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('get_list_feed', list_uri, limit, cursor)
-    def create_post(self, text: str, reply_to: Optional[str] = None, quote_uri: Optional[str] = None, images: Optional[List[Dict]] = None, threadgate: Optional[Dict] = None, fields: Optional[List[str]] = None):
-        return self._call('create_post', text, reply_to, quote_uri, images, threadgate)
-    def like(self, uri: str, fields: Optional[List[str]] = None):
-        return self._call('like', uri)
-    def repost(self, uri: str, fields: Optional[List[str]] = None):
-        return self._call('repost', uri)
-    def follow(self, subject: str, fields: Optional[List[str]] = None):
-        return self._call('follow', subject)
-    def create_list(self, name: str, purpose: str, description: Optional[str] = None, fields: Optional[List[str]] = None):
-        return self._call('create_list', name, purpose, description)
-    def edit_list_members(self, list_uri: str, subject: str, action: str = 'add', fields: Optional[List[str]] = None):
-        return self._call('edit_list_members', list_uri, subject, action)
-
-# Create singleton instance
-_bsky_tools_instance = BskyTools()
-
-# Register as a proper Python module so 'import bsky_tools' works
-import types
-_bsky_tools_module = types.ModuleType('bsky_tools')
-# Only export public methods and classes, NOT all globals
-_bsky_tools_module.bsky_tools = _bsky_tools_instance
-_bsky_tools_module.BskyTools = BskyTools
-_bsky_tools_module.BskyToolsError = BskyToolsError
-# Add convenience: from bsky_tools import search_posts, get_profile
-for _name in dir(_bsky_tools_instance):
-    if not _name.startswith('_'):
-        setattr(_bsky_tools_module, _name, getattr(_bsky_tools_instance, _name))
-
-sys.modules['bsky_tools'] = _bsky_tools_module
-
-# Also keep global variable for backward compatibility
-bsky_tools = _bsky_tools_instance
-`;
 
 async function executePython(code: string, enableWrite: boolean = false) {
   let returnValue: any = null;
@@ -755,13 +578,17 @@ os.environ['BSKY_WORKSPACE'] = '/workspace'
     // Inject bsky_tools — always do this so `import bsky_tools` works
     // All tool calls are forwarded to the main thread via ToolDispatcher
     // Write operations are blocked unless enableWrite=true (user confirmed)
-    try {
-      const bridge = createToolBridge(enableWrite);
-      pyodide.globals.set('bskyToolsBridge', bridge);
-      await pyodide.runPythonAsync(BSKY_TOOLS_PYTHON_WRAPPER);
-      console.debug('[PyodideWorker] bsky_tools module registered');
-    } catch (injectErr) {
-      console.warn('[PyodideWorker] Failed to inject bsky_tools:', injectErr);
+    if (bskyToolsWrapperCode) {
+      try {
+        const bridge = createToolBridge(enableWrite);
+        pyodide.globals.set('bskyToolsBridge', bridge);
+        await pyodide.runPythonAsync(bskyToolsWrapperCode);
+        console.debug('[PyodideWorker] bsky_tools module registered (from core)');
+      } catch (injectErr) {
+        console.warn('[PyodideWorker] Failed to inject bsky_tools:', injectErr);
+      }
+    } else {
+      console.error('[PyodideWorker] bsky_tools wrapper not available');
     }
 
     // Execute user code
@@ -872,6 +699,11 @@ self.onmessage = async function (e: MessageEvent) {
   } else if (msg.type === 'setAuth') {
     // No-op: auth is managed by main thread; kept for backward compatibility
     console.debug('[PyodideWorker] Auth config received (ignored — main thread manages auth)');
+  } else if (msg.type === 'injectWrapper') {
+    bskyToolsWrapperCode = msg.code;
+    console.debug('[PyodideWorker] Wrapper code received, length:', msg.code.length);
+  } else if (msg.type === 'injectMetadata') {
+    console.debug('[PyodideWorker] Tool metadata received, count:', msg.tools?.length);
   } else if (msg.type === 'abort') {
     console.debug('[PyodideWorker] Abort received');
     initAborted = true;

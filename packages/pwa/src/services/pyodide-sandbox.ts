@@ -1,7 +1,6 @@
 import type { PythonSandboxEngine, PythonExecutionResult, BskyClient } from '@bsky/core';
 import { ToolDispatcher } from '@bsky/core';
-import { getDefaultWorkspaceStorage } from '@bsky/app';
-import { getI18nStore } from '@bsky/app';
+import { getDefaultWorkspaceStorage, getI18nStore } from '@bsky/app';
 import PyodideWorker from './pyodide.worker.ts?worker';
 
 const MIME_TYPE_MAP: Record<string, string> = {
@@ -108,6 +107,18 @@ export class PyodideSandbox implements PythonSandboxEngine {
           this._onProgress?.(msg);
         } else if (msg.type === 'initComplete') {
           console.debug('[Pyodide] Worker init complete');
+          
+          // [REFACTOR] Send dynamically generated wrapper from core
+          (async () => {
+            try {
+              const { generatePyodideWrapper } = await import('@bsky/core');
+              const wrapperCode = generatePyodideWrapper();
+              this.worker!.postMessage({ type: 'injectWrapper', code: wrapperCode });
+            } catch (err) {
+              console.error('[Pyodide] Failed to generate/send wrapper:', err);
+            }
+          })();
+          
           this._isReady = true;
           this._initReject = null;
           resolve();
