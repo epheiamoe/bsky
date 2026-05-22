@@ -22,7 +22,8 @@ export async function main() {
   console.error('[MCP] Workspace storage initialized');
 
   // Initialize Python sandbox for execute_python tool
-  const sandbox = new NodePythonSandbox();
+  // [FIX] Pass client so bsky_tools can dispatch via ToolDispatcher
+  const sandbox = new NodePythonSandbox(client);
   setGlobalPythonSandbox(sandbox);
   console.error('[MCP] Python sandbox initialized');
 
