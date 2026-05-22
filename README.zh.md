@@ -23,6 +23,18 @@
 
 流式输出，思考过程可见。**33 个工具**桥接 AI 与 Bluesky——分析讨论、总结内容、管理列表、润色草稿。所有写操作需点击确认。自带 API Key，数据不经过我们的服务器。
 
+### 🐍 Python 沙箱 & bsky_tools
+
+![Python 沙箱](assets/illustration/Create-a-chart-using-python-tool.png)
+
+AI 在隔离沙箱中执行 Python 代码，进行数据分析、批量处理和可视化。**Pandas、NumPy、Matplotlib** 通过 Pyodide WASM 在浏览器内运行（PWA）或本地 Python（TUI/MCP）。
+
+**bsky_tools** —— Python 库，让 AI 从代码中批量调用全部 33 个 Bluesky API 方法。搜索帖子、获取资料、分析时间线、生成图表——全部在一个 Python 脚本中完成，支持按对话隔离的工作区。
+
+结果保存到工作区。上传 CSV/JSON，下载输出文件，在应用内预览图表。
+
+---
+
 ### 🌍 AI 超脱 Bluesky — 内置网页搜索
 
 > **无需任何密钥。无需配置。开箱即用。**
@@ -177,4 +189,4 @@ BSKY_HANDLE=... BSKY_APP_PASSWORD=... bsky-mcp
 
 [MIT](LICENSE) — 自由使用、修改、分发。
 
-**v0.13.9** · [更新日志](CHANGELOG.md) · [English Docs](README.md)
+**v0.14.0** · [更新日志](CHANGELOG.md) · [English Docs](README.md)

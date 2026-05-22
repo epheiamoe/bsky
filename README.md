@@ -23,9 +23,21 @@ Supports third-party PDS.
 
 Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap.
 
-**Python Sandbox** — AI can execute Python code for data analysis, statistics, and visualization. Pandas, NumPy, and Matplotlib available in-browser via Pyodide WASM. Results saved to workspace with per-chat file isolation.
-
 Bring your own API key — nothing runs through our servers.
+
+---
+
+### 🐍 Python Sandbox & bsky_tools
+
+![Python Sandbox](assets/illustration/Create-a-chart-using-python-tool.png)
+
+AI executes Python in an isolated sandbox for data analysis, batch processing, and visualization. **Pandas, NumPy, and Matplotlib** run in-browser via Pyodide WASM (PWA) or local Python (TUI/MCP).
+
+**bsky_tools** — a Python library that lets AI batch-call all 33 Bluesky API methods from code. Search posts, fetch profiles, analyze timelines, generate charts — all in a single Python script with per-chat workspace isolation.
+
+Results saved to workspace. Upload CSV/JSON, download outputs, preview charts in-app.
+
+---
 
 ### 🌍 AI Beyond Bluesky — Web Search Built In
 
@@ -203,4 +215,4 @@ Business logic lives once. TUI, PWA, and MCP share the same core. 5 packages, 1 
 
 [MIT](LICENSE) — free to use, modify, and share.
 
-**v0.13.9** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
+**v0.14.0** · [Changelog](CHANGELOG.md) · [中文文档](README.zh.md)
