@@ -97,7 +97,7 @@ export function ToolCard({ toolName, args, resultContent, expanded, chatId }: To
     return args;
   }, [args, toolName]);
 
-  const previewText = toolName === 'execute_python' ? 'Python sandbox execution' : display.summary;
+  const previewText = toolName === 'execute_python' ? (formattedArgs || 'Python sandbox execution') : display.summary;
 
   // Collapsed view
   if (!expanded) {
