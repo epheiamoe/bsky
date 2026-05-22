@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { mkdtempSync, writeFileSync, readFileSync, readdirSync, statSync, rmSync, existsSync, mkdirSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -235,6 +235,37 @@ export class NodePythonSandbox implements PythonSandboxEngine {
     const workspaceDir = this.getWorkspaceDir(chatId);
     const wrapper = generateNodeWrapper();
     const scriptPath = join(this.baseDir, 'temp', `script_${Date.now()}.py`);
+
+    // Step 1: Syntax check — compile user code to catch errors early
+    const syntaxCheckPath = join(this.baseDir, 'temp', `syntax_${Date.now()}.py`);
+    writeFileSync(syntaxCheckPath, code, 'utf-8');
+    
+    try {
+      const { status } = spawnSync('python3', ['-m', 'py_compile', syntaxCheckPath], {
+        encoding: 'utf-8',
+        timeout: 5000,
+      });
+      if (status !== 0) {
+        // Try to get the actual error message
+        const { stderr } = spawnSync('python3', ['-m', 'py_compile', syntaxCheckPath], {
+          encoding: 'utf-8',
+          timeout: 5000,
+        });
+        return {
+          stdout: '',
+          stderr: `SyntaxError: ${stderr || 'Invalid Python syntax'}`,
+          returnValue: null,
+          files: [],
+          success: false,
+          executionTime: Date.now() - startTime,
+          executionTimestamp: startTime,
+        };
+      }
+    } catch {
+      // py_compile not available, skip syntax check and let Python handle it
+    } finally {
+      try { rmSync(syntaxCheckPath); } catch {}
+    }
 
     // Combine wrapper + user code, then apply sandbox guards
     const fullCode = `${wrapper}\n\n# ============ USER CODE ============\n${code}`;
