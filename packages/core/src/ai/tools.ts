@@ -219,6 +219,10 @@ print(f"Processed {len(df)} rows")`,
       },
       handler: async (p) => {
         let repo = p.repo as string;
+        // Handle 'me' shorthand — use current authenticated user's DID
+        if (repo === 'me') {
+          repo = client.getDid();
+        }
         // listRecords endpoint requires DID, not handle — auto-resolve if needed
         if (repo && !repo.startsWith('did:')) {
           try {
@@ -267,7 +271,7 @@ print(f"Processed {len(df)} rows")`,
           repostCount: post.repostCount,
           indexedAt: post.indexedAt,
         }));
-        return JSON.stringify({ posts, total: posts.length, hitsTotal: res.hitsTotal, cursor: res.cursor });
+        return JSON.stringify({ posts, count: posts.length, hitsTotal: res.hitsTotal, cursor: res.cursor });
       },
       requiresWrite: false,
     },
@@ -377,27 +381,31 @@ print(f"Processed {len(df)} rows")`,
         },
       },
       handler: async (p) => {
-        const res = await client.getFeed(p.feed as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
-        const posts = res.feed.map((f) => ({
-          uri: f.post.uri,
-          author: f.post.author.handle,
-          text: (f.post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
-        }));
-        return JSON.stringify({ feed: posts, cursor: res.cursor });
+        try {
+          const res = await client.getFeed(p.feed as string, (p.limit as number) ?? 50, p.cursor as string | undefined);
+          const posts = res.feed.map((f) => ({
+            uri: f.post.uri,
+            author: f.post.author.handle,
+            text: (f.post.record as unknown as PostRecord)?.text?.slice(0, 200) ?? '',
+          }));
+          return JSON.stringify({ feed: posts, cursor: res.cursor });
+        } catch (err: any) {
+          return JSON.stringify({ error: { type: 'api_error', message: err.message || 'Failed to fetch feed' } });
+        }
       },
       requiresWrite: false,
     },
     {
       definition: {
         name: 'get_post_thread',
-        description: 'Get a post thread with multi-format output. Use format="flat" (default, recommended) for a human-readable view with depth markers, reply arrows, and author info — ideal for understanding conversations. Use format="tree" for the raw AT Protocol tree structure. Use format="subtree" to expand folded replies from a specific post (pass the post URI that showed "N replies folded"). The depth parameter controls how many levels of replies to show.',
+        description: 'Get a post thread with multi-format output. Use format="flat" (default, recommended) for a human-readable view with depth markers, reply arrows, and author info — ideal for understanding conversations. Use format="tree" for the raw AT Protocol tree structure. Use format="subtree" to expand folded replies from a specific post (pass the post URI that showed "N replies folded"). Use format="json" to get structured JSON data (depth, author, text, replies) for programmatic processing. The depth parameter controls how many levels of replies to show.',
         inputSchema: {
           type: 'object',
           properties: {
             uri: { type: 'string', description: 'The AT URI of the post' },
-            format: { type: 'string', description: 'Output format: "flat" (default, human-readable with depth markers), "tree" (raw AT Protocol tree), or "subtree" (expand folded replies from this post)' },
+            format: { type: 'string', description: 'Output format: "flat" (default, human-readable with depth markers), "tree" (raw AT Protocol tree), "subtree" (expand folded replies from this post), or "json" (structured JSON for programmatic use)' },
             depth: { type: 'number', description: 'Maximum thread depth (default 3 for flat/subtree, 6 for tree)' },
-            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20). Only used for flat/subtree format.' },
+            maxReplies: { type: 'number', description: 'Maximum replies per depth level (default 5, max 20). Only used for flat/subtree/json format.' },
           },
           required: ['uri'],
         },
@@ -411,6 +419,15 @@ print(f"Processed {len(df)} rows")`,
         }
         const depth = (p.depth as number) ?? 3;
         const maxReplies = (p.maxReplies as number) ?? 5;
+        if (format === 'json') {
+          const res = await client.getPostThread(uri, Math.max(depth + 1, 6), 80);
+          if (res.thread.$type !== 'app.bsky.feed.defs#threadViewPost') {
+            return JSON.stringify({ error: { type: 'not_found', message: 'Post not found or deleted' } });
+          }
+          const thread = res.thread as ThreadViewPost;
+          const jsonResult = threadToJson(thread, depth, maxReplies);
+          return JSON.stringify(jsonResult);
+        }
         const flat = await flattenThread(client, uri, depth, maxReplies);
         return JSON.stringify(flat);
       },
@@ -430,31 +447,35 @@ print(f"Processed {len(df)} rows")`,
         },
       },
       handler: async (p) => {
-        const uri = p.uri as string;
-        const parsed = parseAtUri(uri);
-        const thread = await flattenThread(client, uri, 3, (p.maxReplies as number) ?? 5);
-        const record = await client.getRecord(parsed.did, parsed.collection, parsed.rkey);
-        const postRecord = record.value as unknown as PostRecord;
-        const media: string[] = [];
-        if (postRecord.embed) {
-          const embedType = (postRecord.embed as { $type?: string }).$type;
-          if (embedType === 'app.bsky.embed.images') {
-            media.push(`图片: ${(postRecord.embed as ImageEmbed).images.length} 张`);
-          } else if (embedType === 'app.bsky.embed.external') {
-            media.push(`外部链接: ${(postRecord.embed as ExternalEmbed).external.uri}`);
-          } else if (embedType === 'app.bsky.embed.record') {
-            media.push(`引用帖子: ${(postRecord.embed as RecordEmbed).record.uri}`);
-          } else if (embedType === 'app.bsky.embed.video') {
-            media.push('视频: 1 个');
+        try {
+          const uri = p.uri as string;
+          const parsed = parseAtUri(uri);
+          const thread = await flattenThread(client, uri, 3, (p.maxReplies as number) ?? 5);
+          const record = await client.getRecord(parsed.did, parsed.collection, parsed.rkey);
+          const postRecord = record.value as unknown as PostRecord;
+          const media: string[] = [];
+          if (postRecord.embed) {
+            const embedType = (postRecord.embed as { $type?: string }).$type;
+            if (embedType === 'app.bsky.embed.images') {
+              media.push(`图片: ${(postRecord.embed as ImageEmbed).images.length} 张`);
+            } else if (embedType === 'app.bsky.embed.external') {
+              media.push(`外部链接: ${(postRecord.embed as ExternalEmbed).external.uri}`);
+            } else if (embedType === 'app.bsky.embed.record') {
+              media.push(`引用帖子: ${(postRecord.embed as RecordEmbed).record.uri}`);
+            } else if (embedType === 'app.bsky.embed.video') {
+              media.push('视频: 1 个');
+            }
           }
+          return JSON.stringify({
+            thread,
+            media,
+            text: postRecord.text,
+            createdAt: postRecord.createdAt,
+            hasReply: !!postRecord.reply,
+          });
+        } catch (err: any) {
+          return JSON.stringify({ error: { type: 'api_error', message: err.message || 'Failed to get post context' } });
         }
-        return JSON.stringify({
-          thread,
-          media,
-          text: postRecord.text,
-          createdAt: postRecord.createdAt,
-          hasReply: !!postRecord.reply,
-        });
       },
       requiresWrite: false,
     },
@@ -1163,19 +1184,23 @@ print(f"Processed {len(df)} rows")`,
         },
       },
         handler: async (p) => {
-        const limit = (p.limit as number) ?? 30;
-        const res = await client.getListFeed(p.list as string, limit, p.cursor as string | undefined);
-        const posts = res.feed.map(f => {
-          const post = (f as any).post ?? f;
-          return {
-            uri: post?.uri,
-            author: post?.author?.handle,
-            text: (post?.record?.text || '').slice(0, 140),
-            indexedAt: post?.indexedAt,
-            createdAt: post?.record?.createdAt,
-          };
-        });
-        return JSON.stringify(posts);
+        try {
+          const limit = (p.limit as number) ?? 30;
+          const res = await client.getListFeed(p.list as string, limit, p.cursor as string | undefined);
+          const posts = res.feed.map(f => {
+            const post = (f as any).post ?? f;
+            return {
+              uri: post?.uri,
+              author: post?.author?.handle,
+              text: (post?.record?.text || '').slice(0, 140),
+              indexedAt: post?.indexedAt,
+              createdAt: post?.record?.createdAt,
+            };
+          });
+          return JSON.stringify(posts);
+        } catch (err: any) {
+          return JSON.stringify({ error: { type: 'api_error', message: err.message || 'Failed to fetch list feed' } });
+        }
       },
       requiresWrite: false,
     },
@@ -1243,6 +1268,51 @@ print(f"Processed {len(df)} rows")`,
 }
 
 // ======================== Thread Flattening ========================
+
+interface ThreadJsonNode {
+  depth: number;
+  uri: string;
+  author: string;
+  displayName: string;
+  text: string;
+  createdAt: string;
+  indexedAt: string;
+  likeCount: number;
+  repostCount: number;
+  replyCount?: number;
+  replies: ThreadJsonNode[];
+}
+
+function threadToJson(thread: ThreadViewPost, maxDepth: number, maxReplies = 5): ThreadJsonNode {
+  const capped = Math.min(maxReplies, 20);
+
+  function buildNode(node: ThreadViewPost, depth: number): ThreadJsonNode {
+    const post = node.post;
+    const record = post.record as unknown as PostRecord;
+    const replies = (node.replies ?? [])
+      .filter((r): r is ThreadViewPost => r.$type === 'app.bsky.feed.defs#threadViewPost')
+      .sort((a, b) => new Date(a.post.indexedAt ?? 0).getTime() - new Date(b.post.indexedAt ?? 0).getTime())
+      .slice(0, capped)
+      .filter(() => depth < maxDepth)
+      .map((r) => buildNode(r, depth + 1));
+
+    return {
+      depth,
+      uri: post.uri,
+      author: post.author.handle,
+      displayName: post.author.displayName ?? '',
+      text: record.text ?? '',
+      createdAt: record.createdAt ?? '',
+      indexedAt: post.indexedAt ?? '',
+      likeCount: post.likeCount ?? 0,
+      repostCount: post.repostCount ?? 0,
+      replyCount: (node.replies ?? []).length,
+      replies,
+    };
+  }
+
+  return buildNode(thread, 0);
+}
 
 async function flattenThread(client: BskyClient, uri: string, maxDepth: number, maxReplies = 5): Promise<string> {
   const capped = Math.min(maxReplies, 20);
@@ -1443,11 +1513,16 @@ function cleanJinaSearchOutput(md: string): string | null {
 /**
  * Format Wikipedia API summary into the same {heading, content} format.
  */
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim();
+}
+
 function formatWikipediaSummary(s: WikipediaSummary): string {
   const parts: string[] = [];
-  parts.push(`# ${s.displaytitle || s.title}`);
+  const title = stripHtml(s.displaytitle || s.title);
+  parts.push(`# ${title}`);
   if (s.description) parts.push(`> ${s.description}`);
-  if (s.extract) parts.push(s.extract);
+  if (s.extract) parts.push(stripHtml(s.extract));
   if (s.content_urls?.desktop?.page) parts.push(`Source: ${s.content_urls.desktop.page}`);
-  return JSON.stringify({ heading: s.displaytitle || s.title, content: parts.join('\n\n') });
+  return JSON.stringify({ heading: title, content: parts.join('\n\n') });
 }
