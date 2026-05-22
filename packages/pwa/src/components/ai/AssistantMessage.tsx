@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useI18n } from '@bsky/app';
@@ -15,10 +15,47 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
   const [copied, setCopied] = useState(false);
   const [imageMap, setImageMap] = useState<Map<string, string>>(new Map());
   const [imagesLoading, setImagesLoading] = useState(false);
-  const blobUrlsRef = useRef<Set<string>>(new Set());
+  const allBlobUrlsRef = useRef<Set<string>>(new Set());
+
+  // [FIX] Extract image filenames once per content change, then useEffect only
+  // depends on the stable Set reference. This prevents re-running the effect
+  // for every single token during streaming.
+  const imageFilenames = useMemo(() => {
+    const regex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const filenames = new Set<string>();
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      const src = match[2];
+      // Skip external URLs - only handle workspace/local paths
+      if (src.startsWith('http://') || src.startsWith('https://')) continue;
+      const filename = src.split('/').pop() || src;
+      if (filename) filenames.add(filename);
+    }
+    return filenames;
+  }, [content]);
 
   // Pre-load workspace images referenced in markdown ![]() syntax
+  // [FIX] Depend on imageFilenames (stable Set) instead of raw content string.
+  // This means the effect only re-runs when a NEW image filename appears,
+  // not on every streaming token.
   useEffect(() => {
+    if (imageFilenames.size === 0) {
+      setImageMap(new Map());
+      return;
+    }
+
+    // Determine which filenames are already loaded (avoid re-loading)
+    const filenamesToLoad = new Set<string>();
+    for (const name of imageFilenames) {
+      if (!imageMap.has(name)) {
+        filenamesToLoad.add(name);
+      }
+    }
+
+    if (filenamesToLoad.size === 0) {
+      return; // All images already loaded
+    }
+
     let cancelled = false;
     setImagesLoading(true);
 
@@ -27,28 +64,11 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
         const { getDefaultWorkspaceStorage } = await import('@bsky/app');
         const storage = getDefaultWorkspaceStorage();
 
-        // Extract all workspace image references from content
-        const regex = /!\[([^\]]*)\]\(([^)]+)\)/g;
-        const filenames = new Set<string>();
-        let match;
-        while ((match = regex.exec(content)) !== null) {
-          const src = match[2];
-          // Skip external URLs - only handle workspace/local paths
-          if (src.startsWith('http://') || src.startsWith('https://')) continue;
-          const filename = src.split('/').pop() || src;
-          if (filename) filenames.add(filename);
-        }
-
-        if (filenames.size === 0) {
-          setImagesLoading(false);
-          return;
-        }
-
         // Load all workspace files (across all sessions for AI references)
         const allFiles = await storage.listFiles();
         const newMap = new Map<string, string>();
 
-        for (const filename of filenames) {
+        for (const filename of filenamesToLoad) {
           const file = allFiles.find(f =>
             f.name === filename || f.name.toLowerCase() === filename.toLowerCase()
           );
@@ -56,16 +76,27 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
           if (file && file.mimeType.startsWith('image/')) {
             const blob = new Blob([file.data as BlobPart], { type: file.mimeType });
             const url = URL.createObjectURL(blob);
-            blobUrlsRef.current.add(url);
+            allBlobUrlsRef.current.add(url);
             newMap.set(filename, url);
           }
         }
 
         if (!cancelled) {
-          setImageMap(newMap);
+          // [FIX] Merge with existing map instead of replacing, preserving
+          // already-loaded images during streaming.
+          setImageMap(prev => {
+            const merged = new Map(prev);
+            for (const [k, v] of newMap) {
+              merged.set(k, v);
+            }
+            return merged;
+          });
         } else {
           // Clean up if cancelled
-          newMap.forEach(url => URL.revokeObjectURL(url));
+          newMap.forEach(url => {
+            URL.revokeObjectURL(url);
+            allBlobUrlsRef.current.delete(url);
+          });
         }
       } catch (err) {
         console.error('[AssistantMessage] Failed to load workspace images:', err);
@@ -78,11 +109,16 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
 
     return () => {
       cancelled = true;
-      // Clean up old blob URLs
-      blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-      blobUrlsRef.current.clear();
     };
-  }, [content]);
+  }, [imageFilenames]);
+
+  // Component unmount cleanup: revoke ALL blob URLs
+  useEffect(() => {
+    return () => {
+      allBlobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+      allBlobUrlsRef.current.clear();
+    };
+  }, []);
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -112,7 +148,10 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
                 const blobUrl = imageMap.get(filename);
                 if (blobUrl) {
                   return (
+                    // [FIX] Stable key ensures React reuses the same DOM node
+                    // during streaming, preventing image reload/flicker.
                     <img
+                      key={blobUrl}
                       src={blobUrl}
                       alt={alt || 'Workspace image'}
                       className="max-w-full h-auto rounded-lg border border-border"
@@ -144,7 +183,7 @@ export function AssistantMessage({ content, isError, compact }: AssistantMessage
                 }
 
                 // Regular external image
-                return <img src={src} alt={alt} className="max-w-full h-auto rounded-lg" />;
+                return <img key={src} src={src} alt={alt} className="max-w-full h-auto rounded-lg" loading="lazy" />;
               }
             }}
           >
