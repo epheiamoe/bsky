@@ -249,6 +249,7 @@ export class NodePythonSandbox implements PythonSandboxEngine {
           ...process.env,
           PYTHONPATH: this.baseDir,
           BSKY_WORKSPACE: workspaceDir,
+          PYTHONIOENCODING: 'utf-8',
         },
       });
 
@@ -423,6 +424,11 @@ export class NodePythonSandbox implements PythonSandboxEngine {
 import sys
 import os
 import json
+import io
+
+# [FIX] Force UTF-8 encoding for stdout/stderr on Windows (default is GBK)
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
 # Store workspace path
 _WORKSPACE = ${JSON.stringify(workspaceDir)}
