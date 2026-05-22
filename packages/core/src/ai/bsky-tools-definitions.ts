@@ -477,7 +477,7 @@ export function generatePyodideWrapper(): string {
       .join(', ');
 
     return `
-    async def ${tool.name}(self, ${args}):
+    def ${tool.name}(self, ${args}):
         """${tool.description}
         
         Returns: ${tool.returns}
@@ -485,7 +485,7 @@ export function generatePyodideWrapper(): string {
         kwargs = {${kwargsEntries}}
         # Remove None values to let JS use defaults
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
-        result = await self._bridge.${tool.name}(kwargs)
+        result = self._bridge.${tool.name}(kwargs)
         return result.to_py() if hasattr(result, 'to_py') else result`;
   }).join('\n');
 
