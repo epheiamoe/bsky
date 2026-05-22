@@ -521,31 +521,37 @@ from collections import Counter
 
 code = ${codeJson}
 
+# Try to parse; if syntax error, return immediately (no bsky_tools calls possible)
 try:
     tree = ast.parse(code)
+    parse_error = None
 except SyntaxError as e:
-    json.dumps({"hasWriteOperations": True, "writeOperations": [{"tool": "unknown", "count": 1}], "hasDynamicCalls": False, "error": str(e)})
+    parse_error = str(e)
+    tree = None
 
-write_tools = {"create_post", "like", "repost", "follow", "create_list", "edit_list_members"}
-write_ops = []
-dynamic_calls = []
+if parse_error:
+    json.dumps({"hasWriteOperations": False, "writeOperations": [], "hasDynamicCalls": False, "error": parse_error})
+else:
+    write_tools = {"create_post", "like", "repost", "follow", "create_list", "edit_list_members"}
+    write_ops = []
+    dynamic_calls = []
 
-for node in ast.walk(tree):
-    if isinstance(node, ast.Call):
-        if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == 'bsky_tools':
-            tool_name = node.func.attr
-            if tool_name in write_tools:
-                write_ops.append({"tool": tool_name, "line": node.lineno})
-        elif isinstance(node.func, ast.Name) and node.func.id == 'getattr':
-            dynamic_calls.append(node.lineno)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Attribute) and isinstance(node.func.value, ast.Name) and node.func.value.id == 'bsky_tools':
+                tool_name = node.func.attr
+                if tool_name in write_tools:
+                    write_ops.append({"tool": tool_name, "line": node.lineno})
+            elif isinstance(node.func, ast.Name) and node.func.id == 'getattr':
+                dynamic_calls.append(node.lineno)
 
-counts = Counter(op["tool"] for op in write_ops)
+    counts = Counter(op["tool"] for op in write_ops)
 
-json.dumps({
-    "hasWriteOperations": len(write_ops) > 0,
-    "writeOperations": [{"tool": tool, "count": count} for tool, count in counts.items()],
-    "hasDynamicCalls": len(dynamic_calls) > 0,
-})
+    json.dumps({
+        "hasWriteOperations": len(write_ops) > 0,
+        "writeOperations": [{"tool": tool, "count": count} for tool, count in counts.items()],
+        "hasDynamicCalls": len(dynamic_calls) > 0,
+    })
     `);
     
     // pyodide.runPython returns the last expression value (a Python string object)
