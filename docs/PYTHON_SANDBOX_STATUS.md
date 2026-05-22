@@ -149,6 +149,12 @@ AI can reference workspace images using Markdown `![]()` syntax:
 - Worker file size reduced from ~26KB to ~16KB
 - Single source of truth: `packages/core/src/ai/bsky-tools-definitions.ts`
 
+**Injection timing fix (2026-05-22)**:
+- `bsky_tools` module is now injected DURING `init` (before `initComplete`),
+  eliminating race conditions where `execute` arrived before wrapper existed
+- Bridge reference uses Python globals (matching `pyodide.globals.set()`),
+  fixing `ModuleNotFoundError: No module named 'bsky_tools'`
+
 **Example**:
 ```python
 import bsky_tools
