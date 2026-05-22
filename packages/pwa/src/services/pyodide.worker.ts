@@ -335,22 +335,55 @@ try {
  * Convert Pyodide proxy objects to plain JS objects.
  * Pyodide proxies (from Python lists/dicts) cannot be serialized via postMessage.
  */
-function toPlainJs(value: any): any {
+function toPlainJs(value: any, seen = new WeakSet<any>()): any {
   if (value === null || value === undefined) return value;
+  if (typeof value !== 'object') return value;
+
+  // Circular reference guard
+  if (seen.has(value)) {
+    console.warn('[PyodideWorker] Circular reference in toPlainJs');
+    return null;
+  }
+  seen.add(value);
+
   // Pyodide proxy objects have .toJs() method
+  // Use dict_converter to convert Python dicts directly to plain objects
   if (typeof value.toJs === 'function') {
-    return toPlainJs(value.toJs());
+    return toPlainJs(value.toJs({ dict_converter: Object.fromEntries }), seen);
   }
+
   if (Array.isArray(value)) {
-    return value.map(toPlainJs);
+    return value.map(item => toPlainJs(item, seen));
   }
-  if (typeof value === 'object') {
+
+  // Defensive fallback: Pyodide dict.toJs() without dict_converter returns Map
+  if (value instanceof Map) {
     const result: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
-      result[k] = toPlainJs(v);
+    for (const [k, v] of value) {
+      result[String(k)] = toPlainJs(v, seen);
     }
     return result;
   }
+
+  // Pyodide set.toJs() returns Set
+  if (value instanceof Set) {
+    return Array.from(value).map(item => toPlainJs(item, seen));
+  }
+
+  // Python datetime -> JS Date
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  // Plain objects
+  if (typeof value === 'object') {
+    const result: Record<string, any> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = toPlainJs(v, seen);
+    }
+    return result;
+  }
+
   return value;
 }
 
@@ -414,7 +447,7 @@ function createToolBridge(enableWrite: boolean = false) {
       if (writeTools.has(method) && !enableWrite) {
         throw new Error(`Write operation '${method}' blocked: requires user confirmation. The Python script must be approved before write operations are allowed.`);
       }
-      return dispatchToMainThread(method, toPlainJs(kwargs));
+      return dispatchToMainThread(method, kwargs);
     };
   }
 
