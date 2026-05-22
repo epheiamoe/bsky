@@ -85,13 +85,15 @@ PWA 额外包：pandas, numpy, matplotlib。
 
 写操作（create_post, like, repost, follow, create_list, edit_list_members）也可通过 bsky_tools 调用，但仍需用户确认。
 
-fields 参数：指定返回字段以减少输出。例：bsky_tools.search_posts("AI", fields=["uri", "author", "likeCount"])
+fields 参数：指定返回字段以减少输出。例：bsky_tools.search_posts(q="AI", fields=["uri", "author", "likeCount"])
+
+⚠️ 所有参数必须使用关键字传递（keyword-only），参数名使用 snake_case：reply_to, quote_uri, max_replies 等。
 
 正确示例：
 \`\`\`python
-posts = bsky_tools.search_posts("AI", limit=100)
+posts = bsky_tools.search_posts(q="AI", limit=100)
 for post in posts['posts']:  # 注意是 posts['posts'] 不是 posts
-    profile = bsky_tools.get_profile(post['author'])
+    profile = bsky_tools.get_profile(actor=post['author'])
     print(f"{profile['displayName']}: {post['text'][:100]}")
 \`\`\`
 

@@ -155,6 +155,21 @@ AI can reference workspace images using Markdown `![]()` syntax:
 - Bridge reference uses Python globals (matching `pyodide.globals.set()`),
   fixing `ModuleNotFoundError: No module named 'bsky_tools'`
 
+**Pyodide proxy parameter fix (2026-05-22)**:
+- Pyodide dict proxies passed from Python to JS don't have enumerable string keys,
+  so `Object.entries(proxy)` returns `[]`, silently dropping all kwargs.
+- Fixed by calling `toPlainJs(params)` at `dispatchToMainThread` entry point
+  before `Object.entries()`, converting proxy to plain JS Object.
+- Also fixed `toPlainJs()` to use `dict.toJs({dict_converter: Object.fromEntries})`
+  at source, with Map/Set/Date fallbacks and WeakSet cycle guard.
+
+**Python keyword-only parameters (2026-05-22)**:
+- All `bsky_tools` methods now use `def method(self, *, ...)` forcing keyword args.
+- Fixes parameter order confusion (e.g., `get_timeline(None, 3)` parsed as
+  `cursor=None, limit=3` instead of `limit=3`).
+- Applied to both `generatePyodideWrapper()` (PWA) and `generateNodeWrapper()`
+  (TUI/MCP) in `@bsky/core` — single source of truth.
+
 **Example**:
 ```python
 import bsky_tools

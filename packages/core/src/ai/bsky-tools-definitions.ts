@@ -451,6 +451,7 @@ function snakeToCamel(str: string): string {
  */
 export function generatePyodideWrapper(): string {
   const methods = BSKY_TOOLS.map(tool => {
+    // Build Python parameter signatures with defaults
     const params = tool.parameters
       .filter(p => p.name !== 'fields')
       .map(p => {
@@ -458,14 +459,27 @@ export function generatePyodideWrapper(): string {
         if (p.default !== undefined) {
           const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
           return `${pyName}=${def}`;
+        } else if (!p.required) {
+          // Optional params without explicit default get None
+          return `${pyName}=None`;
         }
         return pyName;
       })
       .join(', ');
 
+    // Same logic for the signature line
     const args = tool.parameters
       .filter(p => p.name !== 'fields')
-      .map(p => camelToSnake(p.name))
+      .map(p => {
+        const pyName = camelToSnake(p.name);
+        if (p.default !== undefined) {
+          const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
+          return `${pyName}=${def}`;
+        } else if (!p.required) {
+          return `${pyName}=None`;
+        }
+        return pyName;
+      })
       .concat(['fields=None'])
       .join(', ');
 
@@ -526,6 +540,8 @@ export function generateNodeWrapper(): string {
         if (p.default !== undefined) {
           const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
           return `${pyName}=${def}`;
+        } else if (!p.required) {
+          return `${pyName}=None`;
         }
         return pyName;
       })
@@ -533,7 +549,16 @@ export function generateNodeWrapper(): string {
 
     const args = tool.parameters
       .filter(p => p.name !== 'fields')
-      .map(p => camelToSnake(p.name))
+      .map(p => {
+        const pyName = camelToSnake(p.name);
+        if (p.default !== undefined) {
+          const def = typeof p.default === 'string' ? `"${p.default}"` : String(p.default);
+          return `${pyName}=${def}`;
+        } else if (!p.required) {
+          return `${pyName}=None`;
+        }
+        return pyName;
+      })
       .concat(['fields=None'])
       .join(', ');
 
