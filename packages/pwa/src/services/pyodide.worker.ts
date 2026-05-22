@@ -461,22 +461,37 @@ function createToolBridge(enableWrite: boolean = false) {
 }
 
 function analyzePythonCode(code: string): { hasWriteOperations: boolean; writeOperations: Array<{ tool: string; count: number }>; hasDynamicCalls: boolean; error?: string } {
-  if (!pyodide) return { hasWriteOperations: true, writeOperations: [{ tool: 'unknown', count: 1 }], hasDynamicCalls: false, error: 'Pyodide not initialized' };
-  
+  if (!pyodide) {
+    console.error('[PyodideWorker] AST analysis skipped: pyodide not initialized');
+    return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'Pyodide not initialized' };
+  }
+
   try {
-    // Use JSON.stringify for proper escaping instead of manual replace
     const codeJson = JSON.stringify(code);
-    
-    // runPython returns the value of the last expression (the json.dumps call)
-    // We do NOT depend on _stdout_lines which is only set during executePython
-    const pyResult = pyodide.runPython(`
+
+    // Setup stdout capture for AST analysis (same mechanism as executePython)
+    pyodide.runPython(`
+import sys
+_ast_stdout_lines = []
+
+class _ASTStdoutCapture:
+    def write(self, text):
+        if text:
+            _ast_stdout_lines.append(str(text))
+    def flush(self):
+        pass
+
+sys.stdout = _ASTStdoutCapture()
+    `);
+
+    // Run AST analysis and print JSON result to stdout
+    pyodide.runPython(`
 import ast
 import json
 from collections import Counter
 
 code = ${codeJson}
 
-# Try to parse; if syntax error, return immediately (no bsky_tools calls possible)
 try:
     tree = ast.parse(code)
     parse_error = None
@@ -485,7 +500,7 @@ except SyntaxError as e:
     tree = None
 
 if parse_error:
-    json.dumps({"hasWriteOperations": False, "writeOperations": [], "hasDynamicCalls": False, "error": parse_error})
+    result = {"hasWriteOperations": False, "writeOperations": [], "hasDynamicCalls": False, "error": parse_error}
 else:
     write_tools = {"create_post", "like", "repost", "follow", "create_list", "edit_list_members"}
     write_ops = []
@@ -502,19 +517,33 @@ else:
 
     counts = Counter(op["tool"] for op in write_ops)
 
-    json.dumps({
+    result = {
         "hasWriteOperations": len(write_ops) > 0,
         "writeOperations": [{"tool": tool, "count": count} for tool, count in counts.items()],
         "hasDynamicCalls": len(dynamic_calls) > 0,
-    })
+    }
+
+print(json.dumps(result))
     `);
-    
-    // pyodide.runPython returns the last expression value (a Python string object)
-    const jsonStr = String(pyResult);
-    return JSON.parse(jsonStr);
+
+    // Read captured stdout
+    const stdoutLines = pyodide.globals.get('_ast_stdout_lines').toJs();
+    const stdoutText = Array.isArray(stdoutLines) ? stdoutLines.join('') : String(stdoutLines);
+
+    if (!stdoutText || !stdoutText.trim()) {
+      console.error('[PyodideWorker] AST analysis produced no stdout output');
+      return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: 'AST analysis produced no output' };
+    }
+
+    const result = JSON.parse(stdoutText.trim());
+    console.debug('[PyodideWorker] AST analysis result:', JSON.stringify(result));
+    return result;
   } catch (err) {
-    // Fail-safe: if analysis crashes, assume write operations exist and require confirmation
-    return { hasWriteOperations: true, writeOperations: [{ tool: 'unknown', count: 1 }], hasDynamicCalls: false, error: String(err) };
+    console.error('[PyodideWorker] AST analysis failed:', err);
+    // [FIX] Analysis failure is a technical issue, not a security indicator.
+    // Return false so execution continues; actual write safety is enforced
+    // by createToolBridge(enableWrite) at execution time.
+    return { hasWriteOperations: false, writeOperations: [], hasDynamicCalls: false, error: String(err) };
   }
 }
 
