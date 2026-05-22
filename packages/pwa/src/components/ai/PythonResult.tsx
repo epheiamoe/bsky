@@ -63,13 +63,16 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
   const hasError = typeof parsed.error === 'string' && parsed.error.length > 0;
   const hasExecutionTime = typeof parsed.executionTime === 'number';
 
-  // Filter files to only show those created during/after this execution
-  const executionTimestamp = typeof parsed.executionTimestamp === 'number' ? parsed.executionTimestamp : 0;
-  const recentFiles = workspaceFiles.filter(f => {
-    const fileTime = new Date(f.uploadedAt).getTime();
-    return fileTime >= executionTimestamp - 5000; // 5s tolerance for file save delay
-  });
-  const hasFiles = recentFiles.length > 0;
+  // [FIX] Filter files to only show those produced by THIS specific execution.
+  // Worker now returns only newly-created files in result.files, so we match
+  // workspace files by filename for precise isolation (no timestamp heuristics).
+  const resultFileNames = useMemo(() => {
+    if (!parsed?.files || !Array.isArray(parsed.files)) return new Set<string>();
+    return new Set(parsed.files.map((f: any) => f.name).filter(Boolean));
+  }, [parsed]);
+
+  const relevantFiles = workspaceFiles.filter(f => resultFileNames.has(f.name));
+  const hasFiles = relevantFiles.length > 0;
 
   // Error state
   if (!success) {
@@ -80,7 +83,7 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
         {hasStderr && <StderrBlock stderr={parsed.stderr} />}
         {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
         {loadError && <div className="text-xs text-red-400">{loadError}</div>}
-        {hasFiles && <FileList files={recentFiles} />}
+        {hasFiles && <FileList files={relevantFiles} />}
         {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={false} />}
       </div>
     );
@@ -92,7 +95,7 @@ export function PythonResult({ result, chatId }: PythonResultProps) {
       {hasStderr && <StderrBlock stderr={parsed.stderr} />}
       {loading && <div className="text-xs text-text-secondary/40">Loading workspace files...</div>}
       {loadError && <div className="text-xs text-red-400">{loadError}</div>}
-      {hasFiles && <FileList files={recentFiles} />}
+      {hasFiles && <FileList files={relevantFiles} />}
       {hasExecutionTime && <MetaBar executionTime={parsed.executionTime} success={true} />}
     </div>
   );

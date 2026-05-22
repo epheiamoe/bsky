@@ -697,6 +697,22 @@ async function executePython(code: string, enableWrite: boolean = false) {
   const startTime = Date.now();
 
   try {
+    // [FIX] Snapshot existing files in /workspace/output/ before execution
+    // so we can distinguish files created by THIS execution vs previous ones.
+    const existingFiles = new Set<string>();
+    try {
+      if (pyodide.FS && typeof pyodide.FS.readdir === 'function') {
+        const entries = pyodide.FS.readdir('/workspace/output/');
+        for (const name of entries) {
+          if (name !== '.' && name !== '..') {
+            existingFiles.add(name);
+          }
+        }
+      }
+    } catch (e) {
+      console.debug('[PyodideWorker] Could not snapshot existing files:', e);
+    }
+
     // Setup stdout/stderr capture using Python-level redirection (safe, no JS API dependency)
     pyodide.runPython(
       [
@@ -749,8 +765,10 @@ os.environ['BSKY_WORKSPACE'] = '/workspace'
     stdout = pyodide.globals.get('_stdout_lines').toJs().join('');
     stderr = pyodide.globals.get('_stderr_lines').toJs().join('');
 
-    // Scan output files
-    outputFiles = await scanOutputFiles();
+    // Scan output files and filter to only those created during THIS execution
+    const allFiles = await scanOutputFiles();
+    outputFiles = allFiles.filter(f => !existingFiles.has(f.name));
+    console.debug('[PyodideWorker] Found', allFiles.length, 'total files,', outputFiles.length, 'new files this execution');
   } catch (err) {
     console.log('[PyodideWorker] Execution error: ' + (err instanceof Error ? err.message : String(err)));
     throw err;
