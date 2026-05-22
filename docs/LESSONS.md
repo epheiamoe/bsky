@@ -1,7 +1,7 @@
 # Lessons Learned — Bsky Project
 
 > 详细教训记录，按类别分组。
-> 当前共 69 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM 等领域。
+> 当前共 76 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM 等领域。
 >
 > **快速查找**：按类别浏览，或使用下方表格索引。
 
@@ -17,7 +17,7 @@
 | **Auth/Session** | [lessons/auth.md](lessons/auth.md) | 53, 55 | JWT、认证钩子、凭证管理 |
 | **Storage** | [lessons/storage.md](lessons/storage.md) | 10, 11, 49, 50, 51, 69 | IndexedDB、文件系统、缓存、竞态 |
 | **DM/Messaging** | [lessons/dm.md](lessons/dm.md) | 19, 30, 31, 33, 35 | 私信、对话、反应、认证演进 |
-| **Worker/WASM** | [lessons/worker-wasm.md](lessons/worker-wasm.md) | 57, 58, 59, 60, 61, 62, 63, 67 | Pyodide、Worker、二进制数据、字体 |
+| **Worker/WASM** | [lessons/worker-wasm.md](lessons/worker-wasm.md) | 57, 58, 59, 60, 61, 62, 63, 67, 70, 71, 72, 73, 74, 75, 76 | Pyodide、Worker、二进制数据、字体、Python API 设计 |
 | **React/Hooks** | [lessons/react-hooks.md](lessons/react-hooks.md) | 66 | useCallback、闭包、依赖项 |
 | **PWA** | [lessons/pwa.md](lessons/pwa.md) | 65 | Service Worker、Cache API |
 | **Process** | [lessons/process.md](lessons/process.md) | 15, 60 | 构建顺序、增量开发、测试策略 |
@@ -76,6 +76,13 @@
 | 67 | FS.readFile Encoding | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
 | 68 | Pass Context Through Tool Handlers | AI | [ai.md](lessons/ai.md) |
 | 69 | Unified File Storage | Storage | [storage.md](lessons/storage.md) |
+| 70 | Pyodide Proxy Objects — Silent Data Loss | WASM | [worker-wasm.md](lessons/worker-wasm.md) |
+| 71 | Worker Should Only Handle Transport | Worker | [worker-wasm.md](lessons/worker-wasm.md) |
+| 72 | COEP credentialless for Cross-Origin Media | Browser | [worker-wasm.md](lessons/worker-wasm.md) |
+| 73 | Keyword-Only Parameters Prevent Order Bugs | API Design | [worker-wasm.md](lessons/worker-wasm.md) |
+| 74 | Optional Parameters Need Explicit Defaults | API Design | [worker-wasm.md](lessons/worker-wasm.md) |
+| 75 | Fail-Safe Security Defaults | Security | [worker-wasm.md](lessons/worker-wasm.md) |
+| 76 | sys.modules Registration for import Support | Python | [worker-wasm.md](lessons/worker-wasm.md) |
 
 ---
 

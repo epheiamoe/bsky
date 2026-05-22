@@ -23,21 +23,36 @@
 
 ## 当前版本
 
-**v0.14.0** — Python 沙箱 + 工作区 + bsky_tools ✅ **已完成**：
-- `execute_python` AI 工具（第 34 个），浏览器内运行隔离 Python（Pyodide WASM）
-- bsky_tools Python 库：AI 从 Python 批量调用 Bluesky API（33 个方法）
+**v0.14.0** — 2026-05-22 Released ✅
+
+Python 沙箱 + 工作区 + bsky_tools 库。完整项目记录见 `docs/archive/PHASE14_COMPLETE.md`。
+
+**核心功能**:
+- `execute_python` AI 工具（第 34 个），三平台统一架构
+- bsky_tools Python 库：33 个 Bluesky API 方法可从 Python 批量调用
 - **统一 handler 架构**：PWA Worker → Main Thread → `ToolDispatcher` → `tools.ts` → `BskyClient`
-- 复用 function calling 的 handler 逻辑，零重复实现
-- **测试覆盖率**: 51 项测试，95.7% 通过率（44/46）
-- **已知限制**: `get_popular_feed_generators` 返回 `{feeds, cursor}` 而非直接 list；`get_post_thread` format="flat" 返回人类可读字符串
-- 支持 pandas/numpy/matplotlib 数据分析，文件上传至工作区
-- SharedArrayBuffer + Atomics.wait/notify 实现 Worker ↔ Main Thread 同步通信
-- **安全修复** (2026-05-21): 
-  - AST 分析代码读取不存在的 `_stdout_lines` 导致确认被跳过（严重漏洞）
-  - 修复: 使用 `pyodide.runPython()` 返回值，错误时默认安全（hasWriteOperations=true）
-  - Worker 层增加 enableWrite 拦截作为第二道防线
-  - COEP: `require-corp` → `credentialless` 修复图片加载
-- **i18n**: Python 写入确认对话框支持 zh/en/ja 三语言
+- 零重复实现：所有 handler 逻辑在 `@bsky/core` 中只写一次
+
+**三平台实现**:
+- **PWA**: PyodideSandbox (Web Worker + Pyodide WASM + SharedArrayBuffer)
+- **TUI**: NodePythonSandbox (child_process + JSON-RPC)
+- **MCP**: NodePythonSandbox (同上，通过 MCP stdio 协议暴露)
+
+**安全特性**:
+- AST 预执行分析检测 write 操作
+- 双层确认：AST 分析 + Worker enableWrite gate
+- Fail-safe：分析失败时默认要求确认（而非允许执行）
+- i18n 确认对话框：zh/en/ja
+
+**关键修复**:
+- Pyodide proxy 参数丢失（dict→Map→Object 转换）
+- `import bsky_tools` 模块注册（sys.modules）
+- COEP credentialless（修复 CDN 图片加载）
+- 强制 keyword-only 参数（消除位置传参混乱）
+- 可选参数 None 默认值
+
+**测试**: 51 项测试，95.7% 通过率
+**文档**: `docs/BSKY_TOOLS.md`, `docs/PYTHON_SANDBOX_STATUS.md`, `docs/MCP_TROUBLESHOOTING.md`
 
 **v0.13.9** — API Adapter 模式：`ApiAdapter` 接口 + `ChatCompletionsAdapter` + `ResponsesApiAdapter`。新增 4 个提供商（OpenAI/xAI/Kimi/OpenRouter）。`fixedParams`/`supportsReasoningEffort` 元数据。`reasoningEffort` 支持。Welcome 设置 6 厂商展示卡。
 

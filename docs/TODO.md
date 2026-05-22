@@ -51,7 +51,7 @@
 | **组件排序** | ⬜ | ✅ | 侧边栏 + 组件页 chevron-up/down 排序 |
 | **AI Chat 卡片** | ✅ | ✅ | 折叠式思考卡片 + 工具调用卡片(31 工具格式化) — TUI: ThinkingCard + ToolCard components |
 | **AI Chat /view** | ⬜ | ✅ | /view 命令注入当前页面上下文给 AI |
-| **Python 沙箱** | ✅ | ✅ | execute_python 工具，NodePythonSandbox (child_process)，stdout/stderr 捕获，文件系统，mountFile，workspace 保存 |
+| **Python 沙箱** | ✅ | ✅ | v0.14.0: execute_python 工具，三平台统一架构 (Pyodide/Node.js)，bsky_tools 库 (33 方法)，AST 安全分析，keyword-only 参数 |
 | **工作区文件管理** | ✅ | ✅ | 上传/下载/删除/预览，FileWorkspaceStorage (filesystem)，chatId 隔离，MCP 已修复 |
 | **AI Chat Widget** | ✅ | ✅ | WidgetOverlay 中的 AI Chat Widget，支持 /view 命令注入上下文 |
 | **关于页面** | ✅ | ✅ | PWA(`#/about`) + TUI(`?` 键)，显示 commit hash 构建时注入 |

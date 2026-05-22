@@ -227,6 +227,234 @@ const rawData = pyodide.FS.readFile(path, { encoding: 'binary' });
 1. **Always specify encoding for FS.readFile** — default behavior varies by runtime
 2. **Binary data must stay binary** — never convert to string and back
 3. **Test with binary files** — images, PDFs, zip files expose encoding issues
+
+---
+
+---
+
+## Lesson 70: Pyodide Proxy Objects — The Silent Data Loss
+
+**Category**: WebAssembly / Pyodide
+
+**Root Cause**: Pyodide `dict.toJs()` returns a JavaScript `Map` object, not a plain `Object`. `Object.entries(Map)` returns `[]`, so all dictionary keys are silently lost.
+
+**Context**:
+- Python `kwargs` dict passed to JS bridge as Pyodide proxy
+- Bridge used `Object.entries(params)` to iterate parameters
+- `Object.entries(new Map([['actor', 'handle']]))` → `[]` (empty array!)
+- Result: All API calls had empty parameters, causing 400 errors
+
+**Symptoms**:
+- `get_profile("handle")` → 400 (actor parameter missing)
+- `search_posts("AI")` → "Search query is empty" (q parameter missing)
+- `fields` parameter never worked (also lost in params)
+
+**Solution**: 
+```typescript
+// Wrong — Map has no enumerable string keys
+for (const [key, value] of Object.entries(params)) { ... }
+
+// Right — convert proxy to plain Object first
+const plainParams = toPlainJs(params);
+for (const [key, value] of Object.entries(plainParams)) { ... }
+
+// Even better — convert at source
+dict.toJs({ dict_converter: Object.fromEntries })
+```
+
+**Lesson Learned**:
+1. **Pyodide proxies are not plain JS objects** — they implement Python protocols, not JS conventions
+2. **`instanceof Map` is the correct check** after `.toJs()`, not `typeof === 'object'`
+3. **`dict.toJs({dict_converter: Object.fromEntries})` converts at the C level** — cleanest solution
+4. **Always validate data at boundaries** — Python↔JS boundary is where most bugs hide
+
+---
+
+---
+
+## Lesson 71: Worker Should Only Handle Transport
+
+**Category**: Web Worker / Architecture
+
+**Root Cause**: PWA Worker hardcoded all 33 API handlers (27 read + 6 write), duplicating logic from `tools.ts`. Any API change required updating two places.
+
+**Context**:
+- Initial design: Worker implements handlers → sync XHR → BskyClient
+- Refactored design: Worker is transport-only → SAB + Atomics → Main Thread ToolDispatcher
+- TUI/MCP already used ToolDispatcher; PWA was the outlier
+
+**Benefits of Refactor**:
+- Single source of truth for all handlers
+- Changes apply to all platforms instantly
+- Worker file size: 26KB → 16KB
+- Deleted `bsky-tools-pyodide.ts` (260 lines of duplicates)
+
+**Lesson Learned**:
+1. **Transport layer should not implement business logic** — separates concerns, enables reuse
+2. **Refactor early, not late** — Day 4 refactor prevented days of dual-maintenance
+3. **Unified architecture reduces test burden** — test handlers once, not per-platform
+4. **Dynamic wrapper injection** — `generatePyodideWrapper()` in core generates wrapper for all platforms
+
+---
+
+---
+
+## Lesson 72: COEP credentialless for Cross-Origin Media
+
+**Category**: Browser Security / Headers
+
+**Root Cause**: `Cross-Origin-Embedder-Policy: require-corp` enables SharedArrayBuffer but blocks all cross-origin resources without CORP headers. Bluesky's CDN (`cdn.bsky.app`) does not send CORP headers, breaking all images.
+
+**Solution**: `Cross-Origin-Embedder-Policy: credentialless`
+- Enables SharedArrayBuffer (needed for Worker sync communication)
+- Allows cross-origin images without CORP headers
+- Does not send cookies/credentials to cross-origin requests
+
+**Trade-offs**:
+- ✅ SAB works, images load
+- ⚠️ No credentials on cross-origin requests (acceptable for CDN images)
+- ⚠️ Must verify all third-party resources support CORS
+
+**Lesson Learned**:
+1. **`require-corp` is too strict for media-heavy apps** — most CDNs don't implement CORP
+2. **`credentialless` is the pragmatic choice** for apps loading cross-origin media
+3. **Test with real CDN resources** — local testing won't catch CDN header issues
+4. **COEP affects ALL cross-origin subresources** — fonts, scripts, images, iframes
+
+---
+
+---
+
+## Lesson 73: Keyword-Only Parameters Prevent Order Bugs
+
+**Category**: Python API Design
+
+**Root Cause**: Positional arguments caused parameter confusion. `get_timeline(None, 3)` was parsed as `cursor=None, limit=3` instead of `limit=3`.
+
+**Solution**: `def method(self, *, ...)` — Python's keyword-only parameter syntax.
+
+**Before**:
+```python
+def get_timeline(self, limit=50, cursor=None):  # Positional allowed
+    pass
+
+get_timeline(None, 3)  # cursor=None, limit=3 — WRONG
+```
+
+**After**:
+```python
+def get_timeline(self, *, limit=50, cursor=None):  # Keyword-only
+    pass
+
+get_timeline(None, 3)      # TypeError — good!
+get_timeline(limit=3)      # ✅ Correct
+```
+
+**Lesson Learned**:
+1. **Python's `*,` is the keyword-only separator** — forces all subsequent params to be keyword
+2. **Eliminates an entire class of parameter order bugs** — no more positional confusion
+3. **Self-documenting API** — callers must write parameter names, improving readability
+4. **Applies to ALL wrapper generators** — both Pyodide and Node.js wrappers
+
+---
+
+---
+
+## Lesson 74: Optional Parameters Need Explicit Defaults
+
+**Category**: Python API Design
+
+**Root Cause**: BSKY_TOOLS metadata marked params as `required: false` but without `default` values. After adding `*` keyword-only, these became required parameters.
+
+**Example**:
+```typescript
+// Metadata
+{ name: 'cursor', type: 'string', required: false }  // No default!
+
+// Generated Python (before fix)
+def search_posts(self, *, q, limit=25, cursor):  # cursor is REQUIRED!
+    pass
+```
+
+**Solution**: Auto-generate `=None` for optional params without explicit defaults:
+```typescript
+if (p.default !== undefined) {
+    return `${pyName}=${formatDefault(p.default)}`;
+} else if (!p.required) {
+    return `${pyName}=None`;  // Auto-default to None
+}
+```
+
+**Lesson Learned**:
+1. **`required: false` is not enough** — Python needs a default value for keyword-only params
+2. **Auto-generate `=None` as fallback** — safe default for optional API parameters
+3. **Metadata must be self-consistent** — every optional param should have a default (explicit or auto)
+4. **Test parameter omission** — `method(required_param)` without optional params should work
+
+---
+
+---
+
+## Lesson 75: Fail-Safe Security Defaults
+
+**Category**: Security / Sandboxing
+
+**Root Cause**: AST analysis code had a bug — reading non-existent `_stdout_lines` variable caused a ReferenceError. The catch block returned `hasWriteOperations: false`, allowing write operations without confirmation.
+
+**Impact**: **Security vulnerability** — AI could execute write operations without user confirmation.
+
+**Fix**: Two layers of defense:
+1. **Fail-safe default**: Analysis errors return `hasWriteOperations: true` (require confirmation)
+2. **Worker gate**: `createToolBridge(enableWrite)` blocks write ops unless explicitly enabled
+
+**Before** (vulnerable):
+```typescript
+try {
+    const result = pyodide.runPython(analysisCode);
+    return JSON.parse(result);  // May throw
+} catch {
+    return { hasWriteOperations: false };  // ❌ WRONG — allows writes
+}
+```
+
+**After** (secure):
+```typescript
+try {
+    const result = pyodide.runPython(analysisCode);
+    return JSON.parse(result);
+} catch {
+    return { hasWriteOperations: true };  // ✅ SAFE — requires confirmation
+}
+```
+
+**Lesson Learned**:
+1. **Security analysis failures must default to the safest option** — deny, not allow
+2. **Never return permissive defaults from catch blocks** — errors should restrict, not enable
+3. **Multiple defense layers** — AST analysis + Worker gate + UI confirmation
+4. **Security bugs are P0** — fix immediately, don't wait for next release
+
+---
+
+---
+
+## Lesson 76: sys.modules Registration for import Support
+
+**Category**: Python Module System
+
+**Root Cause**: Python wrapper set `bsky_tools = BskyTools()` as a global variable but did not register it in `sys.modules`. Python's `import` mechanism only looks in `sys.modules`, so `import bsky_tools` failed with `ModuleNotFoundError`.
+
+**Solution**: Add module registration:
+```python
+bsky_tools = BskyTools(bridge)
+import sys
+sys.modules['bsky_tools'] = bsky_tools  # Register for import
+```
+
+**Lesson Learned**:
+1. **Python `import` checks `sys.modules`, not globals** — setting a global variable is not enough
+2. **Module registration must happen before user code runs** — inject during init, not after
+3. **Same fix needed for all environments** — Pyodide (globals via `pyodide.globals.set`) and Node.js (module namespace)
+4. **Test `import module` explicitly** — don't assume global variables are importable
 4. **Type guards after read** — verify returned type matches expectation
 
 ---
