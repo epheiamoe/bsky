@@ -121,54 +121,104 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
     });
   }, []);
 
-  const allMessageLines = useMemo((): Array<React.ReactNode> => {
-    const lines: Array<React.ReactNode> = [];
+  // Calculate focused group index before creating React elements
+  // to avoid circular dependency (focusedGroupIndex used in allMessageLines)
+  const focusedGroupIndex = useMemo(() => {
+    // Calculate line count per group
+    const groupLineCounts: number[] = [];
+    for (const group of messageGroups) {
+      let count = 1; // spacer line
+      if (group.type === 'thinking' || group.type === 'tool') {
+        count += 1; // card itself (single line when collapsed)
+      } else if (group.type === 'user') {
+        count += wrapLines(group.msg.content, maxCols, 2).length;
+      } else if (group.type === 'assistant') {
+        count += 1 + renderMarkdown(group.msg.content).length; // header + content lines
+      }
+      groupLineCounts.push(count);
+    }
+
+    const totalLines = groupLineCounts.reduce((a, b) => a + b, 0) + (loading ? 1 : 0);
+    const viewStart = Math.max(0, totalLines - maxVisible - scrollOffset);
+    const visibleCount = Math.min(maxVisible, totalLines - viewStart);
+    const focusedLineIndex = Math.floor(visibleCount / 2) + viewStart;
+
+    let currentLine = 0;
+    for (let gi = 0; gi < groupLineCounts.length; gi++) {
+      const count = groupLineCounts[gi]!;
+      if (currentLine + count > focusedLineIndex) {
+        return gi;
+      }
+      currentLine += count;
+    }
+    return -1;
+  }, [messageGroups, scrollOffset, maxVisible, loading, maxCols]);
+
+  const allMessageLines = useMemo((): Array<{ element: React.ReactNode; groupIndex: number }> => {
+    const lines: Array<{ element: React.ReactNode; groupIndex: number }> = [];
 
     for (let gi = 0; gi < messageGroups.length; gi++) {
       const group = messageGroups[gi]!;
       if (group.type === 'thinking') {
-        lines.push(
-          <ThinkingCard
-            key={`think-${gi}`}
-            content={group.msg.content}
-            expanded={expandedCards.has(gi)}
-            onToggle={() => toggleCard(gi)}
-          />
-        );
+        lines.push({
+          groupIndex: gi,
+          element: (
+            <ThinkingCard
+              key={`think-${gi}`}
+              content={group.msg.content}
+              expanded={expandedCards.has(gi)}
+              onToggle={() => toggleCard(gi)}
+              isFocused={focusedGroupIndex === gi}
+            />
+          ),
+        });
       } else if (group.type === 'tool') {
-        lines.push(
-          <ToolCard
-            key={`tool-${gi}`}
-            toolName={group.msg.toolName || 'unknown'}
-            args={group.msg.content}
-            resultContent={group.result?.content}
-            expanded={expandedCards.has(gi)}
-            onToggle={() => toggleCard(gi)}
-            chatId={sessionId}
-          />
-        );
+        lines.push({
+          groupIndex: gi,
+          element: (
+            <ToolCard
+              key={`tool-${gi}`}
+              toolName={group.msg.toolName || 'unknown'}
+              args={group.msg.content}
+              resultContent={group.result?.content}
+              expanded={expandedCards.has(gi)}
+              onToggle={() => toggleCard(gi)}
+              chatId={sessionId}
+              isFocused={focusedGroupIndex === gi}
+            />
+          ),
+        });
       } else if (group.type === 'user') {
         for (const l of wrapLines(group.msg.content, maxCols, 2)) {
-          lines.push(<Text key={`user-${gi}-${lines.length}`}>{'▸ ' + l}</Text>);
+          lines.push({
+            groupIndex: gi,
+            element: <Text key={`user-${gi}-${lines.length}`}>{'▸ ' + l}</Text>,
+          });
         }
       } else if (group.type === 'assistant') {
-        lines.push(<Text key={`ai-${gi}`} color="cyan">{'🤖'}</Text>);
+        lines.push({
+          groupIndex: gi,
+          element: <Text key={`ai-${gi}`} color="cyan">{'🤖'}</Text>,
+        });
         const elements = renderMarkdown(group.msg.content);
         for (const el of elements) {
-          lines.push(<Text key={`ai-${gi}-${lines.length}`}>{el}</Text>);
+          lines.push({
+            groupIndex: gi,
+            element: <Text key={`ai-${gi}-${lines.length}`}>{el}</Text>,
+          });
         }
       }
-      lines.push(' ');
+      lines.push({ groupIndex: gi, element: ' ' });
     }
 
-    if (loading) lines.push('... ' + t('ai.thinking'));
+    if (loading) lines.push({ groupIndex: -1, element: '... ' + t('ai.thinking') });
     return lines;
-  }, [messageGroups, expandedCards, toggleCard, loading, maxCols, t, sessionId]);
+  }, [messageGroups, expandedCards, toggleCard, loading, maxCols, t, sessionId, focusedGroupIndex]);
 
   // Only auto-scroll to bottom if user was already at bottom
   const totalMsgCount = useMemo(() => messages.length, [messages]);
   useEffect(() => {
-    if (totalMsgCount > prevMsgCount.current) {
+    if (totalMsgCount + prevMsgCount.current) {
       if (wasAtBottom.current) setScrollOffset(0);
     }
     prevMsgCount.current = totalMsgCount;
@@ -274,6 +324,16 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
       if (input === 'n' || input === 'N' || key.escape) { rejectAction(); return; }
       return;
     }
+
+    // Toggle focused thinking/tool card with Enter/Space
+    if ((key.return || input === ' ') && focusedGroupIndex >= 0) {
+      const group = messageGroups[focusedGroupIndex];
+      if (group && (group.type === 'thinking' || group.type === 'tool')) {
+        toggleCard(focusedGroupIndex);
+        return;
+      }
+    }
+
     // User is typing in the input box — let TextInput handle it
     if (focused) return;
 
@@ -406,10 +466,11 @@ export function AIChatView({ client, aiConfig, sessionId, contextPost, contextPr
           <Text dimColor color="cyan">{'↑ '}{t('ai.scrollAbove', { n: viewStart })}</Text>
         )}
         {visibleLines.map((line, i) => {
-          if (typeof line === 'string') {
-            return <Text key={viewStart + i} dimColor={line.startsWith('  ⮡') || line.startsWith('🔧')}>{line || ' '}</Text>;
+          const element = line.element;
+          if (typeof element === 'string') {
+            return <Text key={viewStart + i} dimColor={element.startsWith('  ⮡') || element.startsWith('🔧')}>{element || ' '}</Text>;
           }
-          return <React.Fragment key={viewStart + i}>{line}</React.Fragment>;
+          return <React.Fragment key={viewStart + i}>{element}</React.Fragment>;
         })}
         {!canScrollDown && !canScrollUp && allMessageLines.length <= maxVisible && <Box flexGrow={1} />}
         {canScrollDown && (

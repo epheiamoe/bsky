@@ -62,9 +62,10 @@ interface ToolCardProps {
   expanded: boolean;
   onToggle: () => void;
   chatId?: string;
+  isFocused?: boolean;
 }
 
-export function ToolCard({ toolName, args, resultContent, expanded, chatId }: ToolCardProps) {
+export function ToolCard({ toolName, args, resultContent, expanded, chatId, isFocused }: ToolCardProps) {
   const display = useMemo(
     () => formatToolResult(toolName, resultContent ?? args ?? ''),
     [toolName, resultContent, args]
@@ -102,8 +103,8 @@ export function ToolCard({ toolName, args, resultContent, expanded, chatId }: To
   // Collapsed view
   if (!expanded) {
     return (
-      <Text color="yellow">
-        {'▸ 🔧 '}{toolName}: {previewText}
+      <Text color={isFocused ? 'cyan' : 'yellow'} bold={isFocused}>
+        {(isFocused ? '▸ ' : '') + '▸ 🔧 '}{toolName}: {previewText}
       </Text>
     );
   }
@@ -111,7 +112,9 @@ export function ToolCard({ toolName, args, resultContent, expanded, chatId }: To
   // Expanded view
   return (
     <Box flexDirection="column">
-      <Text color="yellow">{'▼ 🔧 '}{toolName}</Text>
+      <Text color={isFocused ? 'cyan' : 'yellow'} bold={isFocused}>
+        {(isFocused ? '▸ ' : '') + '▼ 🔧 '}{toolName}
+      </Text>
 
       {formattedArgs && (
         <Text color="yellow" dimColor>{'| Args: '}{formattedArgs}</Text>
