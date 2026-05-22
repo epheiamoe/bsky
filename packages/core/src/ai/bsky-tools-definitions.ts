@@ -500,7 +500,11 @@ class BskyTools:
         self._bridge = bridge
 ${methods}
 
-bsky_tools = BskyTools(js.bskyToolsBridge)
+# Use Python globals instead of js module for reliable bridge access
+_bridge = globals().get('bskyToolsBridge')
+if _bridge is None:
+    raise RuntimeError("bskyToolsBridge not found in Python globals. Ensure it is set via pyodide.globals.set() before injecting wrapper.")
+bsky_tools = BskyTools(_bridge)
 `;
 }
 
