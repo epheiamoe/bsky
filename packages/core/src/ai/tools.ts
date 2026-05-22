@@ -221,7 +221,7 @@ print(f"Processed {len(df)} rows")`,
         let repo = p.repo as string;
         // Handle 'me' shorthand — use current authenticated user's DID
         if (repo === 'me') {
-          repo = client.getDid();
+          repo = client.getDID();
         }
         // listRecords endpoint requires DID, not handle — auto-resolve if needed
         if (repo && !repo.startsWith('did:')) {
