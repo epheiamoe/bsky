@@ -142,6 +142,13 @@ AI can reference workspace images using Markdown `![]()` syntax:
 - **Security**: Worker-level enableWrite gate + fail-safe error handling
 - **i18n**: Write confirmation dialog localized (zh/en/ja)
 
+**Architecture refactor (2026-05-22)**:
+- PWA Worker no longer hardcodes `bsky_tools` Python wrapper
+- Worker receives dynamically generated wrapper from `generatePyodideWrapper()` in `@bsky/core`
+- Bridge methods changed from positional args to kwargs dict (unified with TUI/MCP JSON-RPC interface)
+- Worker file size reduced from ~26KB to ~16KB
+- Single source of truth: `packages/core/src/ai/bsky-tools-definitions.ts`
+
 **Example**:
 ```python
 import bsky_tools
