@@ -52,7 +52,7 @@ export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './uti
 export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';
 export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost } from './utils/extractEmbeds.js';
 export { formatThreadgateSummary, buildThreadgateRules, rulesToThreadgateType, getThreadgateDisplayKey } from './utils/formatThreadgate.js';
-export { useI18n } from './i18n/index.js';
+export { useI18n, getI18nStore } from './i18n/index.js';
 export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';
 export { availableLocales, localeLabels } from './i18n/index.js';
 
