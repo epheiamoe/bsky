@@ -2,7 +2,7 @@
 
 > **Status**: ✅ Phase 14 Complete | PWA + TUI + MCP  
 > **Test Coverage**: 51 tests, 95.7% pass rate | All core features verified  
-> **Last Updated**: 2026-05-21
+> **Last Updated**: 2026-05-22
 
 `bsky_tools` is a Python library embedded in the AI Python sandbox that lets you batch-call Bluesky AT Protocol API methods directly from Python code. Instead of making individual tool calls one at a time, you can write Python scripts that efficiently process data in loops.
 
@@ -169,7 +169,7 @@ Different methods return data under different keys. Use this table to know what 
 
 | Method | Data Key | Metadata Keys | Notes |
 |--------|----------|---------------|-------|
-| `search_posts` | `posts` | `cursor`, `total`, `hitsTotal` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt` |
+| `search_posts` | `posts` | `cursor`, `count`, `hitsTotal` | `count` = returned count (not total matches). Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt` |
 | `get_timeline` | `feed` | `cursor` | Each item has `uri`, `author`, `text`, `likeCount`, `repostCount`, `indexedAt`, `createdAt` |
 | `get_author_feed` | `feed` | `cursor` | Same structure as `get_timeline` |
 | `get_connections` | `items` | `direction`, `total`, `cursor` | Each item has `handle`, `displayName`. Use `direction="followers"` or `direction="following"` |
@@ -180,6 +180,7 @@ Different methods return data under different keys. Use this table to know what 
 | `get_feed_generator` | — | — | Returns feed info directly (unwrapped): `uri`, `did`, `creator`, `displayName`, `description`, `likeCount` |
 | `get_lists` | `lists` | — | Each item has `uri`, `name`, `purpose`, `memberCount` |
 | `get_list_feed` | `feed` | `cursor` | Same structure as `get_timeline` (includes `indexedAt` and `createdAt`) |
+| `get_post_thread` | — | — | Returns string (flat), dict (tree), or structured JSON (json format). Use `format='json'` for `depth`, `author`, `text`, `replies` array |
 | `get_record` | `uri`, `cid`, `value` | — | `value` contains the actual record data |
 | `resolve_handle` | `did` | — | Returns `{did: "did:plc:..."}` |
 | `get_profile` | — | — | Returns profile directly: `did`, `handle`, `displayName`, `followersCount`, `followsCount`, `postsCount` |
@@ -256,31 +257,50 @@ for acc in inactive[:10]:
     print(f"  {acc['handle']}: {acc['days_since_post']} days")
 ```
 
+### Example 4: Analyze Thread (JSON Format)
+
+```python
+# Get structured thread data for programmatic processing
+thread = bsky_tools.get_post_thread(uri, format="json", depth=2, max_replies=10)
+
+# thread contains: depth, author, text, likeCount, replies[]
+def print_thread(node, indent=0):
+    prefix = "  " * indent
+    print(f"{prefix}[{node['depth']}] @{node['author']}: {node['text'][:100]}")
+    for reply in node['replies']:
+        print_thread(reply, indent + 1)
+
+print_thread(thread)
+```
+
 ---
 
 ## Error Handling
 
-All bsky_tools methods raise `BskyToolsError` on failure. Always wrap calls in try/except:
+All bsky_tools methods return a consistent error structure on failure:
 
 ```python
-from bsky_tools import BskyToolsError
-
-try:
-    profile = bsky_tools.get_profile("nonexistent.handle")
-    print(f"Found: {profile['displayName']}")
-except BskyToolsError as e:
-    print(f"Error: {e}")
-except Exception as e:
-    print(f"Unexpected error: {e}")
+result = bsky_tools.get_feed(feed="at://invalid")
+if isinstance(result, dict) and 'error' in result:
+    print(f"Error: {result['error']['message']}")
+else:
+    # Process successful result
+    pass
 ```
 
-Common errors:
-- `BskyToolsError: BskyTools not initialized. Auth required.` — Bridge not ready, try manual init
-- `BskyToolsError: HTTP 400: ...` — Invalid parameters or API error
-- `BskyToolsError: HTTP 404: ...` — Resource not found
-- `BskyToolsError: Handle not found` — resolve_handle failed to resolve
+Error format:
+```json
+{"error": {"type": "api_error", "message": "Failed to fetch feed"}}
+```
 
-**Tip**: Check `hasattr(globals(), 'bskyToolsBridge')` before using if you encounter init errors.
+Common error types:
+- `api_error` — Invalid parameters or API error
+- `not_found` — Resource not found
+- `auth_error` — Authentication required
+
+**Note**: Methods no longer throw exceptions with internal URLs. All errors are returned as structured dicts.
+
+For write operations, you may still encounter `BskyToolsError` if AST analysis detects unconfirmed write calls.
 
 ---
 
@@ -289,10 +309,11 @@ Common errors:
 | Feature | PWA (Browser) | TUI/MCP (Node.js) |
 |---------|---------------|-------------------|
 | Mechanism | Sync XHR in Web Worker | JSON-RPC over stdin/stdout |
-| Read ops | ✅ 27 methods | ✅ All 33 methods |
-| Write ops | ❌ Disabled (error) | ✅ With confirmation |
-| External libs | pandas, numpy, matplotlib (auto) | Requires manual install |
+| Read ops | ✅ All 33 methods | ✅ All 33 methods |
+| Write ops | ✅ With confirmation | ✅ With confirmation |
+| External libs | pandas, numpy, matplotlib (auto) | Requires manual `pip install pandas numpy matplotlib` |
 | Web tools | search_web_ddg, search_wikipedia | search_web_ddg, search_wikipedia |
+| Workspace | `/workspace/{data,output,temp}` | `BSKY_WORKSPACE` points to `output/{chatId}/`; user files in sibling `data/` |
 
 ---
 
@@ -310,14 +331,14 @@ Common errors:
 | # | Limitation | Workaround |
 |---|-----------|-----------|
 | 1 | `fields` filters **returned data**, not the API request | All data is fetched; filtering happens before returning to Python |
-| 2 | `get_post_thread` in PWA lacks `format`/`maxReplies` | Use `depth` parameter only; for flat format, use `get_post_context` |
+| 2 | `search_posts` `count` field equals returned count, not total matches | API does not return total match count |
 | 3 | `list_records` may return HTTP 501 on some PDS instances | Use `cursor` pagination; verify actor's PDS supports this endpoint |
 | 4 | `get_suggested_follows` may return HTTP 501 | This endpoint is not available on all PDS instances |
 | 5 | `get_feed` may return HTTP 401 if JWT expired | Re-authenticate to refresh the session token |
 | 6 | `search_web_ddg` fails in PWA due to CORS | Use TUI/MCP for web search, or use `fetch_web_markdown` with specific URLs |
 | 7 | Write operations require confirmation | Use TUI/MCP for programmatic write workflows |
 | 8 | Write operations on PWA require browser `confirm()` dialog | Use TUI/MCP for programmatic write workflows |
-| 9 | `BSKY_WORKSPACE` environment variable not set in Pyodide | Use `/workspace/{data,output,temp}` directly instead of `os.environ['BSKY_WORKSPACE']` |
+| 9 | `BSKY_WORKSPACE` in TUI/MCP points to `output/{chatId}/`, not base dir | To access user uploads: `os.path.join(os.path.dirname(os.path.dirname(ws)), 'data', 'filename')` |
 | 10 | Module namespace pollution | Previous execution's variables may leak into `bsky_tools` module namespace |
 
 ---
