@@ -5,6 +5,7 @@ import type { PostView, AIConfig } from '@bsky/core';
 import { BskyClient } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
+import { useModerationConfig } from './hooks/useModerationConfig.js';
 import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId } from '@bsky/app';
 import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
@@ -71,6 +72,7 @@ export function App() {
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed_v2'));
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
+  const moderationConfigState = useModerationConfig();
   const feedScrollTopRef = useRef(0);
   const profileScrollTopRef = useRef(0);
   const notifsScrollTopRef = useRef(0);
@@ -296,6 +298,8 @@ export function App() {
       <WelcomeCard
         config={appConfig}
         onConfigChange={setAppConfig}
+        moderationConfig={moderationConfigState.config}
+        onModerationConfigChange={moderationConfigState.updateConfig}
         onGoToSettings={() => {
           localStorage.setItem('bsky_welcomed_v2', '1');
           setShowWelcome(false);
@@ -491,6 +495,9 @@ export function App() {
               localStorage.removeItem('bsky_welcomed_v2');
               setShowWelcome(true);
             }}
+            client={client}
+            moderationConfig={moderationConfigState.config}
+            onModerationConfigChange={moderationConfigState.updateConfig}
           />
         );
       default:

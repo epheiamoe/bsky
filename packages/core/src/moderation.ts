@@ -57,6 +57,15 @@ export interface ModerationConfig {
   labelers: LabelerConfig[];
 }
 
+/**
+ * Official Bluesky moderation labeler DID.
+ * This is @moderation.bsky.app.
+ */
+export const OFFICIAL_LABELER_DID = 'did:plc:ar7c4by46qjdydhdevvrndac';
+
+/** Standard label identifiers that appear in the global settings UI */
+export const STANDARD_LABELS = ['porn', 'sexual', 'nudity', 'graphic-media'] as const;
+
 /** Default moderation configuration — conservative, warn-on-adult */
 export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   adultContentEnabled: false,
@@ -66,17 +75,19 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
     { label: 'nudity', visibility: 'warn' },
     { label: 'graphic-media', visibility: 'warn' },
   ],
-  labelers: [],
+  labelers: [
+    {
+      did: OFFICIAL_LABELER_DID,
+      name: 'Bluesky Moderation Service',
+      description: 'Official content moderation service handling spam, NSFW, hate speech, and other basic moderation labels.',
+      labels: [],
+      labelPrefs: {},
+      isActive: true,
+    },
+  ],
 };
 
-/**
- * Official Bluesky moderation labeler DID.
- * This is @moderation.bsky.app.
- */
-export const OFFICIAL_LABELER_DID = 'did:plc:ar7c4by46qjdydhdevvrndac';
 
-/** Standard label identifiers that appear in the global settings UI */
-export const STANDARD_LABELS = ['porn', 'sexual', 'nudity', 'graphic-media'] as const;
 
 /**
  * Resolve moderation decision for a subject based on its labels and user config.

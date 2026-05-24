@@ -94,3 +94,5 @@ export {
   resetAIChatSession,
   setWidgetToggleCallback,
 } from './hooks/widgetStore.js';
+
+export { BUILTIN_LABELERS } from './data/default-labelers.js';

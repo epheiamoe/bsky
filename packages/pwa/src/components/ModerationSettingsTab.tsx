@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import type { ModerationConfig, LabelerConfig, ContentLabelPref } from '@bsky/core';
-import { OFFICIAL_LABELER_DID, STANDARD_LABELS, isStandardLabel } from '@bsky/core';
-import { useLabelerInfo, fetchLabelerInfos } from '@bsky/app';
+import { OFFICIAL_LABELER_DID, STANDARD_LABELS } from '@bsky/core';
+import { useLabelerInfo, fetchLabelerInfos, BUILTIN_LABELERS } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
 
@@ -14,10 +14,10 @@ interface ModerationSettingsTabProps {
 
 type Visibility = 'hide' | 'warn' | 'ignore';
 
-const VISIBILITY_OPTIONS: { value: Visibility; labelKey: string; color: string }[] = [
-  { value: 'hide', labelKey: 'moderation.hide', color: 'text-red-500' },
-  { value: 'warn', labelKey: 'moderation.warn', color: 'text-amber-500' },
-  { value: 'ignore', labelKey: 'moderation.ignore', color: 'text-green-500' },
+const VISIBILITY_OPTIONS: { value: Visibility; labelKey: string }[] = [
+  { value: 'hide', labelKey: 'moderation.hide' },
+  { value: 'warn', labelKey: 'moderation.warn' },
+  { value: 'ignore', labelKey: 'moderation.ignore' },
 ];
 
 export function ModerationSettingsTab({ config, client, onChange }: ModerationSettingsTabProps) {
@@ -25,10 +25,13 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
   const [newLabelerDid, setNewLabelerDid] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [activeLabelerTab, setActiveLabelerTab] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
 
-  // Ensure official labeler is in the list
   const officialLabeler = config.labelers.find(l => l.did === OFFICIAL_LABELER_DID);
   const thirdPartyLabelers = config.labelers.filter(l => l.did !== OFFICIAL_LABELER_DID);
+
+  // Subscribed DIDs for filtering recommendations
+  const subscribedDids = new Set(config.labelers.map(l => l.did));
 
   const handleVisibilityChange = useCallback((label: string, visibility: Visibility) => {
     const existing = config.contentLabels.findIndex(l => l.label === label);
@@ -50,6 +53,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
   const handleAddLabeler = useCallback(async () => {
     if (!client || !newLabelerDid.trim()) return;
     setIsAdding(true);
+    setAddError(null);
     try {
       const infos = await fetchLabelerInfos(client, [newLabelerDid.trim()]);
       const info = infos.get(newLabelerDid.trim());
@@ -65,9 +69,11 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
         };
         onChange({ ...config, labelers: [...config.labelers, newLabeler] });
         setNewLabelerDid('');
+      } else {
+        setAddError('无法获取标签提供商信息');
       }
     } catch (err) {
-      console.error('Failed to add labeler:', err);
+      setAddError(err instanceof Error ? err.message : '添加失败');
     } finally {
       setIsAdding(false);
     }
@@ -97,6 +103,35 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
     });
   }, [config, onChange]);
 
+  const handleAddRecommended = useCallback(async (handle: string) => {
+    if (!client) return;
+    setIsAdding(true);
+    try {
+      const resolved = await client.resolveHandle(handle);
+      const did = resolved.did;
+      if (subscribedDids.has(did)) return;
+      
+      const infos = await fetchLabelerInfos(client, [did]);
+      const info = infos.get(did);
+      if (info) {
+        const newLabeler: LabelerConfig = {
+          did,
+          name: info.view.creator.displayName || info.view.creator.handle,
+          description: '',
+          avatar: info.view.creator.avatar,
+          labels: info.policies?.labelValueDefinitions || [],
+          labelPrefs: {},
+          isActive: true,
+        };
+        onChange({ ...config, labelers: [...config.labelers, newLabeler] });
+      }
+    } catch (err) {
+      console.error('Failed to add recommended labeler:', err);
+    } finally {
+      setIsAdding(false);
+    }
+  }, [client, config, onChange, subscribedDids]);
+
   const getGlobalVisibility = (label: string): Visibility => {
     const pref = config.contentLabels.find(l => l.label === label);
     return pref?.visibility || 'warn';
@@ -108,7 +143,6 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
       <section>
         <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.generalTitle')}</h3>
         
-        {/* Adult Content Toggle */}
         <label className="flex items-center gap-3 cursor-pointer mb-4">
           <input
             type="checkbox"
@@ -119,7 +153,6 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
           <span className="text-sm text-text-primary">{t('moderation.adultContent')}</span>
         </label>
 
-        {/* Standard Labels Table */}
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/50 text-xs font-medium text-text-secondary border-b border-border">
             <span>{t('moderation.label')}</span>
@@ -168,13 +201,12 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
           )}
         </div>
 
-        {officialLabeler ? (
+        {officialLabeler && (
           <OfficialLabelerPanel
             labeler={officialLabeler}
+            client={client}
             onPrefChange={(label, visibility) => handleLabelerPrefChange(OFFICIAL_LABELER_DID, label, visibility)}
           />
-        ) : (
-          <p className="text-sm text-text-secondary">{t('moderation.officialNotLoaded')}</p>
         )}
       </section>
 
@@ -182,7 +214,6 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
       <section>
         <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.thirdPartyLabelers')}</h3>
 
-        {/* Add new labeler */}
         <div className="flex gap-2 mb-4">
           <input
             type="text"
@@ -199,8 +230,12 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
             {isAdding ? t('action.loading') : t('action.add')}
           </button>
         </div>
+        {addError && (
+          <div className="mb-3 p-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-500">
+            {addError}
+          </div>
+        )}
 
-        {/* Third-party labeler tabs */}
         {thirdPartyLabelers.length > 0 ? (
           <div className="space-y-2">
             {thirdPartyLabelers.map(labeler => (
@@ -220,6 +255,29 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
           <p className="text-sm text-text-secondary text-center py-4">{t('moderation.noThirdPartyLabelers')}</p>
         )}
       </section>
+
+      {/* ── Recommended Labelers ── */}
+      <section>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.recommendedLabelers') || '推荐标签提供商'}</h3>
+        <div className="space-y-2">
+          {BUILTIN_LABELERS.filter(b => !subscribedDids.has(b.did || '') && b.handle !== 'moderation.bsky.app').map(builtin => (
+            <div key={builtin.handle} className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface/30">
+              <div>
+                <div className="text-sm font-medium text-text-primary">{builtin.name}</div>
+                <div className="text-xs text-text-secondary">@{builtin.handle}</div>
+                <div className="text-xs text-text-secondary/70 mt-0.5">{builtin.description}</div>
+              </div>
+              <button
+                onClick={() => handleAddRecommended(builtin.handle)}
+                disabled={isAdding}
+                className="px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium disabled:opacity-50 transition-colors"
+              >
+                {t('action.add')}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -227,23 +285,84 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
 /** Official labeler panel with dynamically fetched labels */
 function OfficialLabelerPanel({
   labeler,
+  client,
   onPrefChange,
 }: {
   labeler: LabelerConfig;
+  client: BskyClient | null;
   onPrefChange: (label: string, visibility: Visibility) => void;
 }) {
   const { t } = useI18n();
+  const { view, policies, isLoading, error } = useLabelerInfo(labeler.did, client);
+  const [retryKey, setRetryKey] = useState(0);
 
+  const defs = policies?.labelValueDefinitions || [];
   // Filter out standard labels (already shown in general settings)
-  const extraLabels = labeler.labels.filter(l => !isStandardLabel(l.identifier));
+  const extraLabels = defs.filter(d => !STANDARD_LABELS.includes(d.identifier as any));
+
+  if (error) {
+    return (
+      <div className="border border-border rounded-lg p-4 bg-surface/50">
+        <div className="flex items-center gap-2 mb-2">
+          <Icon name="alert-circle" size={16} className="text-red-500" />
+          <span className="text-sm text-text-primary">{t('moderation.loadError') || '无法获取标签列表'}</span>
+        </div>
+        <button
+          onClick={() => setRetryKey(k => k + 1)}
+          className="text-sm text-primary hover:text-primary-hover transition-colors"
+        >
+          {t('action.refresh') || '重新加载'}
+        </button>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="border border-border rounded-lg p-4 bg-surface/50">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-text-secondary">{t('action.loading')}</span>
+        </div>
+      </div>
+    );
+  }
 
   if (extraLabels.length === 0) {
-    return <p className="text-sm text-text-secondary">{t('moderation.noExtraLabels')}</p>;
+    return (
+      <div className="border border-border rounded-lg p-3">
+        <div className="flex items-center gap-2 mb-2">
+          {view?.creator.avatar ? (
+            <img src={view.creator.avatar} alt="" className="w-6 h-6 rounded-full" />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-xs">🛡</div>
+          )}
+          <div>
+            <div className="text-sm font-medium text-text-primary">{view?.creator.displayName || view?.creator.handle || labeler.name}</div>
+            <div className="text-xs text-text-secondary">@{view?.creator.handle || 'moderation.bsky.app'}</div>
+          </div>
+        </div>
+        <p className="text-sm text-text-secondary">{t('moderation.noExtraLabels')}</p>
+      </div>
+    );
   }
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/50 text-xs font-medium text-text-secondary border-b border-border">
+      <div className="px-3 py-2 bg-surface/50 border-b border-border">
+        <div className="flex items-center gap-2">
+          {view?.creator.avatar ? (
+            <img src={view.creator.avatar} alt="" className="w-6 h-6 rounded-full" />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-xs">🛡</div>
+          )}
+          <div>
+            <div className="text-sm font-medium text-text-primary">{view?.creator.displayName || view?.creator.handle || labeler.name}</div>
+            <div className="text-xs text-text-secondary">@{view?.creator.handle || 'moderation.bsky.app'}</div>
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
         <span>{t('moderation.label')}</span>
         <span className="text-center">{t('moderation.hide')}</span>
         <span className="text-center">{t('moderation.warn')}</span>
@@ -315,7 +434,7 @@ function ThirdPartyLabelerCard({
             <div className="text-sm font-medium text-text-primary">
               {view?.creator.displayName || view?.creator.handle || labeler.name}
             </div>
-            <div className="text-xs text-text-secondary">{labeler.did}</div>
+            <div className="text-xs text-text-secondary">@{view?.creator.handle || labeler.did}</div>
           </div>
         </div>
         <div className="flex items-center gap-2">

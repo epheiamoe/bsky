@@ -6,6 +6,9 @@
  * - Adult content toggle
  * - Subscribed labeler configurations
  * 
+ * Built-in labelers (e.g., official @moderation.bsky.app) are always present
+ * and cannot be removed by the user (only disabled via isActive).
+ * 
  * Note: This is PWA-only. TUI has its own config store in packages/tui/src/config/.
  * Both use the same ModerationConfig interface from @bsky/core for consistency.
  */
@@ -19,16 +22,52 @@ const MODERATION_CONFIG_KEY = 'bsky_moderation_config';
 function loadConfig(): ModerationConfig {
   try {
     const raw = localStorage.getItem(MODERATION_CONFIG_KEY);
-    if (!raw) return { ...DEFAULT_MODERATION_CONFIG };
+    const defaults = structuredClone(DEFAULT_MODERATION_CONFIG);
+    
+    if (!raw) return defaults;
+    
     const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_MODERATION_CONFIG,
-      ...parsed,
-      // Ensure labelers array exists
-      labelers: parsed.labelers || [],
+    
+    // Merge user config over defaults
+    const merged: ModerationConfig = {
+      ...defaults,
+      adultContentEnabled: parsed.adultContentEnabled ?? defaults.adultContentEnabled,
+      contentLabels: parsed.contentLabels ?? defaults.contentLabels,
+      labelers: [], // Rebuild below
     };
+    
+    // Rebuild labelers: start with built-in (preserving user overrides)
+    const userLabelers = new Map<string, LabelerConfig>(
+      (parsed.labelers || []).map((l: LabelerConfig) => [l.did, l])
+    );
+    
+    // Add built-in labelers (cannot be removed, only disabled)
+    for (const builtin of defaults.labelers) {
+      const user = userLabelers.get(builtin.did);
+      if (user) {
+        // User has modified this labeler — merge (preserve user prefs)
+        merged.labelers.push({
+          ...builtin,
+          ...user,
+          // Keep built-in name/description as fallback
+          name: user.name || builtin.name,
+          description: user.description || builtin.description,
+        });
+        userLabelers.delete(builtin.did);
+      } else {
+        // User config missing built-in — restore it
+        merged.labelers.push(builtin);
+      }
+    }
+    
+    // Add any remaining user-added labelers
+    for (const [, userLabeler] of userLabelers) {
+      merged.labelers.push(userLabeler);
+    }
+    
+    return merged;
   } catch {
-    return { ...DEFAULT_MODERATION_CONFIG };
+    return structuredClone(DEFAULT_MODERATION_CONFIG);
   }
 }
 
@@ -45,6 +84,12 @@ export function useModerationConfig() {
       saveConfig(next);
       return next;
     });
+  }, []);
+
+  /** Direct config update (for SettingsPage/WelcomeCard pass-through) */
+  const updateConfig = useCallback((newConfig: ModerationConfig) => {
+    setConfigState(newConfig);
+    saveConfig(newConfig);
   }, []);
 
   const setContentLabelVisibility = useCallback((label: string, visibility: 'hide' | 'warn' | 'ignore') => {
@@ -103,6 +148,7 @@ export function useModerationConfig() {
   return {
     config,
     setConfig,
+    updateConfig,
     setContentLabelVisibility,
     setAdultContentEnabled,
     addLabeler,
