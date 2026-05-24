@@ -164,9 +164,40 @@ All moderation strings in `packages/app/src/i18n/locales/{zh,en,ja}.ts`:
 - `moderation.infoTitle`, `moderation.report*`
 - `moderation.welcomeTitle`, `moderation.welcomeDesc`
 
+## Known Issues (v0.15.0)
+
+### Critical: moderationDecision Not Applied to Posts
+
+**Problem**: `PostCard` accepts a `moderationDecision` prop, but **zero callers pass it**:
+
+| Component | Passes `moderationDecision`? |
+|-----------|------------------------------|
+| `FeedTimeline.tsx` | ❌ No |
+| `BookmarkPage.tsx` | ❌ No |
+| `ProfilePage.tsx` | ❌ No |
+| `SearchPage.tsx` | ❌ No |
+| `ListDetailPage.tsx` | ❌ No |
+| `ThreadView.tsx` | ❌ No |
+
+**Root Cause**: `useModeration()` hook and `resolveModerationBatch()` exist but are not integrated into list rendering pipelines.
+
+**Fix Required**: 
+1. Add `useModerationBatch(posts, config, client)` hook in list components
+2. Pass per-post `ModerationDecision` to each `PostCard`
+3. Apply same pattern to TUI `PostItem` components
+
+### Fixed Issues
+
+- **SettingsPage scroll**: `min-h-0` → `h-dvh md:h-[calc(100dvh-3rem)]` + `overflow-y-auto`
+- **Labeler add silent success**: Added `feedback` state (success/error banner, auto-clear 3s)
+- **Recommended filter**: Changed from displayName to handle matching via `subscribedHandles` Set
+- **Table scroll interception**: `overflow-hidden` → `overflow-clip` on all moderation tables
+- **Defunct labeler**: Removed `aegis.blue`, added 10 verified active labelers with real DIDs
+
 ## Future Work
 
-- [ ] TUI moderation UI implementation
+- [x] TUI moderation UI implementation (SettingsView + report shortcut)
+- [ ] **List-level batch moderation application** (Critical — decision engine works but not wired)
 - [ ] Self-labeling in compose (PWA + TUI)
 - [ ] AI tool: `check_post_labels`
 - [ ] WebSocket subscription (`subscribeLabels`) for real-time updates

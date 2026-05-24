@@ -258,4 +258,51 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/stores/cache.ts` | 模块级数据缓存层 |
 | `packages/app/src/hooks/useVirtualizedList.ts` | 统一虚拟滚动 + 高度缓存 + 位置恢复 |
 
+## v0.15.0 标记系统 (Labeling System) — 2026-05-24
+
+### 核心组件
+- **决策引擎**: `packages/core/src/moderation.ts` — `resolveModeration()`, `DEFAULT_MODERATION_CONFIG`, `STANDARD_LABELS`
+- **标签缓存**: `packages/core/src/moderation-cache.ts` — `LabelCache` batch queries (up to 250 URIs), TTL=5min
+- **React Hook**: `packages/app/src/hooks/useModeration.ts` — `useModeration()` + `resolveModerationBatch()`
+- **配置存储**: `packages/pwa/src/hooks/useModerationConfig.ts` — localStorage persistence
+
+### PWA UI (已完成)
+- **ModerationSettingsTab** — Adult toggle switch (bsky.app style), per-label cards with descriptions, segmented buttons (show/warn/hide), feedback banners
+- **ModerationOverlay** — HiddenContent / WarningContent / BlurredMedia / BadgeRow / LabelSourceInfo
+- **ReportButton** — Modal dialog in ThreadView
+- **WelcomeCard Step 5** — Moderation preferences onboarding
+- **#/settings route** — Full page (not modal), fixed height `h-dvh md:h-[calc(100dvh-3rem)]`, `overflow-y-auto` content area
+
+### TUI UI (已完成)
+- **SettingsView** — `,` quick config, Tab: `🛡 审核`
+  - General subtab: adult toggle + 4 standard labels (hide/warn/ignore cycle)
+  - Labelers subtab: enable/disable third-party labelers
+- **UnifiedThreadView** — `!` key to report post
+
+### 已知问题 (Critical)
+- **moderationDecision not applied to posts**: `PostCard` accepts `moderationDecision` prop, but zero callers pass it. Decision engine works but UI never uses it.
+- **List-level batch moderation missing**: Need to call `resolveModerationBatch()` in list components and pass per-post decisions to `PostCard`
+
+### 内置标签服务 (10 verified active)
+1. `moderation.bsky.app` — Bluesky官方
+2. `skywatch.blue` — Skywatch
+3. `perisai.bsky.social` — Perisai
+4. `moderation.blacksky.app` — Blacksky
+5. `asukafield.xyz` — Asuka
+6. `xblock.aendra.dev` — XBlock
+7. `bskyttrpg.bsky.social` — TTRPG
+8. `sonasky.app` — SonaSky
+9. `creatorlabeler.bsky.social` — CreatorLabeler
+10. `arttheft.bsky.social` — ArtTheft
+
+> 验证方式: `com.atproto.identity.resolveHandle` + `app.bsky.labeler.getServices`
+> 已移除: `aegis.blue` (defunct ~2024 mid)
+
+### 开发规则补充
+29. `overflow-hidden` → `overflow-clip` for rounded containers that should not intercept wheel events
+30. SettingsPage height pattern: `h-dvh md:h-[calc(100dvh-3rem)]` with `overflow-y-auto` content area
+31. Built-in labelers MUST have real DIDs verified via API; no placeholder handles without DIDs
+32. Adult content toggle: master switch controls visibility of per-label controls; "show" replaces "ignore" in UI
+33. `nudity` defaults to `ignore` (show), others to `warn`
+
 (End of file)
