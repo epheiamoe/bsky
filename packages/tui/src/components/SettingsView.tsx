@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { useI18n } from '@bsky/app';
-import { PROVIDERS, getProviderById, getModelInfo } from '@bsky/core';
-import type { ProviderInfo, ModelInfo } from '@bsky/core';
+import { PROVIDERS, getProviderById, getModelInfo, DEFAULT_MODERATION_CONFIG, OFFICIAL_LABELER_DID } from '@bsky/core';
+import type { ProviderInfo, ModelInfo, ModerationConfig, LabelerConfig } from '@bsky/core';
 import { getTuiConfig, saveTuiConfig } from '../config/configStore.js';
 import type { TuiConfig } from '../config/configStore.js';
 
@@ -11,7 +11,7 @@ interface SettingsViewProps {
   goBack: () => void;
 }
 
-type Tab = 'model' | 'scenario' | 'lang' | 'keys';
+type Tab = 'model' | 'scenario' | 'lang' | 'keys' | 'moderation';
 
 const LANG_OPTIONS = [
   { value: 'zh', label: '中文' },
@@ -28,6 +28,7 @@ const TAB_LABELS: Record<Tab, string> = {
   scenario: '🎯 场景',
   lang: '🌐 语言',
   keys: '🔑 Keys',
+  moderation: '🛡 审核',
 };
 
 const SCENARIO_LABELS: Record<string, string> = {
@@ -77,6 +78,13 @@ export function SettingsView({ goBack }: SettingsViewProps) {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
 
+  // Moderation tab
+  const [modConfig, setModConfig] = useState<ModerationConfig>(config.moderationConfig || DEFAULT_MODERATION_CONFIG);
+  const [modFocus, setModFocus] = useState(0);
+  const [modLabelerFocus, setModLabelerFocus] = useState(0);
+  const [modLabelFocus, setModLabelFocus] = useState(0);
+  const [modSubTab, setModSubTab] = useState<'general' | 'labelers'>('general');
+
   const selectedProvider = PROVIDERS[providerIdx]!;
   const models = selectedProvider.models;
   const currentModel = models[modelIdx];
@@ -100,6 +108,7 @@ export function SettingsView({ goBack }: SettingsViewProps) {
       },
       apiKeys,
       scenarioModels,
+      moderationConfig: modConfig,
     };
     saveTuiConfig(newConfig);
     setSaved(true);
@@ -114,7 +123,7 @@ export function SettingsView({ goBack }: SettingsViewProps) {
 
     // Tab navigation
     if (key.tab && !editingKey) {
-      const tabs: Tab[] = ['model', 'scenario', 'lang', 'keys'];
+      const tabs: Tab[] = ['model', 'scenario', 'lang', 'keys', 'moderation'];
       const idx = tabs.indexOf(tab);
       setTab(tabs[(idx + 1) % tabs.length]!);
       return;
@@ -208,6 +217,53 @@ export function SettingsView({ goBack }: SettingsViewProps) {
         const pid = PROVIDERS[keyFocusIdx]!.id;
         setEditingKey(pid);
         setEditingValue(apiKeys[pid] || '');
+      }
+      return;
+    }
+
+    if (tab === 'moderation') {
+      if (key.leftArrow || key.rightArrow) {
+        setModSubTab(s => s === 'general' ? 'labelers' : 'general');
+        setModFocus(0);
+        return;
+      }
+      if (modSubTab === 'general') {
+        const maxFocus = 4; // adult toggle + 3 standard labels
+        if (key.upArrow) setModFocus(i => Math.max(0, i - 1));
+        if (key.downArrow) setModFocus(i => Math.min(maxFocus, i + 1));
+        if (key.return) {
+          if (modFocus === 0) {
+            setModConfig(prev => ({ ...prev, adultContentEnabled: !prev.adultContentEnabled }));
+          } else {
+            const label = ['porn', 'sexual', 'nudity', 'graphic-media'][modFocus - 1]!;
+            const existing = modConfig.contentLabels.findIndex(l => l.label === label);
+            const visibilities: Array<'hide' | 'warn' | 'ignore'> = ['hide', 'warn', 'ignore'];
+            let currentVis: 'hide' | 'warn' | 'ignore' = 'warn';
+            if (existing >= 0) currentVis = modConfig.contentLabels[existing]!.visibility;
+            const nextVis = visibilities[(visibilities.indexOf(currentVis) + 1) % 3]!;
+            let contentLabels = [...modConfig.contentLabels];
+            if (existing >= 0) {
+              contentLabels[existing] = { ...contentLabels[existing]!, visibility: nextVis };
+            } else {
+              contentLabels.push({ label, visibility: nextVis });
+            }
+            setModConfig(prev => ({ ...prev, contentLabels }));
+          }
+        }
+      } else {
+        // labelers subtab
+        const labelers = modConfig.labelers;
+        if (key.upArrow) setModLabelerFocus(i => Math.max(0, i - 1));
+        if (key.downArrow) setModLabelerFocus(i => Math.min(labelers.length, i + 1));
+        if (key.return && modLabelerFocus < labelers.length) {
+          const labeler = labelers[modLabelerFocus]!;
+          setModConfig(prev => ({
+            ...prev,
+            labelers: prev.labelers.map((l, i) =>
+              i === modLabelerFocus ? { ...l, isActive: !l.isActive } : l
+            ),
+          }));
+        }
       }
       return;
     }
@@ -359,6 +415,74 @@ export function SettingsView({ goBack }: SettingsViewProps) {
               </Box>
             );
           })}
+        </Box>
+      )}
+
+      {/* Moderation tab */}
+      {tab === 'moderation' && (
+        <Box flexDirection="column" marginTop={0}>
+          <Box marginBottom={0}>
+            <Text color={modSubTab === 'general' ? 'cyanBright' : undefined} backgroundColor={modSubTab === 'general' ? '#1e40af' : undefined}>
+              {' 通用 '}
+            </Text>
+            <Text color={modSubTab === 'labelers' ? 'cyanBright' : undefined} backgroundColor={modSubTab === 'labelers' ? '#1e40af' : undefined}>
+              {' 标签商 '}
+            </Text>
+            <Text dimColor>{'  ←→:切换子标签'}</Text>
+          </Box>
+
+          {modSubTab === 'general' && (
+            <Box flexDirection="column" marginTop={0}>
+              <Box height={1}>
+                <Text color={modFocus === 0 ? 'cyanBright' : undefined} backgroundColor={modFocus === 0 ? '#1e40af' : undefined}>
+                  {modFocus === 0 ? '▸' : ' '} 成人内容:{' '}
+                  <Text color={modConfig.adultContentEnabled ? 'green' : 'red'}>
+                    {modConfig.adultContentEnabled ? '显示' : '隐藏'}
+                  </Text>
+                </Text>
+              </Box>
+              {['porn', 'sexual', 'nudity', 'graphic-media'].map((label, i) => {
+                const pref = modConfig.contentLabels.find(l => l.label === label);
+                const vis = pref?.visibility || 'warn';
+                const visMap: Record<string, string> = { hide: '隐藏', warn: '警告', ignore: '忽略' };
+                return (
+                  <Box key={label} height={1}>
+                    <Text color={modFocus === i + 1 ? 'cyanBright' : undefined} backgroundColor={modFocus === i + 1 ? '#1e40af' : undefined}>
+                      {modFocus === i + 1 ? '▸' : ' '} {label}:{' '}
+                      <Text color={vis === 'hide' ? 'red' : vis === 'warn' ? 'yellow' : 'green'}>
+                        {visMap[vis] || vis}
+                      </Text>
+                    </Text>
+                  </Box>
+                );
+              })}
+              <Box marginTop={0}>
+                <Text dimColor>  Enter: 切换选项</Text>
+              </Box>
+            </Box>
+          )}
+
+          {modSubTab === 'labelers' && (
+            <Box flexDirection="column" marginTop={0}>
+              {modConfig.labelers.length === 0 ? (
+                <Text dimColor>未添加第三方标签提供商</Text>
+              ) : (
+                modConfig.labelers.map((labeler, i) => (
+                  <Box key={labeler.did} height={1}>
+                    <Text color={i === modLabelerFocus ? 'cyanBright' : undefined} backgroundColor={i === modLabelerFocus ? '#1e40af' : undefined}>
+                      {i === modLabelerFocus ? '▸' : ' '} {labeler.name || labeler.did.slice(0, 20)}...{' '}
+                      <Text color={labeler.isActive ? 'green' : 'red'}>
+                        {labeler.isActive ? '启用' : '禁用'}
+                      </Text>
+                    </Text>
+                  </Box>
+                ))
+              )}
+              <Box marginTop={0}>
+                <Text dimColor>  Enter: 切换启用/禁用</Text>
+              </Box>
+            </Box>
+          )}
         </Box>
       )}
 

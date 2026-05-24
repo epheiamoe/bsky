@@ -15,6 +15,7 @@
 | `docs/KEYBOARD.md` | TUI 快捷键冲突表 |
 | `docs/MCP.md` | MCP 服务器实现记录 |
 | `docs/DM.md` | DM 私信 API/鉴权/模型 |
+| `docs/LABELING.md` | 标记/审核系统架构 (v0.15.0) |
 | `CHANGELOG.md` | 完整版本历史 |
 
 > 其余文档见 `docs/archive/`。详细教训见 `docs/LESSONS.md`（69 课分类索引 → `docs/lessons/*.md`）。
@@ -22,6 +23,29 @@
 > **下一阶段计划**：`docs/PHASE14_PLAN.md` — AI Batch AT Tool Calls（bluesky_tools Python 库）
 
 ## 当前版本
+
+**v0.15.0 (in development)** — Labeling / Moderation System
+
+### 已完成功能 (v0.15.0):
+- **标记/审核系统**: 第三方标签提供商支持，通用/提供商独立配置
+- **动态标签查询**: `com.atproto.label.queryLabels` 批量查询 + LabelCache (TTL 5min)
+- **审核决策引擎**: 9 种 severity × blurs 组合，多提供商独立评估，最严格动作优先
+- **PWA UI**: 设置页面(通用+官方+第三方), PostCard 集成, ThreadView 举报按钮, Welcome 第5步
+- **Info 按钮**: 所有隐藏/警告/徽章元素旁显示标签来源信息
+- **举报功能**: `createModerationReport` API，帖子详情页举报
+- **TUI 配置**: `TuiConfig.moderationConfig` 字段已添加
+- **i18n**: zh/en/ja 完整翻译
+
+### 进行中:
+- TUI 审核 UI (设置 + 帖子渲染 + 举报快捷键)
+- 自标记 (发帖时添加标签)
+
+### 计划:
+- WebSocket 实时标签订阅
+- Bluesky 官方偏好同步 (`putPreferences`)
+- AI 工具: `check_post_labels`
+
+---
 
 **v0.14.0** — 2026-05-22 Released ✅
 

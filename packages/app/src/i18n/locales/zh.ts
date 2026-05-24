@@ -555,7 +555,7 @@ const zh: LocaleMessages = {
   'keys.bookmarks': '↑↓/jk:导航 Enter:查看 d:删除 r:刷新 q:引用',
   'keys.lists': 'j/k:导航 Enter:查看 c:创建 d:删除 r:刷新 Esc:返回',
   'keys.listDetail': 'Tab:切换 j/k:导航 Enter:查看 r:刷新 Esc:返回',
-  'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 d:删除 f:翻译 u:关注 g:资料 R:回复限制',
+  'keys.thread': 'h:主题帖 ↑↓/jk:移动 Enter:聚焦 c:回复 l:赞 r:转发 v:收藏 d:删除 f:翻译 u:关注 g:资料 R:回复限制 !:举报',
   'keys.compose': 'Enter:发送 · Esc:取消 · i:媒体 · D:草稿 · f:润色 · g:回复限制 · P:加帖 · X:删帖',
   'keys.composeMedia': '输入媒体路径 · Enter 确认 · Esc 取消',
   'keys.profile': 'Tab/←→:切换标签 u:关注 f:翻译 a:AI p/P:关注/粉丝 j/k:导航 m:更多 Enter:查看 Esc:返回',

@@ -18,12 +18,23 @@ export function parseAtUri(uri: string): AtUri {
   };
 }
 
+export interface SelfLabel {
+  $type: 'com.atproto.label.defs#selfLabel';
+  val: string;
+}
+
+export interface SelfLabels {
+  $type: 'com.atproto.label.defs#selfLabels';
+  values: SelfLabel[];
+}
+
 export interface PostRecord {
   text: string;
   createdAt: string;
   embed?: ImageEmbed | ExternalEmbed | RecordEmbed | RecordWithMediaEmbed | VideoEmbed;
   facets?: Facet[];
   reply?: { root: { uri: string; cid: string }; parent: { uri: string; cid: string } };
+  labels?: SelfLabels;
 }
 
 export interface ImageEmbed {

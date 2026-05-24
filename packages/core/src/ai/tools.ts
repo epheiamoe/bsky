@@ -946,6 +946,14 @@ print(f"Processed {len(df)} rows")`,
               },
               description: 'Optional: Who can reply to this post. Only for original posts (no replyTo) and quotes (quoteUri without replyTo). For replies, this is ignored.',
             },
+            labels: {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['porn', 'sexual', 'nudity', 'graphic-media', '!no-unauthenticated'],
+              },
+              description: 'Optional: Self-labels for content moderation. Use porn/sexual/nudity/graphic-media for sensitive content. Use !no-unauthenticated to hide from logged-out users.',
+            },
           },
           required: ['text'],
         },
@@ -1048,6 +1056,15 @@ print(f"Processed {len(df)} rows")`,
             };
           }
         }
+        // Add self-labels if provided
+        const selfLabels = p.labels as string[] | undefined;
+        if (selfLabels && selfLabels.length > 0) {
+          record.labels = {
+            $type: 'com.atproto.label.defs#selfLabels',
+            values: selfLabels.map(val => ({ $type: 'com.atproto.label.defs#selfLabel', val })),
+          };
+        }
+
         const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
 
         // Apply threadgate if specified (only for original posts and quotes, not replies)

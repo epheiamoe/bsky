@@ -179,6 +179,18 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         }).catch(() => setTranslating(false));
         return;
       }
+      // Report post
+      if (input === '!' && client) {
+        client.createModerationReport({
+          reasonType: 'com.atproto.moderation.defs#reasonOther',
+          subject: { uri: cursorLine.uri, cid: cursorLine.cid },
+        }).then(() => {
+          process.stderr.write('\n📮 Report submitted\n');
+        }).catch((err: unknown) => {
+          process.stderr.write(`\n❌ Report failed: ${err instanceof Error ? err.message : String(err)}\n`);
+        });
+        return;
+      }
     }
   });
 
