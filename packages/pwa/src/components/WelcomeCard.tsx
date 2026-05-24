@@ -512,17 +512,18 @@ export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange, mo
                   <div className="border border-border rounded-lg overflow-hidden">
                     <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/50 text-xs font-medium text-text-secondary border-b border-border">
                       <span>{t('moderation.label')}</span>
-                      <span className="text-center">{t('moderation.hide')}</span>
+                      <span className="text-center">{t('moderation.show')}</span>
+                      <span className="text-center">{t('moderation.badge')}</span>
                       <span className="text-center">{t('moderation.warn')}</span>
-                      <span className="text-center">{t('moderation.ignore')}</span>
+                      <span className="text-center">{t('moderation.hide')}</span>
                     </div>
                     {['porn', 'sexual', 'nudity', 'graphic-media'].map(label => {
                       const pref = moderationConfig.contentLabels.find(l => l.label === label);
                       const current = pref?.visibility || 'warn';
                       return (
-                        <div key={label} className="grid grid-cols-4 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
+                        <div key={label} className="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
                           <span className="text-sm text-text-primary capitalize">{t(`moderation.labels.${label}`) || label}</span>
-                          {(['hide', 'warn', 'ignore'] as const).map(opt => (
+                          {(['show', 'badge', 'warn', 'hide'] as const).map(opt => (
                             <label key={opt} className="flex justify-center cursor-pointer">
                               <input
                                 type="radio"

@@ -3,7 +3,7 @@ import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActo
 import type { AppView } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
-import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
+import type { BskyClient, AIConfig, PostView, ThreadgateRule, ModerationDecision } from '@bsky/core';
 import { describeImage } from '@bsky/core';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
