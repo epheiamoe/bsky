@@ -11,6 +11,8 @@ import { truncateName } from './PostCard.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { PullToRefresh } from './PullToRefresh.js';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 
 interface SearchPageProps {
   client: BskyClient;
@@ -43,7 +45,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const { config } = useModerationConfig();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
-  const moderationDecisions = useModerationBatch(posts, config, client);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -122,6 +124,16 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
           </button>
         ))}
       </div>
+
+      {(() => {
+        const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+        return (
+          <>
+            <LabelerFailureBanner failedLabelers={bannerFailures} />
+            <LabelerFailureToast failedLabelers={failedLabelers} />
+          </>
+        );
+      })()}
 
       {inputFocused && !input && hasHistory && !searched && (
         <div className="flex-shrink-0 mx-4 my-2 rounded-lg border border-border bg-surface shadow-lg max-h-48 overflow-y-auto">

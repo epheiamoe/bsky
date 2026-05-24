@@ -52,6 +52,8 @@ function loadConfig(): ModerationConfig {
           // Keep built-in name/description as fallback
           name: user.name || builtin.name,
           description: user.description || builtin.description,
+          // Ensure failureBehavior has a default (v0.14.1 migration)
+          failureBehavior: user.failureBehavior || builtin.failureBehavior || 'banner',
         });
         userLabelers.delete(builtin.did);
       } else {
@@ -62,7 +64,11 @@ function loadConfig(): ModerationConfig {
     
     // Add any remaining user-added labelers
     for (const [, userLabeler] of userLabelers) {
-      merged.labelers.push(userLabeler);
+      merged.labelers.push({
+        ...userLabeler,
+        // Ensure failureBehavior has a default (v0.14.1 migration)
+        failureBehavior: userLabeler.failureBehavior || 'banner',
+      });
     }
     
     return merged;

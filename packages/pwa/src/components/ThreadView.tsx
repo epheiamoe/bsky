@@ -1,6 +1,8 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch } from '@bsky/app';
 import type { AppView } from '@bsky/app';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
 import { describeImage } from '@bsky/core';
 import { PostCard } from './PostCard.js';
@@ -58,7 +60,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   } = useThread(client, uri);
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const moderationDecisions = useModerationBatch(flatLines, config, client);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(flatLines, config, client);
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
 
@@ -137,6 +139,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   if (loading) return <Spinner />;
 
+  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
   return (
     <div className="min-h-[100dvh] bg-background animate-fadeIn">
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
@@ -153,6 +157,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           <h1 className="text-lg font-semibold text-text-primary">{t('thread.title')}</h1>
         </div>
       </header>
+      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureToast failedLabelers={failedLabelers} />
 
       <div className="max-w-content mx-auto py-6 space-y-2">
         {/* ── 讨论源 (parent chain) ── */}

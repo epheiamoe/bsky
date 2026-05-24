@@ -9,6 +9,8 @@ import { EditProfileModal } from './EditProfileModal.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 import { Icon } from './Icon.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -50,7 +52,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
-  const moderationDecisions = useModerationBatch(posts, config, client);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
@@ -213,8 +215,11 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   }
 
   // ── Main profile view ──
+  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
   return (
     <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
+      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureToast failedLabelers={failedLabelers} />
       {/* Header bar */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
         <button

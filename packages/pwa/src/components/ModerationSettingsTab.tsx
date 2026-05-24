@@ -26,12 +26,18 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
   const [isAdding, setIsAdding] = useState(false);
   const [activeLabelerTab, setActiveLabelerTab] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const officialLabeler = config.labelers.find(l => l.did === OFFICIAL_LABELER_DID);
   const thirdPartyLabelers = config.labelers.filter(l => l.did !== OFFICIAL_LABELER_DID);
 
-  // Subscribed DIDs for filtering recommendations
+  // Subscribed DIDs + handles for filtering recommendations
   const subscribedDids = new Set(config.labelers.map(l => l.did));
+  const subscribedHandles = new Set(config.labelers.map(l => {
+    // Extract handle from DID or try to find matching builtin
+    const builtin = BUILTIN_LABELERS.find(b => b.did === l.did);
+    return builtin?.handle || l.did;
+  }));
 
   const handleVisibilityChange = useCallback((label: string, visibility: Visibility) => {
     const existing = config.contentLabels.findIndex(l => l.label === label);
@@ -66,6 +72,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
           labels: info.policies?.labelValueDefinitions || [],
           labelPrefs: {},
           isActive: true,
+          failureBehavior: 'banner',
         };
         onChange({ ...config, labelers: [...config.labelers, newLabeler] });
         setNewLabelerDid('');
@@ -103,34 +110,79 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
     });
   }, [config, onChange]);
 
+  const handleFailureBehaviorChange = useCallback((did: string, behavior: 'silent' | 'banner' | 'block') => {
+    onChange({
+      ...config,
+      labelers: config.labelers.map(l =>
+        l.did === did ? { ...l, failureBehavior: behavior } : l
+      ),
+    });
+  }, [config, onChange]);
+
   const handleAddRecommended = useCallback(async (handle: string) => {
     if (!client) return;
     setIsAdding(true);
+    setFeedback(null);
     try {
-      const resolved = await client.resolveHandle(handle);
-      const did = resolved.did;
-      if (subscribedDids.has(did)) return;
-      
-      const infos = await fetchLabelerInfos(client, [did]);
-      const info = infos.get(did);
-      if (info) {
-        const newLabeler: LabelerConfig = {
-          did,
-          name: info.view.creator.displayName || info.view.creator.handle,
-          description: '',
-          avatar: info.view.creator.avatar,
-          labels: info.policies?.labelValueDefinitions || [],
-          labelPrefs: {},
-          isActive: true,
-        };
-        onChange({ ...config, labelers: [...config.labelers, newLabeler] });
+      // Step 1: resolve handle
+      let did: string;
+      try {
+        const resolved = await client.resolveHandle(handle);
+        did = resolved.did;
+      } catch (err) {
+        setFeedback({ type: 'error', message: t('moderation.resolveFailed') || `无法解析 @${handle}，请检查 handle 是否正确` });
+        return;
       }
+
+      if (subscribedDids.has(did)) {
+        setFeedback({ type: 'error', message: t('moderation.alreadyAdded') || '该标签提供商已添加' });
+        return;
+      }
+
+      // Step 2: get labeler services
+      let views: any[];
+      try {
+        views = await client.getLabelerServices([did]);
+      } catch (err: any) {
+        setFeedback({ type: 'error', message: t('moderation.serviceFetchFailed') || `获取标签服务失败: ${err.message || err}` });
+        return;
+      }
+
+      if (!views || views.length === 0) {
+        setFeedback({ type: 'error', message: t('moderation.notALabeler') || '该账户未注册标签服务' });
+        return;
+      }
+
+      const view = views[0];
+
+      // Step 3: get policies
+      let policies: any = null;
+      try {
+        const record = await client.getRecord(did, 'app.bsky.labeler.service', 'self');
+        policies = (record.value as any)?.policies || null;
+      } catch {
+        // Policies may not exist — not fatal
+      }
+
+      const newLabeler: LabelerConfig = {
+        did,
+        name: view.creator.displayName || view.creator.handle,
+        description: '',
+        avatar: view.creator.avatar,
+        labels: policies?.labelValueDefinitions || [],
+        labelPrefs: {},
+        isActive: true,
+        failureBehavior: 'banner',
+      };
+      onChange({ ...config, labelers: [...config.labelers, newLabeler] });
+      setFeedback({ type: 'success', message: t('moderation.addSuccess') || '标签提供商已添加' });
     } catch (err) {
-      console.error('Failed to add recommended labeler:', err);
+      setFeedback({ type: 'error', message: err instanceof Error ? err.message : t('moderation.addFailed') || '添加失败' });
     } finally {
       setIsAdding(false);
+      setTimeout(() => setFeedback(null), 3000);
     }
-  }, [client, config, onChange, subscribedDids]);
+  }, [client, config, onChange, subscribedDids, t]);
 
   const getGlobalVisibility = (label: string): Visibility => {
     const pref = config.contentLabels.find(l => l.label === label);
@@ -139,49 +191,65 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
 
   return (
     <div className="space-y-6">
-      {/* ── General Settings ── */}
+      {/* ── Content Filters ── */}
       <section>
         <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.generalTitle')}</h3>
         
-        <label className="flex items-center gap-3 cursor-pointer mb-4">
-          <input
-            type="checkbox"
-            checked={config.adultContentEnabled}
-            onChange={e => handleAdultToggle(e.target.checked)}
-            className="w-4 h-4 accent-primary"
-          />
+        {/* Adult content master toggle */}
+        <div className="flex items-center justify-between p-3 rounded-lg bg-surface/50 border border-border mb-4">
           <span className="text-sm text-text-primary">{t('moderation.adultContent')}</span>
-        </label>
-
-        <div className="border border-border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/50 text-xs font-medium text-text-secondary border-b border-border">
-            <span>{t('moderation.label')}</span>
-            <span className="text-center">{t('moderation.hide')}</span>
-            <span className="text-center">{t('moderation.warn')}</span>
-            <span className="text-center">{t('moderation.ignore')}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-secondary">
+              {config.adultContentEnabled ? t('moderation.adultEnabled') : t('moderation.adultDisabled')}
+            </span>
+            <button
+              onClick={() => handleAdultToggle(!config.adultContentEnabled)}
+              className={`relative w-11 h-6 rounded-full transition-colors ${config.adultContentEnabled ? 'bg-primary' : 'bg-surface-tertiary'}`}
+              role="switch"
+              aria-checked={config.adultContentEnabled}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${config.adultContentEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+              />
+            </button>
           </div>
-          {STANDARD_LABELS.map(label => {
-            const current = getGlobalVisibility(label);
-            return (
-              <div key={label} className="grid grid-cols-4 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
-                <span className="text-sm text-text-primary capitalize">{t(`moderation.labels.${label}`) || label}</span>
-                {VISIBILITY_OPTIONS.map(opt => (
-                  <label key={opt.value} className="flex justify-center cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`label-${label}`}
-                      value={opt.value}
-                      checked={current === opt.value}
-                      onChange={() => handleVisibilityChange(label, opt.value)}
-                      className="w-4 h-4 accent-primary"
-                    />
-                  </label>
-                ))}
-              </div>
-            );
-          })}
         </div>
-        <p className="text-xs text-text-secondary mt-2">{t('moderation.globalNote')}</p>
+
+        {/* Per-label controls — only visible when adult content is enabled */}
+        {config.adultContentEnabled && (
+          <div className="space-y-3">
+            {STANDARD_LABELS.map(label => {
+              const current = getGlobalVisibility(label);
+              return (
+                <div key={label} className="p-3 rounded-lg border border-border bg-surface/30">
+                  <div className="mb-2">
+                    <div className="text-sm font-medium text-text-primary">{t(`moderation.labels.${label}`) || label}</div>
+                    <div className="text-xs text-text-secondary/70 mt-0.5">{t(`moderation.labelDesc.${label}`)}</div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { value: 'ignore' as Visibility, labelKey: 'moderation.show' },
+                      { value: 'warn' as Visibility, labelKey: 'moderation.warn' },
+                      { value: 'hide' as Visibility, labelKey: 'moderation.hide' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => handleVisibilityChange(label, opt.value)}
+                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                          current === opt.value
+                            ? 'bg-primary text-white'
+                            : 'bg-surface hover:bg-surface-tertiary text-text-secondary'
+                        }`}
+                      >
+                        {t(opt.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       {/* ── Official Labeler ── */}
@@ -248,6 +316,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
                 onPrefChange={(label, visibility) => handleLabelerPrefChange(labeler.did, label, visibility)}
                 onActiveToggle={(isActive) => handleLabelerActiveToggle(labeler.did, isActive)}
                 onRemove={() => handleRemoveLabeler(labeler.did)}
+                onFailureBehaviorChange={(behavior) => handleFailureBehaviorChange(labeler.did, behavior)}
               />
             ))}
           </div>
@@ -256,11 +325,26 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
         )}
       </section>
 
+      {/* ── Feedback banner ── */}
+      {feedback && (
+        <div className={`p-3 rounded-lg border text-sm ${
+          feedback.type === 'success'
+            ? 'bg-green-500/10 border-green-500/20 text-green-500'
+            : 'bg-red-500/10 border-red-500/20 text-red-500'
+        }`}>
+          {feedback.message}
+        </div>
+      )}
+
       {/* ── Recommended Labelers ── */}
       <section>
         <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.recommendedLabelers') || '推荐标签提供商'}</h3>
         <div className="space-y-2">
-          {BUILTIN_LABELERS.filter(b => !subscribedDids.has(b.did || '') && b.handle !== 'moderation.bsky.app').map(builtin => (
+          {BUILTIN_LABELERS.filter(b => 
+            b.handle !== 'moderation.bsky.app' && 
+            !subscribedDids.has(b.did || '') &&
+            !subscribedHandles.has(b.handle)
+          ).map(builtin => (
             <div key={builtin.handle} className="flex items-center justify-between p-3 rounded-lg border border-border bg-surface/30">
               <div>
                 <div className="text-sm font-medium text-text-primary">{builtin.name}</div>
@@ -348,7 +432,7 @@ function OfficialLabelerPanel({
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-clip">
       <div className="px-3 py-2 bg-surface/50 border-b border-border">
         <div className="flex items-center gap-2">
           {view?.creator.avatar ? (
@@ -406,6 +490,7 @@ function ThirdPartyLabelerCard({
   onPrefChange,
   onActiveToggle,
   onRemove,
+  onFailureBehaviorChange,
 }: {
   labeler: LabelerConfig;
   client: BskyClient | null;
@@ -414,12 +499,13 @@ function ThirdPartyLabelerCard({
   onPrefChange: (label: string, visibility: Visibility) => void;
   onActiveToggle: (isActive: boolean) => void;
   onRemove: () => void;
+  onFailureBehaviorChange?: (behavior: 'silent' | 'banner' | 'block') => void;
 }) {
   const { t } = useI18n();
   const { view, isLoading } = useLabelerInfo(labeler.did, client);
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-clip">
       <div
         className="flex items-center justify-between px-3 py-2.5 bg-surface/50 cursor-pointer hover:bg-surface/80 transition-colors"
         onClick={onToggle}
@@ -462,8 +548,28 @@ function ThirdPartyLabelerCard({
 
       {isExpanded && (
         <div className="px-3 py-3 border-t border-border">
+          {/* Failure behavior selector */}
+          {onFailureBehaviorChange && (
+            <div className="mb-3 flex items-center gap-2">
+              <span className="text-xs text-text-secondary">{t('moderation.failureBehavior')}:</span>
+              <select
+                value={labeler.failureBehavior}
+                onChange={e => onFailureBehaviorChange(e.target.value as 'silent' | 'banner' | 'block')}
+                className="text-xs bg-surface border border-border rounded px-2 py-1 text-text-primary"
+              >
+                <option value="silent">{t('moderation.failureBehavior.silent')}</option>
+                <option value="banner">{t('moderation.failureBehavior.banner')}</option>
+                <option value="block">{t('moderation.failureBehavior.block')}</option>
+              </select>
+              <span className="text-xs text-text-secondary/70">
+                {labeler.failureBehavior === 'silent' && t('moderation.failureBehavior.silentDesc')}
+                {labeler.failureBehavior === 'banner' && t('moderation.failureBehavior.bannerDesc')}
+                {labeler.failureBehavior === 'block' && t('moderation.failureBehavior.blockDesc')}
+              </span>
+            </div>
+          )}
           {labeler.labels.length > 0 ? (
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-clip">
               <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
                 <span>{t('moderation.label')}</span>
                 <span className="text-center">{t('moderation.hide')}</span>

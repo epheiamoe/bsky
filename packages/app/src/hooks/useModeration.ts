@@ -19,6 +19,7 @@ import type {
   ModerationDecision,
   PostView,
   ProfileViewBasic,
+  LabelerFailureState,
 } from '@bsky/core';
 import {
   resolveModeration,
@@ -35,6 +36,27 @@ interface LabelerPoliciesCache {
     policies: LabelValueDefinition[];
     fetchedAt: number;
   };
+}
+
+/** [v0.14.1] Information about a failed labeler */
+export interface FailedLabelerInfo {
+  did: string;
+  name: string;
+  behavior: 'silent' | 'banner' | 'block';
+  error: string;
+}
+
+/** [v0.14.1] Result from batch moderation resolution */
+export interface ModerationBatchResult {
+  decisions: Map<string, ModerationDecision>;
+  failedLabelers: FailedLabelerInfo[];
+}
+
+/** [v0.14.1] Result from useModerationBatch hook */
+export interface UseModerationBatchResult {
+  decisions: Map<string, ModerationDecision>;
+  failedLabelers: FailedLabelerInfo[];
+  isLoading: boolean;
 }
 
 const POLICIES_TTL = 30 * 60 * 1000; // 30 minutes
@@ -139,17 +161,20 @@ export function useModeration(
  * Batch-resolve moderation decisions for multiple subjects.
  * More efficient than individual useModeration() for timelines.
  * 
- * @returns Map from URI to decision
+ * [v0.14.1] Now returns failed labelers information.
+ * 
+ * @returns ModerationBatchResult with decisions and failed labelers
  */
 export async function resolveModerationBatch(
   subjects: Array<{ uri: string; labels?: Label[] }>,
   config: ModerationConfig,
   client: BskyClient
-): Promise<Map<string, ModerationDecision>> {
+): Promise<ModerationBatchResult> {
   const cache = new LabelCache();
   const policiesCache: LabelerPoliciesCache = {};
 
-  const activeDids = config.labelers.filter(l => l.isActive).map(l => l.did);
+  const activeLabelers = config.labelers.filter(l => l.isActive);
+  const activeDids = activeLabelers.map(l => l.did);
 
   // Batch fetch all missing labels
   const urisNeedingFetch = subjects
@@ -175,41 +200,73 @@ export async function resolveModerationBatch(
     results.set(subject.uri, dec);
   }
 
-  return results;
+  // [v0.14.1] Collect failed labelers
+  const failedLabelers: FailedLabelerInfo[] = [];
+  const failedStates = cache.getFailedLabelers();
+  
+  for (const state of failedStates) {
+    const labeler = activeLabelers.find(l => l.did === state.did);
+    if (labeler) {
+      failedLabelers.push({
+        did: state.did,
+        name: labeler.name,
+        behavior: labeler.failureBehavior,
+        error: state.lastError,
+      });
+    }
+  }
+
+  return { decisions: results, failedLabelers };
 }
 
 /**
  * React hook for batch moderation decisions on a list of posts.
  * Automatically recalculates when posts, config, or client changes.
  * 
+ * [v0.14.1] Now returns failed labelers and loading state.
+ * 
  * @param posts — Array of posts/flatLines with uri and optional labels
  * @param config — User's moderation configuration
  * @param client — BskyClient instance
- * @returns Map from URI to ModerationDecision
+ * @returns UseModerationBatchResult with decisions, failures, and loading state
  */
 export function useModerationBatch(
   posts: Array<{ uri: string; labels?: Label[] }>,
   config: ModerationConfig,
   client: BskyClient | null
-): Map<string, ModerationDecision> {
-  const [decisions, setDecisions] = useState<Map<string, ModerationDecision>>(new Map());
+): UseModerationBatchResult {
+  const [result, setResult] = useState<UseModerationBatchResult>({
+    decisions: new Map(),
+    failedLabelers: [],
+    isLoading: false,
+  });
 
   useEffect(() => {
     if (!client || posts.length === 0) {
-      setDecisions(new Map());
+      setResult({ decisions: new Map(), failedLabelers: [], isLoading: false });
       return;
     }
 
+    setResult(prev => ({ ...prev, isLoading: true }));
+    
     let cancelled = false;
-    resolveModerationBatch(posts, config, client).then(results => {
-      if (!cancelled) setDecisions(results);
+    resolveModerationBatch(posts, config, client).then(res => {
+      if (!cancelled) setResult({
+        decisions: res.decisions,
+        failedLabelers: res.failedLabelers,
+        isLoading: false,
+      });
     }).catch(() => {
       // Silently fail — moderation is best-effort
-      if (!cancelled) setDecisions(new Map());
+      if (!cancelled) setResult({
+        decisions: new Map(),
+        failedLabelers: [],
+        isLoading: false,
+      });
     });
 
     return () => { cancelled = true; };
   }, [posts, config, client]);
 
-  return decisions;
+  return result;
 }

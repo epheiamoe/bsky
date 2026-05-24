@@ -164,7 +164,83 @@ All moderation strings in `packages/app/src/i18n/locales/{zh,en,ja}.ts`:
 - `moderation.infoTitle`, `moderation.report*`
 - `moderation.welcomeTitle`, `moderation.welcomeDesc`
 
-## Known Issues (v0.15.0)
+## Interface Changes
+
+### v0.14.1 (Phase 1 — In Progress)
+
+#### `LabelerConfig` Extension
+```typescript
+interface LabelerConfig {
+  // ... existing fields ...
+  
+  /** [v0.14.1] Failure notification behavior */
+  failureBehavior: 'silent' | 'banner' | 'block';
+}
+```
+
+#### `resolveModerationBatch()` Return Type [CHANGED]
+```typescript
+// [v0.14.1] Now returns failed labelers info
+export interface ModerationBatchResult {
+  decisions: Map<string, ModerationDecision>;
+  failedLabelers: Array<{
+    did: string;
+    name: string;
+    behavior: 'silent' | 'banner' | 'block';
+    error: string;
+  }>;
+}
+```
+
+#### `useModerationBatch()` Return Type [CHANGED]
+```typescript
+// [v0.14.1] Now returns object with decisions + failures
+export interface UseModerationBatchResult {
+  decisions: Map<string, ModerationDecision>;
+  failedLabelers: Array<{
+    did: string;
+    name: string;
+    behavior: 'silent' | 'banner' | 'block';
+    error: string;
+  }>;
+  isLoading: boolean;
+}
+```
+
+### v0.15.0 (Phase 2 — Planned)
+
+#### `useModerationPipeline()` [NEW]
+```typescript
+// [v0.15.0] Replaces useModerationBatch in list views
+export function useModerationPipeline(
+  fetchPosts: () => Promise<PostView[]>,
+  config: ModerationConfig,
+  client: BskyClient | null
+): PipelineState & { refresh: () => void };
+```
+
+Full details in `docs/plan/plan_labeling_failure_handling.md`
+
+---
+
+## Default Failure Behaviors (v0.14.1+)
+
+| Labeler | Default | Rationale |
+|---------|---------|-----------|
+| `moderation.bsky.app` | `banner` | Foundation safety (spam/NSFW/hate) |
+| `asukafield.xyz` | `block` | Protects LGBTQ+ users |
+| `skywatch.blue` | `banner` | Extremist content filtering |
+| `perisai.bsky.social` | `banner` | Community protection |
+| `moderation.blacksky.app` | `banner` | Cross-group safety |
+| `arttheft.bsky.social` | `banner` | Anti-plagiarism |
+| `xblock.aendra.dev` | `silent` | Informational (Twitter screenshots) |
+| `sonasky.app` | `silent` | Community cultural (furry) |
+| `bskyttrpg.bsky.social` | `silent` | Entertainment (TTRPG) |
+| `creatorlabeler.bsky.social` | `silent` | Informational (creator identity) |
+
+---
+
+## Known Issues (v0.14.1)
 
 ### ✅ Fixed: moderationDecision Applied to Posts (2026-05-24)
 

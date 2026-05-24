@@ -7,6 +7,8 @@ import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Modal } from './Modal.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface ListDetailPageProps {
@@ -27,7 +29,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const { t } = useI18n();
   const { config } = useModerationConfig();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
-  const moderationDecisions = useModerationBatch(feed, config, client);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(feed, config, client);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -69,8 +71,12 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
     if (membersCursor && !loading) loadMoreMembers();
   }, [membersCursor, loading, loadMoreMembers]);
 
+  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
+      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureToast failedLabelers={failedLabelers} />
       {/* Header */}
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">

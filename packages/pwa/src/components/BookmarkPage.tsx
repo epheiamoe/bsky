@@ -6,6 +6,8 @@ import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { PullToRefresh } from './PullToRefresh.js';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface BookmarkPageProps {
@@ -25,13 +27,18 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { config } = useModerationConfig();
-  const moderationDecisions = useModerationBatch(bookmarks, config, client);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
     bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
   );
 
+  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
+      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureToast failedLabelers={failedLabelers} />
+      
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button

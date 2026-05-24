@@ -9,6 +9,8 @@ import { FeedHeader } from './FeedHeader';
 import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { Icon } from './Icon.js';
+import { LabelerFailureBanner } from './LabelerFailureBanner.js';
+import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient } from '@bsky/core';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
@@ -58,7 +60,7 @@ const _heightCache = new Map<string, number>();
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const moderationDecisions = useModerationBatch(posts, config, client ?? null);
+  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
   const lastScrollY = useRef(0);
@@ -144,6 +146,9 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
 
   const settingsBtn = null;
 
+  // Filter banner/block level failures for banner display
+  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
   return (
     <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] animate-fadeIn">
       <FeedHeader
@@ -154,6 +159,9 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         mobileMenuButton={menuBtn}
         mobileCollapsed={mobileCollapsed}
       />
+      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureToast failedLabelers={failedLabelers} />
+      
       <PullToRefresh onRefresh={refresh ?? REFRESH_NOOP} scrollRef={scrollRef} />
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-14">
         {error && (

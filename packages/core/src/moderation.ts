@@ -46,6 +46,8 @@ export interface LabelerConfig {
   /** Per-label visibility override for this labeler */
   labelPrefs: Record<string, 'hide' | 'warn' | 'ignore'>;
   isActive: boolean;
+  /** How to handle service failures for this labeler (v0.14.1) */
+  failureBehavior: 'silent' | 'banner' | 'block';
 }
 
 export interface ModerationConfig {
@@ -72,7 +74,7 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   contentLabels: [
     { label: 'porn', visibility: 'warn' },
     { label: 'sexual', visibility: 'warn' },
-    { label: 'nudity', visibility: 'warn' },
+    { label: 'nudity', visibility: 'ignore' },
     { label: 'graphic-media', visibility: 'warn' },
   ],
   labelers: [
@@ -83,6 +85,7 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
       labels: [],
       labelPrefs: {},
       isActive: true,
+      failureBehavior: 'banner',
     },
   ],
 };

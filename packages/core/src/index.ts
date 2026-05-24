@@ -126,6 +126,7 @@ export type {
   ModerationConfig,
 } from './moderation.js';
 export { LabelCache } from './moderation-cache.js';
+export type { LabelerFailureState, RetryConfig } from './moderation-cache.js';
 
 // Python Sandbox
 export type { PythonSandboxEngine, PythonExecutionResult, PythonFile } from './ai/python-sandbox.js';
