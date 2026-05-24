@@ -1526,3 +1526,10 @@ function formatWikipediaSummary(s: WikipediaSummary): string {
   if (s.content_urls?.desktop?.page) parts.push(`Source: ${s.content_urls.desktop.page}`);
   return JSON.stringify({ heading: title, content: parts.join('\n\n') });
 }
+
+// [TODO: v0.15.0+] Planned AI tool: check_post_labels
+// Description: Query labels on a specific post from configured labelers.
+// Use case: Allow AI to check if a post has moderation labels before recommending it.
+// Parameters: { uri: string, labelerDids?: string[] }
+// Returns: { labels: Array<{ val: string, src: string, severity: string }> }
+// Note: MCP and AI tools do not currently implement labeling features.
