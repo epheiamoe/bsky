@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useI18n } from '@bsky/app';
 import type { ModerationConfig, LabelerConfig, ContentLabelPref } from '@bsky/core';
 import { OFFICIAL_LABELER_DID, STANDARD_LABELS, isStandardLabel } from '@bsky/core';
-import { useLabelerInfo, fetchLabelerInfos } from '@bsky/app/src/hooks/useLabelerInfo.js';
+import { useLabelerInfo, fetchLabelerInfos } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
 
@@ -34,7 +34,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
     const existing = config.contentLabels.findIndex(l => l.label === label);
     let contentLabels: ContentLabelPref[];
     if (existing >= 0) {
-      contentLabels = config.contentLabels.map((l, i) =
+      contentLabels = config.contentLabels.map((l, i) =>
         i === existing ? { ...l, visibility } : l
       );
     } else {
@@ -80,7 +80,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
   const handleLabelerPrefChange = useCallback((did: string, label: string, visibility: Visibility) => {
     onChange({
       ...config,
-      labelers: config.labelers.map(l =
+      labelers: config.labelers.map(l =>
         l.did === did
           ? { ...l, labelPrefs: { ...l.labelPrefs, [label]: visibility } }
           : l
@@ -91,7 +91,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
   const handleLabelerActiveToggle = useCallback((did: string, isActive: boolean) => {
     onChange({
       ...config,
-      labelers: config.labelers.map(l =
+      labelers: config.labelers.map(l =>
         l.did === did ? { ...l, isActive } : l
       ),
     });
@@ -379,6 +379,6 @@ function ThirdPartyLabelerCard({
           )}
         </div>
       )}
-    㰠26exit [Max length reached]. Contact support if you need more context.>/div>
+    </div>
   );
 }

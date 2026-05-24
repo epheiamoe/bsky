@@ -40,11 +40,7 @@ export function useLabelerInfo(did: string, client: BskyClient | null): LabelerI
       let policies: LabelerPolicies | null = null;
       if (view) {
         try {
-          const record = await client.getRecord({
-            repo: did,
-            collection: 'app.bsky.labeler.service',
-            rkey: 'self',
-          });
+          const record = await client.getRecord(did, 'app.bsky.labeler.service', 'self');
           const serviceRecord = record.value as { policies?: LabelerPolicies };
           policies = serviceRecord.policies || null;
         } catch {
@@ -86,11 +82,7 @@ export async function fetchLabelerInfos(
     const policyPromises = views.map(async view => {
       let policies: LabelerPolicies | null = null;
       try {
-        const record = await client.getRecord({
-          repo: view.creator.did,
-          collection: 'app.bsky.labeler.service',
-          rkey: 'self',
-        });
+        const record = await client.getRecord(view.creator.did, 'app.bsky.labeler.service', 'self');
         const serviceRecord = record.value as { policies?: LabelerPolicies };
         policies = serviceRecord.policies || null;
       } catch {

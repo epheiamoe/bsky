@@ -4,7 +4,7 @@
  * 
  * Usage:
  *   const decision = useModeration(post, config, client);
- *   if (decision.action === 'hide') { /* render hidden placeholder */ }
+ *   if (decision.action === 'hide') renderHiddenPlaceholder();
  * 
  * [Debt: Performance] For large timelines, prefer getLabelsBatch() over individual useModeration()
  * calls to avoid N+1 API requests. See TimelineStore integration notes in plan.
@@ -82,7 +82,7 @@ async function fetchLabelerPolicies(
  * @returns ModerationDecision or null while loading
  */
 export function useModeration(
-  subject: ModerationSubject | PostView | ProfileViewBasic | null,
+  subject: ModerationSubject | PostView | null,
   config: ModerationConfig,
   client: BskyClient | null
 ): ModerationDecision | null {

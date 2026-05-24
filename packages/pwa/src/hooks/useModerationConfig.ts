@@ -52,7 +52,7 @@ export function useModerationConfig() {
       const existing = prev.contentLabels.findIndex(l => l.label === label);
       let contentLabels: ContentLabelPref[];
       if (existing >= 0) {
-        contentLabels = prev.contentLabels.map((l, i) =
+        contentLabels = prev.contentLabels.map((l, i) =>
           i === existing ? { ...l, visibility } : l
         );
       } else {
@@ -83,7 +83,7 @@ export function useModerationConfig() {
   const updateLabelerPref = useCallback((did: string, label: string, visibility: 'hide' | 'warn' | 'ignore') => {
     setConfig(prev => ({
       ...prev,
-      labelers: prev.labelers.map(l =
+      labelers: prev.labelers.map(l =>
         l.did === did
           ? { ...l, labelPrefs: { ...l.labelPrefs, [label]: visibility } }
           : l
@@ -94,7 +94,7 @@ export function useModerationConfig() {
   const setLabelerActive = useCallback((did: string, isActive: boolean) => {
     setConfig(prev => ({
       ...prev,
-      labelers: prev.labelers.map(l =
+      labelers: prev.labelers.map(l =>
         l.did === did ? { ...l, isActive } : l
       ),
     }));

@@ -6,6 +6,7 @@ import { describeImage } from '@bsky/core';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
+import { ReportButton } from './ReportButton.js';
 import { truncateName, linkifyText } from './PostCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { VideoData } from './VideoCard.js';
@@ -300,6 +301,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
               <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
               <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
+              <ReportButton client={client} post={focused} />
               {focused.handle === client.getHandle() && (
                 <>
                   <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>

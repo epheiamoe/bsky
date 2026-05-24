@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@bsky/app';
 import type { AppConfig } from '../hooks/useAppConfig.js';
 import { updateAppConfig, saveAppConfig } from '../hooks/useAppConfig.js';
+import type { ModerationConfig } from '@bsky/core';
 import { Icon } from './Icon.js';
 
-const STEP_LABELS = ['welcome.step1', 'welcome.stepPronouns', 'welcome.personalTitle', 'welcome.step4'];
+const STEP_LABELS = ['welcome.step1', 'welcome.stepPronouns', 'welcome.personalTitle', 'welcome.step4', 'moderation.welcomeTitle'];
 
 const slideVariants = {
   enter: { opacity: 0, x: 40 },
@@ -73,9 +74,11 @@ interface WelcomeCardProps {
   onSkip: () => void;
   config: AppConfig;
   onConfigChange: (config: AppConfig) => void;
+  moderationConfig?: ModerationConfig;
+  onModerationConfigChange?: (config: ModerationConfig) => void;
 }
 
-export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange }: WelcomeCardProps) {
+export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange, moderationConfig, onModerationConfigChange }: WelcomeCardProps) {
   const { t } = useI18n();
   const [step, setStep] = useState(0);
   const [showAllTools, setShowAllTools] = useState(false);
@@ -178,8 +181,8 @@ export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange }: 
   return (
     <div className="fixed inset-0 z-[9998] bg-black/40 flex items-center justify-center p-4 animate-fadeIn">
       <div className="bg-white dark:bg-[#1A1A1A] rounded-xl border border-border max-w-lg w-full max-h-[90vh] flex flex-col shadow-xl">
-        {/* Progress dots — only for first 4 steps, not done */}
-        {step < 4 && (
+        {/* Progress dots — only for first 5 steps, not done */}
+        {step < 5 && (
           <div className="flex-shrink-0 px-6 pt-6 pb-4">
             <div className="flex items-center justify-center gap-1">
               {Array.from({ length: stepDotsCount }).map((_, i) => (
@@ -491,8 +494,64 @@ export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange }: 
                 </div>
               )}
 
-              {/* Step 4: Done */}
-              {step === 4 && (
+              {/* Step 4: Moderation Preferences */}
+              {step === 4 && moderationConfig && onModerationConfigChange && (
+                <div className="space-y-4 pb-4">
+                  <h2 className="text-xl font-bold text-text-primary">{t('moderation.welcomeTitle')}</h2>
+                  <p className="text-text-secondary text-sm">{t('moderation.welcomeDesc')}</p>
+
+                  {/* Adult Content Toggle */}
+                  <ToggleSwitch
+                    checked={moderationConfig.adultContentEnabled}
+                    onChange={(v) => onModerationConfigChange({ ...moderationConfig, adultContentEnabled: v })}
+                    label={t('moderation.adultContent')}
+                    desc=""
+                  />
+
+                  {/* Standard Labels */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/50 text-xs font-medium text-text-secondary border-b border-border">
+                      <span>{t('moderation.label')}</span>
+                      <span className="text-center">{t('moderation.hide')}</span>
+                      <span className="text-center">{t('moderation.warn')}</span>
+                      <span className="text-center">{t('moderation.ignore')}</span>
+                    </div>
+                    {['porn', 'sexual', 'nudity', 'graphic-media'].map(label => {
+                      const pref = moderationConfig.contentLabels.find(l => l.label === label);
+                      const current = pref?.visibility || 'warn';
+                      return (
+                        <div key={label} className="grid grid-cols-4 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
+                          <span className="text-sm text-text-primary capitalize">{t(`moderation.labels.${label}`) || label}</span>
+                          {(['hide', 'warn', 'ignore'] as const).map(opt => (
+                            <label key={opt} className="flex justify-center cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`welcome-label-${label}`}
+                                value={opt}
+                                checked={current === opt}
+                                onChange={() => {
+                                  const existing = moderationConfig.contentLabels.findIndex(l => l.label === label);
+                                  let contentLabels = [...moderationConfig.contentLabels];
+                                  if (existing >= 0) {
+                                    contentLabels[existing] = { ...contentLabels[existing], visibility: opt };
+                                  } else {
+                                    contentLabels.push({ label, visibility: opt });
+                                  }
+                                  onModerationConfigChange({ ...moderationConfig, contentLabels });
+                                }}
+                                className="w-4 h-4 accent-primary"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Done */}
+              {step === 5 && (
                 <div className="space-y-4 pb-4">
                   <div className="text-center pt-1 pb-2">
                     <motion.div
@@ -543,7 +602,7 @@ export function WelcomeCard({ onGoToSettings, onSkip, config, onConfigChange }: 
             </button>
           )}
           <div className="flex-1" />
-          {step < 4 ? (
+          {step < 5 ? (
             <button
               onClick={() => {
                 if (step === 1) handlePronounsSave();

@@ -154,8 +154,9 @@ export function resolveModeration(
       let visibility: 'hide' | 'warn' | 'ignore';
       
       // a. Labeler-specific override
-      if (labelerConfig?.labelPrefs[label.val]) {
-        visibility = labelerConfig.labelPrefs[label.val];
+      const labelerPref = labelerConfig?.labelPrefs[label.val];
+      if (labelerPref) {
+        visibility = labelerPref;
       }
       // b. Global fallback
       else if (globalPrefs.has(label.val)) {

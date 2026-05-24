@@ -47,6 +47,7 @@ export type { SocialCircleOptions, SocialCircleResult, SocialCircleState, Social
 export { generateSocialGraphMermaid, buildSocialCircleShareText, INTERACTION_WEIGHTS } from './hooks/useSocialCircle.js';
 export { useConvoList, markConvoRead } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
+export { useLabelerInfo, fetchLabelerInfos } from './hooks/useLabelerInfo.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
 export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { PostView, AIConfig, BskyClient } from '@bsky/core';
+import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/core';
 import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
@@ -10,6 +10,7 @@ import { Icon } from './Icon.js';
 import { VideoCard } from './VideoCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
+import { ModerationOverlay, BadgeRow } from './ModerationOverlay.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -94,6 +95,8 @@ interface PostCardBaseProps {
   previewLines?: number;
   /** Number of lines for quoted post text preview */
   quotedPreviewLines?: number;
+  /** Moderation decision from useModeration hook */
+  moderationDecision?: ModerationDecision | null;
 }
 
 interface PostCardWithPost extends PostCardBaseProps {
@@ -108,7 +111,7 @@ interface PostCardWithLine extends PostCardBaseProps {
 
 type PostCardProps = PostCardWithPost | PostCardWithLine;
 
-export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: PostCardProps) {
+export function PostCard({ onClick, isSelected, post, line, children, goTo, repostBy, imageDescConfig, imageDescLang, client, singleImageFill, previewLines = 10, quotedPreviewLines = 8, moderationDecision }: PostCardProps) {
   let displayName: string;
   let handle: string;
   let text: string;
@@ -171,6 +174,97 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     return null;
   }
 
+  const content = (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center gap-1 shrink-0">
+        <div
+          className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            goTo?.({ type: 'profile', actor: handle });
+          }}
+        >
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            avatarLetter(displayName)
+          )}
+        </div>
+        {replyDepth !== null && (
+          <span className="inline-flex items-center text-[10px] px-1 py-0.5 rounded-md bg-primary/10 text-primary font-medium leading-none">
+            ↩{replyDepth === '2+' ? ' 2+' : ''}
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-text-primary font-semibold text-sm truncate max-w-[200px]">
+            {truncateName(displayName)}
+          </span>
+          <span className="text-text-secondary text-xs truncate max-w-[150px]">
+            @{handle}
+          </span>
+          {indexedAt && (
+            <>
+              <span className="text-text-secondary text-xs">·</span>
+              <span className="text-text-secondary text-xs">{formatTime(indexedAt)}</span>
+            </>
+          )}
+        </div>
+        <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words" style={{ WebkitLineClamp: previewLines }}>
+          {linkifyText(text)}
+        </p>
+        {hasImages && <ImageGrid images={images} singleImageFill={singleImageFill} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+          const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+          if (!m) throw new Error('Could not parse image URL');
+          const did = decodeURIComponent(m[1]!);
+          const cid = decodeURIComponent(m[2]!);
+          return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
+        } : undefined} />}
+        {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
+        {externalLink && (
+          <a
+            href={externalLink.uri}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+          >
+            <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
+            {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
+            <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
+          </a>
+        )}
+        {quotedPost && (
+          <div
+            className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              {quotedPost.authorAvatar && (
+                <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+              )}
+              <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
+              <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
+            </div>
+            <p className="text-xs text-text-primary break-words" style={{ WebkitLineClamp: quotedPreviewLines }}>{linkifyText(quotedPost.text)}</p>
+            {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
+              <div className="mt-1 flex gap-1">
+                {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                  <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
+  );
+
   return (
     <div
       onClick={onClick}
@@ -184,94 +278,11 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           <span>Reposted by @{repostBy}</span>
         </div>
       )}
-      <div className="flex gap-3">
-        <div className="flex flex-col items-center gap-1 shrink-0">
-          <div
-            className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm overflow-hidden cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              goTo?.({ type: 'profile', actor: handle });
-            }}
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              avatarLetter(displayName)
-            )}
-          </div>
-          {replyDepth !== null && (
-            <span className="inline-flex items-center text-[10px] px-1 py-0.5 rounded-md bg-primary/10 text-primary font-medium leading-none">
-              ↩{replyDepth === '2+' ? ' 2+' : ''}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 flex-wrap">
-            <span className="text-text-primary font-semibold text-sm truncate max-w-[200px]">
-              {truncateName(displayName)}
-            </span>
-            <span className="text-text-secondary text-xs truncate max-w-[150px]">
-              @{handle}
-            </span>
-            {indexedAt && (
-              <>
-                <span className="text-text-secondary text-xs">·</span>
-                <span className="text-text-secondary text-xs">{formatTime(indexedAt)}</span>
-              </>
-            )}
-          </div>
-          <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words" style={{ WebkitLineClamp: previewLines }}>
-            {linkifyText(text)}
-          </p>
-          {hasImages && <ImageGrid images={images} singleImageFill={singleImageFill} imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-            const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-            if (!m) throw new Error('Could not parse image URL');
-            const did = decodeURIComponent(m[1]!);
-            const cid = decodeURIComponent(m[2]!);
-            return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
-          } : undefined} />}
-          {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
-          {externalLink && (
-            <a
-              href={externalLink.uri}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-            >
-              <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
-              {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
-              <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
-            </a>
-          )}
-          {quotedPost && (
-            <div
-              className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
-              }}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                {quotedPost.authorAvatar && (
-                  <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                )}
-                <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
-                <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
-              </div>
-              <p className="text-xs text-text-primary break-words" style={{ WebkitLineClamp: quotedPreviewLines }}>{linkifyText(quotedPost.text)}</p>
-              {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
-                <div className="mt-1 flex gap-1">
-                  {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                    <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {children}
-        </div>
-      </div>
+      {moderationDecision ? (
+        <ModerationOverlay decision={moderationDecision}>
+          {content}
+        </ModerationOverlay>
+      ) : content}
     </div>
   );
 }

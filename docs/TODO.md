@@ -74,6 +74,8 @@
 | **WCAG 4.1.2 表单+状态** | N/A | ✅ | htmlFor/id标签关联(14对), aria-expanded(6), aria-describedby, aria-invalid, role=progressbar, hidden input aria-label(5) |
 | **MCP Server** | ✅ | ✅ | v0.13.0 + WorkspaceStorage 初始化修复 (2026-05-19) |
 | **Session 持久化修复** | N/A | ✅ | v0.13.2: auth.ts 捕获 JWT 刷新后 token，App.tsx profile guard |
+| **内容标记系统** | ⬜ | ✅ | v0.15.0: 第三方标签提供商支持，通用/提供商独立配置，动态标签查询，隐藏/警告/徽章/媒体模糊，info 按钮显示来源 |
+| **举报功能** | ⬜ | ✅ | 帖子详情页举报按钮 + TUI 快捷键 |
 
 ## 图例
 
