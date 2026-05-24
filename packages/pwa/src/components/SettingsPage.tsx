@@ -4,8 +4,9 @@ import type { AppConfig } from '../hooks/useAppConfig.js';
 import { updateAppConfig, saveAppConfig } from '../hooks/useAppConfig.js';
 import type { TargetLang, Locale } from '@bsky/app';
 import { PROVIDERS, getProviderByBaseUrl, getModelInfo, getProviderById } from '@bsky/core';
-import type { ProviderInfo, ModelInfo } from '@bsky/core';
+import type { ProviderInfo, ModelInfo, ModerationConfig } from '@bsky/core';
 import { Icon } from './Icon.js';
+import { ModerationSettingsTab } from './ModerationSettingsTab.js';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
   { value: 'zh', label: '中文' },
@@ -23,11 +24,14 @@ interface SettingsPageProps {
   onRelogin: (handle: string, password: string) => Promise<void>;
   onLogout: () => void;
   onRestartWelcome?: () => void;
+  client?: any;
+  moderationConfig?: ModerationConfig;
+  onModerationConfigChange?: (config: ModerationConfig) => void;
 }
 
-type Tab = 'account' | 'ai' | 'scenario' | 'display' | 'preview';
+type Tab = 'account' | 'ai' | 'scenario' | 'display' | 'preview' | 'moderation';
 
-export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRestartWelcome }: SettingsPageProps) {
+export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRestartWelcome, client, moderationConfig, onModerationConfigChange }: SettingsPageProps) {
   const { t, locale, setLocale, localeLabels, availableLocales } = useI18n();
   const [tab, setTab] = useState<Tab>('account');
 
@@ -153,6 +157,7 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
     { key: 'scenario', iconName: 'database', labelKey: 'settings.tabScenario' },
     { key: 'display', iconName: 'sun', labelKey: 'settings.tabDisplay' },
     { key: 'preview', iconName: 'file-text', labelKey: 'settings.tabPreview' },
+    { key: 'moderation', iconName: 'shield', labelKey: 'settings.tabModeration' },
   ];
 
   return (
@@ -574,6 +579,14 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
               {t('settings.savePreview')}
             </button>
           </div>
+        )}
+
+        {tab === 'moderation' && moderationConfig && onModerationConfigChange && (
+          <ModerationSettingsTab
+            config={moderationConfig}
+            client={client}
+            onChange={onModerationConfigChange}
+          />
         )}
       </div>
     </div>
