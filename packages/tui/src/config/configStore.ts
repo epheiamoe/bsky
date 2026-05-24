@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import type { ModerationConfig } from '@bsky/core';
+import { DEFAULT_MODERATION_CONFIG } from '@bsky/core';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,6 +35,8 @@ export interface TuiConfig {
   userPronouns?: string;
   /** Custom emojis for DM reactions */
   dmEmojis?: string[];
+  /** Moderation / labeling configuration */
+  moderationConfig?: ModerationConfig;
 }
 
 export const DEFAULT_TUI_CONFIG: TuiConfig = {
