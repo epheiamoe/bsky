@@ -131,7 +131,7 @@ export interface LabelValueDefinition {
   identifier: string;
   severity: 'inform' | 'alert' | 'none';
   blurs: 'content' | 'media' | 'none';
-  defaultSetting: 'ignore' | 'warn' | 'hide';
+  defaultSetting: 'show' | 'badge' | 'warn' | 'hide';
   adultOnly: boolean;
   locales: Array<{
     lang: string;
@@ -167,7 +167,7 @@ export interface LabelerView {
 
 export interface ContentLabelPref {
   label: string;
-  visibility: 'hide' | 'warn' | 'ignore';
+  visibility: 'show' | 'badge' | 'warn' | 'hide';
 }
 
 export interface ModerationPrefs {
