@@ -33,6 +33,9 @@
 - **PWA UI**: 设置页面(通用+官方+第三方), PostCard 集成, ThreadView 举报按钮, Welcome 第5步
 - **Info 按钮**: 所有隐藏/警告/徽章元素旁显示标签来源信息
 - **举报功能**: `createModerationReport` API，帖子详情页举报
+- **自标记**: PostRecord.labels 类型 + AI create_post 工具支持 labels 参数
+- **TUI 审核设置**: `,` 快速配置中新增「审核」Tab（通用设置+标签商管理）
+- **TUI 举报快捷键**: ThreadView 中 `!` 键举报当前帖子
 - **TUI 配置**: `TuiConfig.moderationConfig` 字段已添加
 - **i18n**: zh/en/ja 完整翻译
 

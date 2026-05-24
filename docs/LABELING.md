@@ -100,7 +100,37 @@ Then: take the **most restrictive** action across all labels.
 
 ### TUI
 
-[TODO: v0.15.0] TUI moderation settings in `,` quick config, post rendering with text-based badges/warnings, report shortcut in thread view.
+- **SettingsView** (`packages/tui/src/components/SettingsView.tsx`) — `,` quick config, Tab: `🛡 审核`
+  - General subtab: adult toggle + 4 standard labels (hide/warn/ignore cycle)
+  - Labelers subtab: enable/disable third-party labelers
+- **UnifiedThreadView** — `!` key to report post (com.atproto.moderation.createReport)
+
+## Self-Labeling
+
+Posts can include self-labels via `com.atproto.label.defs#selfLabels`:
+
+```typescript
+interface SelfLabels {
+  $type: 'com.atproto.label.defs#selfLabels';
+  values: Array<{ $type: 'com.atproto.label.defs#selfLabel'; val: string }>;
+}
+```
+
+### Supported Values
+
+- `porn` — Adult sexual content
+- `sexual` — Sexual content (less intense)
+- `nudity` — Nudity (not 18+)
+- `graphic-media` — Violence/gore
+- `!no-unauthenticated` — Hide from logged-out users
+
+### Usage
+
+**AI tool** (`create_post`): Pass `labels: ['porn', 'sexual']` in parameters.
+
+**PWA UI** (planned): ComposePage will show a label selector (checkboxes for each supported value).
+
+**TUI** (planned): ComposeView will allow toggling labels before posting.
 
 ## Key Files
 
