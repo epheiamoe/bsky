@@ -68,6 +68,52 @@ export const OFFICIAL_LABELER_DID = 'did:plc:ar7c4by46qjdydhdevvrndac';
 /** Standard label identifiers that appear in the global settings UI */
 export const STANDARD_LABELS = ['porn', 'sexual', 'nudity', 'graphic-media'] as const;
 
+/**
+ * [v0.14.1] Built-in label definitions for official Bluesky moderation labels.
+ * Ensures resolveModeration() works correctly even when label definitions
+ * cannot be fetched from the API.
+ */
+export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
+  {
+    identifier: 'porn',
+    severity: 'alert',
+    blurs: 'content',
+    defaultSetting: 'hide',
+    adultOnly: true,
+    locales: [{ lang: 'en', name: 'Adult Content', description: 'Explicit sexual images.' }],
+  },
+  {
+    identifier: 'sexual',
+    severity: 'alert',
+    blurs: 'content',
+    defaultSetting: 'warn',
+    adultOnly: true,
+    locales: [{ lang: 'en', name: 'Sexual', description: 'Sexual content (less intense).' }],
+  },
+  {
+    identifier: 'nudity',
+    severity: 'alert',
+    blurs: 'content',
+    defaultSetting: 'warn',
+    adultOnly: true,
+    locales: [{ lang: 'en', name: 'Nudity', description: 'E.g. artistic nudity.' }],
+  },
+  {
+    identifier: 'graphic-media',
+    severity: 'alert',
+    blurs: 'content',
+    defaultSetting: 'warn',
+    adultOnly: true,
+    locales: [{ lang: 'en', name: 'Graphic Media', description: 'Blood, gore, or other potentially disturbing media.' }],
+  },
+];
+
+/** Lookup map for built-in label definitions */
+const BUILTIN_DEF_MAP = new Map<string, LabelValueDefinition>();
+for (const def of BUILTIN_LABEL_DEFINITIONS) {
+  BUILTIN_DEF_MAP.set(def.identifier, def);
+}
+
 /** Default moderation configuration — conservative, warn-on-adult */
 export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   adultContentEnabled: false,
@@ -162,7 +208,8 @@ export function resolveModeration(
     const contributingLabels: ModerationDecision['sources'][number]['labels'] = [];
 
     for (const label of labelerLabels) {
-      const def = defMap.get(label.val);
+      // [v0.14.1] Use fetched definition if available, otherwise fall back to built-in
+      const def = defMap.get(label.val) || BUILTIN_DEF_MAP.get(label.val);
       
       // Resolve visibility preference
       let visibility: 'hide' | 'warn' | 'ignore';

@@ -106,7 +106,7 @@ function HiddenContent({
   );
 }
 
-/** Warning overlay that covers content */
+/** Warning overlay — hides content until user explicitly shows it */
 function WarningContent({
   decision,
   onShow,
@@ -129,38 +129,38 @@ function WarningContent({
     );
   }
 
+  // Not dismissed: show centered warning placeholder, content is completely hidden
   return (
-    <div className="relative">
-      {/* Warning banner */}
-      <div className="border border-amber-200 dark:border-amber-900/50 rounded-lg p-3 bg-amber-50 dark:bg-amber-900/20 mb-2">
-        <div className="flex items-center gap-2">
-          <Icon name="alert-triangle" size={16} className="text-amber-500" />
-          <span className="text-sm text-text-primary">
-            {decision.warningTextKey ? t(decision.warningTextKey) : t('moderation.warning.content')}
-          </span>
-          <button
-            onClick={() => setShowInfo(!showInfo)}
-            className="ml-auto p-1 text-text-secondary hover:text-text-primary transition-colors"
-            title={t('moderation.infoTitle')}
-            aria-label={t('moderation.infoTitle')}
-          >
-            <Icon name="info" size={14} />
-          </button>
-        </div>
-        
-        {showInfo && <LabelSourceInfo sources={decision.sources} />}
-        
+    <div className="border border-amber-200 dark:border-amber-900/50 rounded-lg p-4 bg-amber-50 dark:bg-amber-900/20">
+      <div className="flex flex-col items-center gap-3 py-6">
+        <Icon name="alert-triangle" size={32} className="text-amber-500" />
+        <span className="text-base font-medium text-text-primary text-center">
+          {decision.warningTextKey ? t(decision.warningTextKey) : t('moderation.warning.content')}
+        </span>
+        {decision.badges.length > 0 && (
+          <div className="flex gap-2 flex-wrap justify-center">
+            {decision.badges.map(badge => (
+              <span key={badge} className="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-xs font-medium">
+                {badge}
+              </span>
+            ))}
+          </div>
+        )}
         <button
-          onClick={() => setDismissed(true)}
-          className="mt-2 text-sm text-primary hover:text-primary-hover transition-colors"
+          onClick={() => setShowInfo(!showInfo)}
+          className="p-1 text-text-secondary hover:text-text-primary transition-colors"
+          title={t('moderation.infoTitle')}
+          aria-label={t('moderation.infoTitle')}
+        >
+          <Icon name="info" size={16} />
+        </button>
+        {showInfo && <LabelSourceInfo sources={decision.sources} />}
+        <button
+          onClick={() => { setDismissed(true); onShow(); }}
+          className="mt-2 px-4 py-2 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
         >
           {t('moderation.showContent')}
         </button>
-      </div>
-      
-      {/* Blurred preview of content */}
-      <div className="opacity-30 pointer-events-none blur-sm">
-        {children}
       </div>
     </div>
   );
