@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n } from '@bsky/app';
+import { useI18n, useModerationBatch } from '@bsky/app';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
@@ -10,6 +10,7 @@ import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { Icon } from './Icon.js';
 import type { BskyClient } from '@bsky/core';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface FeedTimelineProps {
   goTo: (v: AppView) => void;
@@ -56,6 +57,8 @@ const _heightCache = new Map<string, number>();
 
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
+  const { config } = useModerationConfig();
+  const moderationDecisions = useModerationBatch(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
   const lastScrollY = useRef(0);
@@ -215,6 +218,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
+                  moderationDecision={moderationDecisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

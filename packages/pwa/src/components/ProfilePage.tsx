@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget, useModerationBatch } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostCard } from './PostCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -11,6 +11,7 @@ import { Icon } from './Icon.js';
 import { NotFoundCard } from './NotFoundCard.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface ProfilePageProps {
   client: BskyClient;
@@ -40,6 +41,7 @@ function avatarLetter(name: string): string {
 export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig, targetLang, translateMode, translateConfig, imageDescConfig, imageDescLang, singleImageFill, initialScrollTop, onScrollTopChange, previewLines = 10, quotedPreviewLines = 8 }: ProfilePageProps) {
   const { t } = useI18n();
   const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
+  const { config } = useModerationConfig();
   const {
     profile, loading, error,
     tab, setTab,
@@ -48,6 +50,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
+  const moderationDecisions = useModerationBatch(posts, config, client);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
@@ -497,6 +500,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
+                  moderationDecision={moderationDecisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostCard>

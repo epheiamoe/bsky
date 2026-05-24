@@ -48,6 +48,8 @@ export { generateSocialGraphMermaid, buildSocialCircleShareText, INTERACTION_WEI
 export { useConvoList, markConvoRead } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export { useLabelerInfo, fetchLabelerInfos } from './hooks/useLabelerInfo.js';
+export { useModeration, useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
+export type { ModerationSubject } from './hooks/useModeration.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
 export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';

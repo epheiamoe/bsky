@@ -166,25 +166,34 @@ All moderation strings in `packages/app/src/i18n/locales/{zh,en,ja}.ts`:
 
 ## Known Issues (v0.15.0)
 
-### Critical: moderationDecision Not Applied to Posts
+### ✅ Fixed: moderationDecision Applied to Posts (2026-05-24)
 
-**Problem**: `PostCard` accepts a `moderationDecision` prop, but **zero callers pass it**:
+**Problem**: `PostCard` accepts a `moderationDecision` prop, but zero callers passed it.
 
-| Component | Passes `moderationDecision`? |
-|-----------|------------------------------|
-| `FeedTimeline.tsx` | ❌ No |
-| `BookmarkPage.tsx` | ❌ No |
-| `ProfilePage.tsx` | ❌ No |
-| `SearchPage.tsx` | ❌ No |
-| `ListDetailPage.tsx` | ❌ No |
-| `ThreadView.tsx` | ❌ No |
+**Solution**: Created `useModerationBatch` React hook and integrated into all PWA list components:
 
-**Root Cause**: `useModeration()` hook and `resolveModerationBatch()` exist but are not integrated into list rendering pipelines.
+| Component | Status |
+|-----------|--------|
+| `FeedTimeline.tsx` | ✅ Integrated |
+| `BookmarkPage.tsx` | ✅ Integrated |
+| `ProfilePage.tsx` | ✅ Integrated |
+| `SearchPage.tsx` | ✅ Integrated |
+| `ListDetailPage.tsx` | ✅ Integrated |
+| `ThreadView.tsx` | ✅ Integrated (replyLines only) |
 
-**Fix Required**: 
-1. Add `useModerationBatch(posts, config, client)` hook in list components
-2. Pass per-post `ModerationDecision` to each `PostCard`
-3. Apply same pattern to TUI `PostItem` components
+**Implementation**:
+```typescript
+const { config } = useModerationConfig();
+const moderationDecisions = useModerationBatch(posts, config, client);
+
+// In render:
+<PostCard
+  post={post}
+  moderationDecision={moderationDecisions.get(post.uri) ?? null}
+/>
+```
+
+**Note**: ThreadView's `focused` post (root/current) uses inline rendering, not `PostCard`. Moderation overlay for the focused post is not yet applied.
 
 ### Fixed Issues
 

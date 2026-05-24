@@ -177,3 +177,39 @@ export async function resolveModerationBatch(
 
   return results;
 }
+
+/**
+ * React hook for batch moderation decisions on a list of posts.
+ * Automatically recalculates when posts, config, or client changes.
+ * 
+ * @param posts — Array of posts/flatLines with uri and optional labels
+ * @param config — User's moderation configuration
+ * @param client — BskyClient instance
+ * @returns Map from URI to ModerationDecision
+ */
+export function useModerationBatch(
+  posts: Array<{ uri: string; labels?: Label[] }>,
+  config: ModerationConfig,
+  client: BskyClient | null
+): Map<string, ModerationDecision> {
+  const [decisions, setDecisions] = useState<Map<string, ModerationDecision>>(new Map());
+
+  useEffect(() => {
+    if (!client || posts.length === 0) {
+      setDecisions(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    resolveModerationBatch(posts, config, client).then(results => {
+      if (!cancelled) setDecisions(results);
+    }).catch(() => {
+      // Silently fail — moderation is best-effort
+      if (!cancelled) setDecisions(new Map());
+    });
+
+    return () => { cancelled = true; };
+  }, [posts, config, client]);
+
+  return decisions;
+}

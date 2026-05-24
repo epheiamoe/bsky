@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
 import { describeImage } from '@bsky/core';
@@ -13,6 +13,7 @@ import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 import { Modal } from './Modal.js';
 import { ThreadgateEditor } from './ThreadgateEditor.js';
 import { NotFoundCard } from './NotFoundCard.js';
@@ -56,6 +57,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     getPostView,
   } = useThread(client, uri);
   const { t } = useI18n();
+  const { config } = useModerationConfig();
+  const moderationDecisions = useModerationBatch(flatLines, config, client);
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
 
@@ -344,6 +347,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
               client={client}
               previewLines={threadPreviewLines}
               quotedPreviewLines={quotedPostPreviewLines}
+              moderationDecision={line.uri ? moderationDecisions.get(line.uri) ?? null : null}
             >
                       <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                     </PostCard>

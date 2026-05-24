@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useVirtualizedList } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Modal } from './Modal.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface ListDetailPageProps {
   client: BskyClient;
@@ -24,7 +25,9 @@ interface ListDetailPageProps {
 
 export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, initialScrollTop, onScrollTopChange, membersScrollTop, onMembersScrollTop, previewLines = 10, quotedPreviewLines = 8 }: ListDetailPageProps) {
   const { t } = useI18n();
+  const { config } = useModerationConfig();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
+  const moderationDecisions = useModerationBatch(feed, config, client);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -218,7 +221,8 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                       >
                         <PostCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
-                          previewLines={previewLines} quotedPreviewLines={quotedPreviewLines}>
+                          previewLines={previewLines} quotedPreviewLines={quotedPreviewLines}
+                          moderationDecision={moderationDecisions.get(post.uri) ?? null}>
                           <PostActionsRow client={client} goTo={goTo} post={post} />
                         </PostCard>
                       </div>

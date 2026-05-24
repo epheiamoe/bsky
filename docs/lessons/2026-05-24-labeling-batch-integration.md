@@ -194,8 +194,8 @@ posts.map((post, i) => (
 
 ## 7. 提交记录
 
-- `TBD` — 文档更新（本次）
-- `TBD` — 列表级批量审核集成
+- `3ea490f` — docs: Update documentation for v0.15.0 labeling system status
+- `TBD` — fix: Implement list-level batch moderation integration
 
 ---
 

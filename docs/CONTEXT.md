@@ -279,9 +279,9 @@ cd packages/core && npx vitest run --config vitest.config.ts
   - Labelers subtab: enable/disable third-party labelers
 - **UnifiedThreadView** — `!` key to report post
 
-### 已知问题 (Critical)
-- **moderationDecision not applied to posts**: `PostCard` accepts `moderationDecision` prop, but zero callers pass it. Decision engine works but UI never uses it.
-- **List-level batch moderation missing**: Need to call `resolveModerationBatch()` in list components and pass per-post decisions to `PostCard`
+### 已知问题
+- ✅ **已修复 (2026-05-24)**: `useModerationBatch` React hook 创建，6 个列表组件集成（FeedTimeline, BookmarkPage, ProfilePage, SearchPage, ListDetailPage, ThreadView）
+- **ThreadView focused 帖子**: 主题帖/当前帖子使用内联渲染（非 PostCard）， moderation overlay 未应用
 
 ### 内置标签服务 (10 verified active)
 1. `moderation.bsky.app` — Bluesky官方

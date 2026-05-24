@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList } from '@bsky/app';
+import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -10,6 +10,7 @@ import { PostActionsRow } from './PostActionsRow.js';
 import { truncateName } from './PostCard.js';
 import { MobileHeaderCtx } from './Layout.js';
 import { PullToRefresh } from './PullToRefresh.js';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface SearchPageProps {
   client: BskyClient;
@@ -40,7 +41,9 @@ function avatarLetter(name: string): string {
 export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: SearchPageProps) {
   const { t } = useI18n();
   const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
+  const { config } = useModerationConfig();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
+  const moderationDecisions = useModerationBatch(posts, config, client);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -178,6 +181,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                 client={client}
                 previewLines={previewLines}
                 quotedPreviewLines={quotedPreviewLines}
+                moderationDecision={moderationDecisions.get(item.uri) ?? null}
               >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostCard>

@@ -1,11 +1,12 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks, useI18n, useVirtualizedList } from '@bsky/app';
+import { useBookmarks, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostCard } from './PostCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { PullToRefresh } from './PullToRefresh.js';
+import { useModerationConfig } from '../hooks/useModerationConfig.js';
 
 interface BookmarkPageProps {
   client: BskyClient;
@@ -23,6 +24,8 @@ interface BookmarkPageProps {
 export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: BookmarkPageProps) {
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
+  const { config } = useModerationConfig();
+  const moderationDecisions = useModerationBatch(bookmarks, config, client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
     bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
   );
@@ -88,6 +91,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     client={client}
                     previewLines={previewLines}
                     quotedPreviewLines={quotedPreviewLines}
+                    moderationDecision={moderationDecisions.get(post.uri) ?? null}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
                   </PostCard>
