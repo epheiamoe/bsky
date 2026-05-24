@@ -701,6 +701,7 @@ const zh: LocaleMessages = {
   'moderation.label': '标签',
   'moderation.hide': '隐藏',
   'moderation.warn': '警告',
+  'moderation.badge': '显示徽章',
   'moderation.show': '显示',
   'moderation.ignore': '忽略',
   'moderation.globalNote': '这些设置影响所有标签提供商的默认行为。每个提供商可以单独覆盖。',

@@ -550,6 +550,7 @@ const en: LocaleMessages = {
   'moderation.label': 'Label',
   'moderation.hide': 'Hide',
   'moderation.warn': 'Warn',
+  'moderation.badge': 'Show Badge',
   'moderation.show': 'Show',
   'moderation.ignore': 'Ignore',
   'moderation.globalNote': 'These settings affect the default behavior for all labelers. Each labeler can override individually.',

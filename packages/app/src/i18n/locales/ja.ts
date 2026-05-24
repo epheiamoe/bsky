@@ -559,6 +559,7 @@ const ja: LocaleMessages = {
   'moderation.label': 'ラベル',
   'moderation.hide': '非表示',
   'moderation.warn': '警告',
+  'moderation.badge': 'バッジ表示',
   'moderation.show': '表示',
   'moderation.ignore': '無視',
   'moderation.globalNote': 'これらの設定はすべてのラベラーに影響します。各ラベラーは個別に上書きできます。',
