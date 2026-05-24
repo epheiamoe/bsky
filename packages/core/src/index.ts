@@ -63,6 +63,13 @@ export type {
   ThreadgateRule,
   ThreadgateRecord,
   ThreadgateView,
+  Label,
+  LabelValueDefinition,
+  LabelerPolicies,
+  LabelerServiceRecord,
+  LabelerView,
+  ContentLabelPref,
+  ModerationPrefs,
 } from './at/types.js';
 
 // AI exports
@@ -103,6 +110,22 @@ export {
 } from './ai/providers.js';
 export type { ProviderInfo, ModelInfo } from './ai/providers.js';
 export type { LoginErrorDetail } from './at/client.js';
+
+// Moderation / Labeling
+export {
+  resolveModeration,
+  DEFAULT_MODERATION_CONFIG,
+  OFFICIAL_LABELER_DID,
+  STANDARD_LABELS,
+  isStandardLabel,
+} from './moderation.js';
+export type {
+  ModerationAction,
+  ModerationDecision,
+  LabelerConfig,
+  ModerationConfig,
+} from './moderation.js';
+export { LabelCache } from './moderation-cache.js';
 
 // Python Sandbox
 export type { PythonSandboxEngine, PythonExecutionResult, PythonFile } from './ai/python-sandbox.js';

@@ -46,6 +46,8 @@ import type {
   GetActorLikesResponse,
   GetRelationshipsResponse,
   ThreadgateRule,
+  Label,
+  LabelerView,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -925,5 +927,55 @@ export class BskyClient {
       allRelationships.push(...(res.relationships || []));
     }
     return { actor, relationships: allRelationships };
+  }
+
+  // ── Labeling / Moderation API methods ──
+
+  async queryLabels(params: { uriPatterns: string[]; sources?: string[]; limit?: number; cursor?: string }): Promise<{ labels: Label[]; cursor?: string }> {
+    const sp = new URLSearchParams();
+    params.uriPatterns.forEach(p => sp.append('uriPatterns', p));
+    if (params.sources) params.sources.forEach(s => sp.append('sources', s));
+    if (params.limit) sp.set('limit', String(params.limit));
+    if (params.cursor) sp.set('cursor', params.cursor);
+    return this.publicKy.get('com.atproto.label.queryLabels', {
+      searchParams: sp,
+    }).json<{ labels: Label[]; cursor?: string }>();
+  }
+
+  async getLabelerServices(dids: string[]): Promise<LabelerView[]> {
+    const sp = new URLSearchParams();
+    dids.forEach(d => sp.append('dids', d));
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    const res = await kyInstance.get('app.bsky.labeler.getServices', {
+      searchParams: sp,
+      ...headers,
+    }).json<{ views: LabelerView[] }>();
+    return res.views || [];
+  }
+
+  async getPreferences(): Promise<{ preferences: unknown[] }> {
+    return this.ky.get('app.bsky.actor.getPreferences', {
+      headers: this.getAuthHeaders(),
+    }).json<{ preferences: unknown[] }>();
+  }
+
+  async putPreferences(preferences: unknown[]): Promise<void> {
+    await this.ky.post('app.bsky.actor.putPreferences', {
+      headers: this.getAuthHeaders(),
+      json: { preferences },
+    });
+  }
+
+  async createModerationReport(params: {
+    reasonType: string;
+    reason?: string;
+    subject: { did?: string; uri?: string; cid?: string };
+    reportedBy?: string;
+  }): Promise<{ id: number; report: unknown }> {
+    return this.ky.post('com.atproto.moderation.createReport', {
+      headers: this.getAuthHeaders(),
+      json: params,
+    }).json<{ id: number; report: unknown }>();
   }
 }

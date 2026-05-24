@@ -72,6 +72,7 @@ export interface PostView {
   repostCount?: number;
   indexedAt?: string;
   viewer?: ViewerState;
+  labels?: Label[];
 }
 
 export interface ProfileViewBasic {
@@ -79,6 +80,7 @@ export interface ProfileViewBasic {
   handle: string;
   displayName?: string;
   avatar?: string;
+  labels?: Label[];
 }
 
 export interface ProfileView extends ProfileViewBasic {
@@ -98,6 +100,70 @@ export interface ViewerState {
   followedBy?: string;
   like?: string;
   repost?: string;
+}
+
+// ── Labeling (com.atproto.label / app.bsky.labeler) types ──
+
+export interface Label {
+  ver?: number;
+  src: string;
+  uri: string;
+  cid?: string;
+  val: string;
+  neg?: boolean;
+  cts: string;
+  exp?: string;
+  sig?: unknown;
+}
+
+export interface LabelValueDefinition {
+  identifier: string;
+  severity: 'inform' | 'alert' | 'none';
+  blurs: 'content' | 'media' | 'none';
+  defaultSetting: 'ignore' | 'warn' | 'hide';
+  adultOnly: boolean;
+  locales: Array<{
+    lang: string;
+    name: string;
+    description: string;
+  }>;
+}
+
+export interface LabelerPolicies {
+  labelValues: string[];
+  labelValueDefinitions: LabelValueDefinition[];
+}
+
+export interface LabelerServiceRecord {
+  $type: 'app.bsky.labeler.service';
+  policies: LabelerPolicies;
+  subjectTypes?: string[];
+  subjectCollections?: string[];
+  createdAt: string;
+}
+
+export interface LabelerView {
+  uri: string;
+  cid: string;
+  creator: ProfileViewBasic;
+  likeCount?: number;
+  viewer?: { like?: string };
+  indexedAt: string;
+  policies?: LabelerPolicies;
+}
+
+export interface ContentLabelPref {
+  label: string;
+  visibility: 'hide' | 'warn' | 'ignore';
+}
+
+export interface ModerationPrefs {
+  adultContentEnabled: boolean;
+  labels: ContentLabelPref[];
+  labelers: Array<{
+    did: string;
+    labels: ContentLabelPref[];
+  }>;
 }
 
 export interface ThreadViewPost {
