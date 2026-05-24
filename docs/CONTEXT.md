@@ -24,7 +24,7 @@
 
 ## 当前版本
 
-**v0.14.1 (in development)** — Labeling System Update (Not yet on production)
+**v0.15.0 (in development)** — Moderation UI Redesign & Unified Pipeline
 
 ### v0.14.1 Phase 1: Failure Detection & Safety Notifications (In Progress)
 - **Critical Problem**: Label service failures are silent — users don't know they're unprotected
@@ -316,6 +316,18 @@ cd packages/core && npx vitest run --config vitest.config.ts
 ### 已知问题
 - ✅ **已修复 (2026-05-24)**: `useModerationBatch` React hook 创建，6 个列表组件集成（FeedTimeline, BookmarkPage, ProfilePage, SearchPage, ListDetailPage, ThreadView）
 - **ThreadView focused 帖子**: 主题帖/当前帖子使用内联渲染（非 PostCard）， moderation overlay 未应用
+
+### v0.15.0 计划 (Moderation UI Redesign)
+- **PostPreviewCard + PostFullCard**: 统一帖子显示组件，两种模式（预览/完整）
+- **ContentHiddenCard**: 透明化审核来源信息，显示哪个 labeler 标记了什么
+- **MediaBlurOverlay**: Twitter 风格媒体模糊，高 blur + 暗色覆盖，帖子其他部分完全可见
+- **Blob 标签订询**: 从 embed 提取 blob CID，构造 blob URI 查询媒体级标签
+- **引用帖子 moderation**: 引用帖子图片也支持 media blur
+- **统一 moderation hook**: `usePostModeration` — 所有帖子走相同 moderation 流程
+- **i18n 标签名**: 预留 `LABEL_I18N_KEYS` map，支持标签名称国际化
+- **Lucide 图标**: 替换所有 emoji（ThreadView 📭 → inbox icon）
+- **事件冒泡修复**: "显示内容"按钮阻止冒泡，原地展开不跳转
+- **详细计划**: `docs/plan/plan_moderation_ui_redesign.md`
 
 ### 内置标签服务 (10 verified active)
 1. `moderation.bsky.app` — Bluesky官方

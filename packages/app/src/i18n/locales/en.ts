@@ -596,6 +596,12 @@ const en: LocaleMessages = {
   'moderation.failureBehavior.silentDesc': 'Show a small notification only',
   'moderation.failureBehavior.bannerDesc': 'Show a warning banner at the top',
   'moderation.failureBehavior.blockDesc': 'Block content loading until service recovers',
+  // [v0.15.0] Transparent moderation copy
+  'moderation.hiddenByLabelers': 'This content is hidden by your subscribed moderation services:',
+  'moderation.hiddenBy': 'Labeled by {labeler} as',
+  'moderation.clickToShowMedia': 'Click to show media',
+  'moderation.mediaHidden': 'Media hidden',
+
   'moderation.recommendedLabelers': 'Recommended Labelers',
   'moderation.blockLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Content safety filtering is incomplete.',
   'moderation.bannerLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Some content may not be filtered.',

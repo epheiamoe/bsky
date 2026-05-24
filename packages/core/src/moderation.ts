@@ -18,7 +18,12 @@ import type {
 export type ModerationAction = 'hide' | 'warn' | 'blurMedia' | 'showBadge' | 'none';
 
 export interface ModerationDecision {
+  /** Backward-compatible most restrictive action */
   action: ModerationAction;
+  /** Whether post content (text, author) should be hidden */
+  contentAction: 'hide' | 'none';
+  /** Whether media should be blurred */
+  mediaAction: 'blur' | 'none';
   /** Labels that contributed to this decision, grouped by labeler */
   sources: Array<{
     labelerDid: string;
@@ -29,6 +34,7 @@ export interface ModerationDecision {
       description: string;
       severity: string;
       blurs: string;
+      i18nKey?: string;
     }>;
   }>;
   /** Raw warning text key (UI layer should localize via t()) */
@@ -81,6 +87,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
     defaultSetting: 'hide',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Adult Content', description: 'Explicit sexual images.' }],
+    i18nKey: 'moderation.labels.porn',
   },
   {
     identifier: 'sexual',
@@ -89,6 +96,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Sexual', description: 'Sexual content (less intense).' }],
+    i18nKey: 'moderation.labels.sexual',
   },
   {
     identifier: 'nudity',
@@ -97,6 +105,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Nudity', description: 'E.g. artistic nudity.' }],
+    i18nKey: 'moderation.labels.nudity',
   },
   {
     identifier: 'graphic-media',
@@ -105,6 +114,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Graphic Media', description: 'Blood, gore, or other potentially disturbing media.' }],
+    i18nKey: 'moderation.labels.graphic-media',
   },
 ];
 
@@ -140,10 +150,14 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
 
 /**
  * Resolve moderation decision for a subject based on its labels and user config.
- * 
+ *
+ * [v0.15.0] Now computes separate contentAction and mediaAction:
+ * - contentAction: 'hide' | 'none' — affects post text, author, interactions
+ * - mediaAction: 'blur' | 'none' — affects images, video, external media
+ *
  * Decision hierarchy (most restrictive wins):
  *   hide > warn > blurMedia > showBadge > none
- * 
+ *
  * Logic:
  * 1. Group labels by labeler DID.
  * 2. For each label, resolve visibility preference:
@@ -153,8 +167,8 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
  * 3. If adult-only label and adultContentEnabled=false → force 'hide'
  * 4. Determine action from visibility + label definition:
  *    - hide → 'hide'
- *    - warn + blurs=content → 'warn'
- *    - warn + blurs=media → 'blurMedia'
+ *    - warn + blurs=content → 'warn' (contentAction)
+ *    - warn + blurs=media → 'blurMedia' (mediaAction)
  *    - warn + blurs=none + severity≠none → 'showBadge'
  *    - ignore → 'none'
  * 5. Combine: most restrictive action wins across all providers.
@@ -168,7 +182,13 @@ export function resolveModeration(
 ): ModerationDecision {
   // Handle empty / no labels
   if (!labels || labels.length === 0) {
-    return { action: 'none', sources: [], badges: [] };
+    return {
+      action: 'none',
+      contentAction: 'none',
+      mediaAction: 'none',
+      sources: [],
+      badges: [],
+    };
   }
 
   // Build global preference lookup
@@ -187,6 +207,8 @@ export function resolveModeration(
 
   // Track the most restrictive action and all contributing sources
   let finalAction: ModerationAction = 'none';
+  let contentAction: 'hide' | 'none' = 'none';
+  let mediaAction: 'blur' | 'none' = 'none';
   const sources: ModerationDecision['sources'] = [];
   const badges = new Set<string>();
 
@@ -210,10 +232,10 @@ export function resolveModeration(
     for (const label of labelerLabels) {
       // [v0.14.1] Use fetched definition if available, otherwise fall back to built-in
       const def = defMap.get(label.val) || BUILTIN_DEF_MAP.get(label.val);
-      
+
       // Resolve visibility preference
       let visibility: 'hide' | 'warn' | 'ignore';
-      
+
       // a. Labeler-specific override
       const labelerPref = labelerConfig?.labelPrefs[label.val];
       if (labelerPref) {
@@ -254,6 +276,14 @@ export function resolveModeration(
         finalAction = action;
       }
 
+      // Update contentAction / mediaAction separately
+      if (action === 'hide' || action === 'warn') {
+        contentAction = 'hide';
+      }
+      if (action === 'blurMedia') {
+        mediaAction = 'blur';
+      }
+
       // Collect badge if applicable
       if (action !== 'none' && action !== 'hide') {
         const badgeName = def?.locales?.[0]?.name || label.val;
@@ -267,6 +297,7 @@ export function resolveModeration(
         description: def?.locales?.[0]?.description || '',
         severity: def?.severity || 'none',
         blurs: def?.blurs || 'none',
+        i18nKey: (def as any)?.i18nKey,
       });
     }
 
@@ -291,6 +322,8 @@ export function resolveModeration(
 
   return {
     action: finalAction,
+    contentAction,
+    mediaAction,
     sources,
     warningTextKey,
     badges: Array.from(badges),
@@ -302,4 +335,65 @@ export function resolveModeration(
  */
 export function isStandardLabel(val: string): boolean {
   return STANDARD_LABELS.includes(val as typeof STANDARD_LABELS[number]);
+}
+
+/**
+ * [v0.15.0] Extract blob references from a post for media-level label querying.
+ *
+ * Blob URIs follow the format: at://{did}/app.bsky.feed.post/{rkey}#/{blobCid}
+ * These are used with com.atproto.label.queryLabels to fetch labels attached
+ * to specific media blobs (images/video) rather than the entire post.
+ */
+export interface BlobReference {
+  cid: string;
+  /** at://{did}/app.bsky.feed.post/{rkey}#/{cid} */
+  uri: string;
+  type: 'image' | 'video';
+}
+
+export function extractBlobReferences(postUri: string, embed?: Record<string, unknown>): BlobReference[] {
+  const refs: BlobReference[] = [];
+
+  // Parse post URI to get did and rkey
+  const match = postUri.match(/^at:\/\/(did:[^:]+:[^\/]+)\/[^\/]+\/([^\/]+)$/);
+  if (!match) return refs;
+
+  const did = match[1];
+  const rkey = match[2];
+
+  if (!embed) return refs;
+
+  // Extract image blobs
+  const extractImages = (e: Record<string, unknown>) => {
+    const type = e.$type as string | undefined;
+    if ((type === 'app.bsky.embed.images' || type === 'app.bsky.embed.images#view') && Array.isArray(e.images)) {
+      for (const img of e.images as Array<Record<string, unknown>>) {
+        const cid = ((img as any).image?.ref?.$link as string) || ((img as any).cid as string);
+        if (cid) {
+          refs.push({
+            cid,
+            uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+            type: 'image',
+          });
+        }
+      }
+    } else if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
+      extractImages(e.media as Record<string, unknown>);
+    }
+  };
+  extractImages(embed);
+
+  // Extract video blob
+  if ((embed.$type as string) === 'app.bsky.embed.video') {
+    const cid = ((embed.video as any)?.ref?.$link as string);
+    if (cid) {
+      refs.push({
+        cid,
+        uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+        type: 'video',
+      });
+    }
+  }
+
+  return refs;
 }

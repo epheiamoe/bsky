@@ -98,3 +98,4 @@ export {
 } from './hooks/widgetStore.js';
 
 export { BUILTIN_LABELERS } from './data/default-labelers.js';
+export { getLabelName, LABEL_I18N_KEYS } from './i18n/label-i18n.js';

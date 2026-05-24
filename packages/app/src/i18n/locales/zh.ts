@@ -739,6 +739,12 @@ const zh: LocaleMessages = {
   'moderation.welcomeTitle': '审核和标记偏好',
   'moderation.welcomeDesc': '选择你希望如何处理标记内容。你可以随时在设置中更改。',
   
+  // [v0.15.0] 透明审核文案
+  'moderation.hiddenByLabelers': '此内容因为你订阅的审核服务而被隐藏：',
+  'moderation.hiddenBy': '被你订阅的 {labeler} 标记为',
+  'moderation.clickToShowMedia': '点击显示媒体',
+  'moderation.mediaHidden': '媒体已隐藏',
+
   // [v0.14.1] 失败处理
   'moderation.failureBehavior': '失效行为',
   'moderation.failureBehavior.silent': '静默',

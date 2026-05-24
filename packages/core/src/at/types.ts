@@ -138,6 +138,8 @@ export interface LabelValueDefinition {
     name: string;
     description: string;
   }>;
+  /** [v0.15.0] i18n key for label name translation */
+  i18nKey?: string;
 }
 
 export interface LabelerPolicies {

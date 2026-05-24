@@ -161,7 +161,7 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
   ];
 
   return (
-    <div className="flex flex-col bg-background min-h-0">
+    <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b border-border flex-shrink-0">
         <div className="flex items-center h-12 px-4 gap-3">

@@ -118,12 +118,14 @@ export {
   OFFICIAL_LABELER_DID,
   STANDARD_LABELS,
   isStandardLabel,
+  extractBlobReferences,
 } from './moderation.js';
 export type {
   ModerationAction,
   ModerationDecision,
   LabelerConfig,
   ModerationConfig,
+  BlobReference,
 } from './moderation.js';
 export { LabelCache } from './moderation-cache.js';
 export type { LabelerFailureState, RetryConfig } from './moderation-cache.js';

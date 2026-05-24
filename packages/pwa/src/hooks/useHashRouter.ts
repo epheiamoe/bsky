@@ -15,6 +15,7 @@ import { BUILTIN_FEEDS } from '@bsky/core';
  *   #/search / #/search?q=...
  *   #/bookmarks
  *   #/drafts
+ *   #/settings
  *   #/compose / #/compose?replyTo=at://...
  *   #/ai / #/ai?context=at://...
  */
@@ -130,6 +131,8 @@ function parseHash(): AppView {
     }
     case '/drafts':
       return { type: 'drafts' };
+    case '/settings':
+      return { type: 'settings' };
     case '/dm': {
       const conv = params.get('conv');
       if (conv) return { type: 'dmChat', conversationId: decodeURIComponent(conv) };
@@ -213,6 +216,8 @@ function encodeView(view: AppView): string {
     }
     case 'drafts':
       return '#/drafts';
+    case 'settings':
+      return '#/settings';
     case 'dm': {
       const conv = (view as { conversationId?: string }).conversationId;
       return conv ? `#/dm?conv=${encodeURIComponent(conv)}` : '#/dm';
