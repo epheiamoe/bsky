@@ -1,9 +1,9 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
+import { useBookmarks, useI18n, useVirtualizedList, usePostsWithModeration } from '@bsky/app';
 import { Icon } from './Icon.js';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { PullToRefresh } from './PullToRefresh.js';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
@@ -27,9 +27,9 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
+  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(bookmarks, config, client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
+    moderatedPosts, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
   );
 
   const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
@@ -75,7 +75,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
           <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
-              const post = bookmarks[vi.index]!;
+              const post = moderatedPosts[vi.index]!;
               return (
                 <div
                   key={post.uri}
@@ -88,7 +88,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
             className="relative group"
             role="listitem"
           >
-                  <PostCard
+                  <PostPreviewCard
                     post={post}
                     onClick={() => goTo({ type: 'thread', uri: post.uri })}
                     goTo={goTo}
@@ -98,10 +98,10 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     client={client}
                     previewLines={previewLines}
                     quotedPreviewLines={quotedPreviewLines}
-                    moderationDecision={moderationDecisions.get(post.uri) ?? null}
+                    moderationDecision={post.moderationDecision}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
-                  </PostCard>
+                  </PostPreviewCard>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

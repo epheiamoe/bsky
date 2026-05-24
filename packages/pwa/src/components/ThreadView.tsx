@@ -1,18 +1,19 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, usePostsWithModeration } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
 import { describeImage } from '@bsky/core';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
 import { ReportButton } from './ReportButton.js';
-import { truncateName, linkifyText } from './PostCard.js';
+import { truncateName, linkifyText } from './PostPreviewCard.js';
 import { ImageGrid } from './ImageGrid.js';
-import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
+import { ContentHiddenCard } from './ContentHiddenCard.js';
+import { MediaBlurOverlay } from './MediaBlurOverlay.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -60,7 +61,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   } = useThread(client, uri);
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(flatLines, config, client);
+  const { posts: moderatedLines, failedLabelers } = usePostsWithModeration(flatLines, config, client);
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
 
@@ -76,6 +77,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [translationResult, setTranslationResult] = useState<{ translated: string; sourceLang?: string } | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followUri, setFollowUri] = useState<string | undefined>();
+  const [focusedContentRevealed, setFocusedContentRevealed] = useState(false);
+  const [focusedMediaRevealed, setFocusedMediaRevealed] = useState(false);
 
   // Clear translation when focused post changes
   useEffect(() => {
@@ -136,6 +139,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
+  const focusedModeration = focused ? moderatedLines.find(ml => ml.uri === focused.uri)?.moderationDecision : null;
+  const showFocusedContentHidden = focusedModeration?.contentAction === 'hide' && !focusedContentRevealed;
+  const showFocusedMediaBlur = focusedModeration?.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
 
@@ -196,128 +202,162 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         {focused && (
           <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
-            <div className="flex items-start gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mt-0.5"
-                onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
-              >
-                {focused.authorAvatar ? (
-                  <img src={focused.authorAvatar} alt={focused.displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
-                    {focused.displayName?.charAt(0) || '?'}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-text-primary truncate">
-                    {truncateName(focused.displayName)}
-                  </span>
-                  <button
-                    onClick={handleFollow}
-                    className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors shrink-0 ${
-                      isFollowing
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
-                        : 'bg-primary text-white hover:bg-primary-hover'
-                    }`}
+            {showFocusedContentHidden ? (
+              <ContentHiddenCard
+                decision={focusedModeration!}
+                onShow={() => setFocusedContentRevealed(true)}
+              />
+            ) : (
+              <>
+                <div className="flex items-start gap-3 mb-3">
+                  <div
+                    className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mt-0.5"
+                    onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
                   >
-                    {isFollowing ? t('profile.unfollow') : t('profile.follow')}
-                  </button>
+                    {focused.authorAvatar ? (
+                      <img src={focused.authorAvatar} alt={focused.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                        {focused.displayName?.charAt(0) || '?'}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-semibold text-text-primary truncate">
+                        {truncateName(focused.displayName)}
+                      </span>
+                      <button
+                        onClick={handleFollow}
+                        className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors shrink-0 ${
+                          isFollowing
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
+                            : 'bg-primary text-white hover:bg-primary-hover'
+                        }`}
+                      >
+                        {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                      <span>@{focused.handle}</span>
+                      <span>·</span>
+                      <span>{formatTime(focused.indexedAt)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-                  <span>@{focused.handle}</span>
-                  <span>·</span>
-                  <span>{formatTime(focused.indexedAt)}</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-              {linkifyText(focused.text)}
-            </p>
-            {focused.quotedPost && (
-              <div
-                className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-                onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {focused.quotedPost.authorAvatar && (
-                    <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                  )}
-                  <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
-                  <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
-                </div>
-                <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
-                {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
-                  <div className="mt-1 flex gap-1">
-                    {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                      <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                    ))}
+                <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                  {linkifyText(focused.text)}
+                </p>
+                {focused.quotedPost && (
+                  <div
+                    className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+                    onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {focused.quotedPost.authorAvatar && (
+                        <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                      )}
+                      <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                      <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                    </div>
+                    <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
+                    {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
+                      <div className="mt-1 flex gap-1">
+                        {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                          <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
-            {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
-            {translationResult && !translating && (
-              <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <p className="text-xs text-primary font-medium mb-1">
-                  <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
-                  {translationResult.sourceLang && (
-                    <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+                {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
+                {translationResult && !translating && (
+                  <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                    <p className="text-xs text-primary font-medium mb-1">
+                      <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
+                      {translationResult.sourceLang && (
+                        <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+                      )}
+                    </p>
+                    <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
+                  </div>
+                )}
+                {focused.imageDetails?.length > 0 && (
+                  showFocusedMediaBlur ? (
+                    <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
+                      <ImageGrid
+                        images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                        imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                          const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                          if (!m) throw new Error('Could not parse image URL');
+                          return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                        }                 : undefined}
+                        singleImageFill={singleImageFill}
+                      />
+                    </MediaBlurOverlay>
+                  ) : (
+                    <ImageGrid
+                      images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                      imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                        const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                        if (!m) throw new Error('Could not parse image URL');
+                        return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                      }                 : undefined}
+                      singleImageFill={singleImageFill}
+                    />
+                  )
+                )}
+                {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+                  showFocusedMediaBlur ? (
+                    <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
+                      <VideoCard
+                        thumbnailUrl={focused.videoThumbnailUrl}
+                        playlistUrl={focused.videoPlaylistUrl}
+                        alt={focused.videoAlt}
+                        aspectRatio={focused.videoAspectRatio}
+                      />
+                    </MediaBlurOverlay>
+                  ) : (
+                    <VideoCard
+                      thumbnailUrl={focused.videoThumbnailUrl}
+                      playlistUrl={focused.videoPlaylistUrl}
+                      alt={focused.videoAlt}
+                      aspectRatio={focused.videoAspectRatio}
+                    />
+                  )
+                )}
+                {focused.externalLink && (
+                  <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                    className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                  >
+                    <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                    {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                    <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                  </a>
+                )}
+                {/* Threadgate restriction badge */}
+                {threadgate && threadgate.rules !== undefined && (
+                  <div role="alert" className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                    <Icon name="corner-down-right" size={12} />
+                    {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
+                  </div>
+                )}
+                {/* Unified action row + extras */}
+                <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
+                  <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
+                  {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
+                  <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
+                  <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
+                  <ReportButton client={client} post={focused} />
+                  {focused.handle === client.getHandle() && (
+                    <>
+                      <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
+                      <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
+                    </>
                   )}
-                </p>
-                <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
-              </div>
+                </div>
+              </>
             )}
-            {focused.imageDetails?.length > 0 && (
-              <ImageGrid
-                images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                  const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                  if (!m) throw new Error('Could not parse image URL');
-                  return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                }                 : undefined}
-                singleImageFill={singleImageFill}
-              />
-            )}
-            {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-              <VideoCard
-                thumbnailUrl={focused.videoThumbnailUrl}
-                playlistUrl={focused.videoPlaylistUrl}
-                alt={focused.videoAlt}
-                aspectRatio={focused.videoAspectRatio}
-              />
-            )}
-            {focused.externalLink && (
-              <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-              >
-                <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
-                {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
-              </a>
-            )}
-            {/* Threadgate restriction badge */}
-            {threadgate && threadgate.rules !== undefined && (
-              <div role="alert" className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                <Icon name="corner-down-right" size={12} />
-                {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
-              </div>
-            )}
-            {/* Unified action row + extras */}
-            <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
-              <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-              {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
-              <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
-              <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
-              <ReportButton client={client} post={focused} />
-              {focused.handle === client.getHandle() && (
-                <>
-                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
-                  <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
-                </>
-              )}
-            </div>
           </article>
         )}
 
@@ -338,25 +378,26 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 );
               }
+              const moderatedLine = moderatedLines.find(ml => ml.uri === line.uri);
               return (
                 <div
                   key={line.uri || line.rkey}
                   style={{ marginLeft: Math.min((line.depth - 1) * 20, 60) }}
                 >
-            <PostCard
-              line={line}
-              onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
-              goTo={goTo}
-              imageDescConfig={imageDescConfig}
-              imageDescLang={imageDescLang}
-              singleImageFill={singleImageFill}
-              client={client}
-              previewLines={threadPreviewLines}
-              quotedPreviewLines={quotedPostPreviewLines}
-              moderationDecision={line.uri ? moderationDecisions.get(line.uri) ?? null : null}
-            >
-                      <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-                    </PostCard>
+                  <PostPreviewCard
+                    line={line}
+                    onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+                    goTo={goTo}
+                    imageDescConfig={imageDescConfig}
+                    imageDescLang={imageDescLang}
+                    singleImageFill={singleImageFill}
+                    client={client}
+                    previewLines={threadPreviewLines}
+                    quotedPreviewLines={quotedPostPreviewLines}
+                    moderationDecision={moderatedLine?.moderationDecision ?? null}
+                  >
+                    <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
+                  </PostPreviewCard>
                 </div>
               );
             })}
@@ -368,7 +409,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             <NotFoundCard uri={uri} goBack={goBack} />
           ) : (
             <div className="text-center py-16 text-text-secondary">
-              <p className="text-4xl mb-3">📭</p>
+              <Icon name="inbox" size={48} className="mx-auto mb-3" />
               <p>{t('thread.loadFailed')}</p>
             </div>
           )
