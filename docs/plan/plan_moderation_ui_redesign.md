@@ -662,4 +662,8 @@ Same logic as PostPreviewCard.
 *Document created: 2026-05-25*
 *Target: v0.15.0*
 *Branch: feature/moderation-ui-redesign-v15*
-*Phase: Implementation in progress*
+*Status: Core implementation complete (2026-05-25)*
+*Commits: 2*
+  - `8d427ac`: Core moderation engine + pipeline + UI components
+  - `c3c2f5b`: usePostsWithModeration hook + FeedTimeline update
+  - `8a49565`: ThreadView + all list components unified moderation

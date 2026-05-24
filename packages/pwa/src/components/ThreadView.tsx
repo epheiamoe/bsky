@@ -13,6 +13,7 @@ import { truncateName, linkifyText } from './PostPreviewCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import { VideoCard } from './VideoCard.js';
 import { ContentHiddenCard } from './ContentHiddenCard.js';
+import { HiddenBanner } from './HiddenBanner.js';
 import { MediaBlurOverlay } from './MediaBlurOverlay.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
@@ -141,6 +142,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
   const focusedModeration = focused ? moderatedLines.find(ml => ml.uri === focused.uri)?.moderationDecision : null;
   const showFocusedContentHidden = focusedModeration?.contentAction === 'hide' && !focusedContentRevealed;
+  const showFocusedContentWarning = focusedModeration?.contentAction === 'warn' && !focusedContentRevealed;
   const showFocusedMediaBlur = focusedModeration?.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
@@ -203,7 +205,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
             {showFocusedContentHidden ? (
-              <ContentHiddenCard
+              <HiddenBanner
                 decision={focusedModeration!}
                 onShow={() => setFocusedContentRevealed(true)}
               />
@@ -245,95 +247,106 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                     </div>
                   </div>
                 </div>
-                <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-                  {linkifyText(focused.text)}
-                </p>
-                {focused.quotedPost && (
-                  <div
-                    className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-                    onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {focused.quotedPost.authorAvatar && (
-                        <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                      )}
-                      <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
-                      <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
-                    </div>
-                    <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
-                    {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
-                      <div className="mt-1 flex gap-1">
-                        {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                          <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                        ))}
+
+                {showFocusedContentWarning ? (
+                  <ContentHiddenCard
+                    decision={focusedModeration!}
+                    onShow={() => setFocusedContentRevealed(true)}
+                    inline
+                  />
+                ) : (
+                  <>
+                    <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                      {linkifyText(focused.text)}
+                    </p>
+                    {focused.quotedPost && (
+                      <div
+                        className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+                        onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {focused.quotedPost.authorAvatar && (
+                            <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                          )}
+                          <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                          <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                        </div>
+                        <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
+                        {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
+                          <div className="mt-1 flex gap-1">
+                            {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                              <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
-                {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
-                {translationResult && !translating && (
-                  <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                    <p className="text-xs text-primary font-medium mb-1">
-                      <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
-                      {translationResult.sourceLang && (
-                        <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
-                      )}
-                    </p>
-                    <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
-                  </div>
-                )}
-                {focused.imageDetails?.length > 0 && (
-                  showFocusedMediaBlur ? (
-                    <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
-                      <ImageGrid
-                        images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                        imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                          const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                          if (!m) throw new Error('Could not parse image URL');
-                          return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                        }                 : undefined}
-                        singleImageFill={singleImageFill}
-                      />
-                    </MediaBlurOverlay>
-                  ) : (
-                    <ImageGrid
-                      images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                      imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                        const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                        if (!m) throw new Error('Could not parse image URL');
-                        return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                      }                 : undefined}
-                      singleImageFill={singleImageFill}
-                    />
-                  )
-                )}
-                {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-                  showFocusedMediaBlur ? (
-                    <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
-                      <VideoCard
-                        thumbnailUrl={focused.videoThumbnailUrl}
-                        playlistUrl={focused.videoPlaylistUrl}
-                        alt={focused.videoAlt}
-                        aspectRatio={focused.videoAspectRatio}
-                      />
-                    </MediaBlurOverlay>
-                  ) : (
-                    <VideoCard
-                      thumbnailUrl={focused.videoThumbnailUrl}
-                      playlistUrl={focused.videoPlaylistUrl}
-                      alt={focused.videoAlt}
-                      aspectRatio={focused.videoAspectRatio}
-                    />
-                  )
-                )}
-                {focused.externalLink && (
-                  <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                    className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-                  >
-                    <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
-                    {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                    <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
-                  </a>
+                    {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
+                    {translationResult && !translating && (
+                      <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <p className="text-xs text-primary font-medium mb-1">
+                          <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
+                          {translationResult.sourceLang && (
+                            <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+                          )}
+                        </p>
+                        <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
+                      </div>
+                    )}
+                    {focused.imageDetails?.length > 0 && (
+                      showFocusedMediaBlur ? (
+                        <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
+                          <ImageGrid
+                            images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                            imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                              const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                              if (!m) throw new Error('Could not parse image URL');
+                              return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                            }                 : undefined}
+                            singleImageFill={singleImageFill}
+                          />
+                        </MediaBlurOverlay>
+                      ) : (
+                        <ImageGrid
+                          images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                          imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                            const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                            if (!m) throw new Error('Could not parse image URL');
+                            return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                          }                 : undefined}
+                          singleImageFill={singleImageFill}
+                        />
+                      )
+                    )}
+                    {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+                      showFocusedMediaBlur ? (
+                        <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
+                          <VideoCard
+                            thumbnailUrl={focused.videoThumbnailUrl}
+                            playlistUrl={focused.videoPlaylistUrl}
+                            alt={focused.videoAlt}
+                            aspectRatio={focused.videoAspectRatio}
+                          />
+                        </MediaBlurOverlay>
+                      ) : (
+                        <VideoCard
+                          thumbnailUrl={focused.videoThumbnailUrl}
+                          playlistUrl={focused.videoPlaylistUrl}
+                          alt={focused.videoAlt}
+                          aspectRatio={focused.videoAspectRatio}
+                        />
+                      )
+                    )}
+                    {focused.externalLink && (
+                      <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                      >
+                        <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                        {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                        <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                      </a>
+                    )}
+                  </>
                 )}
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (

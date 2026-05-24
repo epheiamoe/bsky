@@ -8,17 +8,18 @@ interface ContentHiddenCardProps {
   decision: ModerationDecision;
   onShow: () => void;
   compact?: boolean;
+  inline?: boolean;
 }
 
 /**
- * [v0.15.0] Transparent moderation hidden content card.
+ * [v0.15.0] Warning overlay for "warn" level moderation.
  *
- * Shows WHICH labeler hid the content and WHY, instead of vague "sensitive" warnings.
+ * Prominent overlay showing WHY content is flagged.
+ * Used when user sets label to "warn" (not "hide").
  *
  * Design:
  * ┌─────────────────────────────────────────────┐
- * │ [shield-alert] 此内容因为你订阅的审核服务     │
- * │                而被隐藏：                    │
+ * │ [shield-alert] 此内容可能包含敏感信息         │
  * │                                             │
  * │  被你订阅的 @moderation.bsky.app 标记为      │
  * │  · Adult Content · Sexual                   │
@@ -29,9 +30,53 @@ interface ContentHiddenCardProps {
  * │            [显示内容]                        │
  * └─────────────────────────────────────────────┘
  */
-export function ContentHiddenCard({ decision, onShow, compact = false }: ContentHiddenCardProps) {
+export function ContentHiddenCard({ decision, onShow, compact = false, inline = false }: ContentHiddenCardProps) {
   const { t } = useI18n();
   const [showInfo, setShowInfo] = useState(false);
+
+  if (inline) {
+    return (
+      <div className="border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50/50 dark:bg-amber-900/10 p-3 my-2">
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Icon name="shield-alert" size={16} className="text-amber-500" />
+            <span className="text-sm font-medium text-text-primary text-center">
+              {t('moderation.hiddenByLabelers')}
+            </span>
+          </div>
+
+          {decision.sources.length > 0 && (
+            <div className="w-full space-y-1.5">
+              {decision.sources.map(source => (
+                <div key={source.labelerDid} className="text-xs">
+                  <p className="text-text-secondary">
+                    {t('moderation.hiddenBy').replace('{labeler}', `@${source.labelerName || source.labelerDid}`)}
+                  </p>
+                  <div className="flex gap-1 flex-wrap mt-0.5 pl-2">
+                    {source.labels.map(label => (
+                      <span
+                        key={label.val}
+                        className="px-1 py-0.5 rounded bg-surface border border-border text-text-secondary text-[10px]"
+                      >
+                        {getLabelName(label.val, t, label.name)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <button
+            onClick={(e) => { e.stopPropagation(); onShow(); }}
+            className="px-3 py-1.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+          >
+            {t('moderation.showContent')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`border border-border rounded-lg bg-surface/50 ${compact ? 'p-3' : 'p-4'}`}>

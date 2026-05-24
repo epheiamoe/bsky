@@ -20,8 +20,8 @@ export type ModerationAction = 'hide' | 'warn' | 'blurMedia' | 'showBadge' | 'no
 export interface ModerationDecision {
   /** Backward-compatible most restrictive action */
   action: ModerationAction;
-  /** Whether post content (text, author) should be hidden */
-  contentAction: 'hide' | 'none';
+  /** Whether post content (text, author) should be hidden or warned */
+  contentAction: 'hide' | 'warn' | 'none';
   /** Whether media should be blurred */
   mediaAction: 'blur' | 'none';
   /** Labels that contributed to this decision, grouped by labeler */
@@ -207,7 +207,7 @@ export function resolveModeration(
 
   // Track the most restrictive action and all contributing sources
   let finalAction: ModerationAction = 'none';
-  let contentAction: 'hide' | 'none' = 'none';
+  let contentAction: 'hide' | 'warn' | 'none' = 'none';
   let mediaAction: 'blur' | 'none' = 'none';
   const sources: ModerationDecision['sources'] = [];
   const badges = new Set<string>();
@@ -277,8 +277,11 @@ export function resolveModeration(
       }
 
       // Update contentAction / mediaAction separately
-      if (action === 'hide' || action === 'warn') {
+      // [v0.15.0] hide = simple banner, warn = prominent overlay
+      if (action === 'hide') {
         contentAction = 'hide';
+      } else if (action === 'warn') {
+        contentAction = 'warn';
       }
       if (action === 'blurMedia') {
         mediaAction = 'blur';
