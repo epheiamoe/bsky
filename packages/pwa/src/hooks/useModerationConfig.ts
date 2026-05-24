@@ -28,17 +28,34 @@ function loadConfig(): ModerationConfig {
     
     const parsed = JSON.parse(raw);
     
+    // [v0.15.0] Migrate old 'ignore' visibility values to 'show'
+    const migrateVisibility = (v: string): 'show' | 'badge' | 'warn' | 'hide' => {
+      if (v === 'ignore') return 'show';
+      if (v === 'show' || v === 'badge' || v === 'warn' || v === 'hide') return v;
+      return 'warn'; // fallback
+    };
+    
     // Merge user config over defaults
     const merged: ModerationConfig = {
       ...defaults,
       adultContentEnabled: parsed.adultContentEnabled ?? defaults.adultContentEnabled,
-      contentLabels: parsed.contentLabels ?? defaults.contentLabels,
+      contentLabels: (parsed.contentLabels || defaults.contentLabels).map((l: ContentLabelPref) => ({
+        ...l,
+        visibility: migrateVisibility(l.visibility),
+      })),
       labelers: [], // Rebuild below
     };
     
     // Rebuild labelers: start with built-in (preserving user overrides)
     const userLabelers = new Map<string, LabelerConfig>(
-      (parsed.labelers || []).map((l: LabelerConfig) => [l.did, l])
+      (parsed.labelers || []).map((l: LabelerConfig) => {
+        // Migrate labelPrefs
+        const migratedPrefs: Record<string, 'show' | 'badge' | 'warn' | 'hide'> = {};
+        for (const [key, val] of Object.entries(l.labelPrefs || {})) {
+          migratedPrefs[key] = migrateVisibility(val as string);
+        }
+        return [l.did, { ...l, labelPrefs: migratedPrefs }];
+      })
     );
     
     // Add built-in labelers (cannot be removed, only disabled)
@@ -98,7 +115,7 @@ export function useModerationConfig() {
     saveConfig(newConfig);
   }, []);
 
-  const setContentLabelVisibility = useCallback((label: string, visibility: 'hide' | 'warn' | 'ignore') => {
+  const setContentLabelVisibility = useCallback((label: string, visibility: 'show' | 'badge' | 'warn' | 'hide') => {
     setConfig(prev => {
       const existing = prev.contentLabels.findIndex(l => l.label === label);
       let contentLabels: ContentLabelPref[];
@@ -131,7 +148,7 @@ export function useModerationConfig() {
     }));
   }, [setConfig]);
 
-  const updateLabelerPref = useCallback((did: string, label: string, visibility: 'hide' | 'warn' | 'ignore') => {
+  const updateLabelerPref = useCallback((did: string, label: string, visibility: 'show' | 'badge' | 'warn' | 'hide') => {
     setConfig(prev => ({
       ...prev,
       labelers: prev.labelers.map(l =>
