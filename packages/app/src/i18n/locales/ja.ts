@@ -605,6 +605,7 @@ const ja: LocaleMessages = {
   'moderation.failureBehavior.silentDesc': '小さな通知のみ表示',
   'moderation.failureBehavior.bannerDesc': '上部に警告バナーを表示',
   'moderation.failureBehavior.blockDesc': 'サービス回復までコンテンツ読み込みをブロック',
+  'moderation.recommendedLabelers': 'おすすめラベルサービス',
   'moderation.blockLevelFailure': '⚠️ ラベルサービス{count}件が利用不可（{names}）。コンテンツ安全フィルタリングが不完全です。',
   'moderation.bannerLevelFailure': '⚠️ ラベルサービス{count}件が利用不可（{names}）。一部のコンテンツがフィルタリングされない可能性があります。',
   'moderation.silentLevelFailure': 'ラベルサービス {names} が利用不可です。',

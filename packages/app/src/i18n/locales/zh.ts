@@ -747,6 +747,7 @@ const zh: LocaleMessages = {
   'moderation.failureBehavior.silentDesc': '仅显示小通知',
   'moderation.failureBehavior.bannerDesc': '顶部显示警告横幅',
   'moderation.failureBehavior.blockDesc': '服务恢复前阻止内容加载',
+  'moderation.recommendedLabelers': '推荐标签提供商',
   'moderation.blockLevelFailure': '⚠️ {count}个标签服务不可用（{names}）。内容安全过滤不完整。',
   'moderation.bannerLevelFailure': '⚠️ {count}个标签服务不可用（{names}）。部分内容可能未过滤。',
   'moderation.silentLevelFailure': '标签服务 {names} 不可用。',

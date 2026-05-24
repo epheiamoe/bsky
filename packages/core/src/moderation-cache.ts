@@ -138,7 +138,7 @@ export class LabelCache {
     const batchSize = 250;
     for (let i = 0; i < toFetch.length; i += batchSize) {
       const batch = toFetch.slice(i, i + batchSize);
-      const uriPatterns = batch.map(uri => `${uri}*`); // prefix match
+      const uriPatterns = batch.map(uri => `${uri}`); // exact URI match (wildcards not supported by all servers)
 
       try {
         const res = await this.fetchWithRetry(client, {
@@ -222,7 +222,7 @@ export class LabelCache {
   ): Promise<Label[]> {
     try {
       const res = await this.fetchWithRetry(client, {
-        uriPatterns: [`${uri}*`],
+        uriPatterns: [`${uri}`],
         sources: labelerDids,
         limit: 50,
       });

@@ -596,6 +596,7 @@ const en: LocaleMessages = {
   'moderation.failureBehavior.silentDesc': 'Show a small notification only',
   'moderation.failureBehavior.bannerDesc': 'Show a warning banner at the top',
   'moderation.failureBehavior.blockDesc': 'Block content loading until service recovers',
+  'moderation.recommendedLabelers': 'Recommended Labelers',
   'moderation.blockLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Content safety filtering is incomplete.',
   'moderation.bannerLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Some content may not be filtered.',
   'moderation.silentLevelFailure': 'Label service {names} is unavailable.',
