@@ -12,12 +12,13 @@ interface ModerationSettingsTabProps {
   onChange: (config: ModerationConfig) => void;
 }
 
-type Visibility = 'hide' | 'warn' | 'ignore';
+type Visibility = 'show' | 'badge' | 'warn' | 'hide';
 
 const VISIBILITY_OPTIONS: { value: Visibility; labelKey: string }[] = [
-  { value: 'hide', labelKey: 'moderation.hide' },
+  { value: 'show', labelKey: 'moderation.show' },
+  { value: 'badge', labelKey: 'moderation.badge' },
   { value: 'warn', labelKey: 'moderation.warn' },
-  { value: 'ignore', labelKey: 'moderation.ignore' },
+  { value: 'hide', labelKey: 'moderation.hide' },
 ];
 
 export function ModerationSettingsTab({ config, client, onChange }: ModerationSettingsTabProps) {
@@ -226,16 +227,12 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
                     <div className="text-sm font-medium text-text-primary">{t(`moderation.labels.${label}`) || label}</div>
                     <div className="text-xs text-text-secondary/70 mt-0.5">{t(`moderation.labelDesc.${label}`)}</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-1">
-                    {[
-                      { value: 'ignore' as Visibility, labelKey: 'moderation.show' },
-                      { value: 'warn' as Visibility, labelKey: 'moderation.warn' },
-                      { value: 'hide' as Visibility, labelKey: 'moderation.hide' },
-                    ].map(opt => (
+                  <div className="grid grid-cols-4 gap-1">
+                    {VISIBILITY_OPTIONS.map(opt => (
                       <button
                         key={opt.value}
                         onClick={() => handleVisibilityChange(label, opt.value)}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
                           current === opt.value
                             ? 'bg-primary text-white'
                             : 'bg-surface hover:bg-surface-tertiary text-text-secondary'
@@ -446,16 +443,17 @@ function OfficialLabelerPanel({
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
+      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
         <span>{t('moderation.label')}</span>
-        <span className="text-center">{t('moderation.hide')}</span>
+        <span className="text-center">{t('moderation.show')}</span>
+        <span className="text-center">{t('moderation.badge')}</span>
         <span className="text-center">{t('moderation.warn')}</span>
-        <span className="text-center">{t('moderation.ignore')}</span>
+        <span className="text-center">{t('moderation.hide')}</span>
       </div>
       {extraLabels.map(def => {
         const current = labeler.labelPrefs[def.identifier] || def.defaultSetting;
         return (
-          <div key={def.identifier} className="grid grid-cols-4 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
+          <div key={def.identifier} className="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
             <div className="text-sm text-text-primary">
               <div>{def.locales?.[0]?.name || def.identifier}</div>
               {def.locales?.[0]?.description && (
@@ -570,16 +568,17 @@ function ThirdPartyLabelerCard({
           )}
           {labeler.labels.length > 0 ? (
             <div className="border border-border rounded-lg overflow-clip">
-              <div className="grid grid-cols-4 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
+              <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
                 <span>{t('moderation.label')}</span>
-                <span className="text-center">{t('moderation.hide')}</span>
+                <span className="text-center">{t('moderation.show')}</span>
+                <span className="text-center">{t('moderation.badge')}</span>
                 <span className="text-center">{t('moderation.warn')}</span>
-                <span className="text-center">{t('moderation.ignore')}</span>
+                <span className="text-center">{t('moderation.hide')}</span>
               </div>
               {labeler.labels.map(def => {
                 const current = labeler.labelPrefs[def.identifier] || def.defaultSetting;
                 return (
-                  <div key={def.identifier} className="grid grid-cols-4 gap-2 px-3 py-2 border-b border-border last:border-b-0 items-center">
+                  <div key={def.identifier} className="grid grid-cols-5 gap-2 px-3 py-2 border-b border-border last:border-b-0 items-center">
                     <div className="text-sm text-text-primary">
                       <div>{def.locales?.[0]?.name || def.identifier}</div>
                     </div>
