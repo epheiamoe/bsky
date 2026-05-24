@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n, useModerationBatch } from '@bsky/app';
-import { PostCard } from './PostCard';
+import { useI18n, usePostsWithModeration } from '@bsky/app';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
 import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
@@ -60,7 +60,7 @@ const _heightCache = new Map<string, number>();
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
+  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
   const lastScrollY = useRef(0);
@@ -180,7 +180,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
 
         {!loading && !error && posts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-text-secondary">
-            <span className="text-4xl mb-3">🕊️</span>
+            <Icon name="bird" size={48} className="mb-3" />
             <p className="text-sm">{t('status.noPosts')}</p>
           </div>
         )}
@@ -194,8 +194,9 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
           }}
         >
           {virtualizer.getVirtualItems().map((virtualItem) => {
-            const post = posts[virtualItem.index];
-            if (!post) return null;
+            const moderatedPost = moderatedPosts[virtualItem.index];
+            if (!moderatedPost) return null;
+            const post = moderatedPost;
             return (
               <div
                 key={post.uri}
@@ -216,7 +217,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                 data-index={virtualItem.index}
                 role="listitem"
               >
-                <PostCard
+                <PostPreviewCard
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
@@ -226,10 +227,10 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
-                  moderationDecision={moderationDecisions.get(post.uri) ?? null}
+                  moderationDecision={post.moderationDecision}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
-                </PostCard>
+                </PostPreviewCard>
               </div>
             );
           })}
