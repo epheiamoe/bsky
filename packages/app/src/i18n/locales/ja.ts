@@ -610,6 +610,9 @@ const ja: LocaleMessages = {
   // [v0.15.0] 透明なモデレーション表現
   'moderation.hiddenByLabelers': 'このコンテンツは、あなたが購読しているモデレーションサービスによって非表示にされています：',
   'moderation.hiddenBy': '{labeler} により',
+  'moderation.flaggedByLabelers': 'このコンテンツはセンシティブとしてマークされています：',
+  'moderation.flaggedBy': '{labeler} によってマークされた',
+  'moderation.labelDetails': 'ラベルの詳細',
   'moderation.clickToShowMedia': 'クリックしてメディアを表示',
   'moderation.mediaHidden': 'メディアを非表示',
 

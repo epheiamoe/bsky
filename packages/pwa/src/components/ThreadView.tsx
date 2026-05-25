@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, usePostsWithModeration } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, usePostsWithModeration, usePostModeration } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
@@ -21,6 +21,7 @@ import { useModerationConfig } from '../hooks/useModerationConfig.js';
 import { Modal } from './Modal.js';
 import { ThreadgateEditor } from './ThreadgateEditor.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { LabelDetailModal } from './LabelDetailModal.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -80,6 +81,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [followUri, setFollowUri] = useState<string | undefined>();
   const [focusedContentRevealed, setFocusedContentRevealed] = useState(false);
   const [focusedMediaRevealed, setFocusedMediaRevealed] = useState(false);
+  const [showFocusedBadgeModal, setShowFocusedBadgeModal] = useState(false);
+  const [showFocusedWarnModal, setShowFocusedWarnModal] = useState(false);
 
   // Clear translation when focused post changes
   useEffect(() => {
@@ -140,10 +143,14 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
-  const focusedModeration = focused ? moderatedLines.find(ml => ml.uri === focused.uri)?.moderationDecision : null;
-  const showFocusedContentHidden = focusedModeration?.contentAction === 'hide' && !focusedContentRevealed;
-  const showFocusedContentWarning = focusedModeration?.contentAction === 'warn' && !focusedContentRevealed;
-  const showFocusedMediaBlur = focusedModeration?.mediaAction === 'blur' && !focusedMediaRevealed;
+  const { decision: focusedModeration } = usePostModeration(
+    focused ? { uri: focused.uri, labels: (focused as any).labels, record: (focused as any).record } : null,
+    config,
+    client
+  );
+  const showFocusedContentHidden = focusedModeration.contentAction === 'hide' && !focusedContentRevealed;
+  const showFocusedContentWarning = focusedModeration.contentAction === 'warn' && !focusedContentRevealed;
+  const showFocusedMediaBlur = focusedModeration.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
 
@@ -246,8 +253,29 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       <span>{formatTime(focused.indexedAt)}</span>
                     </div>
                     {/* Badge row for focused post */}
-                    {focusedModeration && focusedModeration.contentAction !== 'hide' && focusedModeration.badges.length > 0 && (
-                      <FocusedBadgeRow decision={focusedModeration} />
+                    {focusedModeration && focusedModeration.contentAction === 'none' && focusedModeration.badges.length > 0 && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowFocusedBadgeModal(true); }}
+                          className="flex items-center gap-1 mt-1 max-w-full overflow-hidden"
+                        >
+                          <div className="flex items-center gap-1 overflow-hidden">
+                            {focusedModeration.sources.map((source: ModerationDecision['sources'][number]) =>
+                              source.labels.map((label: ModerationDecision['sources'][number]['labels'][number]) => (
+                                <span
+                                  key={`${source.labelerDid}-${label.val}`}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap"
+                                >
+                                  @{source.labelerName || source.labelerDid}/{label.name || label.val}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </button>
+                        {showFocusedBadgeModal && (
+                          <LabelDetailModal sources={focusedModeration.sources} onClose={() => setShowFocusedBadgeModal(false)} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -354,7 +382,28 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 )}
                 {/* Warning label row for focused post */}
                 {focusedModeration && focusedModeration.contentAction === 'warn' && focusedModeration.sources.length > 0 && (
-                  <FocusedWarningLabelRow decision={focusedModeration} />
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowFocusedWarnModal(true); }}
+                      className="flex items-center gap-1 mt-3 max-w-full overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1 overflow-hidden">
+                        {focusedModeration.sources.map((source: ModerationDecision['sources'][number]) =>
+                          source.labels.map((label: ModerationDecision['sources'][number]['labels'][number]) => (
+                            <span
+                              key={`${source.labelerDid}-${label.val}`}
+                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0 whitespace-nowrap"
+                            >
+                              @{source.labelerName || source.labelerDid}/{label.name || label.val}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </button>
+                    {showFocusedWarnModal && (
+                      <LabelDetailModal sources={focusedModeration.sources} onClose={() => setShowFocusedWarnModal(false)} />
+                    )}
+                  </>
                 )}
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (
@@ -449,113 +498,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           onSaved={() => { setShowThreadgateEditor(false); window.location.reload(); }}
         />
       )}
-    </div>
-  );
-}
-
-/** Badge row for focused post — blue style, under handle */
-function FocusedBadgeRow({ decision }: { decision: ModerationDecision }) {
-  const [showModal, setShowModal] = useState(false);
-
-  if (decision.badges.length === 0) return null;
-
-  return (
-    <>
-      <button
-        onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
-        className="flex items-center gap-1 mt-1 max-w-full overflow-hidden"
-      >
-        <div className="flex items-center gap-1 overflow-hidden">
-          {decision.sources.map(source =>
-            source.labels.map(label => (
-              <span
-                key={`${source.labelerDid}-${label.val}`}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap"
-              >
-                @{source.labelerName || source.labelerDid}/{label.name || label.val}
-              </span>
-            ))
-          )}
-        </div>
-      </button>
-      {showModal && <LabelDetailModal sources={decision.sources} onClose={() => setShowModal(false)} />}
-    </>
-  );
-}
-
-/** Warning label row for focused post — amber style, at bottom */
-function FocusedWarningLabelRow({ decision }: { decision: ModerationDecision }) {
-  const [showModal, setShowModal] = useState(false);
-
-  if (decision.sources.length === 0) return null;
-
-  return (
-    <>
-      <button
-        onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
-        className="flex items-center gap-1 mt-3 max-w-full overflow-hidden"
-      >
-        <div className="flex items-center gap-1 overflow-hidden">
-          {decision.sources.map(source =>
-            source.labels.map(label => (
-              <span
-                key={`${source.labelerDid}-${label.val}`}
-                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0 whitespace-nowrap"
-              >
-                @{source.labelerName || source.labelerDid}/{label.name || label.val}
-              </span>
-            ))
-          )}
-        </div>
-      </button>
-      {showModal && <LabelDetailModal sources={decision.sources} onClose={() => setShowModal(false)} />}
-    </>
-  );
-}
-
-/** Modal showing full label source details */
-function LabelDetailModal({ sources, onClose }: { sources: ModerationDecision['sources']; onClose: () => void }) {
-  const { t } = useI18n();
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="mx-4 max-w-md w-full rounded-xl border border-border bg-surface p-4 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-text-primary">{t('moderation.infoTitle') || '标签详情'}</h3>
-          <button
-            onClick={onClose}
-            className="p-1 text-text-secondary hover:text-text-primary transition-colors"
-            aria-label={t('a11y.close')}
-          >
-            <Icon name="x" size={16} />
-          </button>
-        </div>
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          {sources.map(source => (
-            <div key={source.labelerDid} className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">
-                {source.labelerName || source.labelerDid}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {source.labels.map(label => (
-                  <span
-                    key={label.val}
-                    className="px-2 py-1 rounded text-xs bg-surface border border-border text-text-secondary"
-                  >
-                    {label.name || label.val} ({label.val})
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

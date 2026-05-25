@@ -50,7 +50,7 @@ export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export { useLabelerInfo, fetchLabelerInfos } from './hooks/useLabelerInfo.js';
 export { useModeration, useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
 export type { ModerationSubject, FailedLabelerInfo, ModerationBatchResult, UseModerationBatchResult } from './hooks/useModeration.js';
-export { usePostsWithModeration } from './hooks/usePostsWithModeration.js';
+export { usePostsWithModeration, usePostModeration } from './hooks/usePostsWithModeration.js';
 export type { PostWithModeration, UsePostsWithModerationResult } from './hooks/usePostsWithModeration.js';
 export { useModerationPipeline } from './hooks/useModerationPipeline.js';
 export type { PipelineState, PipelineStrategy, PipelinePhase } from './hooks/useModerationPipeline.js';

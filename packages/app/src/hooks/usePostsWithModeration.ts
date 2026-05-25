@@ -176,6 +176,53 @@ export interface UsePostsWithModerationResult<T> {
  * @param client — BskyClient instance
  * @returns Posts augmented with `moderationDecision` field
  */
+/**
+ * [v0.15.0] Hook for single post moderation (e.g., ThreadView focused post).
+ * Same blob-level label querying as usePostsWithModeration.
+ */
+export function usePostModeration(
+  post: { uri: string; record?: { embed?: Record<string, unknown> }; labels?: Label[] } | null | undefined,
+  config: ModerationConfig,
+  client: BskyClient | null
+): { decision: ModerationDecision; isLoading: boolean } {
+  const [decision, setDecision] = useState<ModerationDecision>({
+    action: 'none',
+    contentAction: 'none',
+    mediaAction: 'none',
+    sources: [],
+    badges: [],
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const policiesCacheRef = useRef<LabelerPoliciesCache>({});
+
+  useEffect(() => {
+    if (!client || !post) {
+      setDecision({ action: 'none', contentAction: 'none', mediaAction: 'none', sources: [], badges: [] });
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    let cancelled = false;
+
+    resolveModerationWithBlobs([post], config, client, policiesCacheRef.current)
+      .then(({ decisions }) => {
+        if (cancelled) return;
+        const dec = decisions.get(post.uri);
+        if (dec) setDecision(dec);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [post?.uri, post?.labels?.length, config, client]);
+
+  return { decision, isLoading };
+}
+
 export function usePostsWithModeration<T extends { uri: string }>(
   posts: T[],
   config: ModerationConfig,

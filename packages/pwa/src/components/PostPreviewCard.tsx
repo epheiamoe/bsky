@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/core';
 import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
-import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n, getLabelName } from '@bsky/app';
+import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
 import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
@@ -13,6 +13,7 @@ import type { ImageData } from './ImageGrid.js';
 import { ContentHiddenCard } from './ContentHiddenCard.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { MediaBlurOverlay } from './MediaBlurOverlay.js';
+import { LabelDetailModal } from './LabelDetailModal.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -248,8 +249,8 @@ export function PostPreviewCard({
               )}
             </div>
 
-            {/* Badge row — shown under handle for all non-hidden posts */}
-            {moderationDecision && moderationDecision.contentAction !== 'hide' && moderationDecision.badges.length > 0 && (
+            {/* Badge row — shown under handle for show/badge level posts only */}
+            {moderationDecision && moderationDecision.contentAction === 'none' && moderationDecision.badges.length > 0 && (
               <BadgeRow decision={moderationDecision} />
             )}
 
@@ -447,49 +448,4 @@ function WarningLabelRow({ decision }: { decision: ModerationDecision }) {
   );
 }
 
-/** Modal showing full label source details */
-function LabelDetailModal({ sources, onClose }: { sources: ModerationDecision['sources']; onClose: () => void }) {
-  const { t } = useI18n();
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="mx-4 max-w-md w-full rounded-xl border border-border bg-surface p-4 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-text-primary">{t('moderation.infoTitle') || '标签详情'}</h3>
-          <button
-            onClick={onClose}
-            className="p-1 text-text-secondary hover:text-text-primary transition-colors"
-            aria-label={t('a11y.close')}
-          >
-            <Icon name="x" size={16} />
-          </button>
-        </div>
-        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-          {sources.map(source => (
-            <div key={source.labelerDid} className="space-y-1.5">
-              <p className="text-sm font-medium text-text-primary">
-                {source.labelerName || source.labelerDid}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {source.labels.map(label => (
-                  <span
-                    key={label.val}
-                    className="px-2 py-1 rounded text-xs bg-surface border border-border text-text-secondary"
-                  >
-                    {getLabelName(label.val, t, label.name)} ({label.val})
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}

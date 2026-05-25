@@ -16,23 +16,14 @@ interface ContentHiddenCardProps {
  *
  * Prominent overlay showing WHY content is flagged.
  * Used when user sets label to "warn" (not "hide").
- *
- * Design:
- * ┌─────────────────────────────────────────────┐
- * │ [shield-alert] 此内容可能包含敏感信息         │
- * │                                             │
- * │  被你订阅的 @moderation.bsky.app 标记为      │
- * │  · Adult Content · Sexual                   │
- * │                                             │
- * │  被你订阅的 @asukafield.xyz 标记为          │
- * │  · Transphobia                              │
- * │                                             │
- * │            [显示内容]                        │
- * └─────────────────────────────────────────────┘
  */
 export function ContentHiddenCard({ decision, onShow, compact = false, inline = false }: ContentHiddenCardProps) {
   const { t } = useI18n();
   const [showInfo, setShowInfo] = useState(false);
+
+  const isHide = decision.contentAction === 'hide';
+  const titleKey = isHide ? 'moderation.hiddenByLabelers' : 'moderation.flaggedByLabelers';
+  const byKey = isHide ? 'moderation.hiddenBy' : 'moderation.flaggedBy';
 
   if (inline) {
     return (
@@ -41,7 +32,7 @@ export function ContentHiddenCard({ decision, onShow, compact = false, inline = 
           <div className="flex items-center gap-2">
             <Icon name="shield-alert" size={16} className="text-amber-500" />
             <span className="text-sm font-medium text-text-primary text-center">
-              {t('moderation.hiddenByLabelers')}
+              {t(titleKey)}
             </span>
           </div>
 
@@ -50,7 +41,7 @@ export function ContentHiddenCard({ decision, onShow, compact = false, inline = 
               {decision.sources.map(source => (
                 <div key={source.labelerDid} className="text-xs">
                   <p className="text-text-secondary">
-                    {t('moderation.hiddenBy').replace('{labeler}', `@${source.labelerName || source.labelerDid}`)}
+                    {t(byKey).replace('{labeler}', `@${source.labelerName || source.labelerDid}`)}
                   </p>
                   <div className="flex gap-1 flex-wrap mt-0.5 pl-2">
                     {source.labels.map(label => (
@@ -84,7 +75,7 @@ export function ContentHiddenCard({ decision, onShow, compact = false, inline = 
         <div className="flex items-center gap-2">
           <Icon name="shield-alert" size={compact ? 20 : 24} className="text-amber-500" />
           <span className={`font-medium text-text-primary text-center ${compact ? 'text-sm' : 'text-base'}`}>
-            {t('moderation.hiddenByLabelers')}
+            {t(titleKey)}
           </span>
         </div>
 
@@ -93,7 +84,7 @@ export function ContentHiddenCard({ decision, onShow, compact = false, inline = 
             {decision.sources.map(source => (
               <div key={source.labelerDid} className="text-sm">
                 <p className="text-text-secondary">
-                  {t('moderation.hiddenBy').replace('{labeler}', `@${source.labelerName || source.labelerDid}`)}
+                  {t(byKey).replace('{labeler}', `@${source.labelerName || source.labelerDid}`)}
                 </p>
                 <div className="flex gap-1.5 flex-wrap mt-1 pl-2">
                   {source.labels.map(label => (

@@ -600,6 +600,9 @@ const en: LocaleMessages = {
   // [v0.15.0] Transparent moderation copy
   'moderation.hiddenByLabelers': 'This content is hidden by your subscribed moderation services:',
   'moderation.hiddenBy': 'Labeled by {labeler} as',
+  'moderation.flaggedByLabelers': 'This content is flagged as sensitive:',
+  'moderation.flaggedBy': 'Flagged by {labeler} as',
+  'moderation.labelDetails': 'Label Details',
   'moderation.clickToShowMedia': 'Click to show media',
   'moderation.mediaHidden': 'Media hidden',
 

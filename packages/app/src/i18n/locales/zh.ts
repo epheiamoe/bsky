@@ -743,6 +743,9 @@ const zh: LocaleMessages = {
   // [v0.15.0] 透明审核文案
   'moderation.hiddenByLabelers': '此内容因为你订阅的审核服务而被隐藏：',
   'moderation.hiddenBy': '被你订阅的 {labeler} 标记为',
+  'moderation.flaggedByLabelers': '此内容被标记为敏感：',
+  'moderation.flaggedBy': '被 {labeler} 标记为',
+  'moderation.labelDetails': '标签详情',
   'moderation.clickToShowMedia': '点击显示媒体',
   'moderation.mediaHidden': '媒体已隐藏',
 
