@@ -392,7 +392,7 @@ function BadgeRow({ decision }: { decision: ModerationDecision }) {
                 key={`${source.labelerDid}-${label.val}`}
                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap"
               >
-                @{source.labelerName || source.labelerDid}/{getLabelName(label.val, null as any, label.name)}
+                @{source.labelerName || source.labelerDid}/{label.name || label.val}
               </span>
             ))
           )}
@@ -431,7 +431,7 @@ function WarningLabelRow({ decision }: { decision: ModerationDecision }) {
                 key={`${source.labelerDid}-${label.val}`}
                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0 whitespace-nowrap"
               >
-                @{source.labelerName || source.labelerDid}/{getLabelName(label.val, null as any, label.name)}
+                @{source.labelerName || source.labelerDid}/{label.name || label.val}
               </span>
             ))
           )}
