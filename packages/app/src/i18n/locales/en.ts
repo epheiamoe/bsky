@@ -225,6 +225,10 @@ const en: LocaleMessages = {
   'thread.changeReplyRestriction': 'Change reply restriction',
   'thread.replyRestrictionSaved': 'Reply restriction saved',
   'thread.replyRestrictionRemoved': 'Reply restriction removed (everyone can reply)',
+  'thread.replyRestrictionDetails': 'Reply restriction details',
+  'thread.allowQuote': 'Allow quote',
+  'thread.allowQuoteYes': 'Allowed',
+  'thread.allowQuoteNo': 'Not allowed',
 
   'notifications.title': 'Notifications',
   'notifications.empty': 'No notifications',

@@ -71,7 +71,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       goHome();
     }
   }, [goTo, goHome]);
-  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, selfLabels, setSelfLabels, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
+  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [replyAncestors, setReplyAncestors] = useState<PostView[]>([]);
@@ -118,10 +118,12 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [altModalInitialAlt, setAltModalInitialAlt] = useState('');
   const [altModalPostId, setAltModalPostId] = useState('');
   const [altModalImageIdx, setAltModalImageIdx] = useState(0);
-  const [showContentWarning, setShowContentWarning] = useState(false);
   const [showReplyOptions, setShowReplyOptions] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
+  const [focusedPostId, setFocusedPostId] = useState<string>(posts[0]?.id ?? '');
+  const [selfLabelsMap, setSelfLabelsMap] = useState<Map<string, string[]>>(new Map());
+  const [activeLabelPostId, setActiveLabelPostId] = useState<string | null>(null);
 
   const selectedThreadgateRules = buildThreadgateRules(selectedThreadgate, selectedListUri);
 
@@ -153,6 +155,13 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       if (prev && posts.some(p => p.id === prev)) return prev;
       return posts.find(p => p.text.trim())?.id ?? posts[0]?.id ?? null;
     });
+  }, [posts]);
+
+  // Keep focused post in sync
+  useEffect(() => {
+    if (!posts.some(p => p.id === focusedPostId)) {
+      setFocusedPostId(posts[0]?.id ?? '');
+    }
   }, [posts]);
 
   // Initialize replyTo
@@ -790,7 +799,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                       const el = e.currentTarget;
                       autoResize(el);
                     }}
-                    onFocus={() => setPolishTargetPostId(post.id)}
+                    onFocus={() => {
+                      setFocusedPostId(post.id);
+                      setPolishTargetPostId(post.id);
+                    }}
                     placeholder=""
                     aria-label={t('a11y.composeInput')}
                     disabled={submitting}
@@ -808,31 +820,26 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                   </span>
                 </div>
 
-                {/* ── Bottom control row (pill buttons) ── */}
-                {!isReply && isLast && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowReplyOptions(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors"
-                    >
-                      <Icon name="message-square" size={12} />
-                      <span>{selectedThreadgate.includes('everyone') ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowContentWarning(true)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors ${
-                        selfLabels.length > 0
-                          ? 'border-primary/30 bg-primary/10 text-primary'
-                          : 'border-border bg-surface text-text-secondary hover:text-text-primary hover:border-primary/30'
-                      }`}
-                    >
-                      <Icon name="tag" size={12} />
-                      <span>{selfLabels.length > 0 ? t('compose.labelsCount', { n: String(selfLabels.length) }) : t('compose.labels')}</span>
-                    </button>
-                  </div>
-                )}
+                {/* ── Per-post labels button ── */}
+                <div className="flex items-center gap-2 mt-2">
+                  {(() => {
+                    const postLabels = selfLabelsMap.get(post.id) ?? [];
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setActiveLabelPostId(post.id)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs transition-colors ${
+                          postLabels.length > 0
+                            ? 'border-primary/30 bg-primary/10 text-primary'
+                            : 'border-border bg-surface text-text-secondary hover:text-text-primary hover:border-primary/30'
+                        }`}
+                      >
+                        <Icon name="tag" size={12} />
+                        <span>{postLabels.length > 0 ? `${postLabels.length} labels` : 'Labels'}</span>
+                      </button>
+                    );
+                  })()}
+                </div>
 
                 {/* ── Quote input (pill button style) ── */}
                 {!postQuoteUri && !isQuoteLoading && (
@@ -906,6 +913,20 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             </div>
           )}
 
+          {/* Threadgate controls */}
+          {!isReply && (
+            <div className="px-4 py-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowReplyOptions(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors"
+              >
+                <Icon name="message-square" size={12} />
+                <span>{selectedThreadgate.length === 0 ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
+              </button>
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div role="alert" className="mx-4 mb-3 text-red-500 text-sm bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 transition-all">{error}</div>
@@ -921,7 +942,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => { setFileTargetPostId(posts[posts.length - 1]?.id ?? posts[0]?.id ?? ''); fileInputRef.current?.click(); }}
+              onClick={() => { setFileTargetPostId(focusedPostId); fileInputRef.current?.click(); }}
               disabled={submitting}
               className="p-2 text-text-secondary hover:text-primary transition-colors disabled:opacity-30"
               aria-label="Add media"
@@ -931,7 +952,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             <button
               type="button"
               onClick={() => {
-                setEmojiTargetPostId(posts[posts.length - 1]?.id ?? posts[0]?.id ?? '');
+                setEmojiTargetPostId(focusedPostId);
                 setShowEmojiPicker(true);
               }}
               disabled={submitting}
@@ -943,9 +964,8 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             <button
               type="button"
               onClick={() => {
-                const lastPost = posts[posts.length - 1];
-                if (lastPost) {
-                  setQuoteInputExpanded(prev => new Set(prev).add(lastPost.id));
+                if (focusedPostId) {
+                  setQuoteInputExpanded(prev => new Set(prev).add(focusedPostId));
                 }
               }}
               disabled={submitting}
@@ -1029,10 +1049,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
       {/* Content warning modal */}
       <ContentWarningModal
-        open={showContentWarning}
-        selectedLabels={selfLabels}
-        onClose={() => setShowContentWarning(false)}
-        onChange={setSelfLabels}
+        open={!!activeLabelPostId}
+        selectedLabels={activeLabelPostId ? (selfLabelsMap.get(activeLabelPostId) ?? []) : []}
+        onClose={() => setActiveLabelPostId(null)}
+        onChange={(labels) => {
+          if (activeLabelPostId) {
+            setSelfLabelsMap(prev => new Map(prev).set(activeLabelPostId, labels));
+          }
+        }}
+        hasMedia={activeLabelPostId ? ((perPostImages.get(activeLabelPostId)?.length ?? 0) > 0 || !!perPostVideos.get(activeLabelPostId)) : false}
       />
 
       {/* Reply options modal */}

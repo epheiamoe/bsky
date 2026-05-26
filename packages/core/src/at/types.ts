@@ -262,6 +262,7 @@ export interface ThreadgateRecord {
   allow?: ThreadgateRule[];
   createdAt: string;
   hiddenReplies?: string[];
+  allowQuote?: boolean;
 }
 
 export interface ThreadgateView {

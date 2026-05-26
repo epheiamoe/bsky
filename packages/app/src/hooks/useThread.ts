@@ -40,6 +40,7 @@ export interface FlatLine {
   threadgate?: {
     rules: ThreadgateRule[];
     listInfo?: Array<{ uri: string; name: string }>;
+    allowQuote?: boolean;
   };
   /** [v0.15.0] Labels attached to this post for moderation rendering */
   labels?: Label[];
@@ -90,9 +91,13 @@ export function useThread(
       if (!themeUri) setThemeUri(uri);
       // Parse threadgate
       const tg = res.threadgate;
-      if (tg?.record?.allow) {
+      if (tg?.record) {
         const listInfo: Array<{ uri: string; name: string }> | undefined = tg.lists?.map(l => ({ uri: l.uri, name: l.name }));
-        setThreadgate({ rules: tg.record.allow, listInfo });
+        setThreadgate({ 
+          rules: tg.record.allow ?? [], 
+          listInfo,
+          allowQuote: tg.record.allowQuote !== false // default true
+        });
       } else {
         setThreadgate(undefined);
       }

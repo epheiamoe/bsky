@@ -36,8 +36,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
   // [] = nobody can reply
   // [...rules] = restricted to specific rules
 
-  /** [v0.15.0] Self-labels for content moderation */
-  const [selfLabels, setSelfLabels] = useState<string[]>([]);
+  /** [v0.15.0] Self-labels for content moderation (per-post) */
+  const [selfLabelsMap, setSelfLabelsMap] = useState<Map<string, string[]>>(new Map());
 
   /** [v0.16.0] Language tags for posts */
   const [langs, setLangs] = useState<string[]>([]);
@@ -199,11 +199,12 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
           }
         }
 
-        // [v0.15.0] Add self-labels if selected (only for first post)
-        if (i === 0 && selfLabels.length > 0) {
+        // [v0.15.0] Add self-labels if selected (per-post)
+        const postLabels = selfLabelsMap.get(post.id) ?? [];
+        if (postLabels.length > 0) {
           record.labels = {
             $type: 'com.atproto.label.defs#selfLabels',
-            values: selfLabels.map(val => ({ val })),
+            values: postLabels.map(val => ({ val })),
           };
         }
 
@@ -232,7 +233,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
       setReplyTo(undefined);
       setQuoteUri(undefined);
       setThreadgateRules(undefined);
-      setSelfLabels([]);
+      setSelfLabelsMap(new Map());
       setLangs([]);
       goBack();
       onSuccess?.(createdUris);
@@ -247,7 +248,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     } finally {
       setSubmitting(false);
     }
-  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabels, langs, threadgateRules]);
+  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabelsMap, langs, threadgateRules]);
 
   return {
     posts,
@@ -262,8 +263,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     setQuoteUri,
     threadgateRules,
     setThreadgateRules,
-    selfLabels,
-    setSelfLabels,
+    selfLabelsMap,
+    setSelfLabelsMap,
     langs,
     setLangs,
     submit,

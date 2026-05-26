@@ -22,6 +22,7 @@ import { Modal } from './Modal.js';
 import { ThreadgateEditor } from './ThreadgateEditor.js';
 import { NotFoundCard } from './NotFoundCard.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
+import { ThreadgateDetailModal } from './ThreadgateDetailModal.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -66,6 +67,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const { posts: moderatedLines, failedLabelers } = usePostsWithModeration(flatLines, config, client);
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
+  const [showThreadgateDetail, setShowThreadgateDetail] = useState(false);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
@@ -407,10 +409,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 )}
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (
-                  <div role="alert" className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
+                  <button 
+                    onClick={() => setShowThreadgateDetail(true)}
+                    className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                  >
                     <Icon name="corner-down-right" size={12} />
                     {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
-                  </div>
+                  </button>
                 )}
                 {/* Unified action row + extras */}
                 <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
@@ -496,6 +501,15 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           listInfo={threadgate?.listInfo}
           onClose={() => setShowThreadgateEditor(false)}
           onSaved={() => { setShowThreadgateEditor(false); window.location.reload(); }}
+        />
+      )}
+      {showThreadgateDetail && threadgate && (
+        <ThreadgateDetailModal
+          open={showThreadgateDetail}
+          rules={threadgate.rules}
+          listInfo={threadgate.listInfo}
+          allowQuote={threadgate.allowQuote ?? true}
+          onClose={() => setShowThreadgateDetail(false)}
         />
       )}
     </div>

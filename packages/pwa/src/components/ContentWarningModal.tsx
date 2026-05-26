@@ -7,9 +7,10 @@ interface ContentWarningModalProps {
   selectedLabels: string[];
   onClose: () => void;
   onChange: (labels: string[]) => void;
+  hasMedia?: boolean;
 }
 
-export function ContentWarningModal({ open, selectedLabels, onClose, onChange }: ContentWarningModalProps) {
+export function ContentWarningModal({ open, selectedLabels, onClose, onChange, hasMedia }: ContentWarningModalProps) {
   const { t } = useI18n();
 
   const labelGroups = [
@@ -60,22 +61,26 @@ export function ContentWarningModal({ open, selectedLabels, onClose, onChange }:
             <div key={group.title}>
               <h3 className="text-sm font-semibold text-text-primary mb-2">{group.title}</h3>
               <div className="border border-border rounded-lg overflow-hidden">
-                {group.labels.map((label, idx) => (
-                  <label
-                    key={label.val}
-                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-surface-hover transition-colors ${
-                      idx < group.labels.length - 1 ? 'border-b border-border' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedLabels.includes(label.val)}
-                      onChange={() => toggleLabel(label.val)}
-                      className="w-4 h-4 accent-primary shrink-0"
-                    />
-                    <span className="text-sm text-text-primary">{label.label}</span>
-                  </label>
-                ))}
+                {group.labels.map((label, idx) => {
+                  const disabled = label.val === 'graphic-media' && !hasMedia;
+                  return (
+                    <label
+                      key={label.val}
+                      className={`flex items-center gap-3 px-3 py-2.5 transition-colors ${
+                        idx < group.labels.length - 1 ? 'border-b border-border' : ''
+                      } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-surface-hover'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedLabels.includes(label.val)}
+                        onChange={() => !disabled && toggleLabel(label.val)}
+                        disabled={disabled}
+                        className="w-4 h-4 accent-primary shrink-0"
+                      />
+                      <span className={`text-sm ${disabled ? 'text-text-secondary' : 'text-text-primary'}`}>{label.label}</span>
+                    </label>
+                  );
+                })}
               </div>
             </div>
           ))}

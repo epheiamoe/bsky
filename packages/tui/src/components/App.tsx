@@ -331,7 +331,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               quoteMap.set(post.id, uri);
             }
           }
-          compose.setSelfLabels(selfLabels);
+          const targetPostId = compose.posts[composePostIdx]?.id ?? compose.posts[0]!.id;
+          compose.setSelfLabelsMap(new Map([[targetPostId, selfLabels]]));
           compose.submit(mediaMap, quoteMap.size > 0 ? quoteMap : undefined);
         }
         return;

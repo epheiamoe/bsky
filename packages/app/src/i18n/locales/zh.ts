@@ -224,6 +224,10 @@ const zh: LocaleMessages = {
   'thread.changeReplyRestriction': '更改回复限制',
   'thread.replyRestrictionSaved': '回复限制已保存',
   'thread.replyRestrictionRemoved': '回复限制已移除（所有人可回复）',
+  'thread.replyRestrictionDetails': '回复限制详情',
+  'thread.allowQuote': '允许引用',
+  'thread.allowQuoteYes': '允许',
+  'thread.allowQuoteNo': '不允许',
 
   // ── Notifications ──
   'notifications.title': '通知',

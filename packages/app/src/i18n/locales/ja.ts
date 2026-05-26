@@ -225,6 +225,10 @@ const ja: LocaleMessages = {
   'thread.changeReplyRestriction': '返信制限を変更',
   'thread.replyRestrictionSaved': '返信制限を保存しました',
   'thread.replyRestrictionRemoved': '返信制限を解除しました（全員可）',
+  'thread.replyRestrictionDetails': '返信制限の詳細',
+  'thread.allowQuote': '引用を許可',
+  'thread.allowQuoteYes': '許可',
+  'thread.allowQuoteNo': '許可しない',
 
   'notifications.title': '通知',
   'notifications.empty': '通知はありません',
