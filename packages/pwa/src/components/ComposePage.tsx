@@ -11,6 +11,7 @@ import { EmojiPicker } from './EmojiPicker.js';
 import { AltTextModal } from './AltTextModal.js';
 import { ContentWarningModal } from './ContentWarningModal.js';
 import { ReplyOptionsModal } from './ReplyOptionsModal.js';
+import { LanguageSelector } from './LanguageSelector.js';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -62,7 +63,7 @@ interface SubmitProgress {
 }
 
 export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
-  const { t } = useI18n();
+  const { t, locale: currentLocale } = useI18n();
   const handlePosted = useCallback((uris?: string[]) => {
     if (uris && uris.length > 0) {
       goTo({ type: 'thread', uri: uris[0] });
@@ -70,7 +71,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       goHome();
     }
   }, [goTo, goHome]);
-  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, selfLabels, setSelfLabels, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
+  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, selfLabels, setSelfLabels, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [replyAncestors, setReplyAncestors] = useState<PostView[]>([]);
@@ -98,9 +99,11 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [showPolishModal, setShowPolishModal] = useState(false);
   const [draftSaveHint, setDraftSaveHint] = useState(false);
   const [showThreadgate, setShowThreadgate] = useState(false);
-  const [selectedThreadgate, setSelectedThreadgate] = useState<string>('everyone');
+  const [selectedThreadgate, setSelectedThreadgate] = useState<string[]>(['everyone']);
   const [selectedListUri, setSelectedListUri] = useState('');
   const [userLists, setUserLists] = useState<ListView[]>([]);
+  const [listsLoading, setListsLoading] = useState(false);
+  const [listsError, setListsError] = useState<string | null>(null);
   const [submitProgress, setSubmitProgress] = useState<SubmitProgress>({ visible: false, phase: 'media', current: 0, total: 0, message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileTargetPostId, setFileTargetPostId] = useState<string | null>(null);
@@ -117,21 +120,32 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [altModalImageIdx, setAltModalImageIdx] = useState(0);
   const [showContentWarning, setShowContentWarning] = useState(false);
   const [showReplyOptions, setShowReplyOptions] = useState(false);
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
 
-  const selectedThreadgateRules = buildThreadgateRules(selectedThreadgate, selectedThreadgate === 'list' ? selectedListUri : undefined);
+  const selectedThreadgateRules = buildThreadgateRules(selectedThreadgate, selectedListUri);
 
   // Sync threadgate rules to useCompose
   useEffect(() => {
     setThreadgateRules(selectedThreadgateRules);
   }, [selectedThreadgate, selectedListUri, setThreadgateRules]);
 
-  // Fetch user lists when selecting list mode
+  // Fetch user lists when reply options modal opens
   useEffect(() => {
-    if (selectedThreadgate === 'list') {
-      client.getLists(client.getHandle()).then(r => setUserLists(r.lists)).catch(() => {});
+    if (showReplyOptions) {
+      setListsLoading(true);
+      setListsError(null);
+      client.getLists(client.getHandle())
+        .then(r => {
+          setUserLists(r.lists);
+          setListsLoading(false);
+        })
+        .catch((e) => {
+          setListsError(e instanceof Error ? e.message : String(e));
+          setListsLoading(false);
+        });
     }
-  }, [selectedThreadgate, client]);
+  }, [showReplyOptions, client]);
 
   // Keep polish target in sync
   useEffect(() => {
@@ -803,7 +817,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors"
                     >
                       <Icon name="message-square" size={12} />
-                      <span>{selectedThreadgate === 'everyone' ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedThreadgate === 'list' && selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
+                      <span>{selectedThreadgate.includes('everyone') ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
                     </button>
                     <button
                       type="button"
@@ -955,7 +969,38 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                 <Icon name="plus" size={18} />
               </button>
             )}
-            <span className="text-xs text-text-secondary">{/* Language selector placeholder */}EN</span>
+            <button
+              type="button"
+              onClick={() => setShowLanguageSelector(true)}
+              disabled={submitting}
+              className="text-xs text-text-secondary hover:text-text-primary transition-colors disabled:opacity-30"
+              aria-label={t('compose.language')}
+            >
+              {langs.length === 0
+                ? (() => {
+                    try {
+                      return new Intl.DisplayNames([currentLocale], { type: 'language' }).of(currentLocale) ?? currentLocale.toUpperCase();
+                    } catch {
+                      return currentLocale.toUpperCase();
+                    }
+                  })()
+                : langs.length === 1
+                  ? (() => {
+                      try {
+                        return new Intl.DisplayNames([currentLocale], { type: 'language' }).of(langs[0]!) ?? langs[0]!.toUpperCase();
+                      } catch {
+                        return langs[0]!.toUpperCase();
+                      }
+                    })()
+                  : (() => {
+                      try {
+                        const first = new Intl.DisplayNames([currentLocale], { type: 'language' }).of(langs[0]!) ?? langs[0]!.toUpperCase();
+                        return `${first} + ${langs.length - 1}`;
+                      } catch {
+                        return `${langs[0]!.toUpperCase()} + ${langs.length - 1}`;
+                      }
+                    })()}
+            </button>
             <CircularProgress value={totalCharCount} max={300 * posts.length} />
           </div>
         </div>
@@ -993,15 +1038,16 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       {/* Reply options modal */}
       <ReplyOptionsModal
         open={showReplyOptions}
-        selectedType={selectedThreadgate}
+        selectedTypes={selectedThreadgate}
         selectedListUri={selectedListUri}
         allowQuote={true}
         userLists={userLists.map(l => ({ uri: l.uri, name: l.name, count: l.listItemCount }))}
+        listsLoading={listsLoading}
+        listsError={listsError}
         onClose={() => setShowReplyOptions(false)}
-        onSave={(type, listUri, allowQuote) => {
-          setSelectedThreadgate(type);
-          setSelectedListUri(listUri);
-          // allowQuote is not used in current threadgate implementation
+        onChangeTypes={(types, listUri) => {
+          setSelectedThreadgate(types);
+          if (listUri !== undefined) setSelectedListUri(listUri);
         }}
       />
 
@@ -1058,6 +1104,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           </div>
         </div>
       )}
+
+      {/* Language selector modal */}
+      <LanguageSelector
+        open={showLanguageSelector}
+        selectedCodes={langs}
+        onChange={setLangs}
+        onClose={() => setShowLanguageSelector(false)}
+        locale={currentLocale}
+      />
 
       {/* Polish modal */}
       {showPolishModal && polishConfig && polishPost && (

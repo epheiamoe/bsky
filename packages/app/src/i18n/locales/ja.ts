@@ -41,6 +41,7 @@ const ja: LocaleMessages = {
   'action.addToList': 'リストに追加',
   'action.removeFromList': 'リストから削除',
   'action.remove': '削除',
+  'action.clear': 'クリア',
   'action.download': 'ダウンロード',
   'action.copy': 'コピー',
   'action.copied': 'コピー済み',
@@ -175,6 +176,13 @@ const ja: LocaleMessages = {
   'compose.labels': 'ラベル',
   'compose.labelsCount': '{n} 個のラベル',
   'compose.quote': '引用',
+  'compose.language': '言語',
+  'compose.languageSelectorTitle': '言語を選択',
+  'compose.commonLanguages': 'よく使う言語',
+  'compose.allLanguages': 'すべての言語',
+  'compose.showMoreLanguages': 'もっと見る',
+  'compose.searchLanguage': '言語を検索...',
+  'compose.maxLanguages': '最大3つの言語を選択',
 
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',
@@ -630,6 +638,15 @@ const ja: LocaleMessages = {
   'moderation.welcomeTitle': 'モデレーションとラベリングの設定',
   'moderation.welcomeDesc': 'ラベル付きコンテンツの処理方法を選択してください。後で設定から変更できます。',
   
+  // ── Language Selector ──
+  'language.title': '言語',
+  'language.searchPlaceholder': '言語を検索…',
+  'language.showMore': 'もっと表示',
+  'language.selected': '選択中 {n}',
+  'language.maxReached': '最大3言語まで',
+  'language.commonLanguages': 'よく使う言語',
+  'language.allLanguages': 'すべての言語',
+
   // [v0.14.1] 失敗処理
   'moderation.failureBehavior': '失敗時の動作',
   'moderation.failureBehavior.silent': 'サイレント',

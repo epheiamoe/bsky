@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAllEmojis, type EmojiItem } from '@bsky/app';
 import { Icon } from './Icon.js';
+import { Modal } from './Modal.js';
 
 interface EmojiPickerProps {
   onSelect: (emoji: string) => void;
@@ -25,12 +26,9 @@ export function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
   }, [allEmojis.length, loading]);
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] bg-black/40 flex items-end justify-center animate-fadeIn"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
+    <Modal variant="bottom-sheet" open={true} onClose={onClose}>
       <div
-        className="bg-background rounded-t-2xl border-t border-x border-border shadow-2xl w-full max-w-lg max-h-[60vh] flex flex-col animate-slideUp"
+        className="bg-background rounded-t-2xl border-t border-x border-border shadow-2xl w-full max-w-lg max-h-[60vh] flex flex-col mx-auto"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -97,6 +95,6 @@ export function EmojiPicker({ onSelect, onClose }: EmojiPickerProps) {
           )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

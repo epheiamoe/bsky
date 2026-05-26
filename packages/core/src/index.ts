@@ -160,3 +160,11 @@ export type {
   BskyToolsAPI,
   BskyToolsBaseOptions,
 } from './ai/bsky-tools-api.js';
+
+// Language utilities
+export {
+  SUPPORTED_LANGUAGES,
+  getLanguageName,
+  COMMON_LANGUAGE_CODES,
+} from './at/languages.js';
+export type { Language } from './at/languages.js';

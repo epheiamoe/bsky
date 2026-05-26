@@ -15,7 +15,7 @@ interface ComposeViewProps {
   composeMedia: ComposeMedia[];
   uploadError: string | null;
   composeInfo: string | null;
-  mode: 'text' | 'media' | 'drafts' | 'savePrompt' | 'polishReq' | 'polishResult' | 'altReq';
+  mode: 'text' | 'media' | 'drafts' | 'savePrompt' | 'polishReq' | 'polishResult' | 'altReq' | 'quote' | 'labels' | 'listSelect';
   imagePathInput: string | null;
   setImagePathInput: (v: string | null) => void;
   drafts: AppDraft[];
@@ -29,6 +29,14 @@ interface ComposeViewProps {
   altReqText?: string;
   setAltReqText?: (v: string) => void;
   threadgateMode?: string;
+  postQuotes?: Map<number, string>;
+  selfLabels?: string[];
+  labelSelectIdx?: number;
+  labelOptions?: string[];
+  quoteInputText?: string;
+  setQuoteInputText?: (v: string) => void;
+  listSelectIdx?: number;
+  userLists?: Array<{ uri: string; name: string }>;
 }
 
 export function ComposeView({
@@ -41,6 +49,9 @@ export function ComposeView({
   polishRequirement, setPolishRequirement,
   altReqText, setAltReqText,
   threadgateMode,
+  postQuotes, selfLabels, labelSelectIdx, labelOptions,
+  quoteInputText, setQuoteInputText,
+  listSelectIdx, userLists,
 }: ComposeViewProps) {
   const { t } = useI18n();
   const isReply = !!replyTo;
@@ -61,7 +72,9 @@ export function ComposeView({
           {isReply ? '✏️ ' + t('compose.titleReply') : posts.length > 1 ? '✏️ ' + t('compose.threadTitle') : '✏️ ' + t('compose.title')}
         </Text>
         {!isReply && threadgateMode && threadgateMode !== 'everyone' && (
-          <Text color="yellow">{' 🔒'}{t(MODE_I18N[threadgateMode]!)}</Text>
+          <Text color="yellow">
+            {' 🔒'}{threadgateMode === 'list' ? 'List' : t(MODE_I18N[threadgateMode]!)}
+          </Text>
         )}
         <Text dimColor>
           {mode === 'savePrompt' ? ' ' + t('compose.draftSavePrompt') :
@@ -87,6 +100,14 @@ export function ComposeView({
         </Box>
       )}
 
+      {/* Per-post quote indicator */}
+      {postQuotes?.has(activePostIdx) && (
+        <Box borderStyle="single" borderColor="magenta" paddingX={1} marginBottom={0}>
+          <Text color="magenta">{'📌 '}{t('compose.quoteTo')} </Text>
+          <Text color="white">{postQuotes.get(activePostIdx)}</Text>
+        </Box>
+      )}
+
       {/* Post navigation */}
       {!isReply && posts.length > 1 && (
         <Box height={1} marginBottom={0}>
@@ -96,7 +117,7 @@ export function ComposeView({
                 backgroundColor={i === activePostIdx ? '#1e40af' : undefined}
                 color={i === activePostIdx ? 'cyanBright' : 'dim'}
               >
-                [{i + 1}]{p.text.trim() ? '*' : ''}
+                [{i + 1}]{p.text.trim() ? '*' : ''}{postQuotes?.has(i) ? ' [Quote]' : ''}
               </Text>
               {i < posts.length - 1 && <Text> </Text>}
             </Box>
@@ -177,6 +198,51 @@ export function ComposeView({
             placeholder={t('compose.altPlaceholder')}
           />
         </Box>
+      ) : mode === 'quote' ? (
+        <Box borderStyle="single" borderColor="magenta" padding={1} marginTop={0}>
+          <Text dimColor>{t('compose.quoteTo')}{': '}</Text>
+          <TextInput
+            value={quoteInputText ?? ''}
+            onChange={setQuoteInputText ?? (() => {})}
+            placeholder="at://..."
+          />
+        </Box>
+      ) : mode === 'labels' ? (
+        <Box flexDirection="column" borderStyle="single" borderColor="yellow" padding={1} marginTop={0}>
+          <Text color="yellow">{'🏷 '}{t('compose.labels')}</Text>
+          {(labelOptions ?? []).map((label, i) => {
+            const isSelected = (selfLabels ?? []).includes(label);
+            const isCursor = i === (labelSelectIdx ?? 0);
+            return (
+              <Box key={label} height={1}>
+                <Text backgroundColor={isCursor ? '#1e40af' : undefined} color={isCursor ? 'cyanBright' : undefined}>
+                  {isCursor ? '▶' : ' '}{' '}
+                  {isSelected ? '[x]' : '[ ]'} {label}
+                </Text>
+              </Box>
+            );
+          })}
+          <Text dimColor>{'Space:toggle Esc:close'}</Text>
+        </Box>
+      ) : mode === 'listSelect' ? (
+        <Box flexDirection="column" borderStyle="single" borderColor="cyan" padding={1} marginTop={0}>
+          <Text color="cyan">{'📃 '}{t('lists.title')}</Text>
+          {(!userLists || userLists.length === 0) ? (
+            <Text dimColor>{t('status.loading')}</Text>
+          ) : (
+            userLists.map((list, i) => {
+              const isCursor = i === (listSelectIdx ?? 0);
+              return (
+                <Box key={list.uri} height={1}>
+                  <Text backgroundColor={isCursor ? '#1e40af' : undefined} color={isCursor ? 'cyanBright' : undefined}>
+                    {isCursor ? '▶' : ' '}{' '}{list.name}
+                  </Text>
+                </Box>
+              );
+            })
+          )}
+          <Text dimColor>{'Enter:confirm Esc:cancel'}</Text>
+        </Box>
       ) : mode === 'drafts' || mode === 'savePrompt' ? (
         <Box height={1} />
       ) : (
@@ -209,6 +275,9 @@ export function ComposeView({
         {submitting && <Text color="cyan">{' '}{t('action.sending')}</Text>}
         {uploadError && <Text color="red">{' '}{uploadError}</Text>}
         {error && <Text color="red">{' '}{error}</Text>}
+        {selfLabels && selfLabels.length > 0 && (
+          <Text color="yellow">{' [Labels: '}{selfLabels.join(', ')}{']'}</Text>
+        )}
       </Box>
 
       {/* Media ALT display */}

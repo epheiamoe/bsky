@@ -36,6 +36,7 @@ const zh: LocaleMessages = {
   'action.addToList': '添加到列表',
   'action.removeFromList': '从列表移除',
   'action.remove': '移除',
+  'action.clear': '清除',
   'action.download': '下载',
   'action.copy': '复制',
   'action.copied': '已复制',
@@ -173,6 +174,13 @@ const zh: LocaleMessages = {
   'compose.labels': '标记',
   'compose.labelsCount': '{n} 个标记',
   'compose.quote': '引用',
+  'compose.language': '语言',
+  'compose.languageSelectorTitle': '选择语言',
+  'compose.commonLanguages': '常用语言',
+  'compose.allLanguages': '所有语言',
+  'compose.showMoreLanguages': '显示更多语言',
+  'compose.searchLanguage': '搜索语言...',
+  'compose.maxLanguages': '最多选择 3 种语言',
 
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',
@@ -780,6 +788,15 @@ const zh: LocaleMessages = {
   'moderation.labelDetails': '标签详情',
   'moderation.clickToShowMedia': '点击显示媒体',
   'moderation.mediaHidden': '媒体已隐藏',
+
+  // ── Language Selector ──
+  'language.title': '语言',
+  'language.searchPlaceholder': '搜索语言…',
+  'language.showMore': '显示更多语言',
+  'language.selected': '已选 {n} 种',
+  'language.maxReached': '最多可选 3 种语言',
+  'language.commonLanguages': '常用语言',
+  'language.allLanguages': '所有语言',
 
   // [v0.14.1] 失败处理
   'moderation.failureBehavior': '失效行为',

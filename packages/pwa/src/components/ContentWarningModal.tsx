@@ -38,7 +38,7 @@ export function ContentWarningModal({ open, selectedLabels, onClose, onChange }:
 
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="max-w-sm">
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-base font-bold text-text-primary">{t('compose.contentWarningTitle')}</h2>

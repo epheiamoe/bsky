@@ -5,51 +5,95 @@ import { useI18n } from '@bsky/app';
 
 interface ReplyOptionsModalProps {
   open: boolean;
-  selectedType: string;
+  selectedTypes: string[];
   selectedListUri: string;
   allowQuote: boolean;
   userLists: Array<{ uri: string; name: string; count?: number }>;
+  listsLoading?: boolean;
+  listsError?: string | null;
   onClose: () => void;
-  onSave: (type: string, listUri: string, allowQuote: boolean) => void;
+  onChangeTypes: (types: string[], listUri?: string) => void;
 }
 
+const MUTUALLY_EXCLUSIVE = ['everyone', 'nobody'] as const;
+const MULTI_SELECTABLE = ['mentioned', 'followers', 'following', 'list'] as const;
+
 const OPTIONS = [
-  { value: 'everyone', label: 'Everyone' },
-  { value: 'nobody', label: 'Nobody' },
-  { value: 'mentioned', label: 'Mentioned users only' },
-  { value: 'followers', label: 'Your followers' },
-  { value: 'following', label: 'People you follow' },
-  { value: 'list', label: 'Choose from your lists' },
-];
+  { value: 'everyone', label: 'compose.everyone', exclusive: true },
+  { value: 'nobody', label: 'compose.nobody', exclusive: true },
+  { value: 'mentioned', label: 'compose.onlyMentioned', exclusive: false },
+  { value: 'followers', label: 'compose.onlyFollowers', exclusive: false },
+  { value: 'following', label: 'compose.onlyFollowing', exclusive: false },
+  { value: 'list', label: 'compose.onlyLists', exclusive: false },
+] as const;
 
 export function ReplyOptionsModal({
   open,
-  selectedType,
+  selectedTypes,
   selectedListUri,
   allowQuote,
   userLists,
+  listsLoading,
+  listsError,
   onClose,
-  onSave,
+  onChangeTypes,
 }: ReplyOptionsModalProps) {
   const { t } = useI18n();
-  const [type, setType] = useState(selectedType);
+  const [types, setTypes] = useState<string[]>(selectedTypes);
   const [listUri, setListUri] = useState(selectedListUri);
   const [quote, setQuote] = useState(allowQuote);
 
   useEffect(() => {
-    setType(selectedType);
+    setTypes(selectedTypes);
     setListUri(selectedListUri);
     setQuote(allowQuote);
-  }, [open, selectedType, selectedListUri, allowQuote]);
+  }, [open, selectedTypes, selectedListUri, allowQuote]);
+
+  const handleToggleType = (value: string, exclusive: boolean) => {
+    let nextTypes: string[];
+
+    if (exclusive) {
+      // everyone/nobody: clear everything else
+      nextTypes = [value];
+      if (value !== 'list') {
+        setListUri('');
+      }
+    } else {
+      // multi-selectable options
+      if (types.includes(value)) {
+        nextTypes = types.filter(t => t !== value);
+        if (value === 'list') {
+          setListUri('');
+        }
+      } else {
+        // Remove everyone/nobody when selecting a multi-selectable option
+        nextTypes = [...types.filter(t => !MUTUALLY_EXCLUSIVE.includes(t as any)), value];
+      }
+    }
+
+    setTypes(nextTypes);
+    if (value === 'list') {
+      onChangeTypes(nextTypes, types.includes(value) ? '' : listUri);
+    } else {
+      onChangeTypes(nextTypes, undefined);
+    }
+  };
+
+  const handleListSelect = (uri: string) => {
+    setListUri(uri);
+    onChangeTypes(types, uri);
+  };
 
   const handleSave = () => {
-    onSave(type, listUri, quote);
+    onChangeTypes(types, listUri);
     onClose();
   };
 
+  const isListSelected = types.includes('list');
+
   return (
     <Modal open={open} onClose={onClose}>
-      <div className="max-w-sm">
+      <div>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-base font-bold text-text-primary">{t('compose.replyOptionsTitle')}</h2>
@@ -63,28 +107,45 @@ export function ReplyOptionsModal({
         {/* Who can reply */}
         <div className="p-4 space-y-1">
           <p className="text-sm font-semibold text-text-primary mb-2">{t('compose.whoCanReply')}</p>
-          {OPTIONS.map(opt => (
-            <label
-              key={opt.value}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-surface-hover transition-colors"
-            >
-              <input
-                type="radio"
-                name="reply-option"
-                value={opt.value}
-                checked={type === opt.value}
-                onChange={() => { setType(opt.value); if (opt.value !== 'list') setListUri(''); }}
-                className="accent-primary shrink-0"
-              />
-              <span className="text-sm text-text-primary">{opt.label}</span>
-            </label>
-          ))}
+          {OPTIONS.map(opt => {
+            const isExclusive = opt.exclusive;
+            const isChecked = types.includes(opt.value);
+
+            return (
+              <label
+                key={opt.value}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer hover:bg-surface-hover transition-colors"
+              >
+                <input
+                  type={isExclusive ? 'radio' : 'checkbox'}
+                  name={isExclusive ? 'reply-option-exclusive' : 'reply-option-multi'}
+                  value={opt.value}
+                  checked={isChecked}
+                  onChange={() => handleToggleType(opt.value, isExclusive)}
+                  className="accent-primary shrink-0"
+                />
+                <span className="text-sm text-text-primary">{t(opt.label)}</span>
+              </label>
+            );
+          })}
 
           {/* List selection */}
-          {type === 'list' && (
+          {isListSelected && (
             <div className="ml-8 pl-2 border-l-2 border-border space-y-1 max-h-40 overflow-y-auto mt-1">
-              {userLists.length === 0 ? (
-                <p className="text-xs text-text-secondary py-2">You have no lists yet</p>
+              {listsLoading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <svg className="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span className="text-xs text-text-secondary">{t('common.loading')}</span>
+                </div>
+              ) : listsError ? (
+                <div role="alert" className="text-xs text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-2 py-1.5">
+                  {listsError}
+                </div>
+              ) : userLists.length === 0 ? (
+                <p className="text-xs text-text-secondary py-2">{t('compose.noLists')}</p>
               ) : (
                 userLists.map(list => (
                   <label key={list.uri} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-surface-hover rounded px-2 transition-colors">
@@ -93,7 +154,7 @@ export function ReplyOptionsModal({
                       name="reply-list"
                       value={list.uri}
                       checked={listUri === list.uri}
-                      onChange={() => setListUri(list.uri)}
+                      onChange={() => handleListSelect(list.uri)}
                       className="accent-primary mt-0.5"
                     />
                     <span className="text-sm text-text-primary">{list.name}</span>
@@ -114,7 +175,7 @@ export function ReplyOptionsModal({
             </div>
             <button
               onClick={() => setQuote(!quote)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${quote ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-600'}`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${quote ? 'bg-primary' : 'bg-border'}`}
               role="switch"
               aria-checked={quote}
             >

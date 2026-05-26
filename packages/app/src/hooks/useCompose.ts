@@ -39,6 +39,9 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
   /** [v0.15.0] Self-labels for content moderation */
   const [selfLabels, setSelfLabels] = useState<string[]>([]);
 
+  /** [v0.16.0] Language tags for posts */
+  const [langs, setLangs] = useState<string[]>([]);
+
   const addPost = useCallback(() => {
     setPosts(prev => [...prev, { id: crypto.randomUUID(), text: '' }]);
   }, []);
@@ -204,6 +207,11 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
           };
         }
 
+        // [v0.16.0] Add language tags if selected (only for first post)
+        if (i === 0 && langs.length > 0) {
+          record.langs = langs.slice(0, 3);
+        }
+
         const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
         createdUris.push(res.uri);
         createdCids.push(res.cid);
@@ -225,6 +233,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
       setQuoteUri(undefined);
       setThreadgateRules(undefined);
       setSelfLabels([]);
+      setLangs([]);
       goBack();
       onSuccess?.(createdUris);
     } catch (e) {
@@ -238,7 +247,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     } finally {
       setSubmitting(false);
     }
-  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabels, threadgateRules]);
+  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabels, langs, threadgateRules]);
 
   return {
     posts,
@@ -255,6 +264,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     setThreadgateRules,
     selfLabels,
     setSelfLabels,
+    langs,
+    setLangs,
     submit,
     loadFromDraft,
     toDraftData,

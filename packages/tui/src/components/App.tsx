@@ -122,6 +122,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [draftListIdx, setDraftListIdx] = useState(0);
   const [draftSavePrompt, setDraftSavePrompt] = useState(false);
   const [threadgateMode, setThreadgateMode] = useState<string>('everyone');
+  // Self-labels
+  const [selfLabels, setSelfLabelsState] = useState<string[]>([]);
+  const [labelSelectActive, setLabelSelectActive] = useState(false);
+  const [labelSelectIdx, setLabelSelectIdx] = useState(0);
+  const LABEL_OPTIONS = ['sexual', 'nudity', 'porn', 'graphic-media'];
+  // Per-post quotes
+  const [postQuotes, setPostQuotes] = useState<Map<number, string>>(new Map());
+  const [quoteInputActive, setQuoteInputActive] = useState(false);
+  const [quoteInputText, setQuoteInputText] = useState('');
+  // Threadgate list selection
+  const [listSelectActive, setListSelectActive] = useState(false);
+  const [listSelectIdx, setListSelectIdx] = useState(0);
+  const [userLists, setUserLists] = useState<Array<{ uri: string; name: string }>>([]);
+  const [selectedListUri, setSelectedListUri] = useState<string | undefined>(undefined);
   // Polish
   const [polishPhase, setPolishPhase] = useState<'idle' | 'req' | 'loading' | 'result'>('idle');
   const [polishRequirement, setPolishRequirement] = useState('');
@@ -209,6 +223,16 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (draft) compose.loadFromDraft(draft.posts, draft.replyTo, draft.quoteUri);
       }
       setThreadgateMode('everyone');
+      setSelfLabelsState([]);
+      setLabelSelectActive(false);
+      setLabelSelectIdx(0);
+      setPostQuotes(new Map());
+      setQuoteInputActive(false);
+      setQuoteInputText('');
+      setListSelectActive(false);
+      setListSelectIdx(0);
+      setUserLists([]);
+      setSelectedListUri(undefined);
     }
   }, [currentView.type]);
 
@@ -289,7 +313,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (bm) goTo({ type: 'thread', uri: bm.uri });
         return;
       }
-      if (currentView.type === 'compose' && !draftSavePrompt && !draftListOpen && imagePathInput === null && polishPhase === 'idle' && !altReqActive) {
+      if (currentView.type === 'compose' && !draftSavePrompt && !draftListOpen && imagePathInput === null && polishPhase === 'idle' && !altReqActive && !labelSelectActive && !quoteInputActive && !listSelectActive) {
         // ALT check before submit
         const noAlt = composeMedia.filter(m => m.type === 'image' && !m.alt.trim()).length;
         if (noAlt > 0) {
@@ -299,7 +323,16 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const nonEmpty = compose.posts.filter(p => p.text.trim());
         if (nonEmpty.length > 0) {
           const mediaMap = composeMedia.length > 0 ? new Map<string, ComposeMedia[]>([[compose.posts[composePostIdx]?.id ?? compose.posts[0]!.id, composeMedia]]) : undefined;
-          compose.submit(mediaMap);
+          // Build quoteMap from postQuotes
+          const quoteMap = new Map<string, string>();
+          for (const [postIdx, uri] of postQuotes) {
+            const post = compose.posts[postIdx];
+            if (post && uri.startsWith('at://')) {
+              quoteMap.set(post.id, uri);
+            }
+          }
+          compose.setSelfLabels(selfLabels);
+          compose.submit(mediaMap, quoteMap.size > 0 ? quoteMap : undefined);
         }
         return;
       }
@@ -482,6 +515,56 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (key.escape) { setImagePathInput(null); return; }
         return;
       }
+      // Label selection overlay
+      if (labelSelectActive) {
+        if (key.escape) { setLabelSelectActive(false); return; }
+        if (key.upArrow || input === 'k' || input === 'K') { setLabelSelectIdx(i => Math.max(0, i - 1)); return; }
+        if (key.downArrow || input === 'j' || input === 'J') { setLabelSelectIdx(i => Math.min(LABEL_OPTIONS.length - 1, i + 1)); return; }
+        if (input === ' ') {
+          const label = LABEL_OPTIONS[labelSelectIdx]!;
+          setSelfLabelsState(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
+          return;
+        }
+        return;
+      }
+      // Quote input overlay
+      if (quoteInputActive) {
+        if (key.escape) { setQuoteInputActive(false); setQuoteInputText(''); return; }
+        if (key.return) {
+          const trimmed = quoteInputText.trim();
+          if (trimmed.startsWith('at://')) {
+            setPostQuotes(prev => new Map(prev).set(composePostIdx, trimmed));
+          }
+          setQuoteInputActive(false);
+          setQuoteInputText('');
+          return;
+        }
+        return;
+      }
+      // Threadgate list selection overlay
+      if (listSelectActive) {
+        if (key.escape) {
+          setListSelectActive(false);
+          setListSelectIdx(0);
+          if (!selectedListUri) {
+            setThreadgateMode('everyone');
+            compose.setThreadgateRules(buildThreadgateRules('everyone'));
+          }
+          return;
+        }
+        if (key.upArrow || input === 'k' || input === 'K') { setListSelectIdx(i => Math.max(0, i - 1)); return; }
+        if (key.downArrow || input === 'j' || input === 'J') { setListSelectIdx(i => Math.min(userLists.length - 1, i + 1)); return; }
+        if (key.return) {
+          const list = userLists[listSelectIdx];
+          if (list) {
+            setSelectedListUri(list.uri);
+            compose.setThreadgateRules(buildThreadgateRules('list', list.uri));
+            setListSelectActive(false);
+          }
+          return;
+        }
+        return;
+      }
       if (input === 'i' || input === 'I') {
         const hasVideo = composeMedia.some(m => m.type === 'video');
         if (hasVideo || composeMedia.length < 4) setImagePathInput('');
@@ -495,17 +578,52 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return;
       }
       if (input === 'X' && compose.posts.length > 1) {
-        const id = compose.posts[composePostIdx]?.id;
+        const deletedIdx = composePostIdx;
+        const id = compose.posts[deletedIdx]?.id;
         if (id) compose.removePost(id);
-        if (composePostIdx >= compose.posts.length - 1) setComposePostIdx(i => Math.max(0, i - 1));
+        const newIdx = deletedIdx >= compose.posts.length - 1 ? Math.max(0, deletedIdx - 1) : deletedIdx;
+        setComposePostIdx(newIdx);
+        // Shift postQuotes indices after deletion
+        setPostQuotes(prev => {
+          const next = new Map<number, string>();
+          for (const [idx, uri] of prev) {
+            if (idx < deletedIdx) next.set(idx, uri);
+            else if (idx > deletedIdx) next.set(idx - 1, uri);
+          }
+          return next;
+        });
+        return;
+      }
+      if (input === 'l' || input === 'L') {
+        setLabelSelectActive(a => !a);
+        setLabelSelectIdx(0);
+        return;
+      }
+      if (input === 'Q') {
+        setQuoteInputActive(true);
+        setQuoteInputText('');
         return;
       }
       if ((input === 'g' || input === 'G') && !compose.replyTo) {
-        const cycle = ['everyone', 'nobody', 'mentioned', 'followers', 'following'];
+        const cycle = ['everyone', 'nobody', 'mentioned', 'followers', 'following', 'list'];
         const idx = Math.max(0, cycle.indexOf(threadgateMode));
         const next = cycle[(idx + 1) % cycle.length]!;
         setThreadgateMode(next);
-        compose.setThreadgateRules(buildThreadgateRules(next));
+        if (next === 'list') {
+          if (client) {
+            client.getLists(client.getHandle()).then(res => {
+              setUserLists(res.lists.map(l => ({ uri: l.uri, name: l.name })));
+              setListSelectActive(true);
+              setListSelectIdx(0);
+            }).catch(() => {
+              setThreadgateMode('everyone');
+              compose.setThreadgateRules(buildThreadgateRules('everyone'));
+            });
+          }
+        } else {
+          compose.setThreadgateRules(buildThreadgateRules(next));
+          setSelectedListUri(undefined);
+        }
         return;
       }
       return;
@@ -706,7 +824,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             composeMedia={composeMedia}
             uploadError={composeUploadError}
             composeInfo={composeInfo}
-            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : altReqActive ? 'altReq' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : 'text'}
+            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : altReqActive ? 'altReq' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : quoteInputActive ? 'quote' : labelSelectActive ? 'labels' : listSelectActive ? 'listSelect' : 'text'}
             imagePathInput={imagePathInput}
             setImagePathInput={setImagePathInput}
             drafts={drafts}
@@ -720,6 +838,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             altReqText={altReqText}
             setAltReqText={setAltReqText}
             threadgateMode={threadgateMode}
+            postQuotes={postQuotes}
+            selfLabels={selfLabels}
+            labelSelectIdx={labelSelectIdx}
+            labelOptions={LABEL_OPTIONS}
+            quoteInputText={quoteInputText}
+            setQuoteInputText={setQuoteInputText}
+            listSelectIdx={listSelectIdx}
+            userLists={userLists}
           />
         );
       case 'profile':

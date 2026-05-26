@@ -41,6 +41,7 @@ const en: LocaleMessages = {
   'action.addToList': 'Add to list',
   'action.removeFromList': 'Remove from list',
   'action.remove': 'Remove',
+  'action.clear': 'Clear',
   'action.download': 'Download',
   'action.copy': 'Copy',
   'action.copied': 'Copied',
@@ -175,6 +176,13 @@ const en: LocaleMessages = {
   'compose.labels': 'Labels',
   'compose.labelsCount': '{n} labels',
   'compose.quote': 'Quote',
+  'compose.language': 'Language',
+  'compose.languageSelectorTitle': 'Select Language',
+  'compose.commonLanguages': 'Common Languages',
+  'compose.allLanguages': 'All Languages',
+  'compose.showMoreLanguages': 'Show More Languages',
+  'compose.searchLanguage': 'Search languages...',
+  'compose.maxLanguages': 'Select up to 3 languages',
 
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',
@@ -621,6 +629,15 @@ const en: LocaleMessages = {
   'moderation.welcomeTitle': 'Moderation & Labeling Preferences',
   'moderation.welcomeDesc': 'Choose how you want labeled content to be handled. You can change this anytime in Settings.',
   
+  // ── Language Selector ──
+  'language.title': 'Languages',
+  'language.searchPlaceholder': 'Search languages…',
+  'language.showMore': 'Show more languages',
+  'language.selected': 'Selected {n}',
+  'language.maxReached': 'Maximum 3 languages',
+  'language.commonLanguages': 'Common Languages',
+  'language.allLanguages': 'All Languages',
+
   // [v0.14.1] Failure handling
   'moderation.failureBehavior': 'Failure Behavior',
   'moderation.failureBehavior.silent': 'Silent',

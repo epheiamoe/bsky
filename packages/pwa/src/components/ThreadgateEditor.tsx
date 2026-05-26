@@ -18,7 +18,7 @@ type AllowType = (typeof ALLOW_TYPES)[number];
 
 export function ThreadgateEditor({ client, postUri, currentRules, listInfo, onClose, onSaved }: ThreadgateEditorProps) {
   const { t } = useI18n();
-  const initial = rulesToThreadgateType(currentRules, listInfo);
+  const initial = rulesToThreadgateType(currentRules);
   const [selected, setSelected] = useState<AllowType>(initial.type as AllowType);
   const [selectedListUri, setSelectedListUri] = useState(initial.listUri ?? '');
   const [userLists, setUserLists] = useState<ListView[]>([]);
