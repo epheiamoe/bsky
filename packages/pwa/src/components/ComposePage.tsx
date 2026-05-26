@@ -231,11 +231,11 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         }));
       } else {
         setPostQuotePreviews(prev => new Map(prev).set(postId, null));
-        setPostQuoteErrors(prev => new Map(prev).set(postId, 'Invalid quote post'));
+        setPostQuoteErrors(prev => new Map(prev).set(postId, t('compose.quoteInvalid')));
       }
     } catch (e) {
       setPostQuotePreviews(prev => new Map(prev).set(postId, null));
-      setPostQuoteErrors(prev => new Map(prev).set(postId, e instanceof Error ? e.message : 'Failed to load quote'));
+        setPostQuoteErrors(prev => new Map(prev).set(postId, e instanceof Error ? e.message : t('compose.quoteLoadFailed')));
     } finally {
       setPostQuoteLoading(prev => new Map(prev).set(postId, false));
     }
@@ -835,7 +835,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                         }`}
                       >
                         <Icon name="tag" size={12} />
-                        <span>{postLabels.length > 0 ? `${postLabels.length} labels` : 'Labels'}</span>
+                        <span>{postLabels.length > 0 ? t('compose.labelsCount', { n: String(postLabels.length) }) : t('compose.labels')}</span>
                       </button>
                     );
                   })()}
@@ -851,7 +851,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors"
                       >
                         <Icon name="corner-down-right" size={12} />
-                        <span>Add quote</span>
+                        <span>{t('compose.addQuote')}</span>
                       </button>
                     ) : (
                       <div className="flex items-center gap-2 animate-fadeIn"
@@ -922,7 +922,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-text-primary hover:border-primary/30 transition-colors"
               >
                 <Icon name="message-square" size={12} />
-                <span>{selectedThreadgate.length === 0 ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
+                <span>{selectedThreadgate.length === 0 || selectedThreadgate.includes('everyone') ? t('compose.everyoneCanInteract') : selectedThreadgateRules ? formatThreadgateSummary(selectedThreadgateRules, selectedListUri ? [{ uri: selectedListUri, name: userLists.find(l => l.uri === selectedListUri)?.name ?? '' }] : undefined) : t('compose.restricted')}</span>
               </button>
             </div>
           )}

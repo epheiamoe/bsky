@@ -1,5 +1,5 @@
 import React from 'react';
-import { useI18n, formatThreadgateSummary } from '@bsky/app';
+import { useI18n } from '@bsky/app';
 import type { ThreadgateRule } from '@bsky/core';
 import { Modal } from './Modal.js';
 import { Icon } from './Icon.js';
@@ -25,23 +25,26 @@ export function ThreadgateDetailModal({ open, rules, listInfo, allowQuote, onClo
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('thread.replyRestriction')}</span>
-            <p className="text-sm text-text-primary mt-1">
-              {rules.length === 0 ? t('thread.replyRestricted.nobody') : formatThreadgateSummary(rules, listInfo)}
-            </p>
-          </div>
-          {rules.length > 0 && rules.map((rule, idx) => (
-            <div key={idx} className="flex items-center gap-2">
-              <Icon name="corner-down-right" size={14} className="text-text-secondary shrink-0" />
-              <span className="text-sm text-text-primary">
-                {rule.$type === 'app.bsky.feed.threadgate#mentionRule' && t('thread.replyRestricted.mentioned')}
-                {rule.$type === 'app.bsky.feed.threadgate#followerRule' && t('thread.replyRestricted.followers')}
-                {rule.$type === 'app.bsky.feed.threadgate#followingRule' && t('thread.replyRestricted.following')}
-                {rule.$type === 'app.bsky.feed.threadgate#listRule' && (
-                  listInfo?.find(l => l.uri === (rule as any).list)?.name || t('thread.replyRestricted.list')
-                )}
-              </span>
+            <div className="mt-2 space-y-2">
+              {rules.length === 0 ? (
+                <p className="text-sm text-text-primary">{t('thread.replyRestricted.nobody')}</p>
+              ) : (
+                rules.map((rule, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Icon name="corner-down-right" size={14} className="text-text-secondary shrink-0" />
+                    <span className="text-sm text-text-primary">
+                      {rule.$type === 'app.bsky.feed.threadgate#mentionRule' && t('compose.onlyMentioned')}
+                      {rule.$type === 'app.bsky.feed.threadgate#followerRule' && t('compose.onlyFollowers')}
+                      {rule.$type === 'app.bsky.feed.threadgate#followingRule' && t('compose.onlyFollowing')}
+                      {rule.$type === 'app.bsky.feed.threadgate#listRule' && (
+                        listInfo?.find(l => l.uri === (rule as any).list)?.name || t('compose.onlyLists')
+                      )}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
-          ))}
+          </div>
           <div>
             <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">{t('thread.allowQuote')}</span>
             <p className="text-sm text-text-primary mt-1">
