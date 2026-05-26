@@ -237,10 +237,10 @@ export function SettingsView({ goBack }: SettingsViewProps) {
           } else {
             const label = ['porn', 'sexual', 'nudity', 'graphic-media'][modFocus - 1]!;
             const existing = modConfig.contentLabels.findIndex(l => l.label === label);
-            const visibilities: Array<'show' | 'badge' | 'warn' | 'hide'> = ['show', 'badge', 'warn', 'hide'];
-            let currentVis: 'show' | 'badge' | 'warn' | 'hide' = 'warn';
+            const visibilities: Array<'show' | 'warn' | 'hide'> = ['show', 'warn', 'hide'];
+            let currentVis: 'show' | 'warn' | 'hide' = 'warn';
             if (existing >= 0) currentVis = modConfig.contentLabels[existing]!.visibility;
-            const nextVis = visibilities[(visibilities.indexOf(currentVis) + 1) % 4]!;
+            const nextVis = visibilities[(visibilities.indexOf(currentVis) + 1) % 3]!;
             let contentLabels = [...modConfig.contentLabels];
             if (existing >= 0) {
               contentLabels[existing] = { ...contentLabels[existing]!, visibility: nextVis };

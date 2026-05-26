@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useThread, useI18n, formatThreadgateSummary, getThreadgateDisplayKey, buildThreadgateRules } from '@bsky/app';
-import type { BskyClient, AIConfig, ThreadgateRule } from '@bsky/core';
+import type { BskyClient, AIConfig, ThreadgateRule, ModerationDecision } from '@bsky/core';
+import { resolveModeration, DEFAULT_MODERATION_CONFIG, BUILTIN_LABEL_DEFINITIONS } from '@bsky/core';
 import type { FlatLine } from '@bsky/app';
+import { getTuiConfig } from '../config/configStore.js';
 
 interface UnifiedThreadViewProps {
   client: BskyClient | null;
@@ -45,6 +47,24 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   const [isFollowingFocused, setIsFollowingFocused] = useState(false);
   const [followUriFocused, setFollowUriFocused] = useState<string | undefined>();
   const { t, locale } = useI18n();
+
+  // [v0.15.0] Moderation support
+  const moderationConfig = getTuiConfig().moderationConfig || DEFAULT_MODERATION_CONFIG;
+  const labelDefMap = new Map<string, typeof BUILTIN_LABEL_DEFINITIONS[number]>();
+  for (const def of BUILTIN_LABEL_DEFINITIONS) labelDefMap.set(def.identifier, def);
+
+  const getModerationDecision = (line: FlatLine): ModerationDecision | null => {
+    if (!line.labels || line.labels.length === 0) return null;
+    return resolveModeration(
+      line.labels,
+      moderationConfig,
+      new Map(), // TODO: populate from labeler definitions
+      new Map()
+    );
+  };
+
+  // Track revealed posts (user pressed Enter to show hidden/warned content)
+  const [revealedUris, setRevealedUris] = useState<Set<string>>(new Set());
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
   const dateTimeOpts: Intl.DateTimeFormatOptions = { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
 
@@ -127,6 +147,15 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
     // Enter on truncation line: expand replies
     if (key.return && cursorLine?.isTruncation) { expandReplies(); return; }
 
+    // [v0.15.0] Enter on hidden/warned post: reveal content
+    if (key.return && cursorLine?.uri) {
+      const decision = getModerationDecision(cursorLine);
+      if (decision && (decision.contentAction === 'hide' || decision.contentAction === 'warn') && !revealedUris.has(cursorLine.uri)) {
+        setRevealedUris(prev => new Set([...prev, cursorLine.uri]));
+        return;
+      }
+    }
+
     // h: go back to theme post
     if ((input === 'h' || input === 'H') && themeUri) { refreshThread(themeUri); return; }
 
@@ -199,7 +228,12 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
 
   const glc = (l: FlatLine) => l.likeCount + (localLikeCounts[l.rkey] ?? 0);
 
-  const renderPostBody = (line: FlatLine, bg?: string) => (
+  const renderPostBody = (line: FlatLine, bg?: string) => {
+    const decision = getModerationDecision(line);
+    const isRevealed = line.uri ? revealedUris.has(line.uri) : false;
+    const showOverlay = decision && (decision.contentAction === 'hide' || decision.contentAction === 'warn') && !isRevealed;
+
+    return (
     <Box flexDirection="column">
       {/* Name + media tags */}
       <Box>
@@ -208,6 +242,20 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         </Text>
         <Text backgroundColor={bg} dimColor>{' @'}{line.handle}</Text>
       </Box>
+      {/* Moderation overlay or content */}
+      {showOverlay ? (
+        <Box flexDirection="column">
+          <Text backgroundColor={bg} color="red" bold>
+            {decision.contentAction === 'hide' ? '[HIDDEN]' : '[WARN]'}
+            {decision.sources[0]?.labels[0]?.name && ` ${decision.sources[0].labels[0].name}`}
+          </Text>
+          {decision.sources[0]?.labels[0]?.description && (
+            <Text backgroundColor={bg} dimColor>{decision.sources[0].labels[0].description}</Text>
+          )}
+          <Text backgroundColor={bg} color="yellow">{'Press Enter to show'}</Text>
+        </Box>
+      ) : (
+      <>
       {/* Text */}
       <Box><Text backgroundColor={bg}>{line.text}</Text></Box>
       {/* Images — OSC 8 clickable hyperlinks */}
@@ -238,8 +286,11 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
       </Box>
       {/* Quoted post */}
       {line.quotedPost && renderQuotedPost(line.quotedPost)}
+      </>
+      )}
     </Box>
   );
+  };
 
   const renderQuotedPost = (qp: NonNullable<FlatLine['quotedPost']>) => (
     <Box flexDirection="column" marginTop={0}>
@@ -265,6 +316,9 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           <Box><Text dimColor>{'── ' + t('thread.discussionSource') + ' ──'}</Text></Box>
           {themeLines.map((line) => {
             const isCursor = line.uri === cursorLine?.uri;
+            const decision = getModerationDecision(line);
+            const isRevealed = line.uri ? revealedUris.has(line.uri) : false;
+            const showOverlay = decision && (decision.contentAction === 'hide' || decision.contentAction === 'warn') && !isRevealed;
             return (
               <Box key={line.uri || Math.random()} flexDirection="column" marginBottom={0}>
                 <Box>
@@ -274,11 +328,28 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                   <Text dimColor>{' @'}{line.handle}</Text>
                   {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
                 </Box>
-                <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text}</Text></Box>
-                {line.quotedPost && renderQuotedPost(line.quotedPost)}
-                <Box>
-                  <Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
-                </Box>
+                {showOverlay ? (
+                  <Box flexDirection="column">
+                    <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="red" bold>
+                      {decision.contentAction === 'hide' ? '[HIDDEN]' : '[WARN]'}
+                      {decision.sources[0]?.labels[0]?.name && ` ${decision.sources[0].labels[0].name}`}
+                    </Text>
+                    {decision.sources[0]?.labels[0]?.description && (
+                      <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} dimColor>{decision.sources[0].labels[0].description}</Text>
+                    )}
+                    <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="yellow">
+                      {isCursor ? 'Press Enter to show' : ''}
+                    </Text>
+                  </Box>
+                ) : (
+                  <>
+                    <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text}</Text></Box>
+                    {line.quotedPost && renderQuotedPost(line.quotedPost)}
+                    <Box>
+                      <Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text>
+                    </Box>
+                  </>
+                )}
               </Box>
             );
           })}
@@ -319,6 +390,9 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
           if (!line.uri) return <Box key={i}><Text dimColor>{'  '}{line.text}</Text></Box>;
           const isCursor = line.uri === cursorLine?.uri;
           const indent = '  '.repeat(Math.min(line.depth - 1, 3));
+          const decision = getModerationDecision(line);
+          const isRevealed = line.uri ? revealedUris.has(line.uri) : false;
+          const showOverlay = decision && (decision.contentAction === 'hide' || decision.contentAction === 'warn') && !isRevealed;
           return (
             <Box key={i} flexDirection="column" marginBottom={0}>
               {/* Name line with cursor */}
@@ -329,6 +403,19 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                 {isCursor && <Text dimColor>{' ← '}{t('action.navigate')}</Text>}
                 {line.hasReplies && <Text color="cyan">{' [+]'}</Text>}
               </Box>
+              {showOverlay ? (
+                <Box flexDirection="column">
+                  <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="red" bold>
+                    {indent}{'  '}{decision.contentAction === 'hide' ? '[HIDDEN]' : '[WARN]'}
+                    {decision.sources[0]?.labels[0]?.name && ` ${decision.sources[0].labels[0].name}`}
+                  </Text>
+                  {decision.sources[0]?.labels[0]?.description && (
+                    <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} dimColor>{indent}{'  '}{decision.sources[0].labels[0].description}</Text>
+                  )}
+                  {isCursor && <Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="yellow">{indent}{'  '}Press Enter to show</Text>}
+                </Box>
+              ) : (
+              <>
               {/* Text */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>
               {/* Images */}
@@ -349,6 +436,8 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
               {line.quotedPost && renderQuotedPost(line.quotedPost)}
               {/* Stats */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text dimColor>♥ {glc(line)}  ♺ {line.repostCount}  💬 {line.replyCount}</Text></Box>
+              </>
+              )}
             </Box>
           );
         })}

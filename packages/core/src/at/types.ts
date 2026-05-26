@@ -167,7 +167,7 @@ export interface LabelerView {
 
 export interface ContentLabelPref {
   label: string;
-  visibility: 'show' | 'badge' | 'warn' | 'hide';
+  visibility: 'show' | 'warn' | 'hide';
 }
 
 export interface ModerationPrefs {

@@ -1,27 +1,38 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useI18n } from '@bsky/app';
 import type { ModerationConfig, LabelerConfig, ContentLabelPref } from '@bsky/core';
 import { OFFICIAL_LABELER_DID, STANDARD_LABELS } from '@bsky/core';
 import { useLabelerInfo, fetchLabelerInfos, BUILTIN_LABELERS } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
+import type { SyncState } from '../hooks/useModerationConfig.js';
 
 interface ModerationSettingsTabProps {
   config: ModerationConfig;
+  syncState: SyncState;
   client: BskyClient | null;
   onChange: (config: ModerationConfig) => void;
+  onSyncFromPDS: () => Promise<void>;
+  onSaveToPDS: () => Promise<void>;
 }
 
-type Visibility = 'show' | 'badge' | 'warn' | 'hide';
+type Visibility = 'show' | 'warn' | 'hide';
 
 const VISIBILITY_OPTIONS: { value: Visibility; labelKey: string }[] = [
   { value: 'show', labelKey: 'moderation.show' },
-  { value: 'badge', labelKey: 'moderation.badge' },
   { value: 'warn', labelKey: 'moderation.warn' },
   { value: 'hide', labelKey: 'moderation.hide' },
 ];
 
-export function ModerationSettingsTab({ config, client, onChange }: ModerationSettingsTabProps) {
+/** [v0.15.0] Determine the middle button label based on label definition blurs field.
+ *  warn + blurs=none   → displays as badge (e.g., impersonation)
+ *  warn + blurs=content/media → displays as warning overlay
+ */
+function getMiddleButtonLabel(blurs: string | undefined): string {
+  return blurs === 'none' ? 'moderation.badge' : 'moderation.warn';
+}
+
+export function ModerationSettingsTab({ config, syncState, client, onChange, onSyncFromPDS, onSaveToPDS }: ModerationSettingsTabProps) {
   const { t } = useI18n();
   const [newLabelerDid, setNewLabelerDid] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -190,11 +201,62 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
     return pref?.visibility || 'warn';
   };
 
+  // [v0.15.0] Auto-pull from PDS on mount
+  const hasSyncedRef = React.useRef(false);
+  useEffect(() => {
+    if (client && !hasSyncedRef.current) {
+      hasSyncedRef.current = true;
+      onSyncFromPDS();
+    }
+  }, [client, onSyncFromPDS]);
+
+  const formatLastSync = (timestamp: number | null): string => {
+    if (!timestamp) return t('moderation.neverSynced') || '从未同步';
+    const date = new Date(timestamp);
+    return date.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Content Filters ── */}
       <section>
-        <h3 className="text-sm font-semibold text-text-primary mb-3">{t('moderation.generalTitle')}</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-text-primary">{t('moderation.generalTitle')}</h3>
+          <div className="flex items-center gap-2">
+            {syncState.status === 'syncing' && (
+              <span className="text-xs text-text-secondary flex items-center gap-1">
+                <span className="w-3 h-3 border border-primary border-t-transparent rounded-full animate-spin" />
+                {t('moderation.syncing') || '同步中...'}
+              </span>
+            )}
+            {syncState.status === 'error' && (
+              <span className="text-xs text-red-500" title={syncState.error || ''}>
+                {t('moderation.syncError') || '同步失败'}
+              </span>
+            )}
+            {syncState.status === 'success' && (
+              <span className="text-xs text-green-500">
+                {t('moderation.lastSynced') || '上次同步'}: {formatLastSync(syncState.lastSyncedAt)}
+              </span>
+            )}
+            <button
+              onClick={onSaveToPDS}
+              disabled={syncState.status === 'syncing' || !client}
+              className="px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium disabled:opacity-50 transition-colors flex items-center gap-1"
+            >
+              <Icon name="upload-cloud" size={12} />
+              {t('moderation.syncToPDS') || '同步到服务器'}
+            </button>
+            <button
+              onClick={onSyncFromPDS}
+              disabled={syncState.status === 'syncing' || !client}
+              className="px-2 py-1 rounded-md bg-surface hover:bg-surface-tertiary text-text-secondary text-xs font-medium disabled:opacity-50 transition-colors flex items-center gap-1"
+            >
+              <Icon name="refresh-cw" size={12} />
+              {t('moderation.syncFromPDS') || '从服务器拉取'}
+            </button>
+          </div>
+        </div>
         
         {/* Adult content master toggle */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-surface/50 border border-border mb-4">
@@ -227,7 +289,7 @@ export function ModerationSettingsTab({ config, client, onChange }: ModerationSe
                     <div className="text-sm font-medium text-text-primary">{t(`moderation.labels.${label}`) || label}</div>
                     <div className="text-xs text-text-secondary/70 mt-0.5">{t(`moderation.labelDesc.${label}`)}</div>
                   </div>
-                  <div className="grid grid-cols-4 gap-1">
+                  <div className="grid grid-cols-3 gap-1">
                     {VISIBILITY_OPTIONS.map(opt => (
                       <button
                         key={opt.value}
@@ -429,49 +491,32 @@ function OfficialLabelerPanel({
   }
 
   return (
-    <div className="border border-border rounded-lg overflow-clip">
-      <div className="px-3 py-2 bg-surface/50 border-b border-border">
-        <div className="flex items-center gap-2">
-          {view?.creator.avatar ? (
-            <img src={view.creator.avatar} alt="" className="w-6 h-6 rounded-full" />
-          ) : (
-            <div className="w-6 h-6 rounded-full bg-surface flex items-center justify-center text-xs">🛡</div>
-          )}
-          <div>
-            <div className="text-sm font-medium text-text-primary">{view?.creator.displayName || view?.creator.handle || labeler.name}</div>
-            <div className="text-xs text-text-secondary">@{view?.creator.handle || 'moderation.bsky.app'}</div>
-          </div>
-        </div>
-      </div>
-      <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
-        <span>{t('moderation.label')}</span>
-        <span className="text-center">{t('moderation.show')}</span>
-        <span className="text-center">{t('moderation.badge')}</span>
-        <span className="text-center">{t('moderation.warn')}</span>
-        <span className="text-center">{t('moderation.hide')}</span>
-      </div>
+    <div className="space-y-3">
       {extraLabels.map(def => {
         const current = labeler.labelPrefs[def.identifier] || def.defaultSetting;
         return (
-          <div key={def.identifier} className="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-border last:border-b-0 items-center">
-            <div className="text-sm text-text-primary">
-              <div>{def.locales?.[0]?.name || def.identifier}</div>
+          <div key={def.identifier} className="p-3 rounded-lg border border-border bg-surface/30">
+            <div className="mb-2">
+              <div className="text-sm font-medium text-text-primary">{def.locales?.[0]?.name || def.identifier}</div>
               {def.locales?.[0]?.description && (
-                <div className="text-xs text-text-secondary/70">{def.locales[0].description}</div>
+                <div className="text-xs text-text-secondary/70 mt-0.5">{def.locales[0].description}</div>
               )}
             </div>
-            {VISIBILITY_OPTIONS.map(opt => (
-              <label key={opt.value} className="flex justify-center cursor-pointer">
-                <input
-                  type="radio"
-                  name={`official-${def.identifier}`}
-                  value={opt.value}
-                  checked={current === opt.value}
-                  onChange={() => onPrefChange(def.identifier, opt.value)}
-                  className="w-4 h-4 accent-primary"
-                />
-              </label>
-            ))}
+            <div className="grid grid-cols-3 gap-1">
+              {VISIBILITY_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => onPrefChange(def.identifier, opt.value)}
+                  className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                    current === opt.value
+                      ? 'bg-primary text-white'
+                      : 'bg-surface hover:bg-surface-tertiary text-text-secondary'
+                  }`}
+                >
+                  {t(opt.value === 'warn' ? getMiddleButtonLabel(def.blurs) : opt.labelKey)}
+                </button>
+              ))}
+            </div>
           </div>
         );
       })}
@@ -567,33 +612,32 @@ function ThirdPartyLabelerCard({
             </div>
           )}
           {labeler.labels.length > 0 ? (
-            <div className="border border-border rounded-lg overflow-clip">
-              <div className="grid grid-cols-5 gap-2 px-3 py-2 bg-surface/30 text-xs font-medium text-text-secondary border-b border-border">
-                <span>{t('moderation.label')}</span>
-                <span className="text-center">{t('moderation.show')}</span>
-                <span className="text-center">{t('moderation.badge')}</span>
-                <span className="text-center">{t('moderation.warn')}</span>
-                <span className="text-center">{t('moderation.hide')}</span>
-              </div>
+            <div className="space-y-3">
               {labeler.labels.map(def => {
                 const current = labeler.labelPrefs[def.identifier] || def.defaultSetting;
                 return (
-                  <div key={def.identifier} className="grid grid-cols-5 gap-2 px-3 py-2 border-b border-border last:border-b-0 items-center">
-                    <div className="text-sm text-text-primary">
-                      <div>{def.locales?.[0]?.name || def.identifier}</div>
+                  <div key={def.identifier} className="p-3 rounded-lg border border-border bg-surface/30">
+                    <div className="mb-2">
+                      <div className="text-sm font-medium text-text-primary">{def.locales?.[0]?.name || def.identifier}</div>
+                      {def.locales?.[0]?.description && (
+                        <div className="text-xs text-text-secondary/70 mt-0.5">{def.locales[0].description}</div>
+                      )}
                     </div>
-                    {VISIBILITY_OPTIONS.map(opt => (
-                      <label key={opt.value} className="flex justify-center cursor-pointer">
-                        <input
-                          type="radio"
-                          name={`${labeler.did}-${def.identifier}`}
-                          value={opt.value}
-                          checked={current === opt.value}
-                          onChange={() => onPrefChange(def.identifier, opt.value)}
-                          className="w-4 h-4 accent-primary"
-                        />
-                      </label>
-                    ))}
+                    <div className="grid grid-cols-3 gap-1">
+                      {VISIBILITY_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => onPrefChange(def.identifier, opt.value)}
+                          className={`px-2 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                            current === opt.value
+                              ? 'bg-primary text-white'
+                              : 'bg-surface hover:bg-surface-tertiary text-text-secondary'
+                          }`}
+                        >
+                          {t(opt.value === 'warn' ? getMiddleButtonLabel(def.blurs) : opt.labelKey)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 );
               })}

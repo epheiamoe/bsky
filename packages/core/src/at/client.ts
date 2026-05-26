@@ -880,7 +880,7 @@ export class BskyClient {
     return this.chatPost<{ convo: ConvoView }>('chat.bsky.convo.leaveConvo', { convoId });
   }
 
-  async putProfile(params: { displayName?: string; description?: string; avatar?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number }; banner?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number } }): Promise<void> {
+  async putProfile(params: { displayName?: string; description?: string; avatar?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number }; banner?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number }; pronouns?: string }): Promise<void> {
     const did = this.getDID();
     const record: Record<string, unknown> = {
       $type: 'app.bsky.actor.profile',
@@ -889,10 +889,24 @@ export class BskyClient {
     };
     if (params.avatar) record.avatar = params.avatar;
     if (params.banner) record.banner = params.banner;
+    if (params.pronouns !== undefined) {
+      if (params.pronouns) record.pronouns = params.pronouns;
+      // if empty string, we still need to include it to clear the field
+      else record.pronouns = undefined;
+    }
     await this.ky.post('com.atproto.repo.putRecord', {
       headers: this.getAuthHeaders(),
       json: { repo: did, collection: 'app.bsky.actor.profile', rkey: 'self', record },
     });
+  }
+
+  /** Get the raw app.bsky.actor.profile record (includes pronouns and other fields not exposed by getProfile) */
+  async getProfileRecord(): Promise<Record<string, unknown>> {
+    const did = this.getDID();
+    return this.ky.get('com.atproto.repo.getRecord', {
+      headers: this.getAuthHeaders(),
+      searchParams: { repo: did, collection: 'app.bsky.actor.profile', rkey: 'self' },
+    }).json<{ value: Record<string, unknown> }>().then(r => r.value);
   }
 
   // ── AtPlay: Social Circle API methods ──
@@ -965,6 +979,86 @@ export class BskyClient {
       headers: this.getAuthHeaders(),
       json: { preferences },
     });
+  }
+
+  /**
+   * [v0.15.0] Extract moderation preferences from PDS.
+   * Returns adultContentEnabled, contentLabels, and subscribed labeler DIDs.
+   * Per-labeler preferences are NOT stored in PDS and will be empty.
+   */
+  async getModerationPrefs(): Promise<{ adultContentEnabled: boolean; contentLabels: Array<{ label: string; visibility: 'show' | 'warn' | 'hide' }>; labelerDids: string[] }> {
+    const { preferences } = await this.getPreferences();
+    let adultContentEnabled = false;
+    const contentLabels: Array<{ label: string; visibility: 'show' | 'warn' | 'hide' }> = [];
+    const labelerDids: string[] = [];
+
+    for (const pref of preferences) {
+      const p = pref as Record<string, unknown>;
+      if (p.$type === 'app.bsky.actor.defs#adultContentPref') {
+        adultContentEnabled = !!p.enabled;
+      } else if (p.$type === 'app.bsky.actor.defs#contentLabelPref') {
+        const vis = p.visibility as string;
+        if (vis === 'show' || vis === 'warn' || vis === 'hide') {
+          contentLabels.push({ label: p.label as string, visibility: vis });
+        }
+      } else if (p.$type === 'app.bsky.actor.defs#labelersPref') {
+        const labelers = p.labelers as Array<{ did: string }> | undefined;
+        if (labelers) {
+          for (const l of labelers) {
+            if (l.did) labelerDids.push(l.did);
+          }
+        }
+      }
+    }
+
+    return { adultContentEnabled, contentLabels, labelerDids };
+  }
+
+  /**
+   * [v0.15.0] Write moderation preferences to PDS.
+   * Only adultContentPref, contentLabelPref, and labelersPref are synced.
+   * Per-labeler label preferences are NOT synced (PDS API limitation).
+   */
+  async putModerationPrefs(params: { adultContentEnabled: boolean; contentLabels: Array<{ label: string; visibility: 'show' | 'warn' | 'hide' }>; labelerDids: string[] }): Promise<void> {
+    // Get existing preferences to preserve non-moderation prefs
+    const { preferences } = await this.getPreferences();
+    const newPrefs: unknown[] = [];
+
+    // Keep all non-moderation preferences
+    for (const pref of preferences) {
+      const p = pref as Record<string, unknown>;
+      const type = p.$type as string;
+      if (type !== 'app.bsky.actor.defs#adultContentPref' &&
+          type !== 'app.bsky.actor.defs#contentLabelPref' &&
+          type !== 'app.bsky.actor.defs#labelersPref') {
+        newPrefs.push(pref);
+      }
+    }
+
+    // Add adult content preference
+    newPrefs.push({
+      $type: 'app.bsky.actor.defs#adultContentPref',
+      enabled: params.adultContentEnabled,
+    });
+
+    // Add content label preferences
+    for (const cl of params.contentLabels) {
+      newPrefs.push({
+        $type: 'app.bsky.actor.defs#contentLabelPref',
+        label: cl.label,
+        visibility: cl.visibility,
+      });
+    }
+
+    // Add labelers preference
+    if (params.labelerDids.length > 0) {
+      newPrefs.push({
+        $type: 'app.bsky.actor.defs#labelersPref',
+        labelers: params.labelerDids.map(did => ({ did })),
+      });
+    }
+
+    await this.putPreferences(newPrefs);
   }
 
   async createModerationReport(params: {

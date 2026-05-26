@@ -50,7 +50,7 @@ export interface LabelerConfig {
   avatar?: string;
   labels: LabelValueDefinition[];
   /** Per-label visibility override for this labeler */
-  labelPrefs: Record<string, 'show' | 'badge' | 'warn' | 'hide'>;
+  labelPrefs: Record<string, 'show' | 'warn' | 'hide'>;
   isActive: boolean;
   /** How to handle service failures for this labeler (v0.14.1) */
   failureBehavior: 'silent' | 'banner' | 'block';
@@ -130,7 +130,7 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   contentLabels: [
     { label: 'porn', visibility: 'hide' },
     { label: 'sexual', visibility: 'warn' },
-    { label: 'nudity', visibility: 'show' },
+    { label: 'nudity', visibility: 'warn' },
     { label: 'graphic-media', visibility: 'warn' },
   ],
   labelers: [
@@ -151,9 +151,14 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
 /**
  * Resolve moderation decision for a subject based on its labels and user config.
  *
- * [v0.15.0] Now computes separate contentAction and mediaAction:
+ * [v0.15.0] 3-value visibility system (show/warn/hide) + separate content/media actions:
  * - contentAction: 'hide' | 'warn' | 'none' — affects post text, author, interactions
  * - mediaAction: 'blur' | 'none' — affects images, video, external media
+ *
+ * Badge vs overlay is NOT a user preference. It is determined by label definition blurs:
+ *   blurs=none    → warn renders as badge (contentAction='none', but badge shown)
+ *   blurs=content → warn renders as content overlay (contentAction='warn')
+ *   blurs=media   → warn renders as media blur (mediaAction='blur')
  *
  * Decision hierarchy (most restrictive wins):
  *   hide > warn > blurMedia > showBadge > none
@@ -161,16 +166,15 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
  * Logic:
  * 1. Group labels by labeler DID.
  * 2. For each label, resolve visibility preference:
- *    a. Check the labeler's labelPrefs[label.val] (if labeler is configured)
+ *    a. Check the labeler's labelPrefs[label.val] (3 values only)
  *    b. Fall back to global contentLabels[label.val]
- *    c. Fall back to the label definition's defaultSetting
+ *    c. Fall back to the label definition's defaultSetting (badge maps to warn)
  * 3. If adult-only label and adultContentEnabled=false → force 'hide'
  * 4. Determine action from visibility + label definition:
  *    - show → 'none'
- *    - badge → 'showBadge'
  *    - warn + blurs=content → 'warn' (contentAction)
  *    - warn + blurs=media → 'blurMedia' (mediaAction)
- *    - warn + blurs=none + severity≠none → 'showBadge'
+ *    - warn + blurs=none + severity≠none → 'showBadge' (badge row)
  *    - hide → 'hide'
  * 5. Combine: most restrictive action wins across all providers.
  * 6. Collect all contributing labels into sources for info display.
@@ -193,7 +197,7 @@ export function resolveModeration(
   }
 
   // Build global preference lookup
-  const globalPrefs = new Map<string, 'show' | 'badge' | 'warn' | 'hide'>();
+  const globalPrefs = new Map<string, 'show' | 'warn' | 'hide'>();
   for (const pref of config.contentLabels) {
     globalPrefs.set(pref.label, pref.visibility);
   }
@@ -235,7 +239,7 @@ export function resolveModeration(
       const def = defMap.get(label.val) || BUILTIN_DEF_MAP.get(label.val);
 
       // Resolve visibility preference
-      let visibility: 'show' | 'badge' | 'warn' | 'hide';
+      let visibility: 'show' | 'warn' | 'hide';
 
       // a. Labeler-specific override
       const labelerPref = labelerConfig?.labelPrefs[label.val];
@@ -247,8 +251,10 @@ export function resolveModeration(
         visibility = globalPrefs.get(label.val)!;
       }
       // c. Label definition default
+      // [v0.15.0] defaultSetting='badge' maps to 'warn' because badge is a
+      // rendering mode of warn (blurs=none), not a separate user preference.
       else if (def) {
-        visibility = def.defaultSetting;
+        visibility = def.defaultSetting === 'badge' ? 'warn' : def.defaultSetting;
       }
       // d. Ultimate fallback
       else {
@@ -264,8 +270,6 @@ export function resolveModeration(
       let action: ModerationAction = 'none';
       if (visibility === 'show') {
         action = 'none';
-      } else if (visibility === 'badge') {
-        action = 'showBadge';
       } else if (visibility === 'warn') {
         if (def?.blurs === 'content') action = 'warn';
         else if (def?.blurs === 'media') action = 'blurMedia';
@@ -291,8 +295,9 @@ export function resolveModeration(
         mediaAction = 'blur';
       }
 
-      // Collect badge if applicable (show, badge, warn, blurMedia all show badges)
-      if (action !== 'none' && action !== 'hide') {
+      // Collect badge only for blurs=none labels (display-only badges like impersonation)
+      // blurs=content or blurs=media use overlays instead of badges.
+      if (action !== 'none' && action !== 'hide' && def?.blurs === 'none') {
         const badgeName = def?.locales?.[0]?.name || label.val;
         badges.add(badgeName);
       }

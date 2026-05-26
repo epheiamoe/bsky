@@ -6,6 +6,12 @@
  * - Adult content toggle
  * - Subscribed labeler configurations
  * 
+ * [v0.15.0] PDS Sync: moderation prefs are synced with Bluesky PDS.
+ * - Standard labels + adult toggle → synced to PDS (bidirectional)
+ * - Labeler subscriptions (DIDs) → synced to PDS (bidirectional)
+ * - Per-labeler label preferences → localStorage only (PDS API limitation)
+ * - Auto-pull on settings tab mount; manual sync button available
+ * 
  * Built-in labelers (e.g., official @moderation.bsky.app) are always present
  * and cannot be removed by the user (only disabled via isActive).
  * 
@@ -16,8 +22,18 @@
 import { useState, useCallback } from 'react';
 import type { ModerationConfig, ContentLabelPref, LabelerConfig } from '@bsky/core';
 import { DEFAULT_MODERATION_CONFIG, OFFICIAL_LABELER_DID } from '@bsky/core';
+import type { BskyClient } from '@bsky/core';
 
 const MODERATION_CONFIG_KEY = 'bsky_moderation_config';
+const MODERATION_SYNC_KEY = 'bsky_moderation_sync';
+
+export type SyncStatus = 'idle' | 'syncing' | 'error' | 'success';
+
+export interface SyncState {
+  status: SyncStatus;
+  lastSyncedAt: number | null;
+  error: string | null;
+}
 
 function loadConfig(): ModerationConfig {
   try {
@@ -28,10 +44,11 @@ function loadConfig(): ModerationConfig {
     
     const parsed = JSON.parse(raw);
     
-    // [v0.15.0] Migrate old 'ignore' visibility values to 'show'
-    const migrateVisibility = (v: string): 'show' | 'badge' | 'warn' | 'hide' => {
+    // [v0.15.0] Migrate old values to 3-value system
+    const migrateVisibility = (v: string): 'show' | 'warn' | 'hide' => {
       if (v === 'ignore') return 'show';
-      if (v === 'show' || v === 'badge' || v === 'warn' || v === 'hide') return v;
+      if (v === 'badge') return 'warn'; // badge is now a render mode of warn
+      if (v === 'show' || v === 'warn' || v === 'hide') return v;
       return 'warn'; // fallback
     };
     
@@ -50,7 +67,7 @@ function loadConfig(): ModerationConfig {
     const userLabelers = new Map<string, LabelerConfig>(
       (parsed.labelers || []).map((l: LabelerConfig) => {
         // Migrate labelPrefs
-        const migratedPrefs: Record<string, 'show' | 'badge' | 'warn' | 'hide'> = {};
+        const migratedPrefs: Record<string, 'show' | 'warn' | 'hide'> = {};
         for (const [key, val] of Object.entries(l.labelPrefs || {})) {
           migratedPrefs[key] = migrateVisibility(val as string);
         }
@@ -98,8 +115,28 @@ function saveConfig(config: ModerationConfig): void {
   localStorage.setItem(MODERATION_CONFIG_KEY, JSON.stringify(config));
 }
 
+function loadSyncState(): SyncState {
+  try {
+    const raw = localStorage.getItem(MODERATION_SYNC_KEY);
+    if (!raw) return { status: 'idle', lastSyncedAt: null, error: null };
+    const parsed = JSON.parse(raw);
+    return {
+      status: parsed.status || 'idle',
+      lastSyncedAt: parsed.lastSyncedAt || null,
+      error: parsed.error || null,
+    };
+  } catch {
+    return { status: 'idle', lastSyncedAt: null, error: null };
+  }
+}
+
+function saveSyncState(state: SyncState): void {
+  localStorage.setItem(MODERATION_SYNC_KEY, JSON.stringify(state));
+}
+
 export function useModerationConfig() {
   const [config, setConfigState] = useState<ModerationConfig>(loadConfig);
+  const [syncState, setSyncState] = useState<SyncState>(loadSyncState);
 
   const setConfig = useCallback((updater: (prev: ModerationConfig) => ModerationConfig) => {
     setConfigState(prev => {
@@ -115,7 +152,106 @@ export function useModerationConfig() {
     saveConfig(newConfig);
   }, []);
 
-  const setContentLabelVisibility = useCallback((label: string, visibility: 'show' | 'badge' | 'warn' | 'hide') => {
+  const setSyncStatus = useCallback((updater: (prev: SyncState) => SyncState) => {
+    setSyncState(prev => {
+      const next = updater(prev);
+      saveSyncState(next);
+      return next;
+    });
+  }, []);
+
+  /**
+   * [v0.15.0] Pull moderation preferences from PDS and merge into local config.
+   * 
+   * Merge strategy:
+   * - PDS adultContentEnabled → overwrites local
+   * - PDS contentLabels (standard labels) → overwrites local
+   * - PDS labelerDIDs → add missing labelers (but don't remove local-only ones)
+   * - Local per-labeler labelPrefs → preserved (PDS doesn't store these)
+   * - Local labeler failureBehavior → preserved
+   */
+  const syncFromPDS = useCallback(async (client: BskyClient | null) => {
+    if (!client) return;
+
+    setSyncStatus(prev => ({ ...prev, status: 'syncing', error: null }));
+
+    try {
+      const pdsPrefs = await client.getModerationPrefs();
+
+      setConfigState(prev => {
+        // Merge PDS content labels (overwrite local for standard labels)
+        const mergedContentLabels = [...prev.contentLabels];
+        for (const pdsLabel of pdsPrefs.contentLabels) {
+          const existingIndex = mergedContentLabels.findIndex(l => l.label === pdsLabel.label);
+          if (existingIndex >= 0) {
+            mergedContentLabels[existingIndex] = { ...mergedContentLabels[existingIndex], visibility: pdsLabel.visibility };
+          } else {
+            mergedContentLabels.push(pdsLabel);
+          }
+        }
+
+        // Merge labeler DIDs: add PDS ones, keep local ones
+        const existingLabelerDids = new Set(prev.labelers.map(l => l.did));
+        const mergedLabelers = [...prev.labelers];
+        for (const did of pdsPrefs.labelerDids) {
+          if (!existingLabelerDids.has(did)) {
+            // Add new labeler with minimal config; caller can fetch details later
+            mergedLabelers.push({
+              did,
+              name: did,
+              labels: [],
+              labelPrefs: {},
+              isActive: true,
+              failureBehavior: 'banner',
+            });
+          }
+        }
+
+        const next: ModerationConfig = {
+          ...prev,
+          adultContentEnabled: pdsPrefs.adultContentEnabled,
+          contentLabels: mergedContentLabels,
+          labelers: mergedLabelers,
+        };
+        saveConfig(next);
+        return next;
+      });
+
+      setSyncStatus(prev => ({ ...prev, status: 'success', lastSyncedAt: Date.now(), error: null }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setSyncStatus(prev => ({ ...prev, status: 'error', error: errorMsg }));
+    }
+  }, [setSyncStatus]);
+
+  /**
+   * [v0.15.0] Push moderation preferences to PDS.
+   * 
+   * Only syncs:
+   * - adultContentEnabled
+   * - contentLabels (standard labels)
+   * - labeler DIDs (not per-labeler prefs)
+   */
+  const saveToPDS = useCallback(async (client: BskyClient | null) => {
+    if (!client) return;
+
+    setSyncStatus(prev => ({ ...prev, status: 'syncing', error: null }));
+
+    try {
+      await client.putModerationPrefs({
+        adultContentEnabled: config.adultContentEnabled,
+        contentLabels: config.contentLabels,
+        labelerDids: config.labelers.map(l => l.did),
+      });
+
+      setSyncStatus(prev => ({ ...prev, status: 'success', lastSyncedAt: Date.now(), error: null }));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      setSyncStatus(prev => ({ ...prev, status: 'error', error: errorMsg }));
+    }
+  }, [config, setSyncStatus]);
+
+  const setContentLabelVisibility = useCallback((label: string, visibility: 'show' | 'warn' | 'hide') => {
     setConfig(prev => {
       const existing = prev.contentLabels.findIndex(l => l.label === label);
       let contentLabels: ContentLabelPref[];
@@ -148,7 +284,7 @@ export function useModerationConfig() {
     }));
   }, [setConfig]);
 
-  const updateLabelerPref = useCallback((did: string, label: string, visibility: 'show' | 'badge' | 'warn' | 'hide') => {
+  const updateLabelerPref = useCallback((did: string, label: string, visibility: 'show' | 'warn' | 'hide') => {
     setConfig(prev => ({
       ...prev,
       labelers: prev.labelers.map(l =>
@@ -170,8 +306,11 @@ export function useModerationConfig() {
 
   return {
     config,
+    syncState,
     setConfig,
     updateConfig,
+    syncFromPDS,
+    saveToPDS,
     setContentLabelVisibility,
     setAdultContentEnabled,
     addLabeler,

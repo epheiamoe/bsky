@@ -497,7 +497,10 @@ export function App() {
             }}
             client={client}
             moderationConfig={moderationConfigState.config}
+            moderationSyncState={moderationConfigState.syncState}
             onModerationConfigChange={moderationConfigState.updateConfig}
+            onSyncFromPDS={() => moderationConfigState.syncFromPDS(client)}
+            onSaveToPDS={() => moderationConfigState.saveToPDS(client)}
           />
         );
       default:

@@ -117,6 +117,7 @@ export {
   DEFAULT_MODERATION_CONFIG,
   OFFICIAL_LABELER_DID,
   STANDARD_LABELS,
+  BUILTIN_LABEL_DEFINITIONS,
   isStandardLabel,
   extractBlobReferences,
 } from './moderation.js';

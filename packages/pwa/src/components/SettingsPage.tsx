@@ -7,6 +7,7 @@ import { PROVIDERS, getProviderByBaseUrl, getModelInfo, getProviderById } from '
 import type { ProviderInfo, ModelInfo, ModerationConfig } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { ModerationSettingsTab } from './ModerationSettingsTab.js';
+import type { SyncState } from '../hooks/useModerationConfig.js';
 
 const LANG_OPTIONS: { value: string; label: string }[] = [
   { value: 'zh', label: '中文' },
@@ -26,12 +27,15 @@ interface SettingsPageProps {
   onRestartWelcome?: () => void;
   client?: any;
   moderationConfig?: ModerationConfig;
+  moderationSyncState?: SyncState;
   onModerationConfigChange?: (config: ModerationConfig) => void;
+  onSyncFromPDS?: () => Promise<void>;
+  onSaveToPDS?: () => Promise<void>;
 }
 
 type Tab = 'account' | 'ai' | 'scenario' | 'display' | 'preview' | 'moderation';
 
-export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRestartWelcome, client, moderationConfig, onModerationConfigChange }: SettingsPageProps) {
+export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRestartWelcome, client, moderationConfig, moderationSyncState, onModerationConfigChange, onSyncFromPDS, onSaveToPDS }: SettingsPageProps) {
   const { t, locale, setLocale, localeLabels, availableLocales } = useI18n();
   const [tab, setTab] = useState<Tab>('account');
 
@@ -581,11 +585,14 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
           </div>
         )}
 
-        {tab === 'moderation' && moderationConfig && onModerationConfigChange && (
+        {tab === 'moderation' && moderationConfig && onModerationConfigChange && onSyncFromPDS && onSaveToPDS && (
           <ModerationSettingsTab
             config={moderationConfig}
+            syncState={moderationSyncState || { status: 'idle', lastSyncedAt: null, error: null }}
             client={client}
             onChange={onModerationConfigChange}
+            onSyncFromPDS={onSyncFromPDS}
+            onSaveToPDS={onSaveToPDS}
           />
         )}
       </div>

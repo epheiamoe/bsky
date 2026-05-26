@@ -36,6 +36,9 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
   // [] = nobody can reply
   // [...rules] = restricted to specific rules
 
+  /** [v0.15.0] Self-labels for content moderation */
+  const [selfLabels, setSelfLabels] = useState<string[]>([]);
+
   const addPost = useCallback(() => {
     setPosts(prev => [...prev, { id: crypto.randomUUID(), text: '' }]);
   }, []);
@@ -193,6 +196,14 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
           }
         }
 
+        // [v0.15.0] Add self-labels if selected (only for first post)
+        if (i === 0 && selfLabels.length > 0) {
+          record.labels = {
+            $type: 'com.atproto.label.defs#selfLabels',
+            values: selfLabels.map(val => ({ val })),
+          };
+        }
+
         const res = await client.createRecord(client.getDID(), 'app.bsky.feed.post', record);
         createdUris.push(res.uri);
         createdCids.push(res.cid);
@@ -213,6 +224,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
       setReplyTo(undefined);
       setQuoteUri(undefined);
       setThreadgateRules(undefined);
+      setSelfLabels([]);
       goBack();
       onSuccess?.(createdUris);
     } catch (e) {
@@ -226,7 +238,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     } finally {
       setSubmitting(false);
     }
-  }, [client, goBack, onSuccess, posts, replyTo, quoteUri]);
+  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabels, threadgateRules]);
 
   return {
     posts,
@@ -241,6 +253,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     setQuoteUri,
     threadgateRules,
     setThreadgateRules,
+    selfLabels,
+    setSelfLabels,
     submit,
     loadFromDraft,
     toDraftData,
