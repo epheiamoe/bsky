@@ -96,13 +96,26 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
         if (i === 0 && replyTo) {
           const parts = uriToParts(replyTo);
           const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
-          const cid = rec.cid ?? '';
+          const parentCid = rec.cid ?? '';
+
+          // FIX: Find the true root post by checking if parent has its own reply
+          const parentRecord = rec.value as Record<string, unknown>;
+          const parentReply = parentRecord?.reply as { root?: { uri: string; cid: string }; parent?: { uri: string; cid: string } } | undefined;
+
+          if (parentReply?.root) {
+            // Parent post is itself a reply — use its root as our root
+            rootUri = parentReply.root.uri;
+            rootCid = parentReply.root.cid;
+          } else {
+            // Parent post is the root — use it directly
+            rootUri = replyTo;
+            rootCid = parentCid;
+          }
+
           record.reply = {
-            root: { uri: replyTo, cid },
-            parent: { uri: replyTo, cid },
+            root: { uri: rootUri, cid: rootCid },
+            parent: { uri: replyTo, cid: parentCid },
           };
-          rootUri = replyTo;
-          rootCid = cid;
         } else if (i > 0 && rootUri && rootCid) {
           const parentUri = createdUris[i - 1]!;
           const parentCid = createdCids[i - 1]!;
