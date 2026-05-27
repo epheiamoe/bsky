@@ -29,6 +29,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useScrollRestore` | [UI](./ui.md) | `packages/app/src/hooks/useScrollRestore.ts` |
 | `useSearchHistory` | [UI](./ui.md) | `packages/app/src/hooks/useSearchHistory.ts` |
 | `useDmEmojiConfig` | [UI](./ui.md) | `packages/app/src/hooks/useDmEmojiConfig.ts` |
+| `useModerationBatch` | [UI](./ui.md) | `packages/app/src/hooks/useModerationPipeline.ts` |
+| `usePostsWithModeration` | [UI](./ui.md) | `packages/app/src/hooks/usePostsWithModeration.ts` |
 | `widgetRegistry` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetRegistry.ts` |
 | `widgetStore` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetStore.ts` |
 | `useActiveFeed` | [Widgets](./widgets.md) | `packages/app/src/hooks/useActiveFeed.ts` |
@@ -60,6 +62,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useLists` | ✓ | ✓ |
 | `useListDetail` | ✓ | ✓ |
 | `useVirtualizedList` | ✓ | — |
+| `useModerationBatch` | ✓ | ✓ |
+| `usePostsWithModeration` | ✓ | — |
 | `useDmEmojiConfig` | ✓ | ✓ |
 | `useActiveFeed` | ✓ | ✓ |
 | `usePostActions` | ✓ | ✓ |
@@ -92,6 +96,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useLists` | (inline state + cache) | `{ lists, loading, error, createList, deleteList, updateListInfo, refresh }` |
 | `useListDetail` | (inline state + cache) | `{ list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, addMember, removeMember, updateListInfo, deleteList, refresh }` |
 | `useVirtualizedList` | `@tanstack/react-virtual` | `{ scrollRef, virtualizer, measureAndCache }` |
+| `useModerationBatch` | (inline state) | `{ decisions: Map<string, ModerationDecision>, failedLabelers: FailedLabelerInfo[], isLoading: boolean }` |
+| `usePostsWithModeration` | (inline state) | `{ posts: PostWithModeration<T>[], failedLabelers: FailedLabelerInfo[], isLoading: boolean }` |
 | `useDmEmojiConfig` | `localStorage` | `{ getDmEmojiConfig, saveDmEmojiConfig, fetchAllEmojis }` |
 | `useActiveFeed` | Module-level ref | `{ resolveFeed, recordFeed, goHomeFeed }` |
 | `usePostActions` | Module-level Sets/Maps | `{ isLiked, isReposted, likePost, repostPost, seedFromPosts, seedFromPost }` |

@@ -1,7 +1,7 @@
 # Labeling / Moderation System
 
 > Architecture documentation for v0.15.0 Bluesky labeling system.
-> Last updated: 2026-05-24
+> Last updated: 2026-05-27
 
 ## Overview
 
@@ -140,7 +140,10 @@ interface SelfLabels {
 | `packages/core/src/moderation-cache.ts` | LabelCache with batching + TTL |
 | `packages/core/src/at/client.ts` | BskyClient API methods |
 | `packages/core/src/at/types.ts` | Label, LabelerView, etc. types |
-| `packages/app/src/hooks/useModeration.ts` | React hook for moderation decisions |
+| `packages/app/src/hooks/useModeration.ts` | React hook for single-post moderation |
+| `packages/app/src/hooks/useModerationPipeline.ts` | Batch moderation + pipeline (blob-aware) |
+| `packages/app/src/hooks/usePostsWithModeration.ts` | Posts augmented with moderation decisions |
+| `packages/app/src/hooks/useVirtualizedList.ts` | Virtual scroll with moderation cache invalidation |
 | `packages/app/src/hooks/useLabelerInfo.ts` | Labeler metadata fetching |
 | `packages/pwa/src/hooks/useModerationConfig.ts` | PWA localStorage config |
 | `packages/pwa/src/components/ModerationSettingsTab.tsx` | Settings UI |
@@ -207,7 +210,40 @@ export interface UseModerationBatchResult {
 }
 ```
 
-### v0.15.0 (Phase 2 — Planned)
+### v0.15.0 (Phase 2 — In Progress)
+
+#### `useModerationBatch()` [FIXED — Blob Support + Incremental Resolution]
+```typescript
+// [v0.15.0] Now exported from useModerationPipeline.ts with blob-level label support
+// Previously exported from useModeration.ts (no blob support — CRITICAL BUG)
+export function useModerationBatch(
+  posts: Array<{ uri: string; labels?: Label[] }>,
+  config: ModerationConfig,
+  client: BskyClient | null
+): { decisions: Map<string, ModerationDecision>; failedLabelers: FailedLabelerInfo[]; isLoading: boolean };
+```
+
+**Fixes**:
+1. **Blob-level labels**: Now extracts blob URIs from embeds and queries labels for individual images/videos
+2. **Incremental resolution**: Only resolves moderation for newly added posts on pagination (not O(n) full re-computation)
+3. **Full re-computation** still occurs when `config` or `client` changes
+
+#### `useVirtualizedList()` [ENHANCED — Moderation-Aware Cache]
+```typescript
+// [v0.15.0] New optional 'decisions' parameter for automatic height cache invalidation
+useVirtualizedList(
+  items,
+  cacheKey,
+  estimateHeight,
+  getItemKey,
+  { 
+    overscan?: number;
+    initialScrollTop?: number;
+    onScrollTopChange?: (top: number) => void;
+    decisions?: Map<string, ModerationDecision>; // ← NEW
+  }
+);
+```
 
 #### `useModerationPipeline()` [NEW]
 ```typescript
@@ -260,16 +296,42 @@ Full details in `docs/plan/plan_labeling_failure_handling.md`
 **Implementation**:
 ```typescript
 const { config } = useModerationConfig();
-const moderationDecisions = useModerationBatch(posts, config, client);
+const { decisions } = useModerationBatch(posts, config, client);
 
 // In render:
 <PostCard
   post={post}
-  moderationDecision={moderationDecisions.get(post.uri) ?? null}
+  moderationDecision={decisions.get(post.uri) ?? null}
 />
 ```
 
 **Note**: ThreadView's `focused` post (root/current) uses inline rendering, not `PostCard`. Moderation overlay for the focused post is not yet applied.
+
+### ✅ Fixed: Blob-Level Labels Ignored (2026-05-27)
+
+**Problem**: `useModerationBatch` was exported from `useModeration.ts` (no blob support) instead of `useModerationPipeline.ts` (has blob support). All list components silently ignored media-level labels.
+
+**Solution**: Changed export in `packages/app/src/index.ts` to use the blob-aware implementation from `useModerationPipeline.ts`.
+
+**Impact**: Media blur now works correctly for blob-level labels (e.g., on individual images).
+
+### ✅ Fixed: O(n) Full Re-computation on Pagination (2026-05-27)
+
+**Problem**: `useModerationBatch` re-ran full resolution for all posts on every `loadMore`, causing O(n) computation where n = total posts loaded.
+
+**Solution**: Added incremental resolution — only new posts are resolved, existing decisions are preserved. Full re-computation only occurs when `config` or `client` changes.
+
+### ✅ Fixed: Virtual List Height Cache Drift (2026-05-27)
+
+**Problem**: When a hidden post (rendered as compact banner) was revealed, the virtual list still allocated the old small height, causing content overlap and scroll drift.
+
+**Solution**: `useVirtualizedList` now accepts optional `decisions` parameter. When moderation decisions change (contentAction/mediaAction), the hook clears cached heights for affected URIs and triggers re-measurement.
+
+### ✅ Fixed: TUI Moderation Lacked API Integration (2026-05-27)
+
+**Problem**: `UnifiedThreadView` only used labels already embedded in posts, passing empty Maps for labeler policies and names.
+
+**Solution**: TUI now fetches moderation decisions asynchronously via `resolveModerationBatch` API, matching PWA behavior.
 
 ### Fixed Issues
 
@@ -282,8 +344,8 @@ const moderationDecisions = useModerationBatch(posts, config, client);
 ## Future Work
 
 - [x] TUI moderation UI implementation (SettingsView + report shortcut)
-- [ ] **List-level batch moderation application** (Critical — decision engine works but not wired)
-- [ ] Self-labeling in compose (PWA + TUI)
+- [x] **List-level batch moderation application** (Fixed 2026-05-27 — blob-aware + incremental + cache invalidation)
+- [x] Self-labeling in compose (PWA + TUI) ✅ v0.15.0
 - [ ] AI tool: `check_post_labels`
 - [ ] WebSocket subscription (`subscribeLabels`) for real-time updates
 - [ ] Sync with Bluesky official preferences (`putPreferences`)
