@@ -29,7 +29,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { config } = useModerationConfig();
   const { decisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
+    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange, decisions },
   );
 
   const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');

@@ -53,14 +53,35 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
   const labelDefMap = new Map<string, typeof BUILTIN_LABEL_DEFINITIONS[number]>();
   for (const def of BUILTIN_LABEL_DEFINITIONS) labelDefMap.set(def.identifier, def);
 
+  // [v0.15.0] Fetch moderation decisions asynchronously (matching PWA behavior)
+  const [moderationDecisions, setModerationDecisions] = useState<Map<string, ModerationDecision>>(new Map());
+  useEffect(() => {
+    if (!client || flatLines.length === 0) {
+      setModerationDecisions(new Map());
+      return;
+    }
+
+    let cancelled = false;
+    import('@bsky/app').then(({ resolveModerationBatch }) => {
+      if (cancelled) return;
+      const subjects = flatLines
+        .filter(l => l.uri)
+        .map(l => ({ uri: l.uri, labels: l.labels }));
+      resolveModerationBatch(subjects, moderationConfig, client).then(res => {
+        if (!cancelled) setModerationDecisions(res.decisions);
+      }).catch(() => {
+        if (!cancelled) setModerationDecisions(new Map());
+      });
+    }).catch(() => {
+      if (!cancelled) setModerationDecisions(new Map());
+    });
+
+    return () => { cancelled = true; };
+  }, [flatLines.map(l => l.uri).join(','), moderationConfig, client]);
+
   const getModerationDecision = (line: FlatLine): ModerationDecision | null => {
-    if (!line.labels || line.labels.length === 0) return null;
-    return resolveModeration(
-      line.labels,
-      moderationConfig,
-      new Map(), // TODO: populate from labeler definitions
-      new Map()
-    );
+    if (!line.uri) return null;
+    return moderationDecisions.get(line.uri) || null;
   };
 
   // Track revealed posts (user pressed Enter to show hidden/warned content)

@@ -46,7 +46,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
     scrollRef: feedScrollRef,
     virtualizer: feedVirtualizer,
     measureAndCache: feedMeasureAndCache,
-  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange });
+  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange, decisions });
 
   const {
     scrollRef: memberScrollRef,

@@ -58,7 +58,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const getItemKey = (item: any) => item.uri ?? item.did;
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    items, `search-${input}`, itemHeight, getItemKey, { initialScrollTop, onScrollTopChange },
+    items, `search-${input}`, itemHeight, getItemKey, { initialScrollTop, onScrollTopChange, decisions },
   );
 
   // Sync searched state with items availability (e.g. from cache-restored search)

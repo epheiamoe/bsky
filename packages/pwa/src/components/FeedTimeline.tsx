@@ -66,6 +66,36 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   const lastScrollY = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const prevDecisionsRef = useRef<Map<string, import('@bsky/core').ModerationDecision>>(new Map());
+
+  // ── Invalidate height cache when moderation decisions change ──
+  useEffect(() => {
+    const prevDecisions = prevDecisionsRef.current;
+    let hasChanges = false;
+
+    // Check for new or changed decisions
+    for (const [uri, decision] of decisions) {
+      const prev = prevDecisions.get(uri);
+      if (!prev || prev.contentAction !== decision.contentAction || prev.mediaAction !== decision.mediaAction) {
+        _heightCache.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    // Check for removed decisions (e.g., posts deleted from list)
+    for (const uri of prevDecisions.keys()) {
+      if (!decisions.has(uri)) {
+        _heightCache.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      virtualizer.measure();
+    }
+
+    prevDecisionsRef.current = new Map(decisions);
+  }, [decisions]);
 
   // ── Virtual scroll ──
   const virtualizer = useVirtualizer({

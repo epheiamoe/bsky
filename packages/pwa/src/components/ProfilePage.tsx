@@ -83,7 +83,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange },
+    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange, decisions },
   );
   const sentinelRef = useRef<HTMLDivElement>(null);
   const followScrollRef = useRef<HTMLDivElement>(null);
