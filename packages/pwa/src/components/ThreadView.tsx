@@ -14,6 +14,7 @@ import { ImageGrid } from './ImageGrid.js';
 import { VideoCard } from './VideoCard.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
+import { ContentWarningOverlay } from './ContentWarningOverlay.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -280,18 +281,12 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 </div>
 
-                <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-                  {linkifyText(focused.text)}
-                </p>
-
-                {/* Moderation label bar for media-level labels */}
-                {focusedModeration && focusedModeration.mediaAction === 'blur' && (
-                  <ModerationLabelBar
-                    decision={focusedModeration}
-                    isRevealed={focusedMediaRevealed}
-                    onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
-                  />
-                )}
+                {/* Content area — may be wrapped by ContentWarningOverlay for blurs='content' */}
+                {focusedModeration && focusedModeration.contentAction === 'warn' ? (
+                  <ContentWarningOverlay decision={focusedModeration}>
+                    <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                      {linkifyText(focused.text)}
+                    </p>
                     {focused.quotedPost && (
                       <div
                         className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
@@ -334,9 +329,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                         onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
                       />
                     )}
-
                     {focused.imageDetails?.length > 0 && (
-                      <div className={showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
+                      <div className={`overflow-hidden rounded-lg ${showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
                         <ImageGrid
                           images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
                           imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
@@ -349,7 +343,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       </div>
                     )}
                     {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-                      <div className={showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
+                      <div className={`overflow-hidden rounded-lg ${showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
                         <VideoCard
                           thumbnailUrl={focused.videoThumbnailUrl}
                           playlistUrl={focused.videoPlaylistUrl}
@@ -367,28 +361,85 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                         <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
                       </a>
                     )}
-                {/* Warning label row for focused post */}
-                {focusedModeration && focusedModeration.contentAction === 'warn' && focusedModeration.sources.length > 0 && (
+                  </ContentWarningOverlay>
+                ) : (
                   <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setShowFocusedWarnModal(true); }}
-                      className="flex items-center gap-1 mt-3 max-w-full overflow-hidden"
-                    >
-                      <div className="flex items-center gap-1 overflow-hidden">
-                        {focusedModeration.sources.map((source: ModerationDecision['sources'][number]) =>
-                          source.labels.map((label: ModerationDecision['sources'][number]['labels'][number]) => (
-                            <span
-                              key={`${source.labelerDid}-${label.val}`}
-                              className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0 whitespace-nowrap"
-                            >
-                              @{source.labelerName || source.labelerDid}/{label.name || label.val}
-                            </span>
-                          ))
+                    <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                      {linkifyText(focused.text)}
+                    </p>
+                    {focused.quotedPost && (
+                      <div
+                        className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+                        onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          {focused.quotedPost.authorAvatar && (
+                            <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                          )}
+                          <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                          <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                        </div>
+                        <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
+                        {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
+                          <div className="mt-1 flex gap-1">
+                            {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                              <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                            ))}
+                          </div>
                         )}
                       </div>
-                    </button>
-                    {showFocusedWarnModal && (
-                      <LabelDetailModal sources={focusedModeration.sources} onClose={() => setShowFocusedWarnModal(false)} />
+                    )}
+                    {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
+                    {translationResult && !translating && (
+                      <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                        <p className="text-xs text-primary font-medium mb-1">
+                          <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
+                          {translationResult.sourceLang && (
+                            <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+                          )}
+                        </p>
+                        <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
+                      </div>
+                    )}
+                    {/* Moderation label bar for media-level labels */}
+                    {focusedModeration && focusedModeration.mediaAction === 'blur' && (
+                      <ModerationLabelBar
+                        decision={focusedModeration}
+                        isRevealed={focusedMediaRevealed}
+                        onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
+                      />
+                    )}
+                    {focused.imageDetails?.length > 0 && (
+                      <div className={`overflow-hidden rounded-lg ${showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+                        <ImageGrid
+                          images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                          imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                            const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                            if (!m) throw new Error('Could not parse image URL');
+                            return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                          }                 : undefined}
+                          singleImageFill={singleImageFill}
+                        />
+                      </div>
+                    )}
+                    {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+                      <div className={`overflow-hidden rounded-lg ${showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+                        <VideoCard
+                          thumbnailUrl={focused.videoThumbnailUrl}
+                          playlistUrl={focused.videoPlaylistUrl}
+                          alt={focused.videoAlt}
+                          aspectRatio={focused.videoAspectRatio}
+                        />
+                      </div>
+                    )}
+                    {focused.externalLink && (
+                      <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                      >
+                        <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                        {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                        <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                      </a>
                     )}
                   </>
                 )}

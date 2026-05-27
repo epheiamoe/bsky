@@ -12,6 +12,7 @@ import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
+import { ContentWarningOverlay } from './ContentWarningOverlay.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
@@ -188,7 +189,101 @@ export function PostPreviewCard({
   }
 
   const showContentHidden = moderationDecision?.contentAction === 'hide' && !contentRevealed;
+  const showContentWarning = moderationDecision?.contentAction === 'warn';
   const showMediaBlur = moderationDecision?.mediaAction === 'blur' && !mediaRevealed;
+
+  // Content area that may be wrapped by ContentWarningOverlay
+  const contentArea = (
+    <>
+      {/* Badge row — shown under handle for show/badge level posts only */}
+      {moderationDecision && moderationDecision.contentAction === 'none' && moderationDecision.badges.length > 0 && (
+        <BadgeRow decision={moderationDecision} />
+      )}
+
+      {/* Text content */}
+      <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words" style={{ WebkitLineClamp: previewLines }}>
+        {linkifyText(text)}
+      </p>
+
+      {/* Moderation label bar for media-level labels */}
+      {moderationDecision && moderationDecision.mediaAction === 'blur' && (
+        <ModerationLabelBar
+          decision={moderationDecision}
+          isRevealed={mediaRevealed}
+          onToggle={() => setMediaRevealed(!mediaRevealed)}
+        />
+      )}
+
+      {/* Images — with optional blur controlled by moderation */}
+      {hasImages && (
+        <div className={`overflow-hidden rounded-lg ${showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+          <ImageGrid
+            images={images}
+            singleImageFill={singleImageFill}
+            imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+              const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+              if (!m) throw new Error('Could not parse image URL');
+              const did = decodeURIComponent(m[1]!);
+              const cid = decodeURIComponent(m[2]!);
+              return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
+            } : undefined}
+          />
+        </div>
+      )}
+
+      {/* Video — with optional blur controlled by moderation */}
+      {video && (
+        <div className={`overflow-hidden rounded-lg ${showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+          <VideoCard
+            thumbnailUrl={video.thumbnailUrl}
+            playlistUrl={video.playlistUrl}
+            alt={video.alt}
+            aspectRatio={video.aspectRatio}
+          />
+        </div>
+      )}
+
+      {externalLink && (
+        <a
+          href={externalLink.uri}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+        >
+          <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
+          {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
+          <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
+        </a>
+      )}
+
+      {quotedPost && (
+        <div
+          className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
+          }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            {quotedPost.authorAvatar && (
+              <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+            )}
+            <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
+            <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
+          </div>
+          <p className="text-xs text-text-primary break-words" style={{ WebkitLineClamp: quotedPreviewLines }}>{linkifyText(quotedPost.text)}</p>
+          {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
+            <div className="mt-1 flex gap-1">
+              {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div
@@ -247,92 +342,12 @@ export function PostPreviewCard({
               )}
             </div>
 
-            {/* Badge row — shown under handle for show/badge level posts only */}
-            {moderationDecision && moderationDecision.contentAction === 'none' && moderationDecision.badges.length > 0 && (
-              <BadgeRow decision={moderationDecision} />
-            )}
-
-            {/* Text content — ALWAYS visible regardless of moderation level */}
-            <p className="text-text-primary text-sm mt-1 whitespace-pre-wrap break-words" style={{ WebkitLineClamp: previewLines }}>
-              {linkifyText(text)}
-            </p>
-
-            {/* Moderation label bar for media-level labels */}
-            {moderationDecision && moderationDecision.mediaAction === 'blur' && (
-              <ModerationLabelBar
-                decision={moderationDecision}
-                isRevealed={mediaRevealed}
-                onToggle={() => setMediaRevealed(!mediaRevealed)}
-              />
-            )}
-
-            {/* Images — with optional blur controlled by moderation */}
-            {hasImages && (
-              <div className={showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
-                <ImageGrid
-                  images={images}
-                  singleImageFill={singleImageFill}
-                  imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                    const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                    if (!m) throw new Error('Could not parse image URL');
-                    const did = decodeURIComponent(m[1]!);
-                    const cid = decodeURIComponent(m[2]!);
-                    return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
-                  } : undefined}
-                />
-              </div>
-            )}
-
-            {/* Video — with optional blur controlled by moderation */}
-            {video && (
-              <div className={showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
-                <VideoCard
-                  thumbnailUrl={video.thumbnailUrl}
-                  playlistUrl={video.playlistUrl}
-                  alt={video.alt}
-                  aspectRatio={video.aspectRatio}
-                />
-              </div>
-            )}
-
-            {externalLink && (
-              <a
-                href={externalLink.uri}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-              >
-                <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
-                {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
-                <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
-              </a>
-            )}
-
-            {quotedPost && (
-              <div
-                className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
-                }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {quotedPost.authorAvatar && (
-                    <img src={quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                  )}
-                  <span className="text-xs font-semibold text-text-primary">{quotedPost.displayName}</span>
-                  <span className="text-xs text-text-secondary">@{quotedPost.handle}</span>
-                </div>
-                <p className="text-xs text-text-primary break-words" style={{ WebkitLineClamp: quotedPreviewLines }}>{linkifyText(quotedPost.text)}</p>
-                {quotedPost.imageDetails && quotedPost.imageDetails.length > 0 && (
-                  <div className="mt-1 flex gap-1">
-                    {quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                      <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                    ))}
-                  </div>
-                )}
-              </div>
+            {showContentWarning ? (
+              <ContentWarningOverlay decision={moderationDecision}>
+                {contentArea}
+              </ContentWarningOverlay>
+            ) : (
+              contentArea
             )}
 
             {children}
