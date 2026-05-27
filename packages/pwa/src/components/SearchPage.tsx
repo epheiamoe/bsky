@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList, usePostsWithModeration } from '@bsky/app';
+import { useSearch, useI18n, addFeed, useSearchHistory, addToHistory, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { getFeedLabel, type FeedGeneratorView } from '@bsky/core';
 import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
@@ -45,7 +45,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const { config } = useModerationConfig();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
-  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(posts, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client);
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -53,7 +53,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const hasHistory = history.length > 0;
 
   const isPostsTab = tab === 'top' || tab === 'latest';
-  const items: any[] = isPostsTab ? moderatedPosts : tab === 'users' ? users : feeds;
+  const items: any[] = isPostsTab ? posts : tab === 'users' ? users : feeds;
   const itemHeight = isPostsTab ? 120 : 60;
   const getItemKey = (item: any) => item.uri ?? item.did;
 
@@ -193,7 +193,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                 client={client}
                 previewLines={previewLines}
                 quotedPreviewLines={quotedPreviewLines}
-                moderationDecision={item.moderationDecision}
+                moderationDecision={decisions.get(item.uri) ?? null}
               >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
                     </PostPreviewCard>

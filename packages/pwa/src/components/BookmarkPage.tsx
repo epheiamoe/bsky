@@ -1,7 +1,7 @@
 import React from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useBookmarks, useI18n, useVirtualizedList, usePostsWithModeration } from '@bsky/app';
+import { useBookmarks, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -27,9 +27,9 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { config } = useModerationConfig();
-  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(bookmarks, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    moderatedPosts, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
+    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
   );
 
   const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
@@ -75,7 +75,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
           <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
             {virtualizer.getVirtualItems().map((vi) => {
-              const post = moderatedPosts[vi.index]!;
+              const post = bookmarks[vi.index]!;
               return (
                 <div
                   key={post.uri}
@@ -98,7 +98,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     client={client}
                     previewLines={previewLines}
                     quotedPreviewLines={quotedPreviewLines}
-                    moderationDecision={post.moderationDecision}
+                    moderationDecision={decisions.get(post.uri) ?? null}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
                   </PostPreviewCard>

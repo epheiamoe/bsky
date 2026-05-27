@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, usePostsWithModeration, usePostModeration } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
@@ -64,7 +64,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   } = useThread(client, uri);
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { posts: moderatedLines, failedLabelers } = usePostsWithModeration(flatLines, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(flatLines, config, client);
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
   const [showThreadgateDetail, setShowThreadgateDetail] = useState(false);
@@ -453,7 +453,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 );
               }
-              const moderatedLine = moderatedLines.find(ml => ml.uri === line.uri);
+              const decision = decisions.get(line.uri) ?? null;
               return (
                 <div
                   key={line.uri || line.rkey}
@@ -469,7 +469,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                     client={client}
                     previewLines={threadPreviewLines}
                     quotedPreviewLines={quotedPostPreviewLines}
-                    moderationDecision={moderatedLine?.moderationDecision ?? null}
+                    moderationDecision={decision}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
                   </PostPreviewCard>

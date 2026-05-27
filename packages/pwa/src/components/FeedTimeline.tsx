@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n, usePostsWithModeration } from '@bsky/app';
+import { useI18n, useModerationBatch } from '@bsky/app';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
@@ -60,7 +60,7 @@ const _heightCache = new Map<string, number>();
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(posts, config, client ?? null);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
   const lastScrollY = useRef(0);
@@ -194,9 +194,8 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
           }}
         >
           {virtualizer.getVirtualItems().map((virtualItem) => {
-            const moderatedPost = moderatedPosts[virtualItem.index];
-            if (!moderatedPost) return null;
-            const post = moderatedPost;
+            const post = posts[virtualItem.index];
+            if (!post) return null;
             return (
               <div
                 key={post.uri}
@@ -227,7 +226,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
-                  moderationDecision={post.moderationDecision}
+                  moderationDecision={decisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostPreviewCard>

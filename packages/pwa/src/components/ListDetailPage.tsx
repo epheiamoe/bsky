@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useVirtualizedList, usePostsWithModeration } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -29,7 +29,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const { t } = useI18n();
   const { config } = useModerationConfig();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
-  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(feed, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(feed, config, client);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -46,7 +46,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
     scrollRef: feedScrollRef,
     virtualizer: feedVirtualizer,
     measureAndCache: feedMeasureAndCache,
-  } = useVirtualizedList(moderatedPosts, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange });
+  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange });
 
   const {
     scrollRef: memberScrollRef,
@@ -220,7 +220,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
               <>
                 <div style={{ height: feedVirtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
                   {feedVirtualizer.getVirtualItems().map((vi) => {
-                    const post = moderatedPosts[vi.index]!;
+                    const post = feed[vi.index]!;
                     return (
                       <div key={post.uri} data-index={vi.index}
                         ref={(el) => feedMeasureAndCache(el, post)}
@@ -228,7 +228,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                       >
                         <PostPreviewCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
                           previewLines={previewLines} quotedPreviewLines={quotedPreviewLines}
-                          moderationDecision={post.moderationDecision}>
+                          moderationDecision={decisions.get(post.uri) ?? null}>
                           <PostActionsRow client={client} goTo={goTo} post={post} />
                         </PostPreviewCard>
                       </div>

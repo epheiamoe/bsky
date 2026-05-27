@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useContext } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
-import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget, usePostsWithModeration } from '@bsky/app';
+import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget, useModerationBatch } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { PostPreviewCard } from './PostPreviewCard';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -52,7 +52,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
-  const { posts: moderatedPosts, failedLabelers } = usePostsWithModeration(posts, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
@@ -83,7 +83,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    moderatedPosts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange },
+    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange },
   );
   const sentinelRef = useRef<HTMLDivElement>(null);
   const followScrollRef = useRef<HTMLDivElement>(null);
@@ -479,7 +479,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
           }}
         >
           {virtualizer.getVirtualItems().map((virtualItem) => {
-            const post = moderatedPosts[virtualItem.index];
+            const post = posts[virtualItem.index];
             if (!post) return null;
             return (
               <div
@@ -505,7 +505,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
-                  moderationDecision={post.moderationDecision}
+                  moderationDecision={decisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
                 </PostPreviewCard>
