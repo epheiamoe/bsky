@@ -256,6 +256,10 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
         </Box>
       ) : (
       <>
+      {/* Badges */}
+      {decision && decision.badges.length > 0 && (
+        <Box><Text backgroundColor={bg} color="yellow">{'🏷 '}{decision.badges.map(b => labelDefMap.get(b)?.locales[0]?.name || b).join(', ')}</Text></Box>
+      )}
       {/* Text */}
       <Box><Text backgroundColor={bg}>{line.text}</Text></Box>
       {/* Images — OSC 8 clickable hyperlinks */}
@@ -343,6 +347,9 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                   </Box>
                 ) : (
                   <>
+                    {decision && decision.badges.length > 0 && (
+                      <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="yellow">{'🏷 '}{decision.badges.map(b => labelDefMap.get(b)?.locales[0]?.name || b).join(', ')}</Text></Box>
+                    )}
                     <Box><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text}</Text></Box>
                     {line.quotedPost && renderQuotedPost(line.quotedPost)}
                     <Box>
@@ -416,6 +423,10 @@ export function UnifiedThreadView({ client, uri, goBack, goTo, refreshThread, co
                 </Box>
               ) : (
               <>
+              {/* Badges */}
+              {decision && decision.badges.length > 0 && (
+                <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined} color="yellow">{'🏷 '}{decision.badges.map(b => labelDefMap.get(b)?.locales[0]?.name || b).join(', ')}</Text></Box>
+              )}
               {/* Text */}
               <Box><Text dimColor>{indent}{'  '}</Text><Text backgroundColor={isCursor ? '#0e4a6e' : undefined}>{line.text.replace(/\n/g, ' ').slice(0, 200)}</Text></Box>
               {/* Images */}
