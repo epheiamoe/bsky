@@ -16,17 +16,17 @@
 - All 6 list components integrated with failure notifications
 - `docs/LABELING.md`, all i18n strings
 
-### ⚠️ Partially Complete
-- `useModerationPipeline` hook exists but **orphaned** (no consumers)
-- TUI Settings tab exists but posts render **without moderation**
+### ✅ Completed in This Session
+1. **TUI Post Rendering with Moderation Overlays** — `UnifiedThreadView` supports `[HIDDEN]`/`[WARN]` overlays + Enter key reveal
+2. **Self-label Selector in ComposePage** — Per-post labels with `ContentWarningModal`, integrated into `useCompose.ts`
+3. **Wire up moderation batch** — 6 list components migrated from `usePostsWithModeration` to `useModerationBatch`
+4. **`LoadingSafetyBanner` + `BlockedLoadingScreen`** — Created with i18n support
+5. **`useLabelerHealth` hook** — Periodic health checks (30s interval) with recovery detection
+6. **TUI Badge prefix** — Badge labels displayed before post text in all 3 view modes
 
-### ❌ Missing (This Plan)
-1. **TUI Post Rendering with Moderation Overlays** (Critical)
-2. **Self-label Selector in ComposePage** (Critical)
-3. **Wire up `useModerationPipeline`** (Enhancement)
-4. **`LoadingSafetyBanner` + `BlockedLoadingScreen`** (Enhancement)
-5. **`useLabelerHealth` hook** (Enhancement)
-6. **Height cache invalidation on moderation changes** (Enhancement)
+### ⚠️ Remaining
+- **Height cache invalidation on moderation changes** — Not yet implemented
+- **Full `useModerationPipeline` integration** — Hook exists, but list components use `useModerationBatch` (sufficient for now)
 
 ---
 
