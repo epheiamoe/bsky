@@ -675,6 +675,13 @@ const ja: LocaleMessages = {
   'moderation.blockLevelFailure': '⚠️ ラベルサービス{count}件が利用不可（{names}）。コンテンツ安全フィルタリングが不完全です。',
   'moderation.bannerLevelFailure': '⚠️ ラベルサービス{count}件が利用不可（{names}）。一部のコンテンツがフィルタリングされない可能性があります。',
   'moderation.silentLevelFailure': 'ラベルサービス {names} が利用不可です。',
+
+  // [v0.15.0] コンテンツ安全ロード状態
+  'pipeline.loadingSafety': 'コンテンツ安全検証を読み込み中…',
+  'pipeline.blockedTitle': '安全検証が利用不可',
+  'pipeline.blockedDesc': 'コンテンツを安全に読み込めません。一部のラベルサービスが応答していません。',
+  'pipeline.retry': '再試行',
+  'pipeline.loadAnyway': '強制読み込み（危険）',
 };
 
 export default ja;

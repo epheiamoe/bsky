@@ -665,6 +665,13 @@ const en: LocaleMessages = {
   'moderation.blockLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Content safety filtering is incomplete.',
   'moderation.bannerLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Some content may not be filtered.',
   'moderation.silentLevelFailure': 'Label service {names} is unavailable.',
+
+  // [v0.15.0] Content safety loading states
+  'pipeline.loadingSafety': 'Loading content safety verification…',
+  'pipeline.blockedTitle': 'Safety Verification Unavailable',
+  'pipeline.blockedDesc': 'Unable to safely load content. Some label services are not responding.',
+  'pipeline.retry': 'Retry',
+  'pipeline.loadAnyway': 'Load Anyway (Unsafe)',
 };
 
 export default en;
