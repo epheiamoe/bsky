@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import type { ModerationDecision } from '@bsky/core';
 
 const _globalHeightCaches = new Map<string, Map<string, number>>();
 
@@ -12,6 +13,7 @@ export function useVirtualizedList<T>(
     overscan?: number;
     initialScrollTop?: number;
     onScrollTopChange?: (top: number) => void;
+    decisions?: Map<string, ModerationDecision>;
   },
 ) {
   let _heightCache = _globalHeightCaches.get(cacheKey);
@@ -22,6 +24,7 @@ export function useVirtualizedList<T>(
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const didRestore = useRef(false);
+  const prevDecisionsRef = useRef<Map<string, ModerationDecision>>(new Map());
 
   const virtualizer = useVirtualizer({
     count: items.length,
@@ -45,6 +48,36 @@ export function useVirtualizedList<T>(
       if (h > 0) _heightCache!.set(getItemKey(item), h);
     }
   };
+
+  // Invalidate height cache when moderation decisions change
+  useEffect(() => {
+    const decisions = options?.decisions;
+    if (!decisions) return;
+
+    const prevDecisions = prevDecisionsRef.current;
+    let hasChanges = false;
+
+    for (const [uri, decision] of decisions) {
+      const prev = prevDecisions.get(uri);
+      if (!prev || prev.contentAction !== decision.contentAction || prev.mediaAction !== decision.mediaAction) {
+        _heightCache!.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    for (const uri of prevDecisions.keys()) {
+      if (!decisions.has(uri)) {
+        _heightCache!.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      virtualizer.measure();
+    }
+
+    prevDecisionsRef.current = new Map(decisions);
+  }, [options?.decisions, virtualizer]);
 
   // FeedTimeline pattern: real-time scroll position report via callback
   useEffect(() => {

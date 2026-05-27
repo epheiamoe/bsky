@@ -437,28 +437,77 @@ export function useModerationBatch(
     failedLabelers: [] as FailedLabelerInfo[],
     isLoading: false,
   });
+  const prevPostsRef = useRef(new Set<string>());
+  const prevConfigRef = useRef(config);
+  const prevClientRef = useRef(client);
 
   useEffect(() => {
     if (!client || posts.length === 0) {
       setResult({ decisions: new Map(), failedLabelers: [], isLoading: false });
+      prevPostsRef.current = new Set();
+      return;
+    }
+
+    const configChanged = prevConfigRef.current !== config;
+    const clientChanged = prevClientRef.current !== client;
+    prevConfigRef.current = config;
+    prevClientRef.current = client;
+
+    // Full re-computation when config or client changes
+    if (configChanged || clientChanged) {
+      setResult(prev => ({ ...prev, isLoading: true }));
+      let cancelled = false;
+      resolveModerationBatch(posts, config, client).then(res => {
+        if (!cancelled) setResult({
+          decisions: res.decisions,
+          failedLabelers: res.failedLabelers,
+          isLoading: false,
+        });
+        prevPostsRef.current = new Set(posts.map(p => p.uri));
+      }).catch(() => {
+        if (!cancelled) setResult({
+          decisions: new Map(),
+          failedLabelers: [],
+          isLoading: false,
+        });
+      });
+      return () => { cancelled = true; };
+    }
+
+    // Incremental: only resolve new posts
+    const prevUris = prevPostsRef.current;
+    const newPosts = posts.filter(p => !prevUris.has(p.uri));
+
+    if (newPosts.length === 0) {
+      // No new posts, but some may have been removed
+      const currentUris = new Set(posts.map(p => p.uri));
+      const newDecisions = new Map(result.decisions);
+      for (const uri of newDecisions.keys()) {
+        if (!currentUris.has(uri)) newDecisions.delete(uri);
+      }
+      if (newDecisions.size !== result.decisions.size) {
+        setResult(prev => ({ ...prev, decisions: newDecisions }));
+      }
       return;
     }
 
     setResult(prev => ({ ...prev, isLoading: true }));
 
     let cancelled = false;
-    resolveModerationBatch(posts, config, client).then(res => {
-      if (!cancelled) setResult({
-        decisions: res.decisions,
+    resolveModerationBatch(newPosts, config, client).then(res => {
+      if (cancelled) return;
+      const mergedDecisions = new Map(result.decisions);
+      for (const [uri, decision] of res.decisions) {
+        mergedDecisions.set(uri, decision);
+      }
+      setResult({
+        decisions: mergedDecisions,
         failedLabelers: res.failedLabelers,
         isLoading: false,
       });
+      prevPostsRef.current = new Set(posts.map(p => p.uri));
     }).catch(() => {
-      if (!cancelled) setResult({
-        decisions: new Map(),
-        failedLabelers: [],
-        isLoading: false,
-      });
+      if (!cancelled) setResult(prev => ({ ...prev, isLoading: false }));
     });
 
     return () => { cancelled = true; };
