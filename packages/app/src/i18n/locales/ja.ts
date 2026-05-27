@@ -670,6 +670,10 @@ const ja: LocaleMessages = {
   'moderation.labelDetails': 'ラベルの詳細',
   'moderation.clickToShowMedia': 'クリックしてメディアを表示',
   'moderation.mediaHidden': 'メディアを非表示',
+  'moderation.sensitiveContent': 'センシティブコンテンツ',
+  'moderation.labeledBy': '{labeler} によってマークされています。',
+  'moderation.learnMore': '詳細を見る',
+  'moderation.collapseDetails': '詳細を閉じる',
 
   'moderation.recommendedLabelers': 'おすすめラベルサービス',
   'moderation.blockLevelFailure': '⚠️ ラベルサービス{count}件が利用不可（{names}）。コンテンツ安全フィルタリングが不完全です。',

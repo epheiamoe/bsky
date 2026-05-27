@@ -12,9 +12,8 @@ import { ReportButton } from './ReportButton.js';
 import { truncateName, linkifyText } from './PostPreviewCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import { VideoCard } from './VideoCard.js';
-import { ContentHiddenCard } from './ContentHiddenCard.js';
 import { HiddenBanner } from './HiddenBanner.js';
-import { MediaBlurOverlay } from './MediaBlurOverlay.js';
+import { ModerationLabelBar } from './ModerationLabelBar.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -151,7 +150,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     client
   );
   const showFocusedContentHidden = focusedModeration.contentAction === 'hide' && !focusedContentRevealed;
-  const showFocusedContentWarning = focusedModeration.contentAction === 'warn' && !focusedContentRevealed;
   const showFocusedMediaBlur = focusedModeration.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
@@ -282,17 +280,18 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 </div>
 
-                {showFocusedContentWarning ? (
-                  <ContentHiddenCard
-                    decision={focusedModeration!}
-                    onShow={() => setFocusedContentRevealed(true)}
-                    inline
+                <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                  {linkifyText(focused.text)}
+                </p>
+
+                {/* Moderation label bar for media-level labels */}
+                {focusedModeration && focusedModeration.mediaAction === 'blur' && (
+                  <ModerationLabelBar
+                    decision={focusedModeration}
+                    isRevealed={focusedMediaRevealed}
+                    onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
                   />
-                ) : (
-                  <>
-                    <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-                      {linkifyText(focused.text)}
-                    </p>
+                )}
                     {focused.quotedPost && (
                       <div
                         className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
@@ -327,20 +326,17 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                         <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
                       </div>
                     )}
+                    {/* Moderation label bar for media-level labels */}
+                    {focusedModeration && focusedModeration.mediaAction === 'blur' && (
+                      <ModerationLabelBar
+                        decision={focusedModeration}
+                        isRevealed={focusedMediaRevealed}
+                        onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
+                      />
+                    )}
+
                     {focused.imageDetails?.length > 0 && (
-                      showFocusedMediaBlur ? (
-                        <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
-                          <ImageGrid
-                            images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                            imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                              const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                              if (!m) throw new Error('Could not parse image URL');
-                              return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                            }                 : undefined}
-                            singleImageFill={singleImageFill}
-                          />
-                        </MediaBlurOverlay>
-                      ) : (
+                      <div className={showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
                         <ImageGrid
                           images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
                           imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
@@ -350,26 +346,17 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                           }                 : undefined}
                           singleImageFill={singleImageFill}
                         />
-                      )
+                      </div>
                     )}
                     {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-                      showFocusedMediaBlur ? (
-                        <MediaBlurOverlay onShow={() => setFocusedMediaRevealed(true)}>
-                          <VideoCard
-                            thumbnailUrl={focused.videoThumbnailUrl}
-                            playlistUrl={focused.videoPlaylistUrl}
-                            alt={focused.videoAlt}
-                            aspectRatio={focused.videoAspectRatio}
-                          />
-                        </MediaBlurOverlay>
-                      ) : (
+                      <div className={showFocusedMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}>
                         <VideoCard
                           thumbnailUrl={focused.videoThumbnailUrl}
                           playlistUrl={focused.videoPlaylistUrl}
                           alt={focused.videoAlt}
                           aspectRatio={focused.videoAspectRatio}
                         />
-                      )
+                      </div>
                     )}
                     {focused.externalLink && (
                       <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
@@ -380,8 +367,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                         <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
                       </a>
                     )}
-                  </>
-                )}
                 {/* Warning label row for focused post */}
                 {focusedModeration && focusedModeration.contentAction === 'warn' && focusedModeration.sources.length > 0 && (
                   <>

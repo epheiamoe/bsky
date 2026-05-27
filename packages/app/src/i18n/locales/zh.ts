@@ -794,6 +794,10 @@ const zh: LocaleMessages = {
   'moderation.labelDetails': '标签详情',
   'moderation.clickToShowMedia': '点击显示媒体',
   'moderation.mediaHidden': '媒体已隐藏',
+  'moderation.sensitiveContent': '敏感内容',
+  'moderation.labeledBy': '由 {labeler} 标记。',
+  'moderation.learnMore': '了解详情',
+  'moderation.collapseDetails': '收起详情',
 
   // ── Language Selector ──
   'language.title': '语言',

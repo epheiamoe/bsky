@@ -660,6 +660,10 @@ const en: LocaleMessages = {
   'moderation.labelDetails': 'Label Details',
   'moderation.clickToShowMedia': 'Click to show media',
   'moderation.mediaHidden': 'Media hidden',
+  'moderation.sensitiveContent': 'Sensitive Content',
+  'moderation.labeledBy': 'Labeled by {labeler}.',
+  'moderation.learnMore': 'Learn more',
+  'moderation.collapseDetails': 'Collapse details',
 
   'moderation.recommendedLabelers': 'Recommended Labelers',
   'moderation.blockLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Content safety filtering is incomplete.',

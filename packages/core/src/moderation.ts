@@ -101,7 +101,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
   {
     identifier: 'nudity',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'show',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Nudity', description: 'E.g. artistic nudity.' }],
