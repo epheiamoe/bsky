@@ -12,7 +12,6 @@ import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
-import { ContentWarningOverlay } from './ContentWarningOverlay.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
@@ -189,10 +188,13 @@ export function PostPreviewCard({
   }
 
   const showContentHidden = moderationDecision?.contentAction === 'hide' && !contentRevealed;
-  const showContentWarning = moderationDecision?.contentAction === 'warn';
+  const showContentBlur = moderationDecision?.contentAction === 'warn' && !contentRevealed;
   const showMediaBlur = moderationDecision?.mediaAction === 'blur' && !mediaRevealed;
 
-  // Content area that may be wrapped by ContentWarningOverlay
+  // Determine if any blur is active and which type
+  const isContentBlurred = showContentBlur;
+  const isMediaBlurred = showMediaBlur && !isContentBlurred;
+
   const contentArea = (
     <>
       {/* Badge row — shown under handle for show/badge level posts only */}
@@ -205,18 +207,9 @@ export function PostPreviewCard({
         {linkifyText(text)}
       </p>
 
-      {/* Moderation label bar for media-level labels */}
-      {moderationDecision && moderationDecision.mediaAction === 'blur' && (
-        <ModerationLabelBar
-          decision={moderationDecision}
-          isRevealed={mediaRevealed}
-          onToggle={() => setMediaRevealed(!mediaRevealed)}
-        />
-      )}
-
-      {/* Images — with optional blur controlled by moderation */}
+      {/* Images */}
       {hasImages && (
-        <div className={`overflow-hidden rounded-lg ${showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+        <div className={`overflow-hidden rounded-lg ${isContentBlurred || isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
           <ImageGrid
             images={images}
             singleImageFill={singleImageFill}
@@ -231,9 +224,9 @@ export function PostPreviewCard({
         </div>
       )}
 
-      {/* Video — with optional blur controlled by moderation */}
+      {/* Video */}
       {video && (
-        <div className={`overflow-hidden rounded-lg ${showMediaBlur ? 'blur-xl brightness-50 transition-all duration-300' : ''}`}>
+        <div className={`overflow-hidden rounded-lg ${isContentBlurred || isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
           <VideoCard
             thumbnailUrl={video.thumbnailUrl}
             playlistUrl={video.playlistUrl}
@@ -249,7 +242,7 @@ export function PostPreviewCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+          className={`mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline ${isContentBlurred ? 'pointer-events-none' : ''}`}
         >
           <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
           {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
@@ -259,8 +252,8 @@ export function PostPreviewCard({
 
       {quotedPost && (
         <div
-          className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-          onClick={(e) => {
+          className={`mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden hover:bg-surface/80 hover:border-primary/30 transition-colors ${isContentBlurred ? 'pointer-events-none' : 'cursor-pointer'}`}
+          onClick={isContentBlurred ? undefined : (e) => {
             e.stopPropagation();
             if (goTo && quotedPost) goTo({ type: 'thread', uri: quotedPost.uri });
           }}
@@ -342,13 +335,22 @@ export function PostPreviewCard({
               )}
             </div>
 
-            {showContentWarning ? (
-              <ContentWarningOverlay decision={moderationDecision}>
-                {contentArea}
-              </ContentWarningOverlay>
-            ) : (
-              contentArea
+            {/* Moderation label bar — unified for both content-level and media-level warnings */}
+            {(isContentBlurred || isMediaBlurred) && moderationDecision && (
+              <ModerationLabelBar
+                decision={moderationDecision}
+                isRevealed={isContentBlurred ? contentRevealed : mediaRevealed}
+                onToggle={() => {
+                  if (isContentBlurred) {
+                    setContentRevealed(!contentRevealed);
+                  } else {
+                    setMediaRevealed(!mediaRevealed);
+                  }
+                }}
+              />
             )}
+
+            {contentArea}
 
             {children}
           </div>
