@@ -74,15 +74,15 @@
 | **WCAG 4.1.2 表单+状态** | N/A | ✅ | htmlFor/id标签关联(14对), aria-expanded(6), aria-describedby, aria-invalid, role=progressbar, hidden input aria-label(5) |
 | **MCP Server** | ✅ | ✅ | v0.13.0 + WorkspaceStorage 初始化修复 (2026-05-19) |
 | **Session 持久化修复** | N/A | ✅ | v0.13.2: auth.ts 捕获 JWT 刷新后 token，App.tsx profile guard |
-| **内容标记系统** | ✅ | ✅ | v0.14.1: 第三方标签提供商支持，通用/提供商独立配置，动态标签查询，隐藏/警告/徽章/媒体模糊，info 按钮显示来源 |
-| **举报功能** | ✅ | ✅ | 帖子详情页举报按钮 + TUI ! 快捷键 |
-| **自标记** | ⬜ | ✅ | AI create_post 工具支持 labels 参数；PWA/TUI UI 待完善 |
-| **标记决策应用到帖子** | ✅ | ✅ | v0.14.1: 列表级批量处理 — useModerationBatch hook + 6 个组件集成 |
-| **标签服务失败检测** | ✅ | ✅ | v0.14.1: 按提供商失败追踪，指数退避重试(3次)，失败通知(banner/toast) |
-| **标签服务失效配置** | ✅ | ✅ | v0.14.1: 每标签提供商可配置 failureBehavior (silent/banner/block) |
-| **标记 UI 重构** | ✅ | ✅ | v0.15.0: 3 种渲染模式 — HiddenBanner/ContentWarningOverlay/ModerationLabelBar + BadgeRow，官方 bsky.app 风格 |
-| **统一帖子加载管道** | ✅ | ✅ | v0.15.0: useModerationBatch (blob-aware) + usePostModeration — 所有帖子走统一 moderation 流程 |
-| **引用帖子标记** | ✅ | ✅ | v0.15.0: 引用帖子共享父帖 moderation decision，媒体模糊通过 blob 级标签 |
+| **内容标记系统** | ✅ | ✅ | v0.14.0: 第三方标签提供商支持，通用/提供商独立配置，动态标签查询，隐藏/警告/徽章/媒体模糊，info 按钮显示来源 |
+| **举报功能** | ✅ | ✅ | v0.14.0: 帖子详情页举报按钮 + TUI ! 快捷键 |
+| **自标记** | ⬜ | ✅ | v0.14.0: AI create_post 工具支持 labels 参数；PWA/TUI UI 待完善 |
+| **标记决策应用到帖子** | ✅ | ✅ | v0.14.0: 列表级批量处理 — useModerationBatch hook + 6 个组件集成 |
+| **标签服务失败检测** | ✅ | ✅ | v0.14.0: 按提供商失败追踪，指数退避重试(3次)，失败通知(banner/toast) |
+| **标签服务失效配置** | ✅ | ✅ | v0.14.0: 每标签提供商可配置 failureBehavior (silent/banner/block) |
+| **标记 UI 重构** | ✅ | ✅ | v0.14.0: 3 种渲染模式 — HiddenBanner/ContentWarningOverlay/ModerationLabelBar + BadgeRow，官方 bsky.app 风格 |
+| **统一帖子加载管道** | ✅ | ✅ | v0.14.0: useModerationBatch (blob-aware) + usePostModeration — 所有帖子走统一 moderation 流程 |
+| **引用帖子标记** | ✅ | ✅ | v0.14.0: 引用帖子共享父帖 moderation decision，媒体模糊通过 blob 级标签 |
 
 ## 图例
 

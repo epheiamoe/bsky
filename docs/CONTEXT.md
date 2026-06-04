@@ -24,63 +24,38 @@
 
 ## 当前版本
 
-**v0.15.0 (in development)** — Moderation UI Redesign & Unified Pipeline
+**v0.14.0 — 基本开发完成 ✅**
 
-### v0.14.1 Phase 1: Failure Detection & Safety Notifications (In Progress)
-- **Critical Problem**: Label service failures are silent — users don't know they're unprotected
-- **Solution**: Per-provider failure tracking, retry with backoff, user notifications by severity level
-- **Default failure behaviors**: `block` (LGBTQ+ protection), `banner` (foundation safety), `silent` (community/enrichment)
-- **Architecture**: Enhanced LabelCache + useModerationBatch returns failedLabelers + UI banners/toasts
-- **Plan**: `docs/plan/plan_labeling_failure_handling.md`
+v0.14.0 是一个大版本，包含多个阶段的功能开发。当前标记/审核系统（v0.14.1）已接近完成，进入收尾修复阶段。
 
-### v0.15.0 Phase 2: Mixed Sync/Async Loading Pipeline (Planned)
-- **Goal**: Loading strategy determined by highest active failure level (block/banner/silent)
-- **New**: `useModerationPipeline()` hook, health monitoring, scroll preservation
-- **Block strategy**: Wait for safety verification before showing posts
-- **Banner strategy**: Show posts with "loading safety..." banner
-- **Silent strategy**: Show posts immediately, apply tags async with smooth transitions
-- **AI tools exempt**: AI controls what to show via custom prompts
+### v0.14.0 核心功能 (已完成):
+- **Python 沙箱**: 三平台统一架构 (PWA/TUI/MCP)，bsky_tools 库 (33 API 方法)
+- **工作区文件管理**: 按 chat session 隔离的文件上传/下载/删除/预览
+- **标记/审核系统 (v0.14.1)**: 第三方标签提供商支持，通用/提供商独立配置
+- **标签服务失败检测**: 按提供商失败追踪，指数退避重试，用户通知 (banner/toast)
+- **审核决策引擎**: 9 种 severity × blurs 组合，多提供商独立评估
+- **批量审核集成**: `useModerationBatch` hook + 6 个 PWA 列表组件集成
+- **举报功能**: `createModerationReport` API，帖子详情页举报 + TUI `!` 快捷键
 
-### 已完成功能 (v0.14.1):
-- **标记/审核系统**: 第三方标签提供商支持，通用/提供商独立配置
-- **动态标签查询**: `com.atproto.label.queryLabels` 批量查询 + LabelCache (TTL 5min)
-- **审核决策引擎**: 9 种 severity × blurs 组合，多提供商独立评估，最严格动作优先
-- **PWA UI**: 设置页面(通用+官方+第三方), PostCard 集成, ThreadView 举报按钮, Welcome 第5步
-- **Info 按钮**: 所有隐藏/警告/徽章元素旁显示标签来源信息
-- **举报功能**: `createModerationReport` API，帖子详情页举报
-- **自标记**: PostRecord.labels 类型 + AI create_post 工具支持 labels 参数
-- **TUI 审核设置**: `,` 快速配置中新增「审核」Tab（通用设置+标签商管理）
-- **TUI 举报快捷键**: ThreadView 中 `!` 键举报当前帖子
-- **TUI 配置**: `TuiConfig.moderationConfig` 字段已添加
-- **i18n**: zh/en/ja 完整翻译
-- **批量审核集成**: `useModerationBatch` hook + 6个PWA列表组件集成 (FeedTimeline, BookmarkPage, ProfilePage, SearchPage, ListDetailPage, ThreadView)
+### 最近修复 (2026-06-04):
+- ✅ `BUILTIN_LABEL_DEFINITIONS`: porn/sexual/graphic-media → `blurs='media'` (匹配官方文档)
+- ✅ PostPreviewCard: `contentAction='warn'` 模糊整个内容区域，`mediaAction='blur'` 只模糊图片/视频
+- ✅ 横幅始终可见: 点击"显示"后横幅不消失，按钮变为"隐藏"
+- ✅ 横幅位置修正: media 级别在文字和图片之间，content 级别在标题栏和内容之间
+- ✅ blur 溢出修复: 根容器添加 `overflow-hidden` 防止模糊扩散到圆角外
 
-### v0.14.1 已完成功能:
-- ✅ **Phase 1**: 标签服务失败检测 + 用户通知
-  - LabelCache 按提供商记录失败状态 + 指数退避重试(3次)
-  - resolveModerationBatch 返回 failedLabelers
-  - useModerationBatch 暴露失败信息 + loading 状态
-  - UI: LabelerFailureBanner (block/banner级别) + LabelerFailureToast (silent级别)
-  - 6个列表组件集成失败提示 (FeedTimeline, BookmarkPage, ProfilePage, SearchPage, ListDetailPage, ThreadView)
-  - Settings: 每个标签提供商可配置 failureBehavior (silent/banner/block)
-  - 默认分级: block(LGBTQ+保护), banner(基础安全), silent(社区/娱乐)
-  - 详细计划: `docs/plan/plan_labeling_failure_handling.md`
+### 待完成 (收尾):
+- Staging 验证后部署到生产环境
+- 文档最终更新
 
-### v0.14.1 计划 (测试后上生产):
-- TUI 审核 UI (设置 + 帖子渲染 + 举报快捷键)
-- 自标记 (发帖时添加标签)
+---
 
-### v0.15.0 计划 (Phase 2 — 大重构):
-- **混合同步/异步加载管道**: `useModerationPipeline()` hook
-  - 根据最高活跃失败级别决定加载策略
-  - Block: 等待安全验证后显示内容
-  - Banner: 显示内容 + "加载安全验证"横幅
-  - Silent: 立即显示内容，后台异步应用标签
-  - 虚拟滚动位置保持
-  - 标签提供商健康监控 + 自动恢复检测
-- WebSocket 实时标签订阅
-- Bluesky 官方偏好同步 (`putPreferences`)
-- AI 工具: `check_post_labels`
+**历史版本:**
+
+**v0.15.0 (已合并到 v0.14.0)** — Moderation UI Redesign & Unified Pipeline
+- 原计划作为独立版本，实际作为 v0.14.0 的标记系统增强部分开发
+
+**v0.14.0** — 2026-05-22 Released ✅ — Python 沙箱 + 工作区 + bsky_tools 库
 
 ---
 
