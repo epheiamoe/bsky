@@ -209,7 +209,7 @@ export function PostPreviewCard({
 
       {/* Images */}
       {hasImages && (
-        <div className={`overflow-hidden rounded-lg ${isContentBlurred || isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+        <div className={`overflow-hidden rounded-lg ${isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
           <ImageGrid
             images={images}
             singleImageFill={singleImageFill}
@@ -226,7 +226,7 @@ export function PostPreviewCard({
 
       {/* Video */}
       {video && (
-        <div className={`overflow-hidden rounded-lg ${isContentBlurred || isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+        <div className={`overflow-hidden rounded-lg ${isMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
           <VideoCard
             thumbnailUrl={video.thumbnailUrl}
             playlistUrl={video.playlistUrl}
@@ -281,7 +281,7 @@ export function PostPreviewCard({
   return (
     <div
       onClick={onClick}
-      className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl border border-border bg-surface/20 transition-colors transition-shadow duration-150 hover:shadow-sm ${
+      className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl border border-border bg-surface/20 transition-colors transition-shadow duration-150 hover:shadow-sm overflow-hidden ${
         onClick ? 'cursor-pointer hover:bg-surface/40' : ''
       } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
     >
@@ -350,7 +350,13 @@ export function PostPreviewCard({
               />
             )}
 
-            {contentArea}
+            {isContentBlurred ? (
+              <div className="blur-2xl brightness-50 transition-all duration-300 pointer-events-none select-none overflow-hidden rounded-lg">
+                {contentArea}
+              </div>
+            ) : (
+              contentArea
+            )}
 
             {children}
           </div>

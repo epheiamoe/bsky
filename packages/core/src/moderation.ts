@@ -83,7 +83,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
   {
     identifier: 'porn',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'hide',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Adult Content', description: 'Explicit sexual images.' }],
@@ -92,7 +92,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
   {
     identifier: 'sexual',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Sexual', description: 'Sexual content (less intense).' }],
@@ -110,7 +110,7 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
   {
     identifier: 'graphic-media',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Graphic Media', description: 'Blood, gore, or other potentially disturbing media.' }],

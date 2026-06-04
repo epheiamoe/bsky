@@ -210,7 +210,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
         {/* ── 主题帖 / 当前帖子 ── */}
         {focused && (
-          <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30">
+          <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30 overflow-hidden">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
             {showFocusedContentHidden ? (
               <HiddenBanner
@@ -360,7 +360,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                 )}
                 {focused.externalLink && (
                   <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                    className={`mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline ${showFocusedContentBlur ? 'pointer-events-none' : ''}`}
+                    className={`mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline ${showFocusedContentBlur ? 'pointer-events-none blur-2xl brightness-50' : ''}`}
                   >
                     <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
                     {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
