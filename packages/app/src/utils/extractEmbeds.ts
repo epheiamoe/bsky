@@ -108,6 +108,10 @@ export function extractQuotedPost(post: PostView): ExtractQuotedPost | null {
   const rec = embed.record as Record<string, unknown> | undefined;
   if (!rec?.uri) return null;
 
+  // Skip non-post records (e.g., lists, feeds)
+  const recordType = rec.$type as string | undefined;
+  if (recordType === 'app.bsky.graph.defs#listView' || recordType === 'app.bsky.feed.defs#generatorView') return null;
+
   const imageDetails: ExtractImage[] = [];
   let externalLink: ExtractExternalLink | null = null;
   const recEmbeds = rec.embeds as Array<Record<string, unknown>> | undefined;

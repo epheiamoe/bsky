@@ -20,7 +20,7 @@ export default defineConfig({
       } catch { /* sw.js may not exist in dev */ }
     },
   }],
-  base: './',
+  base: '/',
   resolve: {
     alias: {
       os: resolve(__dirname, 'src/stubs/os.ts'),
