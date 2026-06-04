@@ -150,8 +150,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     client
   );
   const showFocusedContentHidden = focusedModeration.contentAction === 'hide' && !focusedContentRevealed;
-  const showFocusedContentBlur = focusedModeration.contentAction === 'warn' && !focusedContentRevealed;
-  const showFocusedMediaBlur = focusedModeration.mediaAction === 'blur' && !focusedMediaRevealed && !showFocusedContentBlur;
+  const isFocusedContentBlurred = focusedModeration.contentAction === 'warn' && !focusedContentRevealed;
+  const isFocusedMediaBlurred = focusedModeration.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
 
@@ -281,29 +281,23 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 </div>
 
-                {/* Unified moderation label bar — for both content-level and media-level warnings */}
-                {(showFocusedContentBlur || showFocusedMediaBlur) && focusedModeration && (
+                {/* Content-level moderation banner — between header and content */}
+                {focusedModeration.contentAction === 'warn' && (
                   <ModerationLabelBar
                     decision={focusedModeration}
-                    isRevealed={showFocusedContentBlur ? focusedContentRevealed : focusedMediaRevealed}
-                    onToggle={() => {
-                      if (showFocusedContentBlur) {
-                        setFocusedContentRevealed(!focusedContentRevealed);
-                      } else {
-                        setFocusedMediaRevealed(!focusedMediaRevealed);
-                      }
-                    }}
+                    isRevealed={focusedContentRevealed}
+                    onToggle={() => setFocusedContentRevealed(!focusedContentRevealed)}
                   />
                 )}
 
-                <div className={`${showFocusedContentBlur ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none select-none' : ''}`}>
+                <div className={`${isFocusedContentBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none select-none' : ''}`}>
                   <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
                     {linkifyText(focused.text)}
                   </p>
                   {focused.quotedPost && (
                     <div
-                      className={`mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors ${showFocusedContentBlur ? '' : 'cursor-pointer'}`}
-                      onClick={showFocusedContentBlur ? undefined : () => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                      className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
+                      onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
                     >
                       <div className="flex items-center gap-2 mb-1">
                         {focused.quotedPost.authorAvatar && (
@@ -334,39 +328,49 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
                     </div>
                   )}
+
+                  {/* Media-level moderation banner — between text and media */}
+                  {focusedModeration.mediaAction === 'blur' && focusedModeration.contentAction === 'none' && (
+                    <ModerationLabelBar
+                      decision={focusedModeration}
+                      isRevealed={focusedMediaRevealed}
+                      onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
+                    />
+                  )}
+
+                  {focused.imageDetails?.length > 0 && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <ImageGrid
+                        images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                        imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                          const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                          if (!m) throw new Error('Could not parse image URL');
+                          return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                        }                 : undefined}
+                        singleImageFill={singleImageFill}
+                      />
+                    </div>
+                  )}
+                  {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <VideoCard
+                        thumbnailUrl={focused.videoThumbnailUrl}
+                        playlistUrl={focused.videoPlaylistUrl}
+                        alt={focused.videoAlt}
+                        aspectRatio={focused.videoAspectRatio}
+                      />
+                    </div>
+                  )}
+                  {focused.externalLink && (
+                    <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                      className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                    >
+                      <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                      {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                      <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                    </a>
+                  )}
                 </div>
-                {focused.imageDetails?.length > 0 && (
-                  <div className={`overflow-hidden rounded-lg ${showFocusedContentBlur || showFocusedMediaBlur ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
-                    <ImageGrid
-                      images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                      imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                        const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                        if (!m) throw new Error('Could not parse image URL');
-                        return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                      }                 : undefined}
-                      singleImageFill={singleImageFill}
-                    />
-                  </div>
-                )}
-                {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-                  <div className={`overflow-hidden rounded-lg ${showFocusedContentBlur || showFocusedMediaBlur ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
-                    <VideoCard
-                      thumbnailUrl={focused.videoThumbnailUrl}
-                      playlistUrl={focused.videoPlaylistUrl}
-                      alt={focused.videoAlt}
-                      aspectRatio={focused.videoAspectRatio}
-                    />
-                  </div>
-                )}
-                {focused.externalLink && (
-                  <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                    className={`mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline ${showFocusedContentBlur ? 'pointer-events-none blur-2xl brightness-50' : ''}`}
-                  >
-                    <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
-                    {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                    <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
-                  </a>
-                )}
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (
                   <button 
