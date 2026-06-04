@@ -526,6 +526,13 @@ export class BskyClient {
     }).json<ListNotificationsResponse>();
   }
 
+  async updateNotificationsSeen(seenAt?: string): Promise<void> {
+    await this.ky.post('app.bsky.notification.updateSeen', {
+      headers: this.getAuthHeaders(),
+      json: { seenAt: seenAt ?? new Date().toISOString() },
+    });
+  }
+
   async getPopularFeedGenerators(limit = 50, cursor?: string): Promise<GetFeedGeneratorsResponse> {
     const params: Record<string, string | number> = { limit };
     if (cursor) params.cursor = cursor;
