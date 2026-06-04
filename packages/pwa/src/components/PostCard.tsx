@@ -1,8 +1,8 @@
 import React from 'react';
 import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/core';
 import { parseAtUri, describeImage } from '@bsky/core';
-import type { FlatLine, AppView } from '@bsky/app';
-import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
+import type { FlatLine, AppView, ExtractListEmbed } from '@bsky/app';
+import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n, isBskyAppUrl, bskyUrlToAppView } from '@bsky/app';
 import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
@@ -11,7 +11,8 @@ import { VideoCard } from './VideoCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
 import { ModerationOverlay, BadgeRow } from './ModerationOverlay.js';
-import { BskyLinkCard, isBskyAppUrl } from './BskyLinkCard.js';
+import { BskyLinkCard } from './BskyLinkCard.js';
+import { ListEmbedCard } from './ListEmbedCard.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -28,7 +29,7 @@ export function truncateName(name: string, max = 15): string {
   return name.length > max ? name.slice(0, max - 1) + '…' : name;
 }
 
-const LINK_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|#[\p{L}\p{N}_]+|at:\/\/did:[a-z]+:[^\/\s]+\/[a-zA-Z.0-9-]+\/[a-zA-Z0-9~_.-]+)/gu;
+const LINK_REGEX = /(https?:\/\/[^\s<>"']+|bsky\.app\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|#[\p{L}\p{N}_]+|at:\/\/did:[a-z]+:[^\/\s]+\/[a-zA-Z.0-9-]+\/[a-zA-Z0-9~_.-]+)/gu;
 
 export function linkifyText(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -66,6 +67,10 @@ export function linkifyText(text: string): React.ReactNode[] {
     } else if (token.startsWith('#')) {
       const tag = token.slice(1);
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={`#/search?q=${encodeURIComponent(tag)}&tab=top`} onClick={(e) => e.stopPropagation()}>{token}</a>);
+    } else if (token.startsWith('bsky.app/')) {
+      // Bare bsky.app URL - treat as external link that opens choice modal
+      const fullUrl = `https://${token}`;
+      parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={fullUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{token}</a>);
     } else {
       parts.push(<a key={match.index} className="text-blue-500 hover:underline" href={token} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{token}</a>);
     }
@@ -125,6 +130,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let externalLink: ExtractExternalLink | null = null;
   let avatarUrl: string | undefined;
   let quotedPost: ExtractQuotedPost | null;
+  let listEmbed: ExtractListEmbed | null = null;
   let video: ExtractVideo | null = null;
   let hasVideo = false;
   const replyDepth = post ? getReplyDepth(post) : null;
@@ -142,6 +148,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     images = embeds.images;
     hasImages = images.length > 0;
     externalLink = embeds.external;
+    listEmbed = embeds.list;
     quotedPost = extractQuotedPost(post);
     video = embeds.video;
     hasVideo = video !== null;
@@ -161,6 +168,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     if (line.externalLink) {
       externalLink = line.externalLink;
     }
+    listEmbed = (line as any).listEmbed as ExtractListEmbed | undefined ?? null;
     quotedPost = (line.quotedPost as ExtractQuotedPost | undefined) ?? null;
     hasVideo = line.hasVideo;
     if (hasVideo && line.videoThumbnailUrl && line.videoPlaylistUrl) {
@@ -238,6 +246,14 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
           </a>
         ))}
+        {listEmbed && (
+          <ListEmbedCard
+            list={listEmbed}
+            onClick={() => {
+              if (goTo) goTo({ type: 'listDetail', uri: listEmbed.uri });
+            }}
+          />
+        )}
         {quotedPost && (
           <div
             className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"

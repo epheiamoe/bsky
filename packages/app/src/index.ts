@@ -56,7 +56,7 @@ export { useModerationPipeline, useModerationBatch, resolveModerationBatch } fro
 export type { PipelineState, PipelineStrategy, PipelinePhase, FailedLabelerInfo } from './hooks/useModerationPipeline.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
-export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';
+export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds, extractListEmbed } from './utils/extractEmbeds.js';
 export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost, ExtractListEmbed } from './utils/extractEmbeds.js';
 export { formatThreadgateSummary, buildThreadgateRules, rulesToThreadgateType, getThreadgateDisplayKey } from './utils/formatThreadgate.js';
 export { useI18n, getI18nStore } from './i18n/index.js';

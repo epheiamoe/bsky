@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl } from '@bsky/app';
-import type { AppView } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl, extractListEmbed } from '@bsky/app';
+import type { AppView, ExtractListEmbed } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule, ModerationDecision } from '@bsky/core';
@@ -15,6 +15,7 @@ import { VideoCard } from './VideoCard.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
 import { BskyLinkCard } from './BskyLinkCard.js';
+import { ListEmbedCard } from './ListEmbedCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -68,6 +69,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
   const [showThreadgateDetail, setShowThreadgateDetail] = useState(false);
+
+  // Extract list embed from focused post
+  const focusedListEmbed: ExtractListEmbed | null = useMemo(() => {
+    if (!focused) return null;
+    const postView = getPostView?.(focused.uri);
+    return postView ? extractListEmbed(postView) : null;
+  }, [focused, getPostView]);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
@@ -295,6 +303,12 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
                     {linkifyText(focused.text)}
                   </p>
+                  {focusedListEmbed && (
+                    <ListEmbedCard
+                      list={focusedListEmbed}
+                      onClick={() => goTo({ type: 'listDetail', uri: focusedListEmbed.uri })}
+                    />
+                  )}
                   {focused.quotedPost && (
                     <div
                       className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"

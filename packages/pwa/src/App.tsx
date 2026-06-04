@@ -284,6 +284,21 @@ export function App() {
     }
   }, [login]);
 
+  // ── Redirect page handler ──
+  // Must be checked BEFORE auth/welcome states so /i/ links work even when not logged in
+  if (redirectPath) {
+    return (
+      <RedirectPage
+        pathname={redirectPath}
+        client={client}
+        onNavigate={(view) => {
+          setRedirectPath(null);
+          goTo(view, true);
+        }}
+      />
+    );
+  }
+
   // ── Loading ──
   if (authLoading) {
     return (
@@ -316,20 +331,6 @@ export function App() {
         onSkip={() => {
           localStorage.setItem('bsky_welcomed_v2', '1');
           setShowWelcome(false);
-        }}
-      />
-    );
-  }
-
-  // ── Redirect page handler ──
-  if (redirectPath) {
-    return (
-      <RedirectPage
-        pathname={redirectPath}
-        client={client}
-        onNavigate={(view) => {
-          setRedirectPath(null);
-          goTo(view, true);
         }}
       />
     );

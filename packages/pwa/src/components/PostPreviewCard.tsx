@@ -3,7 +3,7 @@ import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/c
 import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
 import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n, isBskyAppUrl } from '@bsky/app';
-import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
+import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo, ExtractListEmbed } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
@@ -14,6 +14,7 @@ import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
 import { BskyLinkCard } from './BskyLinkCard.js';
+import { ListEmbedCard } from './ListEmbedCard.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -138,6 +139,7 @@ export function PostPreviewCard({
   let externalLink: ExtractExternalLink | null = null;
   let avatarUrl: string | undefined;
   let quotedPost: ExtractQuotedPost | null;
+  let listEmbed: ExtractListEmbed | null = null;
   let video: ExtractVideo | null = null;
   let hasVideo = false;
   const replyDepth = post ? getReplyDepth(post) : null;
@@ -155,6 +157,7 @@ export function PostPreviewCard({
     images = embeds.images;
     hasImages = images.length > 0;
     externalLink = embeds.external;
+    listEmbed = embeds.list;
     quotedPost = extractQuotedPost(post);
     video = embeds.video;
     hasVideo = video !== null;
@@ -174,6 +177,7 @@ export function PostPreviewCard({
     if (line.externalLink) {
       externalLink = line.externalLink;
     }
+    listEmbed = (line as any).listEmbed as ExtractListEmbed | undefined ?? null;
     quotedPost = (line.quotedPost as ExtractQuotedPost | undefined) ?? null;
     hasVideo = line.hasVideo;
     if (hasVideo && line.videoThumbnailUrl && line.videoPlaylistUrl) {
@@ -323,6 +327,14 @@ export function PostPreviewCard({
                 </a>
               ))}
 
+              {listEmbed && (
+                <ListEmbedCard
+                  list={listEmbed}
+                  onClick={() => {
+                    if (goTo) goTo({ type: 'listDetail', uri: listEmbed.uri });
+                  }}
+                />
+              )}
               {quotedPost && (
                 <div
                   className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
