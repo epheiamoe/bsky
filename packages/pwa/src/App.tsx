@@ -42,6 +42,7 @@ import { Icon } from './components/Icon.js';
 import { AIGuidance } from './components/AIGuidance.js';
 import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
+import { RedirectPage } from './components/RedirectPage.js';
 
 export function App() {
   // Register storage factories (browser: IndexedDB)
@@ -58,6 +59,13 @@ export function App() {
   BskyClient.buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '(dev)';
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
+
+  // Handle /i/ redirect paths (e.g. /i/bsky.app/profile/xxx)
+  const [redirectPath, setRedirectPath] = useState<string | null>(() => {
+    const pathname = window.location.pathname;
+    return pathname.startsWith('/i/') ? pathname : null;
+  });
+
   const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession, profile } = useAuth();
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
   const timeline = useTimeline(client, feedUri);
@@ -308,6 +316,20 @@ export function App() {
         onSkip={() => {
           localStorage.setItem('bsky_welcomed_v2', '1');
           setShowWelcome(false);
+        }}
+      />
+    );
+  }
+
+  // ── Redirect page handler ──
+  if (redirectPath) {
+    return (
+      <RedirectPage
+        pathname={redirectPath}
+        client={client}
+        onNavigate={(view) => {
+          setRedirectPath(null);
+          goTo(view, true);
         }}
       />
     );

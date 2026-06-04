@@ -12,7 +12,7 @@ interface NotifViewProps {
 }
 
 export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
-  const { notifications, loading, refresh } = useNotifications(client);
+  const { notifications, loading, refresh, markAllAsRead } = useNotifications(client);
   const [cursorIdx, setCursorIdx] = useState(0);
   const { t, locale } = useI18n();
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
@@ -22,6 +22,7 @@ export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
     if (key.upArrow || input === 'k') { setCursorIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow || input === 'j') { setCursorIdx(i => Math.min(notifications.length - 1, i + 1)); return; }
     if (input === 'r' || input === 'R') { void refresh(); return; }
+    if (input === 'm' || input === 'M') { void markAllAsRead(); return; }
     if (key.return) {
       const n = notifications[cursorIdx];
       if (n?.reasonSubject) {
@@ -39,7 +40,7 @@ export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
     <Box flexDirection="column" width={cols} borderStyle="single" borderColor="gray" paddingX={1}>
       <Box height={1}>
         <Text bold>{'🔔 '}{t('notifications.title')}</Text>
-        <Text dimColor>{' ('}{notifications.length}{t('notifications.count')}{') '}{t('keys.notifications')}</Text>
+        <Text dimColor>{' ('}{notifications.length}{t('notifications.count')}{') '}{t('keys.notifications')}{' | '}{t('keys.markRead')}</Text>
       </Box>
       {notifications.length === 0 && <Text dimColor>{t('notifications.empty')}</Text>}
       {notifications.map((n, i) => {

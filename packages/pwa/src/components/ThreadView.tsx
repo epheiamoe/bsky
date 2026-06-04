@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
@@ -14,6 +14,7 @@ import { ImageGrid } from './ImageGrid.js';
 import { VideoCard } from './VideoCard.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
+import { BskyLinkCard } from './BskyLinkCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -361,7 +362,9 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       />
                     </div>
                   )}
-                  {focused.externalLink && (
+                  {focused.externalLink && (isBskyAppUrl(focused.externalLink.uri) ? (
+                    <BskyLinkCard url={focused.externalLink.uri} onOpenInternal={(view) => goTo(view)} />
+                  ) : (
                     <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
                       className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
                     >
@@ -369,7 +372,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
                       <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
                     </a>
-                  )}
+                  ))}
                 </div>
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/core';
 import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView } from '@bsky/app';
-import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n } from '@bsky/app';
+import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n, isBskyAppUrl } from '@bsky/app';
 import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
@@ -13,6 +13,7 @@ import type { ImageData } from './ImageGrid.js';
 import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
+import { BskyLinkCard } from './BskyLinkCard.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -306,7 +307,9 @@ export function PostPreviewCard({
                 </div>
               )}
 
-              {externalLink && (
+              {externalLink && (isBskyAppUrl(externalLink.uri) ? (
+                <BskyLinkCard url={externalLink.uri} onOpenInternal={(view) => goTo?.(view)} />
+              ) : (
                 <a
                   href={externalLink.uri}
                   target="_blank"
@@ -318,7 +321,7 @@ export function PostPreviewCard({
                   {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
                   <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
                 </a>
-              )}
+              ))}
 
               {quotedPost && (
                 <div

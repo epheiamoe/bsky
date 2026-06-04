@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
 import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
@@ -96,10 +96,14 @@ function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) =>
 
 export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange }: NotifsPageProps) {
   const { t } = useI18n();
-  const { notifications, loading, error, refresh } = useNotifications(client);
+  const { notifications, loading, error, refresh, unreadCount, markAllAsRead } = useNotifications(client);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
     notifications, 'notifs', 72, n => n.uri, { initialScrollTop, onScrollTopChange },
   );
+
+  const handleMarkAllAsRead = useCallback(async () => {
+    await markAllAsRead();
+  }, [markAllAsRead]);
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
@@ -114,13 +118,25 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
           </button>
           <h1 className="text-text-primary font-semibold text-lg"><Icon name="bell" size={20} /> {t('notifications.title')}</h1>
         </div>
-        <button
-          onClick={() => refresh()}
-          disabled={loading}
-          className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
-        >
-          {t('action.refresh')}
-        </button>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllAsRead}
+              disabled={loading}
+              className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
+              aria-label={t('notifications.markAllAsRead')}
+            >
+              {t('notifications.markAllAsRead')}
+            </button>
+          )}
+          <button
+            onClick={() => refresh()}
+            disabled={loading}
+            className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
+          >
+            {t('action.refresh')}
+          </button>
+        </div>
       </div>
 
       {error && (

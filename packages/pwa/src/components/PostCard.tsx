@@ -11,6 +11,7 @@ import { VideoCard } from './VideoCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
 import { ModerationOverlay, BadgeRow } from './ModerationOverlay.js';
+import { BskyLinkCard, isBskyAppUrl } from './BskyLinkCard.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
   const reply = (post.record as any).reply as { root: { uri: string }; parent: { uri: string } } | undefined;
@@ -222,7 +223,9 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
         } : undefined} />}
         {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
-        {externalLink && (
+        {externalLink && (isBskyAppUrl(externalLink.uri) ? (
+          <BskyLinkCard url={externalLink.uri} onOpenInternal={(view) => goTo?.(view)} />
+        ) : (
           <a
             href={externalLink.uri}
             target="_blank"
@@ -234,7 +237,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
             {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
             <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
           </a>
-        )}
+        ))}
         {quotedPost && (
           <div
             className="mt-2 border border-border rounded-xl p-3 bg-surface overflow-hidden cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
