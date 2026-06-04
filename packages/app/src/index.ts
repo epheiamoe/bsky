@@ -57,7 +57,7 @@ export type { PipelineState, PipelineStrategy, PipelinePhase, FailedLabelerInfo 
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
 export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';
-export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost } from './utils/extractEmbeds.js';
+export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost, ExtractListEmbed } from './utils/extractEmbeds.js';
 export { formatThreadgateSummary, buildThreadgateRules, rulesToThreadgateType, getThreadgateDisplayKey } from './utils/formatThreadgate.js';
 export { useI18n, getI18nStore } from './i18n/index.js';
 export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';

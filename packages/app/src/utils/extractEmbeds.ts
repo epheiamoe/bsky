@@ -30,6 +30,19 @@ export interface ExtractQuotedPost {
   externalLink: ExtractExternalLink | null;
 }
 
+export interface ExtractListEmbed {
+  uri: string;
+  cid: string;
+  name: string;
+  description?: string;
+  avatar?: string;
+  creatorHandle: string;
+  creatorDisplayName: string;
+  creatorAvatar?: string;
+  listItemCount: number;
+  purpose: string;
+}
+
 export function extractImages(post: PostView): ExtractImage[] {
   const images: ExtractImage[] = [];
   const embed = post.record.embed as Record<string, unknown> | undefined;
@@ -128,6 +141,35 @@ export function extractQuotedPost(post: PostView): ExtractQuotedPost | null {
   };
 }
 
+export function extractListEmbed(post: PostView): ExtractListEmbed | null {
+  const embed = (post as any).embed as Record<string, unknown> | undefined;
+  if (!embed) return null;
+
+  const type = embed.$type as string | undefined;
+  if (type !== 'app.bsky.embed.record#view' && type !== 'app.bsky.embed.record') return null;
+
+  const record = embed.record as Record<string, unknown> | undefined;
+  if (!record) return null;
+
+  const recordType = record.$type as string | undefined;
+  if (recordType !== 'app.bsky.graph.defs#listView') return null;
+
+  const creator = record.creator as Record<string, string> | undefined;
+
+  return {
+    uri: record.uri as string,
+    cid: (record.cid as string) ?? '',
+    name: (record.name as string) ?? '',
+    description: record.description as string | undefined,
+    avatar: record.avatar as string | undefined,
+    creatorHandle: creator?.handle ?? '',
+    creatorDisplayName: creator?.displayName ?? creator?.handle ?? '',
+    creatorAvatar: creator?.avatar,
+    listItemCount: (record.listItemCount as number) ?? 0,
+    purpose: (record.purpose as string) ?? '',
+  };
+}
+
 export function extractHasGif(post: PostView): boolean {
   const embed = post.record.embed as Record<string, unknown> | undefined;
   if (!embed) return false;
@@ -149,11 +191,12 @@ export function extractHasGif(post: PostView): boolean {
   return checkGif(embed);
 }
 
-export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; hasGif: boolean } {
+export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; list: ExtractListEmbed | null; hasGif: boolean } {
   return {
     images: extractImages(post),
     video: extractVideo(post),
     external: extractExternalLink(post),
+    list: extractListEmbed(post),
     hasGif: extractHasGif(post),
   };
 }

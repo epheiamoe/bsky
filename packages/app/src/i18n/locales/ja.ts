@@ -699,6 +699,11 @@ const ja: LocaleMessages = {
   'link.choiceTitle': '開き方を選択',
   'link.choiceDesc': 'これは Bluesky のリンクです。どこで開きますか？',
 
+  // List embed card
+  'list.label': 'リスト',
+  'list.member': 'メンバー',
+  'list.members': 'メンバー',
+
   // [v0.14.0] リダイレクトページ
   'redirect.resolving': 'リンクを解析中…',
   'redirect.redirecting': 'リダイレクト中…',

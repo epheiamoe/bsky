@@ -301,6 +301,11 @@ const zh: LocaleMessages = {
   'lists.addMember': '添加成员',
   'lists.removeMember': '移除成员',
 
+  // List embed card
+  'list.label': '列表',
+  'list.member': '成员',
+  'list.members': '成员',
+
   // ── AI Chat ──
   'ai.title': 'AI 对话',
   'ai.history': 'AI 对话历史',

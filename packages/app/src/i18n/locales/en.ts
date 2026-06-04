@@ -689,6 +689,11 @@ const en: LocaleMessages = {
   'link.choiceTitle': 'Choose how to open this link',
   'link.choiceDesc': 'This is a Bluesky link. Where would you like to open it?',
 
+  // List embed card
+  'list.label': 'List',
+  'list.member': 'member',
+  'list.members': 'members',
+
   // [v0.14.0] Redirect page
   'redirect.resolving': 'Resolving link…',
   'redirect.redirecting': 'Redirecting…',
