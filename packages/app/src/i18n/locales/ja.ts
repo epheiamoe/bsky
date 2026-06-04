@@ -686,6 +686,30 @@ const ja: LocaleMessages = {
   'pipeline.blockedDesc': 'コンテンツを安全に読み込めません。一部のラベルサービスが応答していません。',
   'pipeline.retry': '再試行',
   'pipeline.loadAnyway': '強制読み込み（危険）',
+
+  // [v0.14.0] Bsky.app リンク処理
+  'link.type.profile': 'Bluesky プロフィール',
+  'link.type.post': 'Bluesky 投稿',
+  'link.type.search': 'Bluesky 検索',
+  'link.type.feed': 'Bluesky フィード',
+  'link.type.list': 'Bluesky リスト',
+  'link.type.unknown': 'Bluesky リンク',
+  'link.openInApp': 'AI Bsky で開く',
+  'link.openInBsky': 'Bluesky で開く',
+  'link.choiceTitle': '開き方を選択',
+  'link.choiceDesc': 'これは Bluesky のリンクです。どこで開きますか？',
+
+  // [v0.14.0] リダイレクトページ
+  'redirect.resolving': 'リンクを解析中…',
+  'redirect.redirecting': 'リダイレクト中…',
+  'redirect.failed': 'リダイレクト失敗',
+  'redirect.invalidUrl': '無効な URL 形式',
+  'redirect.unsupportedPath': '未対応の URL パス',
+  'redirect.unsupportedClient': '未対応のクライアント。現在は bsky.app のリンクのみ対応しています。',
+
+  // [v0.14.0] 通知
+  'notifications.markAllAsRead': 'すべて既読にする',
+  'keys.markRead': 'M: 既読にする',
 };
 
 export default ja;

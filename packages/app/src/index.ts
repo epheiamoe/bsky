@@ -103,3 +103,5 @@ export {
 
 export { BUILTIN_LABELERS } from './data/default-labelers.js';
 export { getLabelName, LABEL_I18N_KEYS } from './i18n/label-i18n.js';
+export { parseBskyAppUrl, bskyUrlToAppView, getBskyUrlTypeLabel, isBskyAppUrl } from './utils/parseBskyUrl.js';
+export type { BskyUrlInfo } from './utils/parseBskyUrl.js';

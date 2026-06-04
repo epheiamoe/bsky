@@ -827,6 +827,30 @@ const zh: LocaleMessages = {
   'pipeline.blockedDesc': '无法安全加载内容。部分标签服务未响应。',
   'pipeline.retry': '重试',
   'pipeline.loadAnyway': '强制加载（不安全）',
+
+  // [v0.14.0] Bsky.app 链接处理
+  'link.type.profile': 'Bluesky 个人资料',
+  'link.type.post': 'Bluesky 帖子',
+  'link.type.search': 'Bluesky 搜索',
+  'link.type.feed': 'Bluesky 动态源',
+  'link.type.list': 'Bluesky 列表',
+  'link.type.unknown': 'Bluesky 链接',
+  'link.openInApp': '在 AI Bsky 打开',
+  'link.openInBsky': '在 Bluesky 打开',
+  'link.choiceTitle': '选择打开方式',
+  'link.choiceDesc': '这是一个 Bluesky 链接。你想在哪里打开它？',
+
+  // [v0.14.0] 重定向页面
+  'redirect.resolving': '正在解析链接…',
+  'redirect.redirecting': '正在跳转…',
+  'redirect.failed': '跳转失败',
+  'redirect.invalidUrl': '无效的 URL 格式',
+  'redirect.unsupportedPath': '不支持的 URL 路径',
+  'redirect.unsupportedClient': '不支持的客户端。目前仅支持 bsky.app 链接。',
+
+  // [v0.14.0] 通知
+  'notifications.markAllAsRead': '全部标记已读',
+  'keys.markRead': 'M: 标记已读',
 };
 
 export default zh;

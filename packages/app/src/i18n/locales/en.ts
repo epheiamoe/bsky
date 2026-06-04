@@ -676,6 +676,30 @@ const en: LocaleMessages = {
   'pipeline.blockedDesc': 'Unable to safely load content. Some label services are not responding.',
   'pipeline.retry': 'Retry',
   'pipeline.loadAnyway': 'Load Anyway (Unsafe)',
+
+  // [v0.14.0] Bsky.app link handling
+  'link.type.profile': 'Bluesky Profile',
+  'link.type.post': 'Bluesky Post',
+  'link.type.search': 'Bluesky Search',
+  'link.type.feed': 'Bluesky Feed',
+  'link.type.list': 'Bluesky List',
+  'link.type.unknown': 'Bluesky Link',
+  'link.openInApp': 'Open in AI Bsky',
+  'link.openInBsky': 'Open in Bluesky',
+  'link.choiceTitle': 'Choose how to open this link',
+  'link.choiceDesc': 'This is a Bluesky link. Where would you like to open it?',
+
+  // [v0.14.0] Redirect page
+  'redirect.resolving': 'Resolving link…',
+  'redirect.redirecting': 'Redirecting…',
+  'redirect.failed': 'Redirect Failed',
+  'redirect.invalidUrl': 'Invalid URL format',
+  'redirect.unsupportedPath': 'Unsupported URL path',
+  'redirect.unsupportedClient': 'Unsupported client. Currently only bsky.app links are supported.',
+
+  // [v0.14.0] Notifications
+  'notifications.markAllAsRead': 'Mark All as Read',
+  'keys.markRead': 'M: Mark read',
 };
 
 export default en;
