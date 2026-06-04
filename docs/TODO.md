@@ -38,6 +38,7 @@
 | **头像缓存** | ⬜ | ⬜ | Service Worker / IndexedDB 缓存头像 |
 | **关注/取关** | ✅ | ✅ | 资料页 + 帖子页 + 推荐关注 widget |
 | **推荐关注** | ⬜ | ✅ | SuggestedFollowsWidget + AT API |
+| **列表订阅到时间线** | N/A | ✅ | v0.14.0: 列表可作为时间线源，FeedHeader 下拉选择，ListDetailPage 订阅按钮，配置时间线管理 |
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ✅ | ✅ | PWA: ListsPage + ListDetailPage (Posts/Members tabs + 虚拟滚动) + ProfilePage Lists tab; TUI: 内联视图 + L 快捷键 + j/k/Enter/d/r; AI: 4 工具 |
 | **DM 私信** | ✅ | ✅ | Phase 1+2: send/get/list/delete/mute/read + emoji 反应(8 常用) + 引用帖(URI 粘贴) + 动画 + 加载更早 |

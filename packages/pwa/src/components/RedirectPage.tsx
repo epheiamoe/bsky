@@ -55,15 +55,16 @@ export function RedirectPage({ pathname, client, onNavigate }: RedirectPageProps
         if (needsResolution && client && info.handleOrDid) {
           try {
             const resolved = await client.resolveHandle(info.handleOrDid);
-            if (resolved && info.rkey) {
+            if (resolved?.did && info.rkey) {
+              const did = resolved.did;
               if (info.type === 'post') {
-                const uri = `at://${resolved}/app.bsky.feed.post/${info.rkey}`;
+                const uri = `at://${did}/app.bsky.feed.post/${info.rkey}`;
                 view = { type: 'thread', uri };
               } else if (info.type === 'list' && info.listRkey) {
-                const uri = `at://${resolved}/app.bsky.graph.list/${info.listRkey}`;
+                const uri = `at://${did}/app.bsky.graph.list/${info.listRkey}`;
                 view = { type: 'listDetail', uri };
               } else if (info.type === 'feed' && info.feedRkey) {
-                const uri = `at://${resolved}/app.bsky.feed.generator/${info.feedRkey}`;
+                const uri = `at://${did}/app.bsky.feed.generator/${info.feedRkey}`;
                 view = { type: 'feed', feedUri: uri };
               }
             }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useVirtualizedList, useModerationBatch, getFeedConfig, addSubscribedList, removeSubscribedList } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList, useModerationBatch, useSubscribedLists } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -37,23 +37,20 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const [editDesc, setEditDesc] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(() =>
-    getFeedConfig().subscribedLists.some(l => l.uri === listUri)
-  );
+  const { subscribe, unsubscribe, isSubscribed: checkSubscribed } = useSubscribedLists(client);
+  const isSubscribed = checkSubscribed(listUri);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const isOwnList = list?.creator?.did === client.getDID();
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!list) return;
-    addSubscribedList(listUri, list.name);
-    setIsSubscribed(true);
+    await subscribe(listUri);
   };
 
-  const handleUnsubscribe = () => {
-    removeSubscribedList(listUri);
-    setIsSubscribed(false);
+  const handleUnsubscribe = async () => {
+    await unsubscribe(listUri);
   };
 
   const {

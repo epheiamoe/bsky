@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed, addSubscribedList, removeSubscribedList } from '@bsky/app';
+import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed, useSubscribedLists } from '@bsky/app';
 import { getFeedLabel, RECOMMENDED_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, FeedGeneratorView } from '@bsky/core';
@@ -20,8 +20,8 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   const [showMenu, setShowMenu] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [feeds, setFeeds] = useState(() => getFeedConfig().feeds);
-  const [subscribedLists, setSubscribedLists] = useState(() => getFeedConfig().subscribedLists);
   const [config, setConfig] = useState(() => getFeedConfig());
+  const { lists: subscribedLists, loading: listsLoading, unsubscribe } = useSubscribedLists(client ?? null);
 
   const switchFeed = (uri: string) => {
     goTo({ type: 'feed', feedUri: uri });
@@ -36,7 +36,6 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   const refreshFeeds = () => {
     const cfg = getFeedConfig();
     setFeeds(cfg.feeds);
-    setSubscribedLists(cfg.subscribedLists);
     setConfig(cfg);
   };
 
@@ -110,6 +109,9 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
           onClose={() => { refreshFeeds(); setShowConfig(false); }}
           goTo={goTo}
           client={client}
+          subscribedLists={subscribedLists}
+          listsLoading={listsLoading}
+          onUnsubscribe={unsubscribe}
         />
       )}
       {/* Close menu on outside click */}
@@ -118,7 +120,21 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   );
 }
 
-function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo: (v: AppView) => void; client?: BskyClient | null }) {
+function FeedConfigModal({ 
+  onClose, 
+  goTo, 
+  client, 
+  subscribedLists, 
+  listsLoading, 
+  onUnsubscribe 
+}: { 
+  onClose: () => void; 
+  goTo: (v: AppView) => void; 
+  client?: BskyClient | null;
+  subscribedLists: import('@bsky/core').ListView[];
+  listsLoading: boolean;
+  onUnsubscribe: (uri: string) => Promise<boolean>;
+}) {
   const { t } = useI18n();
   const [config, setConfig] = useState(() => getFeedConfig());
   const [customUri, setCustomUri] = useState('');
@@ -163,12 +179,11 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
     onClose();
   };
 
-  const handleRemoveSubscribedList = (uri: string) => {
-    const updated = removeSubscribedList(uri);
-    setConfig(updated);
+  const handleUnsubscribeList = async (uri: string) => {
+    await onUnsubscribe(uri);
   };
 
-  const handleOpenSubscribedList = (uri: string) => {
+  const handleOpenList = (uri: string) => {
     goTo({ type: 'listDetail', uri });
     onClose();
   };
@@ -211,14 +226,17 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
             ))}
           </div>
 
-          {config.subscribedLists.length > 0 && (
+          {listsLoading && (
+            <div className="text-text-secondary text-sm py-2">{t('status.loading')}</div>
+          )}
+          {!listsLoading && subscribedLists.length > 0 && (
             <div>
               <p className="text-xs text-text-secondary mb-2">{t('feed.subscribedLists')}</p>
-              {config.subscribedLists.map(l => (
+              {subscribedLists.map(l => (
                 <div key={l.uri} className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
                   <span className="flex-1 text-sm text-text-primary truncate">{l.name}</span>
-                  <button onClick={() => handleOpenSubscribedList(l.uri)} className="text-xs text-primary hover:underline">{t('action.open')}</button>
-                  <button onClick={() => handleRemoveSubscribedList(l.uri)} className="text-xs text-red-400 hover:text-red-500"><Icon name="x" size={16} /></button>
+                  <button onClick={() => handleOpenList(l.uri)} className="text-xs text-primary hover:underline">{t('action.open')}</button>
+                  <button onClick={() => handleUnsubscribeList(l.uri)} className="text-xs text-red-400 hover:text-red-500"><Icon name="x" size={16} /></button>
                 </div>
               ))}
             </div>
