@@ -80,9 +80,9 @@
 | **标记决策应用到帖子** | ✅ | ✅ | v0.14.1: 列表级批量处理 — useModerationBatch hook + 6 个组件集成 |
 | **标签服务失败检测** | ✅ | ✅ | v0.14.1: 按提供商失败追踪，指数退避重试(3次)，失败通知(banner/toast) |
 | **标签服务失效配置** | ✅ | ✅ | v0.14.1: 每标签提供商可配置 failureBehavior (silent/banner/block) |
-| **标记 UI 重构** | ⬜ | ⬜ | v0.15.0: PostPreviewCard + PostFullCard + ContentHiddenCard + MediaBlurOverlay + Blob 标签订询 |
-| **统一帖子加载管道** | ⬜ | ⬜ | v0.15.0: usePostModeration hook — 所有帖子走统一 moderation 流程 |
-| **引用帖子标记** | ⬜ | ⬜ | v0.15.0: 引用帖子独立 moderation，媒体模糊 |
+| **标记 UI 重构** | ✅ | ✅ | v0.15.0: 3 种渲染模式 — HiddenBanner/ContentWarningOverlay/ModerationLabelBar + BadgeRow，官方 bsky.app 风格 |
+| **统一帖子加载管道** | ✅ | ✅ | v0.15.0: useModerationBatch (blob-aware) + usePostModeration — 所有帖子走统一 moderation 流程 |
+| **引用帖子标记** | ✅ | ✅ | v0.15.0: 引用帖子共享父帖 moderation decision，媒体模糊通过 blob 级标签 |
 
 ## 图例
 

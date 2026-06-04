@@ -292,42 +292,47 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/app/src/stores/cache.ts` | 模块级数据缓存层 |
 | `packages/app/src/hooks/useVirtualizedList.ts` | 统一虚拟滚动 + 高度缓存 + 位置恢复 |
 
-## v0.15.0 标记系统 (Labeling System) — 2026-05-24
+## v0.15.0 标记系统 (Labeling System) — 2026-05-28 ✅ COMPLETE
 
 ### 核心组件
-- **决策引擎**: `packages/core/src/moderation.ts` — `resolveModeration()`, `DEFAULT_MODERATION_CONFIG`, `STANDARD_LABELS`
-- **标签缓存**: `packages/core/src/moderation-cache.ts` — `LabelCache` batch queries (up to 250 URIs), TTL=5min
-- **React Hook**: `packages/app/src/hooks/useModeration.ts` — `useModeration()` + `resolveModerationBatch()`
+- **决策引擎**: `packages/core/src/moderation.ts` — `resolveModeration()`, 3-value system (show/warn/hide), blurs mapping (content/media/none)
+- **标签缓存**: `packages/core/src/moderation-cache.ts` — `LabelCache` batch queries (up to 250 URIs), TTL=5min, per-labeler failure tracking
+- **批量 Hook**: `packages/app/src/hooks/useModerationPipeline.ts` — `useModerationBatch()` with blob support + incremental resolution
 - **配置存储**: `packages/pwa/src/hooks/useModerationConfig.ts` — localStorage persistence
 
-### PWA UI (已完成)
-- **ModerationSettingsTab** — Adult toggle switch (bsky.app style), per-label cards with descriptions, segmented buttons (show/warn/hide), feedback banners
-- **ModerationOverlay** — HiddenContent / WarningContent / BlurredMedia / BadgeRow / LabelSourceInfo
+### PWA UI — 三种渲染模式 (v0.15.0)
+
+| 模式 | 触发条件 | 组件 | 效果 |
+|------|---------|------|------|
+| **Hide** | `contentAction='hide'` | `HiddenBanner` | 替换整个帖子为横幅 |
+| **Content Warning** | `contentAction='warn'` + blurs='content' | `ContentWarningOverlay` | 模糊覆盖文字+媒体+引用，保留作者+互动 |
+| **Media Blur** | `mediaAction='blur'` + blurs='media' | `ModerationLabelBar` | 文字可见，媒体 CSS blur + show/hide 切换 |
+| **Badge** | `blurs='none'` | `BadgeRow` | 作者下方小蓝徽章 |
+
+- **ModerationSettingsTab** — Adult toggle, per-label config, per-labeler failureBehavior
+- **ModerationLabelBar** — Compact bar: info icon + label name + show/hide toggle + expandable details
+- **ContentWarningOverlay** — Official bsky.app style: blurred background + centered overlay
+- **HiddenBanner** — Full-post replacement
+- **LabelDetailModal** — Full label source details
 - **ReportButton** — Modal dialog in ThreadView
 - **WelcomeCard Step 5** — Moderation preferences onboarding
-- **#/settings route** — Full page (not modal), fixed height `h-dvh md:h-[calc(100dvh-3rem)]`, `overflow-y-auto` content area
+- **LabelerFailureBanner/Toast** — Per-provider failure notifications
 
 ### TUI UI (已完成)
 - **SettingsView** — `,` quick config, Tab: `🛡 审核`
-  - General subtab: adult toggle + 4 standard labels (hide/warn/ignore cycle)
+  - General subtab: adult toggle + 4 standard labels (hide/warn/show cycle)
   - Labelers subtab: enable/disable third-party labelers
-- **UnifiedThreadView** — `!` key to report post
+- **UnifiedThreadView** — `!` key to report post, async moderation fetching, `[HIDDEN]`/`[WARN]` overlays
 
-### 已知问题
-- ✅ **已修复 (2026-05-24)**: `useModerationBatch` React hook 创建，6 个列表组件集成（FeedTimeline, BookmarkPage, ProfilePage, SearchPage, ListDetailPage, ThreadView）
-- **ThreadView focused 帖子**: 主题帖/当前帖子使用内联渲染（非 PostCard）， moderation overlay 未应用
-
-### v0.15.0 计划 (Moderation UI Redesign)
-- **PostPreviewCard + PostFullCard**: 统一帖子显示组件，两种模式（预览/完整）
-- **ContentHiddenCard**: 透明化审核来源信息，显示哪个 labeler 标记了什么
-- **MediaBlurOverlay**: Twitter 风格媒体模糊，高 blur + 暗色覆盖，帖子其他部分完全可见
-- **Blob 标签订询**: 从 embed 提取 blob CID，构造 blob URI 查询媒体级标签
-- **引用帖子 moderation**: 引用帖子图片也支持 media blur
-- **统一 moderation hook**: `usePostModeration` — 所有帖子走相同 moderation 流程
-- **i18n 标签名**: 预留 `LABEL_I18N_KEYS` map，支持标签名称国际化
-- **Lucide 图标**: 替换所有 emoji（ThreadView 📭 → inbox icon）
-- **事件冒泡修复**: "显示内容"按钮阻止冒泡，原地展开不跳转
-- **详细计划**: `docs/plan/plan_moderation_ui_redesign.md`
+### 已修复问题 (2026-05-24 ~ 2026-05-28)
+- ✅ `useModerationBatch` blob-aware 导出修复（之前导出了无 blob 支持的旧版本）
+- ✅ 增量解析（分页时只解析新帖子）
+- ✅ 虚拟列表高度缓存失效（decisions 变化时自动清除）
+- ✅ TUI 异步 moderation 获取
+- ✅ `nudity` blurs 改为 'media'（匹配官方，只模糊媒体）
+- ✅ `ContentWarningOverlay` 用于 blurs='content' 标签（sexual/graphic-media）
+- ✅ blur 溢出修复（overflow-hidden rounded-lg）
+- ✅ ThreadView 重复 ModerationLabelBar 删除
 
 ### 内置标签服务 (10 verified active)
 1. `moderation.bsky.app` — Bluesky官方

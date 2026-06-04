@@ -64,6 +64,49 @@ if (newPosts.length === 0) {
 
 **Lesson**: TUI and PWA must use the SAME data sources. Divergence in data fetching = divergent user experience.
 
+## Issue 5: Wrong blurs Value for nudity Label (HIGH)
+
+**Symptom**: `nudity` labels were hiding text content (treating them like `sexual`/`graphic-media`), but official Bluesky behavior is to only blur media for nudity.
+
+**Root Cause**: `BUILTIN_LABEL_DEFINITIONS` in `packages/core/src/moderation.ts` had `nudity.blurs = 'content'`, but official behavior is `blurs = 'media'`.
+
+**Fix**: Changed `nudity` from `blurs: 'content'` to `blurs: 'media'`. This makes nudity labels render as `ModerationLabelBar` (compact bar) with media blur, keeping text fully visible.
+
+**Lesson**: When implementing features that match official behavior, verify the official defaults. Don't assume all adult labels have the same `blurs` value.
+
+## Issue 6: Content-Level Labels Lost Visual Warning (CRITICAL)
+
+**Symptom**: `sexual` and `graphic-media` labels (which correctly have `blurs='content'`) showed only badge rows at bottom after `ContentHiddenCard` was removed. No visual warning for the text content itself.
+
+**Root Cause**: In the migration from `ContentHiddenCard` to `ModerationLabelBar`, we assumed ALL labels should use the compact bar pattern. But `blurs='content'` means the ENTIRE content area should be covered, not just media.
+
+**Fix**: Added `ContentWarningOverlay` component that wraps the entire content area (text + media + quotes + external links) with a blurred background + overlay. Author info and interaction buttons remain visible.
+
+**Lesson**: Different `blurs` values require different UI treatments:
+- `blurs='content'` → Full content overlay (text + media)
+- `blurs='media'` → Compact bar + media-only blur
+- `blurs='none'` → Badge only
+
+## Issue 7: Blur Overflowing Boundaries (MEDIUM)
+
+**Symptom**: CSS `blur-xl` on images created a halo effect bleeding into the black background outside image boundaries.
+
+**Root Cause**: Gaussian blur extends beyond element boundaries by default. No `overflow-hidden` was applied to contain the blur.
+
+**Fix**: Added `overflow-hidden rounded-lg` wrapper around all blur containers in `PostPreviewCard` and `ThreadView`.
+
+**Lesson**: CSS `filter: blur()` ALWAYS extends beyond element boundaries. Any blur effect MUST be wrapped in `overflow-hidden`.
+
+## Issue 8: Duplicate ModerationLabelBar in ThreadView (MEDIUM)
+
+**Symptom**: ThreadView showed two identical `ModerationLabelBar` components stacked on top of each other.
+
+**Root Cause**: `ThreadView` rendered `ModerationLabelBar` in two separate places — once before quotedPost/translation content, and once before media content. Both used the same condition (`focusedModeration.mediaAction === 'blur'`), so they both appeared when media labels were present.
+
+**Fix**: Removed the duplicate bar, consolidated into single render before media content.
+
+**Lesson**: When refactoring components, use `grep` to find ALL occurrences of a component name. Don't assume there's only one render site.
+
 ## Architecture Pattern: Hook Export Verification
 
 When a project has multiple implementations:
@@ -84,12 +127,19 @@ When a project has multiple implementations:
 
 - `d6363fa`: fix(moderation): Correct useModerationBatch export + incremental resolution + virtual list cache invalidation
 - `a9e39d0`: fix(moderation): Integrate moderation decisions into virtual list components
+- `64dfd04`: feat(moderation): Implement official Bluesky-style moderation label bar
+- `6324419`: fix(moderation): ContentWarningOverlay + fix duplicate bars + blur overflow
 
 ## Files Changed
 
 - `packages/app/src/index.ts` — Fixed export source
 - `packages/app/src/hooks/useModerationPipeline.ts` — Incremental resolution in useModerationBatch
 - `packages/app/src/hooks/useVirtualizedList.ts` — Added `decisions` parameter + cache invalidation
+- `packages/core/src/moderation.ts` — Fixed nudity blurs from 'content' to 'media'
+- `packages/pwa/src/components/ContentWarningOverlay.tsx` — NEW: Content-level warning overlay
+- `packages/pwa/src/components/ModerationLabelBar.tsx` — NEW: Compact bar for media-level labels
+- `packages/pwa/src/components/PostPreviewCard.tsx` — 3-mode moderation rendering
+- `packages/pwa/src/components/ThreadView.tsx` — Removed duplicate bars, added overflow-hidden
 - `packages/pwa/src/components/FeedTimeline.tsx` — Height cache invalidation on decision changes
 - `packages/pwa/src/components/SearchPage.tsx` — Pass decisions to useVirtualizedList
 - `packages/pwa/src/components/ProfilePage.tsx` — Pass decisions to useVirtualizedList
