@@ -256,7 +256,7 @@ const ja: LocaleMessages = {
   'search.clearAll': 'すべて削除',
 
   'feed.switchFeed': 'フィード切替',
-  'feed.configureFeeds': 'フィード設定',
+  'feed.configureFeeds': 'タイムライン設定',
   'feed.defaultFeed': 'デフォルトフィード（起動時）',
   'feed.yourFeeds': 'あなたのフィード',
   'feed.noCustomFeeds': 'カスタムフィードはありません',
@@ -265,7 +265,11 @@ const ja: LocaleMessages = {
   'feed.unsubscribe': '解除',
   'feed.addFeedUri': 'フィードURIを入力 (at://...)',
   'feed.recommended': 'おすすめフィード',
+  'feed.subscribedLists': '購読中リスト',
   'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
+
+  'list.subscribeToTimeline': 'タイムラインに追加',
+  'list.unsubscribeFromTimeline': '購読解除',
 
   // ── DMs ──
   'nav.dm': 'メッセージ',

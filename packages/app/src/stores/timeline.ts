@@ -23,6 +23,10 @@ function shouldUseTimeline(feedUri?: string): boolean {
   return false;
 }
 
+function isListUri(uri: string): boolean {
+  return uri.includes('app.bsky.graph.list');
+}
+
 export function createTimelineStore(): TimelineStore {
   const store: TimelineStore = {
     posts: [],
@@ -36,9 +40,14 @@ export function createTimelineStore(): TimelineStore {
       store._notify();
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const res = shouldUseTimeline(feedUri)
-            ? await client.getTimeline(20)
-            : await client.getFeed(feedUri!, 20);
+          let res: { feed: Array<{ post: PostView }>; cursor?: string };
+          if (shouldUseTimeline(feedUri)) {
+            res = await client.getTimeline(20);
+          } else if (feedUri && isListUri(feedUri)) {
+            res = await client.getListFeed(feedUri, 20);
+          } else {
+            res = await client.getFeed(feedUri!, 20);
+          }
           store.posts = res.feed.map(f => f.post);
           store.cursor = res.cursor;
           store.error = null;
@@ -64,9 +73,14 @@ export function createTimelineStore(): TimelineStore {
       store._notify();
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const res: { feed: Array<{ post: PostView }>; cursor?: string } = shouldUseTimeline(feedUri)
-            ? await client.getTimeline(20, store.cursor)
-            : await client.getFeed(feedUri!, 20, store.cursor);
+          let res: { feed: Array<{ post: PostView }>; cursor?: string };
+          if (shouldUseTimeline(feedUri)) {
+            res = await client.getTimeline(20, store.cursor);
+          } else if (feedUri && isListUri(feedUri)) {
+            res = await client.getListFeed(feedUri, 20, store.cursor);
+          } else {
+            res = await client.getFeed(feedUri!, 20, store.cursor);
+          }
           store.posts = [...store.posts, ...res.feed.map(f => f.post)];
           store.cursor = res.cursor;
           store.error = null;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList, useModerationBatch, getFeedConfig, addSubscribedList, removeSubscribedList } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
@@ -37,10 +37,24 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const [editDesc, setEditDesc] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(() =>
+    getFeedConfig().subscribedLists.some(l => l.uri === listUri)
+  );
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const isOwnList = list?.creator?.did === client.getDID();
+
+  const handleSubscribe = () => {
+    if (!list) return;
+    addSubscribedList(listUri, list.name);
+    setIsSubscribed(true);
+  };
+
+  const handleUnsubscribe = () => {
+    removeSubscribedList(listUri);
+    setIsSubscribed(false);
+  };
 
   const {
     scrollRef: feedScrollRef,
@@ -95,6 +109,28 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                 <Icon name="trash-2" size={16} />
               </button>
             </>
+          )}
+          {!isOwnList && (
+            isSubscribed ? (
+              <button
+                onClick={handleUnsubscribe}
+                className="rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs px-3 py-1.5 transition-colors flex items-center gap-1"
+                title={t('list.unsubscribeFromTimeline')}
+                aria-label={t('list.unsubscribeFromTimeline')}
+              >
+                <Icon name="check" size={14} /> {t('list.unsubscribeFromTimeline')}
+              </button>
+            ) : (
+              <button
+                onClick={handleSubscribe}
+                disabled={!list}
+                className="rounded-full bg-surface hover:bg-primary/10 text-text-primary text-xs px-3 py-1.5 transition-colors disabled:opacity-50 flex items-center gap-1"
+                title={t('list.subscribeToTimeline')}
+                aria-label={t('list.subscribeToTimeline')}
+              >
+                <Icon name="plus" size={14} /> {t('list.subscribeToTimeline')}
+              </button>
+            )
           )}
           <button onClick={() => refresh()} disabled={loading} className="text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50" aria-label={t('action.refresh')}>
             <Icon name="refresh-cw" size={16} />

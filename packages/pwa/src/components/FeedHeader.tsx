@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed } from '@bsky/app';
+import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed, addSubscribedList, removeSubscribedList } from '@bsky/app';
 import { getFeedLabel, RECOMMENDED_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, FeedGeneratorView } from '@bsky/core';
@@ -20,6 +20,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   const [showMenu, setShowMenu] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [feeds, setFeeds] = useState(() => getFeedConfig().feeds);
+  const [subscribedLists, setSubscribedLists] = useState(() => getFeedConfig().subscribedLists);
   const [config, setConfig] = useState(() => getFeedConfig());
 
   const switchFeed = (uri: string) => {
@@ -27,9 +28,15 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
     setShowMenu(false);
   };
 
+  const switchList = (uri: string) => {
+    goTo({ type: 'listDetail', uri });
+    setShowMenu(false);
+  };
+
   const refreshFeeds = () => {
     const cfg = getFeedConfig();
     setFeeds(cfg.feeds);
+    setSubscribedLists(cfg.subscribedLists);
     setConfig(cfg);
   };
 
@@ -60,6 +67,21 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
                   {f.label}
                 </button>
               ))}
+              {subscribedLists.length > 0 && (
+                <>
+                  <div className="border-t border-border my-1" />
+                  {subscribedLists.map(l => (
+                    <button
+                      key={l.uri}
+                      onClick={() => switchList(l.uri)}
+                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-surface transition-colors text-text-primary flex items-center gap-2"
+                    >
+                      <Icon name="list" size={14} className="text-text-secondary/60" />
+                      {l.name}
+                    </button>
+                  ))}
+                </>
+              )}
               <div className="border-t border-border mt-1 pt-1">
                 <button
                   onClick={() => { setShowMenu(false); setShowConfig(true); }}
@@ -141,6 +163,16 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
     onClose();
   };
 
+  const handleRemoveSubscribedList = (uri: string) => {
+    const updated = removeSubscribedList(uri);
+    setConfig(updated);
+  };
+
+  const handleOpenSubscribedList = (uri: string) => {
+    goTo({ type: 'listDetail', uri });
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
@@ -178,6 +210,19 @@ function FeedConfigModal({ onClose, goTo, client }: { onClose: () => void; goTo:
               </div>
             ))}
           </div>
+
+          {config.subscribedLists.length > 0 && (
+            <div>
+              <p className="text-xs text-text-secondary mb-2">{t('feed.subscribedLists')}</p>
+              {config.subscribedLists.map(l => (
+                <div key={l.uri} className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
+                  <span className="flex-1 text-sm text-text-primary truncate">{l.name}</span>
+                  <button onClick={() => handleOpenSubscribedList(l.uri)} className="text-xs text-primary hover:underline">{t('action.open')}</button>
+                  <button onClick={() => handleRemoveSubscribedList(l.uri)} className="text-xs text-red-400 hover:text-red-500"><Icon name="x" size={16} /></button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div>
             <p className="text-xs text-text-secondary mb-2">{t('feed.addCustomFeed')}</p>

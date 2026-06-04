@@ -658,7 +658,7 @@ const zh: LocaleMessages = {
 
   // ── Feed ──
   'feed.switchFeed': '切换 Feed',
-  'feed.configureFeeds': '配置 Feed',
+  'feed.configureFeeds': '配置时间线',
   'feed.defaultFeed': '默认 Feed（启动时显示）',
   'feed.yourFeeds': '你的 Feed',
   'feed.noCustomFeeds': '暂未添加自定义 Feed',
@@ -667,7 +667,11 @@ const zh: LocaleMessages = {
   'feed.unsubscribe': '取消订阅',
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
+  'feed.subscribedLists': '订阅的列表',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',
+
+  'list.subscribeToTimeline': '订阅到时间线',
+  'list.unsubscribeFromTimeline': '取消订阅',
 
   // ── DMs ──
   'nav.dm': '私信',

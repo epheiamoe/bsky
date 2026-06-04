@@ -256,7 +256,7 @@ const en: LocaleMessages = {
   'search.clearAll': 'Clear All',
 
   'feed.switchFeed': 'Switch Feed',
-  'feed.configureFeeds': 'Configure Feeds',
+  'feed.configureFeeds': 'Configure Timeline',
   'feed.defaultFeed': 'Default Feed (on startup)',
   'feed.yourFeeds': 'Your Feeds',
   'feed.noCustomFeeds': 'No custom feeds added',
@@ -265,7 +265,11 @@ const en: LocaleMessages = {
   'feed.unsubscribe': 'Unsubscribe',
   'feed.addFeedUri': 'Enter Feed URI (at://...)',
   'feed.recommended': 'Recommended Feeds',
+  'feed.subscribedLists': 'Subscribed Lists',
   'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',
+
+  'list.subscribeToTimeline': 'Subscribe to Timeline',
+  'list.unsubscribeFromTimeline': 'Unsubscribe',
 
   // ── DMs ──
   'nav.dm': 'Messages',
