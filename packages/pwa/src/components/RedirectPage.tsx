@@ -75,6 +75,10 @@ export function RedirectPage({ pathname, client, onNavigate }: RedirectPageProps
 
         setResolvedView(view);
         setStatus('success');
+        // Clean up URL: remove /i/ prefix before navigation
+        if (window.history.replaceState) {
+          window.history.replaceState(null, '', '/');
+        }
         // Auto-navigate after a brief delay to show the user what's happening
         setTimeout(() => {
           onNavigate(view!);

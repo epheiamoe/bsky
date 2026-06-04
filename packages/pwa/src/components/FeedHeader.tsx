@@ -131,9 +131,9 @@ function FeedConfigModal({
   onClose: () => void; 
   goTo: (v: AppView) => void; 
   client?: BskyClient | null;
-  subscribedLists: import('@bsky/core').ListView[];
+  subscribedLists: Array<{ uri: string; name: string }>;
   listsLoading: boolean;
-  onUnsubscribe: (uri: string) => Promise<boolean>;
+  onUnsubscribe: (uri: string) => boolean;
 }) {
   const { t } = useI18n();
   const [config, setConfig] = useState(() => getFeedConfig());

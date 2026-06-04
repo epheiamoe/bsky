@@ -70,6 +70,8 @@ export {
   addFeed,
   removeFeed,
   setDefaultFeed,
+  addSubscribedList,
+  removeSubscribedList,
 } from './state/feedConfig.js';
 export type { FeedConfigData } from './state/feedConfig.js';
 

@@ -517,54 +517,6 @@ export class BskyClient {
     await this.deleteRecord(parsed.did, 'app.bsky.graph.listblock', parsed.rkey);
   }
 
-  async getSubscribedLists(limit = 50, cursor?: string): Promise<ListView[]> {
-    const did = this.getDID();
-    // 1. Get all follow records
-    const followsRes = await this.listRecords(did, 'app.bsky.graph.follow', limit, cursor);
-    const followRecords = followsRes.records;
-    // 2. Filter out list subscriptions (subject contains app.bsky.graph.list)
-    const listUris = followRecords
-      .filter(r => {
-        const subject = (r.value as Record<string, unknown>)?.subject as string;
-        return subject && subject.includes('app.bsky.graph.list');
-      })
-      .map(r => (r.value as Record<string, unknown>).subject as string);
-    // 3. Fetch list details
-    const lists = await Promise.all(
-      listUris.map(async uri => {
-        try {
-          const res = await this.getList(uri);
-          return res.list;
-        } catch {
-          return null;
-        }
-      })
-    );
-    return lists.filter((l): l is ListView => l !== null);
-  }
-
-  async subscribeToList(listUri: string): Promise<{ uri: string; cid: string }> {
-    const record = {
-      $type: 'app.bsky.graph.follow',
-      subject: listUri,
-      createdAt: new Date().toISOString(),
-    };
-    return this.createRecord(this.getDID(), 'app.bsky.graph.follow', record);
-  }
-
-  async unsubscribeFromList(listUri: string): Promise<void> {
-    const did = this.getDID();
-    // Find the follow record with matching subject
-    const followsRes = await this.listRecords(did, 'app.bsky.graph.follow', 100);
-    const match = followsRes.records.find(r => {
-      const subject = (r.value as Record<string, unknown>)?.subject as string;
-      return subject === listUri;
-    });
-    if (match) {
-      await this.deleteRecord(did, 'app.bsky.graph.follow', match.uri.split('/').pop() ?? '');
-    }
-  }
-
   async listNotifications(limit = 50, cursor?: string, priority?: boolean): Promise<ListNotificationsResponse> {
     const params: Record<string, string | number | boolean> = { limit };
     if (cursor) params.cursor = cursor;

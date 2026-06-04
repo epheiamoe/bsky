@@ -3,6 +3,7 @@ import type { FeedInfo } from '@bsky/core';
 
 export interface FeedConfigData {
   feeds: FeedInfo[];
+  subscribedLists: Array<{ uri: string; name: string }>;
   defaultFeedUri: string | null; // null = home timeline
 }
 
@@ -10,6 +11,7 @@ const STORAGE_KEY = 'bsky_feed_config';
 
 const DEFAULT_CONFIG: FeedConfigData = {
   feeds: [...RECOMMENDED_FEEDS],
+  subscribedLists: [],
   defaultFeedUri: null,
 };
 
@@ -18,8 +20,10 @@ export function getFeedConfig(): FeedConfigData {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_CONFIG };
     const parsed = JSON.parse(raw);
-    // Backward compatibility: remove old subscribedLists field if present
-    delete parsed.subscribedLists;
+    // Backward compatibility: ensure subscribedLists exists
+    if (!Array.isArray(parsed.subscribedLists)) {
+      parsed.subscribedLists = [];
+    }
     return { ...DEFAULT_CONFIG, ...parsed };
   } catch {
     return { ...DEFAULT_CONFIG };
@@ -50,6 +54,21 @@ export function removeFeed(uri: string): FeedConfigData {
 export function setDefaultFeed(feedUri: string | null): FeedConfigData {
   const config = getFeedConfig();
   config.defaultFeedUri = feedUri;
+  saveFeedConfig(config);
+  return config;
+}
+
+export function addSubscribedList(uri: string, name: string): FeedConfigData {
+  const config = getFeedConfig();
+  if (config.subscribedLists.some(l => l.uri === uri)) return config;
+  config.subscribedLists.push({ uri, name });
+  saveFeedConfig(config);
+  return config;
+}
+
+export function removeSubscribedList(uri: string): FeedConfigData {
+  const config = getFeedConfig();
+  config.subscribedLists = config.subscribedLists.filter(l => l.uri !== uri);
   saveFeedConfig(config);
   return config;
 }

@@ -46,7 +46,7 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
 
   const handleSubscribe = async () => {
     if (!list) return;
-    await subscribe(listUri);
+    subscribe(listUri, list.name);
   };
 
   const handleUnsubscribe = async () => {
