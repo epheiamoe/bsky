@@ -57,6 +57,18 @@ const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 // Module-level cache: post.uri → measured pixel height (survives mount/unmount)
 const _heightCache = new Map<string, number>();
 
+// Module-level cache: feed key → top visible anchor post + pixel offset within that post.
+// Used for URI-based restoration so image loading does not shift the perceived position.
+const _anchorCache = new Map<string, { uri: string | undefined; offset: number }>();
+
+function saveAnchor(key: string, anchor: { uri: string | undefined; offset: number }): void {
+  _anchorCache.set(key, anchor);
+}
+
+function getAnchor(key: string): { uri: string | undefined; offset: number } | undefined {
+  return _anchorCache.get(key);
+}
+
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
@@ -140,12 +152,31 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     if (restoredForRef.current === key) return;
     restoredForRef.current = key;
 
+    const anchor = getAnchor(key);
     const saved = getScrollTop(key);
+
+    // Prefer URI-based restoration: find the same top-visible post and restore
+    // the pixel offset within it. This survives image-loading height changes.
+    if (anchor?.uri && posts.some(p => p.uri === anchor.uri) && scrollRef.current) {
+      const idx = posts.findIndex(p => p.uri === anchor.uri);
+      requestAnimationFrame(() => {
+        virtualizer.scrollToIndex(idx, { align: 'start' });
+        requestAnimationFrame(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop += anchor.offset;
+          }
+          requestAnimationFrame(() => {
+            isTransitioningRef.current = false;
+          });
+        });
+      });
+      return;
+    }
+
+    // Fallback to raw pixel restoration.
     if (saved !== undefined && saved > 0 && scrollRef.current) {
-      // Defer until the virtualizer has had a chance to measure rows.
       requestAnimationFrame(() => {
         virtualizer.scrollToOffset(saved, { align: 'start' });
-        // Re-enable scroll reporting after the restoration frame has applied.
         requestAnimationFrame(() => {
           isTransitioningRef.current = false;
         });
@@ -153,7 +184,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     } else {
       isTransitioningRef.current = false;
     }
-  }, [feedUri, loading, virtualizer]);
+  }, [feedUri, loading, posts, virtualizer]);
 
   // ── Report scroll position to parent ──
   // During a feed transition the container height collapses to skeleton size and
@@ -161,8 +192,20 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   // saved position isn't overwritten.
   const reportScrollTop = useCallback(() => {
     if (!onScrollTopChange || !scrollRef.current || isTransitioningRef.current) return;
-    onScrollTopChange(scrollRef.current.scrollTop);
-  }, [onScrollTopChange]);
+    const top = scrollRef.current.scrollTop;
+    onScrollTopChange(top);
+
+    // Also snapshot the top-visible post as an anchor. This lets us restore by
+    // post URI on the next visit, avoiding drift from lazy-loaded images.
+    const key = `feed-${feedUri ?? 'following'}`;
+    const items = virtualizer.getVirtualItems();
+    const topItem = items[0];
+    if (topItem) {
+      const anchorUri = posts[topItem.index]?.uri;
+      const offset = top - topItem.start;
+      saveAnchor(key, { uri: anchorUri, offset });
+    }
+  }, [onScrollTopChange, feedUri, virtualizer, posts]);
 
   useEffect(() => {
     const el = scrollRef.current;
