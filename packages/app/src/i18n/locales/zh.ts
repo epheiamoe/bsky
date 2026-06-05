@@ -658,6 +658,7 @@ const zh: LocaleMessages = {
 
   // ── Feed ──
   'feed.switchFeed': '切换 Feed',
+  'feed.selectFeed': '选择切换的feed',
   'feed.configureFeeds': '配置时间线',
   'feed.defaultFeed': '默认 Feed（启动时显示）',
   'feed.yourFeeds': '你的 Feed',

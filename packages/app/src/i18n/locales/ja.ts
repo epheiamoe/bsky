@@ -256,6 +256,7 @@ const ja: LocaleMessages = {
   'search.clearAll': 'すべて削除',
 
   'feed.switchFeed': 'フィード切替',
+  'feed.selectFeed': 'フィードを選択',
   'feed.configureFeeds': 'タイムライン設定',
   'feed.defaultFeed': 'デフォルトフィード（起動時）',
   'feed.yourFeeds': 'あなたのフィード',

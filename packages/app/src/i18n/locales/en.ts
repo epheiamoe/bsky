@@ -256,6 +256,7 @@ const en: LocaleMessages = {
   'search.clearAll': 'Clear All',
 
   'feed.switchFeed': 'Switch Feed',
+  'feed.selectFeed': 'Select Feed',
   'feed.configureFeeds': 'Configure Timeline',
   'feed.defaultFeed': 'Default Feed (on startup)',
   'feed.yourFeeds': 'Your Feeds',
