@@ -35,6 +35,8 @@ export interface AppConfig {
   quotedPreviewLines: number;
   /** Thread post preview line count */
   threadPreviewLines: number;
+  /** Max posts to cache per feed in memory (sliding window). 0 = unlimited. */
+  feedCacheLimit: number;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -61,6 +63,7 @@ const DEFAULT_CONFIG: AppConfig = {
   postPreviewLines: 10,
   quotedPreviewLines: 8,
   threadPreviewLines: 8,
+  feedCacheLimit: 1000,
 };
 
 export function getAppConfig(): AppConfig {

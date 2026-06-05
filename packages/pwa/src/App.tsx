@@ -6,7 +6,7 @@ import { BskyClient } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { useModerationConfig } from './hooks/useModerationConfig.js';
-import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId, saveScrollTop, getScrollTop } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId, saveFeedScrollTop, getFeedScrollTop } from '@bsky/app';
 import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
@@ -67,8 +67,9 @@ export function App() {
   });
 
   const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession, profile } = useAuth();
+  const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
-  const timeline = useTimeline(client, feedUri);
+  const timeline = useTimeline(client, feedUri, appConfig.feedCacheLimit);
   const postActions = usePostActions(client);
   // Seed timeline posts into global like/repost state
   useEffect(() => { if (timeline.posts.length > 0) seedPostViewers(timeline.posts as any[]); }, [timeline.posts]);
@@ -79,7 +80,6 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed_v2'));
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const moderationConfigState = useModerationConfig();
   const profileScrollTopRef = useRef(0);
   const notifsScrollTopRef = useRef(0);
@@ -348,8 +348,8 @@ export function App() {
             error={timeline.error}
             loadMore={timeline.loadMore}
             refresh={timeline.refresh}
-            initialScrollTop={getScrollTop(`feed-${feedUri ?? 'following'}`) ?? 0}
-            onScrollTopChange={(top) => { saveScrollTop(`feed-${feedUri ?? 'following'}`, top); }}
+            initialScrollTop={getFeedScrollTop(feedUri) ?? 0}
+            onScrollTopChange={(top) => { saveFeedScrollTop(feedUri, top); }}
             feedUri={(currentView as { feedUri?: string }).feedUri}
             client={client}
             isLiked={postActions.isLiked}

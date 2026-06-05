@@ -63,6 +63,7 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
   const [postPreviewLines, setPostPreviewLines] = useState(config.postPreviewLines ?? 10);
   const [quotedPreviewLines, setQuotedPreviewLines] = useState(config.quotedPreviewLines ?? 8);
   const [threadPreviewLines, setThreadPreviewLines] = useState(config.threadPreviewLines ?? 8);
+  const [feedCacheLimit, setFeedCacheLimit] = useState(config.feedCacheLimit ?? 1000);
 
   // Detect current provider from baseUrl
   const currentProvider = useMemo(() => getProviderByBaseUrl(baseUrl), [baseUrl]);
@@ -144,7 +145,7 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
   };
 
   const savePreview = () => {
-    const updated = { ...config, postPreviewLines, quotedPreviewLines, threadPreviewLines };
+    const updated = { ...config, postPreviewLines, quotedPreviewLines, threadPreviewLines, feedCacheLimit };
     updateAppConfig(updated);
     onConfigChange(updated);
   };
@@ -576,6 +577,14 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
               value={threadPreviewLines} onChange={setThreadPreviewLines}
               min={2} max={12}
             />
+            <div className="border-t border-border pt-4">
+              <p className="text-text-secondary text-xs mb-3">{t('settings.feedCacheDesc')}</p>
+              <PreviewSlider
+                label={t('settings.feedCacheLimit')}
+                value={feedCacheLimit} onChange={setFeedCacheLimit}
+                min={100} max={5000} step={100}
+              />
+            </div>
             <button
               onClick={savePreview}
               className="w-full py-2 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-medium transition-colors"
@@ -600,15 +609,15 @@ export function SettingsPage({ config, onConfigChange, onRelogin, onLogout, onRe
   );
 }
 
-function PreviewSlider({ label, value, onChange, min, max }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number }) {
+function PreviewSlider({ label, value, onChange, min, max, step = 1 }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; step?: number }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
         <label className="text-sm text-text-primary">{label}</label>
-        <span className="text-sm text-text-secondary font-mono w-8 text-right">{value}</span>
+        <span className="text-sm text-text-secondary font-mono w-12 text-right">{value}</span>
       </div>
       <input
-        type="range" min={min} max={max}
+        type="range" min={min} max={max} step={step}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
         className="w-full accent-primary"

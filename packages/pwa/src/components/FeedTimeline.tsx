@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n, useModerationBatch, getScrollTop } from '@bsky/app';
+import { useI18n, useModerationBatch, isFeedCacheFull } from '@bsky/app';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
@@ -13,6 +13,7 @@ import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient } from '@bsky/core';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
+import { getAppConfig } from '../hooks/useAppConfig.js';
 
 interface FeedTimelineProps {
   goTo: (v: AppView) => void;
@@ -57,18 +58,6 @@ const ESTIMATED_POST_HEIGHT = 120; // px — rough estimate per post card
 // Module-level cache: post.uri → measured pixel height (survives mount/unmount)
 const _heightCache = new Map<string, number>();
 
-// Module-level cache: feed key → top visible anchor post + pixel offset within that post.
-// Used for URI-based restoration so image loading does not shift the perceived position.
-const _anchorCache = new Map<string, { uri: string | undefined; offset: number }>();
-
-function saveAnchor(key: string, anchor: { uri: string | undefined; offset: number }): void {
-  _anchorCache.set(key, anchor);
-}
-
-function getAnchor(key: string): { uri: string | undefined; offset: number } | undefined {
-  return _anchorCache.get(key);
-}
-
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
@@ -79,16 +68,12 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const prevDecisionsRef = useRef<Map<string, import('@bsky/core').ModerationDecision>>(new Map());
-  // Ref to latest posts so the restoration effect does not re-run on every post change.
-  const postsRef = useRef(posts);
-  postsRef.current = posts;
 
   // ── Invalidate height cache when moderation decisions change ──
   useEffect(() => {
     const prevDecisions = prevDecisionsRef.current;
     let hasChanges = false;
 
-    // Check for new or changed decisions
     for (const [uri, decision] of decisions) {
       const prev = prevDecisions.get(uri);
       if (!prev || prev.contentAction !== decision.contentAction || prev.mediaAction !== decision.mediaAction) {
@@ -97,7 +82,6 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
       }
     }
 
-    // Check for removed decisions (e.g., posts deleted from list)
     for (const uri of prevDecisions.keys()) {
       if (!decisions.has(uri)) {
         _heightCache.delete(uri);
@@ -128,88 +112,27 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     initialOffset: (initialScrollTop ?? 0) > 0 ? initialScrollTop : 0,
   });
 
-  // ── Restore scroll position when feed changes and data is loaded ──
+  // ── Restore scroll position when feed changes ──
+  // With per-feed caching the posts are already present, so we can restore
+  // immediately without waiting for a network load.
   const restoredForRef = useRef<string | null>(null);
-  const isTransitioningRef = useRef(false);
-  const prevFeedUriRef = useRef(feedUri);
-
-  // When feed changes, pause scroll reporting and reset container to top so the
-  // browser doesn't auto-clamp the old feed's saved position while skeletons render.
   useEffect(() => {
-    if (prevFeedUriRef.current === feedUri) return;
-    prevFeedUriRef.current = feedUri;
-    isTransitioningRef.current = true;
-    restoredForRef.current = null;
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [feedUri]);
-
-  useEffect(() => {
-    const key = `feed-${feedUri ?? 'following'}`;
-    // Wait until loading finishes and we have posts (or a definitive empty state).
-    if (loading) {
-      restoredForRef.current = null;
-      return;
-    }
+    const key = feedUri ?? 'following';
     if (restoredForRef.current === key) return;
     restoredForRef.current = key;
 
-    const currentPosts = postsRef.current;
-    const anchor = getAnchor(key);
-    const saved = getScrollTop(key);
-
-    // Prefer URI-based restoration: find the same top-visible post and restore
-    // the pixel offset within it. This survives image-loading height changes.
-    if (anchor?.uri && currentPosts.some(p => p.uri === anchor.uri) && scrollRef.current) {
-      const idx = currentPosts.findIndex(p => p.uri === anchor.uri);
+    if (posts.length > 0 && initialScrollTop !== undefined && initialScrollTop > 0 && scrollRef.current) {
       requestAnimationFrame(() => {
-        virtualizer.scrollToIndex(idx, { align: 'start' });
-        requestAnimationFrame(() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollTop += anchor.offset;
-          }
-          requestAnimationFrame(() => {
-            isTransitioningRef.current = false;
-          });
-        });
+        virtualizer.scrollToOffset(initialScrollTop, { align: 'start' });
       });
-      return;
     }
-
-    // Fallback to raw pixel restoration.
-    if (saved !== undefined && saved > 0 && scrollRef.current) {
-      requestAnimationFrame(() => {
-        virtualizer.scrollToOffset(saved, { align: 'start' });
-        requestAnimationFrame(() => {
-          isTransitioningRef.current = false;
-        });
-      });
-    } else {
-      isTransitioningRef.current = false;
-    }
-  }, [feedUri, loading, virtualizer]);
+  }, [feedUri, posts.length, initialScrollTop, virtualizer]);
 
   // ── Report scroll position to parent ──
-  // During a feed transition the container height collapses to skeleton size and
-  // the browser auto-clamps scrollTop; ignore those values so the old feed's
-  // saved position isn't overwritten.
   const reportScrollTop = useCallback(() => {
-    if (!onScrollTopChange || !scrollRef.current || isTransitioningRef.current) return;
-    const top = scrollRef.current.scrollTop;
-    onScrollTopChange(top);
-
-    // Also snapshot the top-visible post as an anchor. This lets us restore by
-    // post URI on the next visit, avoiding drift from lazy-loaded images.
-    const key = `feed-${feedUri ?? 'following'}`;
-    const items = virtualizer.getVirtualItems();
-    const topItem = items[0];
-    if (topItem) {
-      const anchorUri = posts[topItem.index]?.uri;
-      const offset = top - topItem.start;
-      saveAnchor(key, { uri: anchorUri, offset });
-    }
-  }, [onScrollTopChange, feedUri, virtualizer, posts]);
+    if (!onScrollTopChange || !scrollRef.current) return;
+    onScrollTopChange(scrollRef.current.scrollTop);
+  }, [onScrollTopChange]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -266,10 +189,11 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     </div>
   );
 
-  const settingsBtn = null;
-
   // Filter banner/block level failures for banner display
   const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
+  const cacheLimit = getAppConfig().feedCacheLimit ?? 1000;
+  const cacheFull = isFeedCacheFull(feedUri, cacheLimit);
 
   return (
     <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] animate-fadeIn">
@@ -360,7 +284,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         {/* Auto-load sentinel */}
         <div ref={sentinelRef} className="h-px" />
 
-        {cursor && (
+        {cursor && !cacheFull && (
           <div className="flex justify-center py-4">
             <button
               onClick={loadMore}
@@ -368,6 +292,19 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
               className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-6 py-2 disabled:opacity-50 transition-colors"
             >
               {loading ? t('action.loading') : t('action.loadMore')}
+            </button>
+          </div>
+        )}
+
+        {cacheFull && (
+          <div className="flex flex-col items-center gap-2 py-6 text-text-secondary">
+            <Icon name="bird" size={24} />
+            <p className="text-sm">{t('feed.cacheLimitReached', { limit: cacheLimit })}</p>
+            <button
+              onClick={refresh}
+              className="text-xs text-primary hover:underline"
+            >
+              {t('action.refresh')}
             </button>
           </div>
         )}
