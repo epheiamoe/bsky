@@ -268,6 +268,7 @@ const ja: LocaleMessages = {
   'feed.recommended': 'おすすめフィード',
   'feed.subscribedLists': '購読中リスト',
   'feed.openListDetails': 'リスト詳細を開く',
+  'feed.cacheLimitReached': '{limit}件をキャッシュしました — 更新して新しい投稿を表示',
   'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
 
   'list.subscribeToTimeline': 'タイムラインに追加',
@@ -481,6 +482,8 @@ const ja: LocaleMessages = {
   'settings.postPreviewLines': '投稿テキスト行数',
   'settings.quotedPreviewLines': '引用投稿行数',
   'settings.threadPreviewLines': 'スレッド投稿行数',
+  'settings.feedCacheDesc': 'フィードキャッシュ上限（スライディングウィンドウ）。超過時に古い投稿を自動削除。',
+  'settings.feedCacheLimit': 'フィードキャッシュ上限',
   'settings.savePreview': 'プレビュー設定を保存',
   'settings.restartWelcome': 'ウェルカム設定を再開',
 

@@ -513,6 +513,8 @@ const zh: LocaleMessages = {
   'settings.postPreviewLines': '帖子正文行数',
   'settings.quotedPreviewLines': '引用帖子行数',
   'settings.threadPreviewLines': 'Thread 帖子行数',
+  'settings.feedCacheDesc': 'Feed 缓存上限（滑动窗口）。超出后自动删除最早的帖子。',
+  'settings.feedCacheLimit': 'Feed 缓存上限',
   'settings.savePreview': '保存预览设置',
   'settings.restartWelcome': '重新进行欢迎设置',
 
@@ -670,6 +672,7 @@ const zh: LocaleMessages = {
   'feed.recommended': '推荐 Feed',
   'feed.subscribedLists': '订阅的列表',
   'feed.openListDetails': '进入列表详情',
+  'feed.cacheLimitReached': '已缓存 {limit} 条帖子 — 刷新以查看更新内容',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',
 
   'list.subscribeToTimeline': '订阅到时间线',

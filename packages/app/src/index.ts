@@ -19,6 +19,16 @@ export { useActiveFeed, getLastFeedUri, setLastFeedUri } from './hooks/useActive
 export { useScrollRestore, saveScrollTop, getScrollTop } from './hooks/useScrollRestore.js';
 export { useVirtualizedList } from './hooks/useVirtualizedList.js';
 export { hasCache } from './stores/cache.js';
+export {
+  getFeedCache,
+  setFeedCache,
+  appendToFeedCache,
+  saveFeedScrollTop,
+  getFeedScrollTop,
+  clearFeedCache,
+  isFeedCacheFull,
+  getFeedCacheSize,
+} from './stores/feedCache.js';
 export { saveViewState, getViewState } from './state/viewStateStore.js';
 export { usePostActions, isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers, seedPostViewer } from './hooks/usePostActions.js';
 export { useAIChat } from './hooks/useAIChat.js';

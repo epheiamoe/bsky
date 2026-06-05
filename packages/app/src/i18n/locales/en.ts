@@ -268,6 +268,7 @@ const en: LocaleMessages = {
   'feed.recommended': 'Recommended Feeds',
   'feed.subscribedLists': 'Subscribed Lists',
   'feed.openListDetails': 'Open List Details',
+  'feed.cacheLimitReached': 'Cached {limit} posts — refresh to see newer',
   'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',
 
   'list.subscribeToTimeline': 'Subscribe to Timeline',
@@ -410,6 +411,8 @@ const en: LocaleMessages = {
   'settings.postPreviewLines': 'Post text lines',
   'settings.quotedPreviewLines': 'Quoted post lines',
   'settings.threadPreviewLines': 'Thread post lines',
+  'settings.feedCacheDesc': 'Feed cache limit (sliding window). Older posts are removed when exceeded.',
+  'settings.feedCacheLimit': 'Feed cache limit',
   'settings.savePreview': 'Save Preview Settings',
   'settings.restartWelcome': 'Restart Welcome Setup',
 
