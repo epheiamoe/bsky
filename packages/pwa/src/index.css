@@ -35,6 +35,15 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Hide scrollbars while keeping scroll functionality (used by feed tab bar / expanded list) */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Markdown body styling ── */
 .markdown-body {
   line-height: 1.625;
