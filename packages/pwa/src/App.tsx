@@ -341,6 +341,7 @@ export function App() {
       case 'feed':
         return (
           <FeedTimeline
+            key={feedUri ?? 'following'}
             goTo={goTo}
             posts={timeline.posts}
             loading={timeline.loading}
@@ -350,7 +351,7 @@ export function App() {
             refresh={timeline.refresh}
             initialScrollTop={getFeedScrollTop(feedUri) ?? 0}
             onScrollTopChange={(top) => { saveFeedScrollTop(feedUri, top); }}
-            feedUri={(currentView as { feedUri?: string }).feedUri}
+            feedUri={feedUri}
             client={client}
             isLiked={postActions.isLiked}
             isReposted={postActions.isReposted}

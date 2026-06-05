@@ -121,7 +121,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     if (restoredForRef.current === key) return;
     restoredForRef.current = key;
 
-    if (posts.length > 0 && initialScrollTop !== undefined && initialScrollTop > 0 && scrollRef.current) {
+    if (posts.length > 0 && initialScrollTop !== undefined && initialScrollTop >= 0 && scrollRef.current) {
       requestAnimationFrame(() => {
         virtualizer.scrollToOffset(initialScrollTop, { align: 'start' });
       });
