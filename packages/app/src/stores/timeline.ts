@@ -6,6 +6,8 @@ export interface TimelineStore {
   loading: boolean;
   cursor: string | undefined;
   error: string | null;
+  /** URI of the feed currently being loaded; used to discard stale responses. */
+  _activeLoadUri?: string;
 
   load(client: BskyClient, feedUri?: string): Promise<void>;
   loadMore(client: BskyClient, feedUri?: string): Promise<void>;
@@ -36,6 +38,8 @@ export function createTimelineStore(): TimelineStore {
     listener: null,
 
     async load(client, feedUri) {
+      const targetUri = feedUri;
+      store._activeLoadUri = targetUri;
       store.loading = true;
       store._notify();
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -48,6 +52,8 @@ export function createTimelineStore(): TimelineStore {
           } else {
             res = await client.getFeed(feedUri!, 20);
           }
+          // Discard stale response if the user switched feeds while this request was in-flight.
+          if (store._activeLoadUri !== targetUri) return;
           store.posts = res.feed.map(f => f.post);
           store.cursor = res.cursor;
           store.error = null;
@@ -63,12 +69,16 @@ export function createTimelineStore(): TimelineStore {
           store.error = e instanceof Error ? e.message : String(e);
         }
       }
-      store.loading = false;
-      store._notify();
+      if (store._activeLoadUri === targetUri) {
+        store.loading = false;
+        store._notify();
+      }
     },
 
     async loadMore(client, feedUri) {
       if (!store.cursor || store.loading) return;
+      const targetUri = feedUri;
+      store._activeLoadUri = targetUri;
       store.loading = true;
       store._notify();
       for (let attempt = 0; attempt < 2; attempt++) {
@@ -81,6 +91,7 @@ export function createTimelineStore(): TimelineStore {
           } else {
             res = await client.getFeed(feedUri!, 20, store.cursor);
           }
+          if (store._activeLoadUri !== targetUri) return;
           store.posts = [...store.posts, ...res.feed.map(f => f.post)];
           store.cursor = res.cursor;
           store.error = null;
@@ -95,8 +106,10 @@ export function createTimelineStore(): TimelineStore {
           store.error = e instanceof Error ? e.message : String(e);
         }
       }
-      store.loading = false;
-      store._notify();
+      if (store._activeLoadUri === targetUri) {
+        store.loading = false;
+        store._notify();
+      }
     },
 
     async refresh(client, feedUri) {

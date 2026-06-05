@@ -79,6 +79,9 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const prevDecisionsRef = useRef<Map<string, import('@bsky/core').ModerationDecision>>(new Map());
+  // Ref to latest posts so the restoration effect does not re-run on every post change.
+  const postsRef = useRef(posts);
+  postsRef.current = posts;
 
   // ── Invalidate height cache when moderation decisions change ──
   useEffect(() => {
@@ -152,13 +155,14 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     if (restoredForRef.current === key) return;
     restoredForRef.current = key;
 
+    const currentPosts = postsRef.current;
     const anchor = getAnchor(key);
     const saved = getScrollTop(key);
 
     // Prefer URI-based restoration: find the same top-visible post and restore
     // the pixel offset within it. This survives image-loading height changes.
-    if (anchor?.uri && posts.some(p => p.uri === anchor.uri) && scrollRef.current) {
-      const idx = posts.findIndex(p => p.uri === anchor.uri);
+    if (anchor?.uri && currentPosts.some(p => p.uri === anchor.uri) && scrollRef.current) {
+      const idx = currentPosts.findIndex(p => p.uri === anchor.uri);
       requestAnimationFrame(() => {
         virtualizer.scrollToIndex(idx, { align: 'start' });
         requestAnimationFrame(() => {
@@ -184,7 +188,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     } else {
       isTransitioningRef.current = false;
     }
-  }, [feedUri, loading, posts, virtualizer]);
+  }, [feedUri, loading, virtualizer]);
 
   // ── Report scroll position to parent ──
   // During a feed transition the container height collapses to skeleton size and

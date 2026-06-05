@@ -25,6 +25,7 @@ export function useTimeline(client: BskyClient | null, feedUri?: string) {
       store.posts = [];
       store.cursor = undefined;
       store.error = null;
+      store._activeLoadUri = effFeedUri; // invalidate any in-flight load for the old feed
       loaded.current = false;
       store._notify();
     }
