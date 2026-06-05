@@ -115,6 +115,21 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
 
   // ── Restore scroll position when feed changes and data is loaded ──
   const restoredForRef = useRef<string | null>(null);
+  const isTransitioningRef = useRef(false);
+  const prevFeedUriRef = useRef(feedUri);
+
+  // When feed changes, pause scroll reporting and reset container to top so the
+  // browser doesn't auto-clamp the old feed's saved position while skeletons render.
+  useEffect(() => {
+    if (prevFeedUriRef.current === feedUri) return;
+    prevFeedUriRef.current = feedUri;
+    isTransitioningRef.current = true;
+    restoredForRef.current = null;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, [feedUri]);
+
   useEffect(() => {
     const key = `feed-${feedUri ?? 'following'}`;
     // Wait until loading finishes and we have posts (or a definitive empty state).
@@ -130,13 +145,22 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
       // Defer until the virtualizer has had a chance to measure rows.
       requestAnimationFrame(() => {
         virtualizer.scrollToOffset(saved, { align: 'start' });
+        // Re-enable scroll reporting after the restoration frame has applied.
+        requestAnimationFrame(() => {
+          isTransitioningRef.current = false;
+        });
       });
+    } else {
+      isTransitioningRef.current = false;
     }
   }, [feedUri, loading, virtualizer]);
 
   // ── Report scroll position to parent ──
+  // During a feed transition the container height collapses to skeleton size and
+  // the browser auto-clamps scrollTop; ignore those values so the old feed's
+  // saved position isn't overwritten.
   const reportScrollTop = useCallback(() => {
-    if (!onScrollTopChange || !scrollRef.current) return;
+    if (!onScrollTopChange || !scrollRef.current || isTransitioningRef.current) return;
     onScrollTopChange(scrollRef.current.scrollTop);
   }, [onScrollTopChange]);
 
