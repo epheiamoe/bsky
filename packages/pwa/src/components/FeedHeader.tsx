@@ -39,7 +39,7 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   const listTabs: TabItem[] = subscribedLists.map(l => ({ type: 'list', uri: l.uri, label: l.name }));
   const allTabs: TabItem[] = [...feedTabs, ...listTabs];
 
-  const isCurrent = (tab: TabItem) => tab.type === 'feed' && tab.uri === effectiveFeedUri;
+  const isCurrent = (tab: TabItem) => tab.uri === effectiveFeedUri;
   const currentTab = allTabs.find(isCurrent);
 
   // Collapse expanded list on outside click.
@@ -76,19 +76,14 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
   const handleTabClick = (tab: TabItem) => {
     if (isCurrent(tab)) {
       setExpanded(true);
-    } else if (tab.type === 'feed') {
-      goTo({ type: 'feed', feedUri: tab.uri });
     } else {
-      goTo({ type: 'listDetail', uri: tab.uri });
+      // Both feeds and subscribed lists can be rendered as a timeline source.
+      goTo({ type: 'feed', feedUri: tab.uri });
     }
   };
 
   const handleItemClick = (tab: TabItem) => {
-    if (tab.type === 'feed') {
-      goTo({ type: 'feed', feedUri: tab.uri });
-    } else {
-      goTo({ type: 'listDetail', uri: tab.uri });
-    }
+    goTo({ type: 'feed', feedUri: tab.uri });
     setExpanded(false);
   };
 
@@ -278,6 +273,29 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
                               />
                               <Icon name="list" size={14} className="text-text-secondary/60 flex-shrink-0" />
                               <span className="flex-1 truncate">{tab.label}</span>
+                              {active && (
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={e => {
+                                    e.stopPropagation();
+                                    setExpanded(false);
+                                    goTo({ type: 'listDetail', uri: tab.uri });
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.stopPropagation();
+                                      setExpanded(false);
+                                      goTo({ type: 'listDetail', uri: tab.uri });
+                                    }
+                                  }}
+                                  className="ml-auto p-1.5 text-text-secondary hover:text-primary rounded-full hover:bg-surface/80 transition-colors"
+                                  aria-label={t('feed.openListDetails')}
+                                  title={t('feed.openListDetails')}
+                                >
+                                  <Icon name="arrow-big-right" size={14} />
+                                </span>
+                              )}
                             </button>
                           );
                         })}

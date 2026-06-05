@@ -6,7 +6,7 @@ import { BskyClient } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { useModerationConfig } from './hooks/useModerationConfig.js';
-import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId, saveScrollTop, getScrollTop } from '@bsky/app';
 import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
@@ -81,7 +81,6 @@ export function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const moderationConfigState = useModerationConfig();
-  const feedScrollTopRef = useRef(0);
   const profileScrollTopRef = useRef(0);
   const notifsScrollTopRef = useRef(0);
   const searchScrollTopRef = useRef(0);
@@ -349,8 +348,8 @@ export function App() {
             error={timeline.error}
             loadMore={timeline.loadMore}
             refresh={timeline.refresh}
-            initialScrollTop={feedScrollTopRef.current}
-            onScrollTopChange={(top) => { feedScrollTopRef.current = top; }}
+            initialScrollTop={getScrollTop(`feed-${feedUri ?? 'following'}`) ?? 0}
+            onScrollTopChange={(top) => { saveScrollTop(`feed-${feedUri ?? 'following'}`, top); }}
             feedUri={(currentView as { feedUri?: string }).feedUri}
             client={client}
             isLiked={postActions.isLiked}

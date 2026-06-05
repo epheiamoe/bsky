@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n, useModerationBatch } from '@bsky/app';
+import { useI18n, useModerationBatch, getScrollTop } from '@bsky/app';
 import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
@@ -112,6 +112,27 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     overscan: 5,
     initialOffset: (initialScrollTop ?? 0) > 0 ? initialScrollTop : 0,
   });
+
+  // ── Restore scroll position when feed changes and data is loaded ──
+  const restoredForRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `feed-${feedUri ?? 'following'}`;
+    // Wait until loading finishes and we have posts (or a definitive empty state).
+    if (loading) {
+      restoredForRef.current = null;
+      return;
+    }
+    if (restoredForRef.current === key) return;
+    restoredForRef.current = key;
+
+    const saved = getScrollTop(key);
+    if (saved !== undefined && saved > 0 && scrollRef.current) {
+      // Defer until the virtualizer has had a chance to measure rows.
+      requestAnimationFrame(() => {
+        virtualizer.scrollToOffset(saved, { align: 'start' });
+      });
+    }
+  }, [feedUri, loading, virtualizer]);
 
   // ── Report scroll position to parent ──
   const reportScrollTop = useCallback(() => {
