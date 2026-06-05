@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig } from '@bsky/app';
@@ -92,9 +92,24 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [showFeedConfig, setShowFeedConfig] = useState(false);
   const [feedConfigInput, setFeedConfigInput] = useState('');
 
+  const { lists: subscribedLists } = useSubscribedLists(client);
+  const allFeedUris = useMemo(() => {
+    const uris = [...feedConfig];
+    for (const l of subscribedLists) {
+      if (!uris.includes(l.uri)) uris.push(l.uri);
+    }
+    return uris;
+  }, [feedConfig, subscribedLists]);
+
   const effectiveFeedUri = currentFeedUri ?? defaultFeedUri;
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client, effectiveFeedUri);
-  const [feedIdx, setFeedIdx] = useState(0);
+
+  // Per-feed selected index so switching feeds preserves the last cursor position.
+  const feedIdxMapRef = useRef<Map<string, number>>(new Map());
+  const [feedIdx, setFeedIdx] = useState(() => feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
+  useEffect(() => {
+    setFeedIdx(feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
+  }, [effectiveFeedUri]);
 
   // Track last active feed URI for sidebar/home navigation (shared PWA+TUI)
   useEffect(() => {
@@ -296,8 +311,22 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (creatingList || editingListUri) return;
 
     // Arrows — feed + bookmarks
-    if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
-    if (key.downArrow && currentView.type === 'feed') { setFeedIdx(i => Math.min(posts.length - 1, i + 1)); return; }
+    if (key.upArrow && currentView.type === 'feed') {
+      setFeedIdx(i => {
+        const next = Math.max(0, i - 1);
+        feedIdxMapRef.current.set(effectiveFeedUri ?? 'following', next);
+        return next;
+      });
+      return;
+    }
+    if (key.downArrow && currentView.type === 'feed') {
+      setFeedIdx(i => {
+        const next = Math.min(posts.length - 1, i + 1);
+        feedIdxMapRef.current.set(effectiveFeedUri ?? 'following', next);
+        return next;
+      });
+      return;
+    }
     if (key.upArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1)); return; }
 
@@ -776,22 +805,31 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
             <Box height={1}>
-              <Text bold>{'📋 '}{t('nav.feed')}{effectiveFeedUri ? ' - ' + getFeedLabel(effectiveFeedUri) : ''}</Text>
+              <Text bold>
+                {'📋 '}
+                {t('nav.feed')}
+                {effectiveFeedUri
+                  ? ' - ' + (isListUri(effectiveFeedUri)
+                    ? (subscribedLists.find(l => l.uri === effectiveFeedUri)?.name ?? getFeedLabel(effectiveFeedUri))
+                    : getFeedLabel(effectiveFeedUri))
+                  : ''}
+              </Text>
               <Text dimColor>{' '}{showFeedConfig ? 'Esc:关闭' : t('keys.feed')}</Text>
             </Box>
-            {showFeedConfig ? (
-              <FeedConfigOverlay
-                feeds={feedConfig}
-                currentFeedUri={effectiveFeedUri}
-                defaultFeedUri={defaultFeedUri}
-                client={client}
-                onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
-                onSetDefault={(uri) => setDefaultFeedUri(uri)}
-                onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
-                onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
-                onClose={() => setShowFeedConfig(false)}
-              />
-            ) : (
+              {showFeedConfig ? (
+                <FeedConfigOverlay
+                  feeds={allFeedUris}
+                  subscribedLists={subscribedLists}
+                  currentFeedUri={effectiveFeedUri}
+                  defaultFeedUri={defaultFeedUri}
+                  client={client}
+                  onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
+                  onSetDefault={(uri) => setDefaultFeedUri(uri)}
+                  onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
+                  onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
+                  onClose={() => setShowFeedConfig(false)}
+                />
+              ) : (
               <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
             )}
           </Box>
@@ -1061,8 +1099,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   );
 }
 
-function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSelect, onSetDefault, onAdd, onRemove, onClose }: {
+function isListUri(uri: string): boolean {
+  return uri.includes('app.bsky.graph.list');
+}
+
+function FeedConfigOverlay({ feeds, subscribedLists, currentFeedUri, defaultFeedUri, client, onSelect, onSetDefault, onAdd, onRemove, onClose }: {
   feeds: string[];
+  subscribedLists: Array<{ uri: string; name: string }>;
   currentFeedUri: string | undefined;
   defaultFeedUri: string | undefined;
   client: BskyClient | null;
@@ -1077,6 +1120,14 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
   const [addInput, setAddInput] = useState('');
   const [suggested, setSuggested] = useState<Array<{ uri: string; label: string }>>([]);
   const [loadingSuggested, setLoadingSuggested] = useState(false);
+
+  const getItemLabel = (uri: string) => {
+    if (isListUri(uri)) {
+      const list = subscribedLists.find(l => l.uri === uri);
+      return list ? `📋 ${list.name}` : getFeedLabel(uri);
+    }
+    return getFeedLabel(uri);
+  };
 
   useEffect(() => {
     if (!client) return;
@@ -1130,7 +1181,7 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
       <Box flexDirection="column" marginTop={1}>
         {feeds.map((f, i) => (
           <Text key={f} color={i === idx ? 'cyan' : undefined}>
-            {i === idx ? '▸' : ' '} {f === defaultFeedUri ? '★ ' : '  '}{getFeedLabel(f)}
+            {i === idx ? '▸' : ' '} {f === defaultFeedUri ? '★ ' : '  '}{getItemLabel(f)}
           </Text>
         ))}
         <Text dimColor>{'┈┈ 推荐 Feed ┈┈'}</Text>
