@@ -669,6 +669,7 @@ const zh: LocaleMessages = {
   'feed.addFeedUri': '输入 Feed URI (at://...)',
   'feed.recommended': '推荐 Feed',
   'feed.subscribedLists': '订阅的列表',
+  'feed.openListDetails': '进入列表详情',
   'feed.noSuggestedFeeds': '未能获取推荐 Feed，请检查网络',
 
   'list.subscribeToTimeline': '订阅到时间线',

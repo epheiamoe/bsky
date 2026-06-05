@@ -267,6 +267,7 @@ const en: LocaleMessages = {
   'feed.addFeedUri': 'Enter Feed URI (at://...)',
   'feed.recommended': 'Recommended Feeds',
   'feed.subscribedLists': 'Subscribed Lists',
+  'feed.openListDetails': 'Open List Details',
   'feed.noSuggestedFeeds': 'Could not load suggested feeds, check network',
 
   'list.subscribeToTimeline': 'Subscribe to Timeline',

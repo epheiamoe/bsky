@@ -267,6 +267,7 @@ const ja: LocaleMessages = {
   'feed.addFeedUri': 'フィードURIを入力 (at://...)',
   'feed.recommended': 'おすすめフィード',
   'feed.subscribedLists': '購読中リスト',
+  'feed.openListDetails': 'リスト詳細を開く',
   'feed.noSuggestedFeeds': 'おすすめフィードを取得できませんでした、ネットワークを確認してください',
 
   'list.subscribeToTimeline': 'タイムラインに追加',
