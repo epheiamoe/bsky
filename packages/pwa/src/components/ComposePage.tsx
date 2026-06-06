@@ -503,6 +503,17 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     }
   }, [processFiles]);
 
+  // Paste images from clipboard
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const files = Array.from(e.clipboardData.files);
+    const imageFiles = files.filter(f => f.type.startsWith('image/'));
+    if (imageFiles.length > 0 && focusedPostId) {
+      e.preventDefault();
+      processFiles(focusedPostId, imageFiles);
+    }
+    // If no image files, let default paste behavior handle text
+  }, [focusedPostId, processFiles]);
+
   const openAltModal = (postId: string, imgIdx: number, img: LocalImage) => {
     setAltModalPostId(postId);
     setAltModalImageIdx(imgIdx);
@@ -538,7 +549,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const totalCharCount = posts.reduce((sum, p) => sum + p.text.length, 0);
 
   return (
-    <div className="min-h-[100dvh] bg-background animate-fadeIn">
+    <div className="min-h-[100dvh] bg-background animate-fadeIn" onPaste={handlePaste}>
       {/* ── Top bar ── */}
       <header className="sticky top-0 z-10 bg-white/80 dark:bg-[#0A0A0A]/80 backdrop-blur-md border-b border-border">
         <div className="max-w-content mx-auto px-4 h-14 flex items-center justify-between">
