@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
 import { createTimelineStore } from '../stores/timeline.js';
 import type { TimelineStore } from '../stores/timeline.js';
 import type { BskyClient } from '@bsky/core';
@@ -13,10 +13,16 @@ export function useTimeline(client: BskyClient | null, feedUri?: string, cacheLi
   const lastGoodFeed = useRef<string | undefined>(undefined);
 
   const effFeedUri = feedUri ?? lastGoodFeed.current;
-  if (feedUri !== undefined) lastGoodFeed.current = feedUri;
-  if (lastFeed.current === undefined && effFeedUri !== undefined) {
-    lastFeed.current = effFeedUri;
-  }
+
+  // Move ref updates out of render phase to avoid React StrictMode / concurrent issues
+  useLayoutEffect(() => {
+    if (feedUri !== undefined) {
+      lastGoodFeed.current = feedUri;
+    }
+    if (lastFeed.current === undefined && effFeedUri !== undefined) {
+      lastFeed.current = effFeedUri;
+    }
+  }, [feedUri, effFeedUri]);
 
   // Feed change: restore from cache if available, otherwise reset and load.
   useEffect(() => {
@@ -51,7 +57,10 @@ export function useTimeline(client: BskyClient | null, feedUri?: string, cacheLi
     }
   }, [client, store, effFeedUri, cacheLimit]);
 
-  useEffect(() => store.subscribe(tick), [store, tick]);
+  useEffect(() => {
+    const unsubscribe = store.subscribe(tick);
+    return unsubscribe;
+  }, [store, tick]);
 
   const loadMore = useCallback(async () => {
     if (client) await store.loadMore(client, effFeedUri, cacheLimit);
