@@ -168,10 +168,12 @@ export function useModeration(
 export async function resolveModerationBatch(
   subjects: Array<{ uri: string; labels?: Label[] }>,
   config: ModerationConfig,
-  client: BskyClient
+  client: BskyClient,
+  labelCache?: LabelCache,
+  policiesCache?: LabelerPoliciesCache
 ): Promise<ModerationBatchResult> {
-  const cache = new LabelCache();
-  const policiesCache: LabelerPoliciesCache = {};
+  const cache = labelCache || new LabelCache();
+  const policiesCacheInstance: LabelerPoliciesCache = policiesCache || {};
 
   const activeLabelers = config.labelers.filter(l => l.isActive);
   const activeDids = activeLabelers.map(l => l.did);
@@ -186,7 +188,7 @@ export async function resolveModerationBatch(
   }
 
   // Fetch policies once
-  const definitions = await fetchLabelerPolicies(client, activeDids, policiesCache);
+  const definitions = await fetchLabelerPolicies(client, activeDids, policiesCacheInstance);
 
   const labelerNames = new Map<string, string>();
   for (const l of config.labelers) {
@@ -203,7 +205,7 @@ export async function resolveModerationBatch(
   // [v0.14.1] Collect failed labelers
   const failedLabelers: FailedLabelerInfo[] = [];
   const failedStates = cache.getFailedLabelers();
-  
+
   for (const state of failedStates) {
     const labeler = activeLabelers.find(l => l.did === state.did);
     if (labeler) {
@@ -222,9 +224,11 @@ export async function resolveModerationBatch(
 /**
  * React hook for batch moderation decisions on a list of posts.
  * Automatically recalculates when posts, config, or client changes.
- * 
+ *
  * [v0.14.1] Now returns failed labelers and loading state.
- * 
+ * [v0.14.1] Incremental resolution: only processes new posts on each render,
+ * reusing the LabelCache across batches for efficiency.
+ *
  * @param posts — Array of posts/flatLines with uri and optional labels
  * @param config — User's moderation configuration
  * @param client — BskyClient instance
@@ -241,29 +245,58 @@ export function useModerationBatch(
     isLoading: false,
   });
 
+  // [v0.14.1] Persist label cache and processed URIs across renders for incremental resolution
+  const labelCacheRef = useRef(new LabelCache());
+  const processedUrisRef = useRef(new Set<string>());
+  const policiesCacheRef = useRef<LabelerPoliciesCache>({});
+
+  // Reset caches when config or client changes fundamentally
+  useEffect(() => {
+    labelCacheRef.current.clear();
+    processedUrisRef.current.clear();
+    policiesCacheRef.current = {};
+    setResult({
+      decisions: new Map(),
+      failedLabelers: [],
+      isLoading: false,
+    });
+  }, [config, client]);
+
   useEffect(() => {
     if (!client || posts.length === 0) {
       setResult({ decisions: new Map(), failedLabelers: [], isLoading: false });
       return;
     }
 
+    // Only process posts we haven't seen before
+    const newPosts = posts.filter(p => !processedUrisRef.current.has(p.uri));
+    if (newPosts.length === 0) return;
+
+    // Mark as processed before async to prevent duplicate in-flight requests
+    newPosts.forEach(p => processedUrisRef.current.add(p.uri));
+
     setResult(prev => ({ ...prev, isLoading: true }));
-    
+
     let cancelled = false;
-    resolveModerationBatch(posts, config, client).then(res => {
-      if (!cancelled) setResult({
-        decisions: res.decisions,
-        failedLabelers: res.failedLabelers,
-        isLoading: false,
+    resolveModerationBatch(newPosts, config, client, labelCacheRef.current, policiesCacheRef.current)
+      .then(res => {
+        if (!cancelled) {
+          setResult(prev => ({
+            decisions: new Map([...prev.decisions, ...res.decisions]),
+            // LabelCache maintains cumulative failure state across batches
+            failedLabelers: res.failedLabelers,
+            isLoading: false,
+          }));
+        }
+      })
+      .catch(() => {
+        // Silently fail — moderation is best-effort
+        if (!cancelled) setResult({
+          decisions: new Map(),
+          failedLabelers: [],
+          isLoading: false,
+        });
       });
-    }).catch(() => {
-      // Silently fail — moderation is best-effort
-      if (!cancelled) setResult({
-        decisions: new Map(),
-        failedLabelers: [],
-        isLoading: false,
-      });
-    });
 
     return () => { cancelled = true; };
   }, [posts, config, client]);
