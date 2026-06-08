@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { ModerationDecision } from '@bsky/core';
 import { useI18n, getLabelName } from '@bsky/app';
 
@@ -22,6 +22,16 @@ interface ContentWarningOverlayProps {
 export function ContentWarningOverlay({ decision, children }: ContentWarningOverlayProps) {
   const { t } = useI18n();
   const [revealed, setRevealed] = useState(false);
+  const blurRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // `inert` removes the subtree from the accessibility tree and blocks all
+    // user interactions.  We set it imperatively so we do not need to fight
+    // React’s (older) JSX typings.
+    if (blurRef.current) {
+      blurRef.current.inert = true;
+    }
+  }, []);
 
   if (revealed) {
     return <>{children}</>;
@@ -29,8 +39,12 @@ export function ContentWarningOverlay({ decision, children }: ContentWarningOver
 
   return (
     <div className="relative">
-      {/* Blurred content underneath */}
-      <div className="blur-sm brightness-75 select-none pointer-events-none">
+      {/* Blurred content underneath — hidden from screen readers */}
+      <div
+        ref={blurRef}
+        className="blur-sm brightness-75 select-none pointer-events-none"
+        aria-hidden="true"
+      >
         {children}
       </div>
 
@@ -69,6 +83,7 @@ export function ContentWarningOverlay({ decision, children }: ContentWarningOver
             e.stopPropagation();
             setRevealed(true);
           }}
+          aria-expanded={revealed}
           className="px-4 py-1.5 rounded-full bg-surface border border-border text-text-primary text-sm font-medium hover:bg-surface/80 transition-colors"
         >
           {t('moderation.showContent')}
