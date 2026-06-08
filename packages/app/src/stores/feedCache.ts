@@ -51,10 +51,9 @@ export function appendToFeedCache(
   const combined = [...existing.posts, ...posts];
   let trimmed = 0;
 
-  // Sliding window: if over limit, trim oldest batch.
+  // Strict limit enforcement: remove all excess posts.
   if (combined.length > limit) {
-    const excess = combined.length - limit;
-    trimmed = Math.min(excess, TRIM_BATCH);
+    trimmed = combined.length - limit;
     combined.splice(0, trimmed);
   }
 
