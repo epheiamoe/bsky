@@ -106,11 +106,29 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [listsError, setListsError] = useState<string | null>(null);
   const [submitProgress, setSubmitProgress] = useState<SubmitProgress>({ visible: false, phase: 'media', current: 0, total: 0, message: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const perPostImagesRef = useRef<Map<string, LocalImage[]>>(perPostImages);
+  const perPostVideosRef = useRef<Map<string, LocalVideo | null>>(perPostVideos);
   const [fileTargetPostId, setFileTargetPostId] = useState<string | null>(null);
   const [polishTargetPostId, setPolishTargetPostId] = useState<string | null>(null);
   const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const [showPostedOverlay, setShowPostedOverlay] = useState(false);
   const postedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep refs in sync with latest state for unmount cleanup
+  useEffect(() => { perPostImagesRef.current = perPostImages; }, [perPostImages]);
+  useEffect(() => { perPostVideosRef.current = perPostVideos; }, [perPostVideos]);
+
+  // Cleanup all blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      for (const imgs of perPostImagesRef.current.values()) {
+        imgs.forEach(img => URL.revokeObjectURL(img.preview));
+      }
+      for (const vid of perPostVideosRef.current.values()) {
+        if (vid) URL.revokeObjectURL(vid.preview);
+      }
+    };
+  }, []);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [emojiTargetPostId, setEmojiTargetPostId] = useState<string | null>(null);
   const [altModalOpen, setAltModalOpen] = useState(false);
