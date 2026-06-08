@@ -289,13 +289,21 @@ export function useModerationBatch(
           }));
         }
       })
-      .catch(() => {
-        // Silently fail — moderation is best-effort
-        if (!cancelled) setResult({
-          decisions: new Map(),
-          failedLabelers: [],
-          isLoading: false,
-        });
+      .catch((err: unknown) => {
+        console.error('Moderation batch failed:', err);
+        if (!cancelled) {
+          const activeLabelers = config.labelers.filter(l => l.isActive);
+          setResult({
+            decisions: new Map(),
+            failedLabelers: activeLabelers.map(l => ({
+              did: l.did,
+              name: l.name,
+              behavior: l.failureBehavior,
+              error: 'Moderation unavailable',
+            })),
+            isLoading: false,
+          });
+        }
       });
 
     return () => { cancelled = true; };
