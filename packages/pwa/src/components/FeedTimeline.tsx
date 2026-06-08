@@ -155,7 +155,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [loadMore, cursor, posts.length]);
+  }, [loadMore, cursor]);
 
   // ── Hide header/footer on scroll down (mobile) ──
   useEffect(() => {
