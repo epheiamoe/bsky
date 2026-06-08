@@ -46,6 +46,19 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const { config } = useModerationConfig();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
   const { decisions, failedLabelers } = useModerationBatch(posts, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -126,10 +139,14 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
       </div>
 
       {(() => {
-        const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+        const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+        const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
         return (
           <>
-            <LabelerFailureBanner failedLabelers={bannerFailures} />
+            <LabelerFailureBanner
+              failedLabelers={bannerFailures}
+              onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+            />
             <LabelerFailureToast failedLabelers={failedLabelers} />
           </>
         );

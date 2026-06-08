@@ -66,6 +66,19 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const { t } = useI18n();
   const { config } = useModerationConfig();
   const { decisions, failedLabelers } = useModerationBatch(flatLines, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
   const [showThreadgateDetail, setShowThreadgateDetail] = useState(false);
@@ -164,7 +177,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   if (loading) return <Spinner />;
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
 
   return (
     <div className="min-h-[100dvh] bg-background animate-fadeIn">
@@ -182,7 +196,10 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           <h1 className="text-lg font-semibold text-text-primary">{t('thread.title')}</h1>
         </div>
       </header>
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
 
       <div className="max-w-content mx-auto py-6 space-y-2">

@@ -30,6 +30,18 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const { config } = useModerationConfig();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
   const { decisions, failedLabelers } = useModerationBatch(feed, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -82,11 +94,16 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
     if (membersCursor && !loading) loadMoreMembers();
   }, [membersCursor, loading, loadMoreMembers]);
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       {/* Header */}
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">

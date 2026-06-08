@@ -64,6 +64,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
   const { decisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
   const lastScrollY = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -189,8 +190,21 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     </div>
   );
 
-  // Filter banner/block level failures for banner display
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  // Auto-reset dismissed state when failedLabelers changes (a did recovers and fails again)
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
+  // Filter banner/block level failures for banner display, excluding dismissed ones
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
 
   const cacheLimit = getAppConfig().feedCacheLimit ?? 1000;
   const cacheFull = isFeedCacheFull(feedUri, cacheLimit);
@@ -205,7 +219,11 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         mobileMenuButton={menuBtn}
         mobileCollapsed={mobileCollapsed}
       />
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       
       <PullToRefresh onRefresh={refresh ?? REFRESH_NOOP} scrollRef={scrollRef} />

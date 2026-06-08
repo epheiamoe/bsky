@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { useBookmarks, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
@@ -28,15 +28,33 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { config } = useModerationConfig();
   const { decisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
     bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange, decisions },
   );
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
-
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
