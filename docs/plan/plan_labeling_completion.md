@@ -20,13 +20,12 @@
 1. **TUI Post Rendering with Moderation Overlays** — `UnifiedThreadView` supports `[HIDDEN]`/`[WARN]` overlays + Enter key reveal
 2. **Self-label Selector in ComposePage** — Per-post labels with `ContentWarningModal`, integrated into `useCompose.ts`
 3. **Wire up moderation batch** — 6 list components migrated from `usePostsWithModeration` to `useModerationBatch`
-4. **`LoadingSafetyBanner` + `BlockedLoadingScreen`** — Created with i18n support
-5. **`useLabelerHealth` hook** — Periodic health checks (30s interval) with recovery detection
-6. **TUI Badge prefix** — Badge labels displayed before post text in all 3 view modes
+4. **`useLabelerHealth` hook** — Periodic health checks (30s interval) with recovery detection
+5. **TUI Badge prefix** — Badge labels displayed before post text in all 3 view modes
 
 ### ⚠️ Remaining
 - **Height cache invalidation on moderation changes** — Not yet implemented
-- **Full `useModerationPipeline` integration** — Hook exists, but list components use `useModerationBatch` (sufficient for now)
+- ~~**Full `useModerationPipeline` integration**~~ — **已废弃**：决定采用 `useModerationBatch` 作为标准方案，Pipeline 死代码已清理
 
 ---
 
@@ -96,25 +95,28 @@ Post content here...
    ```
 4. Update `useCompose.ts` `submitPost()` to pass labels
 
-### Priority 3: Wire up `useModerationPipeline`
+### Priority 3: Wire up `useModerationPipeline`（已采用 `useModerationBatch` 替代）
 
-**Goal**: Replace `usePostsWithModeration` with `useModerationPipeline` in list views
+**决策**：`useModerationBatch` 的"先显示再标记"策略已满足核心安全目标，因此废弃 `useModerationPipeline` 方案，改为清理相关死代码。
 
-**Files**:
-- `packages/pwa/src/components/FeedTimeline.tsx` — Use pipeline
-- `packages/pwa/src/components/BookmarkPage.tsx` — Use pipeline
-- `packages/pwa/src/components/ProfilePage.tsx` — Use pipeline
-- `packages/pwa/src/components/SearchPage.tsx` — Use pipeline
-- `packages/pwa/src/components/ListDetailPage.tsx` — Use pipeline
+**替代方案**:
+- 列表组件继续使用 `useModerationBatch`
+- 失败通知由 `LabelerFailureBanner` / `LabelerFailureToast` 承担
+- 不再实现 `LoadingSafetyBanner` / `BlockedLoadingScreen`
 
-**Implementation**:
-1. Create `LoadingSafetyBanner` component
-2. Create `BlockedLoadingScreen` component
-3. Modify each list component:
-   - Replace `usePostsWithModeration` with `useModerationPipeline`
-   - Render `LoadingSafetyBanner` when `state.phase === 'loadingTags'`
-   - Render `BlockedLoadingScreen` when `state.phase === 'blocked'`
-   - Pass pipeline's posts + decisions to child components
+**历史目标（供参考）**: Replace `usePostsWithModeration` with `useModerationPipeline` in list views
+
+**历史 Files**（已不再需要）:
+- `packages/pwa/src/components/FeedTimeline.tsx` — 继续使用 `useModerationBatch`
+- `packages/pwa/src/components/BookmarkPage.tsx` — 继续使用 `useModerationBatch`
+- `packages/pwa/src/components/ProfilePage.tsx` — 继续使用 `useModerationBatch`
+- `packages/pwa/src/components/SearchPage.tsx` — 继续使用 `useModerationBatch`
+- `packages/pwa/src/components/ListDetailPage.tsx` — 继续使用 `useModerationBatch`
+
+**Implementation**（历史记录，未执行）:
+1. ~~Create `LoadingSafetyBanner` component~~ — 已废弃
+2. ~~Create `BlockedLoadingScreen` component~~ — 已废弃
+3. ~~Modify each list component to use `useModerationPipeline`~~ — 保留 `useModerationBatch`
 
 ### Priority 4: `useLabelerHealth` Hook
 
@@ -159,11 +161,11 @@ Post content here...
 - [ ] Submitting post includes labels in record
 - [ ] Labels visible on posted content
 
-### Pipeline Integration
-- [ ] FeedTimeline uses `useModerationPipeline`
-- [ ] Loading banner appears when tags loading
-- [ ] Block screen appears when block-level labelers fail
-- [ ] Silent failures show toast only
+### Pipeline Integration（已废弃）
+- [x] 决定采用 `useModerationBatch` 替代 `useModerationPipeline`
+- [x] `useModerationPipeline` 函数及相关类型已删除
+- [x] `LoadingSafetyBanner` 和 `BlockedLoadingScreen` 组件已删除
+- [x] 列表组件继续使用 `useModerationBatch`，失败通知通过 `LabelerFailureBanner` / `LabelerFailureToast`
 
 ---
 
@@ -175,8 +177,6 @@ Post content here...
 | `packages/tui/src/components/PostDetailView.tsx` | Add moderation overlays | P1 |
 | `packages/pwa/src/components/ComposePage.tsx` | Add self-label selector | P2 |
 | `packages/pwa/src/hooks/useCompose.ts` | Pass labels to createRecord | P2 |
-| `packages/pwa/src/components/LoadingSafetyBanner.tsx` | NEW | P3 |
-| `packages/pwa/src/components/BlockedLoadingScreen.tsx` | NEW | P3 |
 | `packages/app/src/hooks/useLabelerHealth.ts` | NEW | P4 |
 | `packages/app/src/hooks/useVirtualizedList.ts` | Add cache invalidation | P5 |
 | `packages/app/src/i18n/locales/{en,zh,ja}.ts` | Add new i18n keys | All |

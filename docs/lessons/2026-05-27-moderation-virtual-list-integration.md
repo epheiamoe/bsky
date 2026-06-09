@@ -8,16 +8,16 @@ Subagent exploration revealed 4 critical hidden issues in the moderation/labelin
 
 **Symptom**: Blob-level labels (media-level labels on individual images) were silently ignored in ALL list components.
 
-**Root Cause**: `packages/app/src/index.ts:51` exported `useModerationBatch` from `useModeration.ts` (no blob support) instead of `useModerationPipeline.ts` (has blob support via `extractBlobReferences`).
+**Root Cause**: `packages/app/src/index.ts:51` exported `useModerationBatch` from an older `useModeration.ts` (no blob support) instead of the blob-aware implementation that then lived in `useModerationPipeline.ts` (now renamed to `useModeration.ts`).
 
 **Code**:
 ```typescript
 // BEFORE (broken):
 export { useModeration, useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
 
-// AFTER (fixed):
+// AFTER (fixed, later cleaned up):
 export { useModeration } from './hooks/useModeration.js';
-export { useModerationPipeline, useModerationBatch, resolveModerationBatch } from './hooks/useModerationPipeline.js';
+export { useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
 ```
 
 **Lesson**: When you have multiple implementations of the same function, ALWAYS verify which one is actually exported. Dead code with "better" implementation is worse than no code.
@@ -133,7 +133,7 @@ When a project has multiple implementations:
 ## Files Changed
 
 - `packages/app/src/index.ts` — Fixed export source
-- `packages/app/src/hooks/useModerationPipeline.ts` — Incremental resolution in useModerationBatch
+- `packages/app/src/hooks/useModeration.ts` — Incremental resolution in useModerationBatch (file renamed from `useModerationPipeline.ts`)
 - `packages/app/src/hooks/useVirtualizedList.ts` — Added `decisions` parameter + cache invalidation
 - `packages/core/src/moderation.ts` — Fixed nudity blurs from 'content' to 'media'
 - `packages/pwa/src/components/ContentWarningOverlay.tsx` — NEW: Content-level warning overlay

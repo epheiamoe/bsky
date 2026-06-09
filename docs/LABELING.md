@@ -1,7 +1,7 @@
 # Labeling / Moderation System
 
 > Architecture documentation for v0.15.0 Bluesky labeling system.
-> Last updated: 2026-05-28
+> Last updated: 2026-06-09
 
 ## Overview
 
@@ -156,7 +156,7 @@ interface SelfLabels {
 | `packages/core/src/at/client.ts` | BskyClient API methods |
 | `packages/core/src/at/types.ts` | Label, LabelerView, etc. types |
 | `packages/app/src/hooks/useModeration.ts` | React hook for single-post moderation |
-| `packages/app/src/hooks/useModerationPipeline.ts` | Batch moderation + pipeline (blob-aware) |
+| `packages/app/src/hooks/useModeration.ts` | Batch moderation hook (blob-aware) |
 | `packages/app/src/hooks/usePostsWithModeration.ts` | Posts augmented with moderation decisions |
 | `packages/app/src/hooks/useVirtualizedList.ts` | Virtual scroll with moderation cache invalidation |
 | `packages/app/src/hooks/useLabelerInfo.ts` | Labeler metadata fetching |
@@ -235,8 +235,8 @@ export interface UseModerationBatchResult {
 
 #### `useModerationBatch()` [FIXED — Blob Support + Incremental Resolution]
 ```typescript
-// [v0.15.0] Now exported from useModerationPipeline.ts with blob-level label support
-// Previously exported from useModeration.ts (no blob support — CRITICAL BUG)
+// [v0.15.0] Exported from useModeration.ts (renamed from useModerationPipeline.ts) with blob-level label support
+// Previously exported from an older useModeration.ts (no blob support — CRITICAL BUG)
 export function useModerationBatch(
   posts: Array<{ uri: string; labels?: Label[] }>,
   config: ModerationConfig,
@@ -266,17 +266,17 @@ useVirtualizedList(
 );
 ```
 
-#### `useModerationPipeline()` [NEW]
-```typescript
-// [v0.15.0] Replaces useModerationBatch in list views
-export function useModerationPipeline(
-  fetchPosts: () => Promise<PostView[]>,
-  config: ModerationConfig,
-  client: BskyClient | null
-): PipelineState & { refresh: () => void };
-```
+#### `useModerationPipeline()` [已移除]
 
-Full details in `docs/plan/plan_labeling_failure_handling.md`
+`useModerationPipeline` 曾作为 v0.15.0 Phase 2 的实验性设计实现，但从未被列表组件采用。经过评估，其 block 策略会阻塞内容显示且与当前体验目标不符，因此已于 2026-06-09 清理：
+
+- 删除了 `useModerationPipeline` 函数及相关 `PipelineState` / `PipelineStrategy` / `PipelinePhase` 类型
+- 删除了 `LoadingSafetyBanner` 和 `BlockedLoadingScreen` 组件
+- `packages/app/src/hooks/useModerationPipeline.ts` 重命名为 `useModeration.ts`，仅保留 `useModerationBatch` 和 `resolveModerationBatch`
+
+列表视图继续使用 `useModerationBatch` 的"先显示再标记"策略，配合 `LabelerFailureBanner` / `LabelerFailureToast` 实现失败通知。
+
+历史细节见 `docs/plan/plan_labeling_failure_handling.md`（已标注为废弃）。
 
 ---
 
@@ -330,9 +330,9 @@ const { decisions } = useModerationBatch(posts, config, client);
 
 ### ✅ Fixed: Blob-Level Labels Ignored (2026-05-27)
 
-**Problem**: `useModerationBatch` was exported from `useModeration.ts` (no blob support) instead of `useModerationPipeline.ts` (has blob support). All list components silently ignored media-level labels.
+**Problem**: `useModerationBatch` was exported from an older `useModeration.ts` (no blob support) instead of the blob-aware implementation (then in `useModerationPipeline.ts`). All list components silently ignored media-level labels.
 
-**Solution**: Changed export in `packages/app/src/index.ts` to use the blob-aware implementation from `useModerationPipeline.ts`.
+**Solution**: Changed export in `packages/app/src/index.ts` to use the blob-aware implementation, which now lives in `useModeration.ts` (renamed from `useModerationPipeline.ts`).
 
 **Impact**: Media blur now works correctly for blob-level labels (e.g., on individual images).
 

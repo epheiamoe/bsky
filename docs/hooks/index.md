@@ -29,7 +29,7 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useScrollRestore` | [UI](./ui.md) | `packages/app/src/hooks/useScrollRestore.ts` |
 | `useSearchHistory` | [UI](./ui.md) | `packages/app/src/hooks/useSearchHistory.ts` |
 | `useDmEmojiConfig` | [UI](./ui.md) | `packages/app/src/hooks/useDmEmojiConfig.ts` |
-| `useModerationBatch` | [UI](./ui.md) | `packages/app/src/hooks/useModerationPipeline.ts` |
+| `useModerationBatch` | [UI](./ui.md) | `packages/app/src/hooks/useModeration.ts` |
 | `usePostsWithModeration` | [UI](./ui.md) | `packages/app/src/hooks/usePostsWithModeration.ts` |
 | `widgetRegistry` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetRegistry.ts` |
 | `widgetStore` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetStore.ts` |
