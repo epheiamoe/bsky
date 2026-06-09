@@ -285,6 +285,4 @@ export function usePostsWithModeration<T extends { uri: string }>(
   return result;
 }
 
-// Re-export for backward compatibility
-export { useModerationPipeline } from './useModerationPipeline.js';
-export type { PipelineState, PipelineStrategy, PipelinePhase } from './useModerationPipeline.js';
+

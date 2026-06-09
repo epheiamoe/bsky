@@ -679,13 +679,6 @@ const en: LocaleMessages = {
   'moderation.bannerLevelFailure': '⚠️ {count} label service(s) unavailable ({names}). Some content may not be filtered.',
   'moderation.silentLevelFailure': 'Label service {names} is unavailable.',
 
-  // [v0.15.0] Content safety loading states
-  'pipeline.loadingSafety': 'Loading content safety verification…',
-  'pipeline.blockedTitle': 'Safety Verification Unavailable',
-  'pipeline.blockedDesc': 'Unable to safely load content. Some label services are not responding.',
-  'pipeline.retry': 'Retry',
-  'pipeline.loadAnyway': 'Load Anyway (Unsafe)',
-
   // [v0.14.0] Bsky.app link handling
   'link.type.profile': 'Bluesky Profile',
   'link.type.post': 'Bluesky Post',

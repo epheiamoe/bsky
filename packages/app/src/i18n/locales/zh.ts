@@ -835,13 +835,6 @@ const zh: LocaleMessages = {
   'moderation.bannerLevelFailure': '⚠️ {count}个标签服务不可用（{names}）。部分内容可能未过滤。',
   'moderation.silentLevelFailure': '标签服务 {names} 不可用。',
 
-  // [v0.15.0] 内容安全加载状态
-  'pipeline.loadingSafety': '正在加载内容安全验证…',
-  'pipeline.blockedTitle': '安全验证不可用',
-  'pipeline.blockedDesc': '无法安全加载内容。部分标签服务未响应。',
-  'pipeline.retry': '重试',
-  'pipeline.loadAnyway': '强制加载（不安全）',
-
   // [v0.14.0] Bsky.app 链接处理
   'link.type.profile': 'Bluesky 个人资料',
   'link.type.post': 'Bluesky 帖子',
