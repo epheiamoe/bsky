@@ -20,7 +20,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import type { ModerationConfig, ContentLabelPref, LabelerConfig } from '@bsky/core';
+import type { ModerationConfig, ContentLabelPref, LabelerConfig, LabelValueDefinition } from '@bsky/core';
 import { DEFAULT_MODERATION_CONFIG, OFFICIAL_LABELER_DID } from '@bsky/core';
 import type { BskyClient } from '@bsky/core';
 
@@ -178,6 +178,25 @@ export function useModerationConfig() {
     try {
       const pdsPrefs = await client.getModerationPrefs();
 
+      // [v0.14.0-fix] Fetch labeler details for any new labelers from PDS
+      const existingDids = new Set(config.labelers.map(l => l.did));
+      const newDids = pdsPrefs.labelerDids.filter(did => !existingDids.has(did));
+      const newLabelerInfos = new Map<string, { name: string; labels: LabelValueDefinition[] }>();
+      if (newDids.length > 0) {
+        try {
+          const { fetchLabelerInfos } = await import('@bsky/app');
+          const infos = await fetchLabelerInfos(client, newDids);
+          for (const [did, info] of infos) {
+            newLabelerInfos.set(did, {
+              name: info.view.creator.displayName || info.view.creator.handle,
+              labels: info.policies?.labelValueDefinitions || [],
+            });
+          }
+        } catch {
+          // If fetch fails, fall back to minimal config
+        }
+      }
+
       setConfigState(prev => {
         // Merge PDS content labels (overwrite local for standard labels)
         const mergedContentLabels = [...prev.contentLabels];
@@ -195,11 +214,11 @@ export function useModerationConfig() {
         const mergedLabelers = [...prev.labelers];
         for (const did of pdsPrefs.labelerDids) {
           if (!existingLabelerDids.has(did)) {
-            // Add new labeler with minimal config; caller can fetch details later
+            const fetched = newLabelerInfos.get(did);
             mergedLabelers.push({
               did,
-              name: did,
-              labels: [],
+              name: fetched?.name || did,
+              labels: fetched?.labels || [],
               labelPrefs: {},
               isActive: true,
               failureBehavior: 'banner',

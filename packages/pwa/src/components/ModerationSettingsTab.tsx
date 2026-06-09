@@ -545,7 +545,10 @@ function ThirdPartyLabelerCard({
   onFailureBehaviorChange?: (behavior: 'silent' | 'banner' | 'block') => void;
 }) {
   const { t } = useI18n();
-  const { view, isLoading } = useLabelerInfo(labeler.did, client);
+  const { view, policies, isLoading } = useLabelerInfo(labeler.did, client);
+  // [v0.14.0-fix] Use real-time fetched label definitions instead of cached config.
+  // app.bsky.labeler.getServices does not include policies, so config.labels may be stale.
+  const liveLabels = policies?.labelValueDefinitions || labeler.labels;
 
   return (
     <div className="border border-border rounded-lg overflow-clip">
@@ -611,9 +614,9 @@ function ThirdPartyLabelerCard({
               </span>
             </div>
           )}
-          {labeler.labels.length > 0 ? (
+          {liveLabels.length > 0 ? (
             <div className="space-y-3">
-              {labeler.labels.map(def => {
+              {liveLabels.map(def => {
                 const current = labeler.labelPrefs[def.identifier] || def.defaultSetting;
                 return (
                   <div key={def.identifier} className="p-3 rounded-lg border border-border bg-surface/30">

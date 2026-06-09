@@ -81,12 +81,28 @@ async function fetchLabelerPolicies(
   }
 
   if (toFetch.length > 0) {
+    // [v0.14.0-fix] Fetch policies via getRecord for each labeler
+    // app.bsky.labeler.getServices does NOT include policies field,
+    // so we must fetch the service record directly.
+    const fetchPromises = toFetch.map(async (did) => {
+      try {
+        const record = await client.getRecord(did, 'app.bsky.labeler.service', 'self');
+        const serviceRecord = record.value as {
+          policies?: { labelValueDefinitions?: LabelValueDefinition[] };
+        };
+        const defs = serviceRecord.policies?.labelValueDefinitions || [];
+        return { did, defs };
+      } catch {
+        // Service record may not exist or be inaccessible
+        return { did, defs: [] as LabelValueDefinition[] };
+      }
+    });
+
     try {
-      const views = await client.getLabelerServices(toFetch);
-      for (const view of views) {
-        const defs = view.policies?.labelValueDefinitions || [];
-        result.set(view.creator.did, defs);
-        cache[view.creator.did] = { policies: defs, fetchedAt: Date.now() };
+      const resolved = await Promise.all(fetchPromises);
+      for (const { did, defs } of resolved) {
+        result.set(did, defs);
+        cache[did] = { policies: defs, fetchedAt: Date.now() };
       }
     } catch {
       // Silently fail — we'll use defaults
