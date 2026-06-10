@@ -12,6 +12,7 @@ import { AltTextModal } from './AltTextModal.js';
 import { ContentWarningModal } from './ContentWarningModal.js';
 import { ReplyOptionsModal } from './ReplyOptionsModal.js';
 import { LanguageSelector } from './LanguageSelector.js';
+import { Modal } from './Modal.js';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
@@ -119,6 +120,8 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const [showPostedOverlay, setShowPostedOverlay] = useState(false);
   const postedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showAltConfirmModal, setShowAltConfirmModal] = useState(false);
+  const [altMissingCount, setAltMissingCount] = useState(0);
 
   // Keep refs in sync with latest state for unmount cleanup
   useEffect(() => { perPostImagesRef.current = perPostImages; }, [perPostImages]);
@@ -420,6 +423,22 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     e.preventDefault();
     if (submitting) return;
 
+    // [UX] Check ALT immediately before any upload
+    let noAltCount = 0;
+    for (const post of posts) {
+      const imgs = perPostImages.get(post.id) ?? [];
+      noAltCount += imgs.filter(img => !img.altText.trim()).length;
+    }
+    if (noAltCount > 0) {
+      setAltMissingCount(noAltCount);
+      setShowAltConfirmModal(true);
+      return;
+    }
+
+    await executeSubmit();
+  }, [posts, perPostImages, submitting]);
+
+  const executeSubmit = useCallback(async () => {
     // Count posts that have text or media
     const hasContent = (post: typeof posts[0]) => {
       const hasText = !!post.text.trim();
@@ -486,18 +505,6 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       if (uploaded.length > 0) mediaMap.set(post.id, uploaded);
     }
 
-    let noAltCount = 0;
-    for (const [, media] of mediaMap) {
-      noAltCount += media.filter(m => m.type === 'image' && !m.alt.trim()).length;
-    }
-    if (noAltCount > 0) {
-      const confirmed = window.confirm(t('compose.altWarning', { n: String(noAltCount) }));
-      if (!confirmed) {
-        setSubmitProgress(prev => ({ ...prev, visible: false }));
-        return;
-      }
-    }
-
     const quoteMap = new Map<string, string>();
     for (const [postId, uri] of postQuoteUris) {
       if (uri) quoteMap.set(postId, uri);
@@ -510,7 +517,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     } catch {
       // Error handled in submit
     }
-  }, [posts, perPostImages, perPostVideos, submitting, submit, client, t, postQuoteUris]);
+  }, [posts, perPostImages, perPostVideos, submit, client, t, postQuoteUris]);
 
   const truncate = (s: string, max = 40) => s.length > max ? s.slice(0, max) + '…' : s;
 
@@ -1200,6 +1207,44 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           }}
           onClose={() => setShowPolishModal(false)}
         />
+      )}
+
+      {/* ALT confirmation modal */}
+      {showAltConfirmModal && (
+        <Modal open onClose={() => setShowAltConfirmModal(false)}>
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-text-primary">{t('compose.altMissingTitle')}</h3>
+                <p className="text-sm text-text-secondary mt-1">{t('compose.altWarning', { n: String(altMissingCount) })}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={() => {
+                  setShowAltConfirmModal(false);
+                }}
+                className="flex-1 px-4 py-2 rounded-lg border border-border text-sm font-medium text-text-secondary hover:bg-surface transition-colors"
+              >
+                {t('compose.addAltNow')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowAltConfirmModal(false);
+                  executeSubmit();
+                }}
+                className="flex-1 px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
+              >
+                {t('compose.sendWithoutAlt')}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
