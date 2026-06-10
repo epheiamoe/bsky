@@ -31,15 +31,24 @@ interface ComposePageProps {
 }
 
 interface LocalImage {
-  file: File;
+  /** Actual image bytes read immediately after selection to avoid File-reference staleness. */
+  data: Uint8Array;
+  fileName: string;
+  mimeType: string;
   preview: string;
   uploading: boolean;
   error?: string;
   altText: string;
+  wasCompressed?: boolean;
+  originalSize?: number;
+  compressedSize?: number;
 }
 
 interface LocalVideo {
-  file: File;
+  /** Actual video bytes read immediately after selection to avoid File-reference staleness. */
+  data: Uint8Array;
+  fileName: string;
+  mimeType: string;
   preview: string;
   uploading: boolean;
   error?: string;
@@ -348,11 +357,20 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       if (currentVideo) { alert('Only 1 video allowed'); return; }
       if (currentImages.length > 0) { alert('Cannot mix video with images'); return; }
       if (videoFile.size > MAX_VIDEO_SIZE) { alert(`"${videoFile.name}" exceeds 100MB limit`); return; }
-      setPerPostVideos(prev => new Map(prev).set(postId, {
-        file: videoFile,
-        preview: URL.createObjectURL(videoFile),
-        uploading: false,
-      }));
+      try {
+        const data = new Uint8Array(await videoFile.arrayBuffer());
+        const blob = new Blob([data], { type: videoFile.type });
+        setPerPostVideos(prev => new Map(prev).set(postId, {
+          data,
+          fileName: videoFile.name,
+          mimeType: videoFile.type,
+          preview: URL.createObjectURL(blob),
+          uploading: false,
+        }));
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e);
+        alert(`${t('compose.uploadFailed')}: ${detail}`);
+      }
       return;
     }
 
@@ -365,18 +383,30 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     const newImages: LocalImage[] = [];
     const compressNotices: string[] = [];
     for (const file of imageFiles) {
-      const result = await compressImage(file);
-      if (result.wasCompressed) {
-        compressNotices.push(
-          `${result.originalName}: ${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}`,
-        );
+      try {
+        const result = await compressImage(file);
+        if (result.wasCompressed) {
+          compressNotices.push(
+            `${result.originalName}: ${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}`,
+          );
+        }
+        const data = new Uint8Array(await result.file.arrayBuffer());
+        const blob = new Blob([data], { type: result.file.type });
+        newImages.push({
+          data,
+          fileName: result.file.name,
+          mimeType: result.file.type,
+          preview: URL.createObjectURL(blob),
+          uploading: false,
+          altText: '',
+          wasCompressed: result.wasCompressed,
+          originalSize: result.originalSize,
+          compressedSize: result.compressedSize,
+        });
+      } catch (e) {
+        const detail = e instanceof Error ? e.message : String(e);
+        alert(`${t('compose.uploadFailed')}: ${detail}`);
       }
-      newImages.push({
-        file: result.file,
-        preview: URL.createObjectURL(result.file),
-        uploading: false,
-        altText: '',
-      });
     }
     if (compressNotices.length > 0) {
       setCompressInfo(compressNotices.join('; '));
@@ -512,11 +542,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         currentItem++;
         setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
         try {
-          const data = new Uint8Array(await vid.file.arrayBuffer());
-          const res = await client.uploadBlob(data, vid.file.type);
+          const res = await client.uploadBlob(vid.data, vid.mimeType);
           uploaded.push({
             type: 'video',
-            blobRef: { $link: res.blob.ref.$link, mimeType: vid.file.type, size: vid.file.size },
+            blobRef: { $link: res.blob.ref.$link, mimeType: vid.mimeType, size: vid.data.length },
             alt: '',
           });
         } catch (e) {
@@ -531,11 +560,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           currentItem++;
           setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
           try {
-            const data = new Uint8Array(await img.file.arrayBuffer());
-            const res = await client.uploadBlob(data, img.file.type);
+            const res = await client.uploadBlob(img.data, img.mimeType);
             uploaded.push({
               type: 'image',
-              blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
+              blobRef: { $link: res.blob.ref.$link, mimeType: img.mimeType, size: img.data.length },
               alt: img.altText,
             });
           } catch (e) {
