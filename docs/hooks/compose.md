@@ -51,6 +51,7 @@ function useDrafts(client: BskyClient | null): {
   syncDraft: (id: string) => Promise<void>;
   refreshDrafts: () => Promise<void>;
   loadDraft: (id: string) => AppDraft | undefined;
+  findDuplicateOnServer: (data: { posts: { text: string }[]; replyTo?: string; quoteUri?: string }) => AppDraft | undefined;
 }
 
 interface AppDraft {
@@ -66,3 +67,5 @@ interface AppDraft {
 ```
 
 Uses module-level `_clientRef` to avoid stale closures. PDS-first sync with local fallback.
+
+**PWA compose media handling**: selected image/video bytes are read into `Uint8Array` immediately on selection and stored in component state. Upload uses the stored bytes — never the original `File` reference, which can become stale on mobile (especially after backgrounding or cloud-picker virtualization).

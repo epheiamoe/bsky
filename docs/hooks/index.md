@@ -82,7 +82,7 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, threadgate, likePost, repostPost, expandReplies, isLiked, isReposted, getPostView }` |
 | `useCompose` | (inline state) | `{ posts, addPost, removePost, setPostText, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, threadgateRules, setThreadgateRules, submit, loadFromDraft, toDraftData }` |
 | `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, stop, addUserImage, chatId, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex }` |
-| `useDrafts` | `createDraftsStore(client)` | `{ drafts, loading, saving, saveDraft, deleteDraft, syncDraft, refreshDrafts, loadDraft }` |
+| `useDrafts` | `createDraftsStore(client)` | `{ drafts, loading, saving, saveDraft, deleteDraft, syncDraft, refreshDrafts, loadDraft, findDuplicateOnServer }` |
 | `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
 | `useChatHistory` | `ChatStorage` | `{ conversations, loading, loadConversation, saveConversation, deleteConversation, refresh, storage }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |

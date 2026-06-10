@@ -65,8 +65,8 @@ throw new Error('translateText failed after 4 attempts');
 ## Polish Draft
 
 The `polishDraft()` function is accessible via:
-- **PWA**: Polish Widget in right component panel (compose view `lg+`) or via 润色 button (small screens).
-  Targets first non-empty post in multi-post threads (not hardcoded post[0]).
+- **PWA**: Polish Widget in right component panel (compose view `lg+`) or via 润色 button in the compose bottom toolbar (to the right of the media button).
+  Targets the currently focused post (not hardcoded post[0]).
   The widget calls `polishDraft(config, draft, requirement)` and provides copy/results, replace buttons.
 - **TUI**: Press `f` in compose text mode → polish requirement input → AI polish call → show result with [R] Replace / [C] Copy / [Esc] dismiss.
   Uses `resolveScenarioConfig(config.scenarioModels.polish)` for per-scenario model config.

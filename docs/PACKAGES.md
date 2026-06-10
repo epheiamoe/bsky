@@ -157,7 +157,7 @@
 | `PostCard` | `components/PostCard.tsx` | Single post card with media, links, markdown rendering |
 | `FeedTimeline` | `components/FeedTimeline.tsx` | Infinite-scroll feed with PostCard list + cursor pagination |
 | `ThreadView` | `components/ThreadView.tsx` | Nested thread display with depth indentation |
-| `ComposePage` | `components/ComposePage.tsx` | Post/reply/quote composer with image upload |
+| `ComposePage` | `components/ComposePage.tsx` | Post/reply/thread composer with image/video upload, ALT text, draft save modal, and polish button |
 | `AIChatPage` | `components/AIChatPage.tsx` | AI assistant chat with markdown rendering, tool call cards |
 | `ProfilePage` | `components/ProfilePage.tsx` | User profile, follows/followers, author feed |
 | `SearchPage` | `components/SearchPage.tsx` | Search actors + posts |
