@@ -13,6 +13,7 @@ export interface DraftStore {
   syncDraft(id: string): Promise<void>;
   refreshDrafts(): Promise<void>;
   loadDraft(id: string): AppDraft | undefined;
+  findDuplicateOnServer(data: { posts: { text: string }[]; replyTo?: string; quoteUri?: string }): AppDraft | undefined;
 }
 
 // Module-level mutable client ref — avoids stale closure capture via singleton
@@ -191,6 +192,18 @@ export function createDraftsStore(initialClient: BskyClient | null): DraftStore 
     loadDraft(id) {
       return store.drafts.find(d => d.id === id);
     },
+
+    findDuplicateOnServer(data) {
+      if (!_clientRef?.isAuthenticated()) return undefined;
+      const normalizedPosts = data.posts.map(p => p.text.trim());
+      return store.drafts.find(d => {
+        if (d.syncStatus !== 'synced' || !d.serverId) return false;
+        if (d.replyTo !== data.replyTo) return false;
+        if (d.quoteUri !== data.quoteUri) return false;
+        if (d.posts.length !== normalizedPosts.length) return false;
+        return d.posts.every((p, i) => p.text.trim() === normalizedPosts[i]);
+      });
+    },
   };
 
   return store;
@@ -237,5 +250,6 @@ export function useDrafts(client: BskyClient | null) {
     syncDraft,
     refreshDrafts,
     loadDraft: (id: string) => store.loadDraft(id),
+    findDuplicateOnServer: (data: { posts: { text: string }[]; replyTo?: string; quoteUri?: string }) => store.findDuplicateOnServer(data),
   };
 }

@@ -79,7 +79,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     }, 0);
   }, [goBack, goTo, goHome]);
   const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, handlePosted);
-  const { drafts, saveDraft } = useDrafts(client);
+  const { drafts, saveDraft, findDuplicateOnServer } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [replyAncestors, setReplyAncestors] = useState<PostView[]>([]);
   const [replyToPost, setReplyToPost] = useState<PostView | null>(null);
@@ -104,7 +104,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [quoteInputExpanded, setQuoteInputExpanded] = useState<Set<string>>(new Set());
   const [quoteInputValues, setQuoteInputValues] = useState<Map<string, string>>(new Map());
   const [showPolishModal, setShowPolishModal] = useState(false);
-  const [draftSaveHint, setDraftSaveHint] = useState(false);
+  const [showDraftSaveModal, setShowDraftSaveModal] = useState(false);
   const [showThreadgate, setShowThreadgate] = useState(false);
   const [selectedThreadgate, setSelectedThreadgate] = useState<string[]>(['everyone']);
   const [selectedListUri, setSelectedListUri] = useState('');
@@ -431,7 +431,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     const hasLangs = langs.length > 0;
 
     if (hasText || hasImages || hasVideo || hasQuote || hasReply || hasThreadgate || hasLabels || hasLangs) {
-      setDraftSaveHint(true);
+      setShowDraftSaveModal(true);
     } else {
       goBack();
     }
@@ -439,13 +439,20 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
   const confirmSaveDraft = useCallback(async () => {
     const data = toDraftData();
-    await saveDraft(data);
-    setDraftSaveHint(false);
+    const duplicate = findDuplicateOnServer(data);
+    if (duplicate) {
+      // An identical draft already exists on the PDS — skip redundant save and exit
+      setShowDraftSaveModal(false);
+      goBack();
+      return;
+    }
+    await saveDraft(data, draftId);
+    setShowDraftSaveModal(false);
     goBack();
-  }, [toDraftData, saveDraft, goBack]);
+  }, [toDraftData, saveDraft, findDuplicateOnServer, goBack, draftId]);
 
   const discardDraft = useCallback(() => {
-    setDraftSaveHint(false);
+    setShowDraftSaveModal(false);
     goBack();
   }, [goBack]);
 
@@ -512,8 +519,9 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             blobRef: { $link: res.blob.ref.$link, mimeType: vid.file.type, size: vid.file.size },
             alt: '',
           });
-        } catch {
-          setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: t('compose.uploadFailed') });
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e);
+          setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: `${t('compose.uploadFailed')}: ${detail}` });
           return;
         }
       }
@@ -530,8 +538,9 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
               blobRef: { $link: res.blob.ref.$link, mimeType: img.file.type, size: img.file.size },
               alt: img.altText,
             });
-          } catch {
-            setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: t('compose.uploadFailed') });
+          } catch (e) {
+            const detail = e instanceof Error ? e.message : String(e);
+            setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: `${t('compose.uploadFailed')}: ${detail}` });
             return;
           }
         }
@@ -652,21 +661,6 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       </header>
 
       <div className="max-w-content mx-auto">
-        {/* Draft save hint */}
-        {draftSaveHint && (
-          <div role="alert" className="mx-4 mt-4 border border-yellow-400 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-4 animate-fadeIn">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">{t('compose.draftSaveHint')}</p>
-            <div className="flex gap-2">
-              <button onClick={confirmSaveDraft} className="px-3 py-1.5 bg-primary text-white rounded-lg text-sm hover:bg-primary-hover transition-colors">
-                {t('compose.saveDraft')}
-              </button>
-              <button onClick={discardDraft} className="px-3 py-1.5 border border-border rounded-lg text-sm text-text-secondary hover:text-text-primary transition-colors">
-                {t('action.cancel')}
-              </button>
-            </div>
-          </div>
-        )}
-
         <form id="compose-form" onSubmit={handleSubmit} className="divide-y divide-border">
           {/* ── Reply ancestors ── */}
           {(replyToPost || replyAncestors.length > 0) && (
@@ -1040,6 +1034,22 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             >
               <Icon name="camera" size={18} />
             </button>
+            {polishConfig && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (focusedPostId) {
+                    setPolishTargetPostId(focusedPostId);
+                    setShowPolishModal(true);
+                  }
+                }}
+                disabled={submitting || !posts.some(p => p.id === focusedPostId && p.text.trim())}
+                className="p-2 text-text-secondary hover:text-primary transition-colors disabled:opacity-30"
+                aria-label={t('action.polish')}
+              >
+                <Icon name="sparkles" size={18} />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -1242,6 +1252,42 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           }}
           onClose={() => setShowPolishModal(false)}
         />
+      )}
+
+      {/* Draft save confirmation modal */}
+      {showDraftSaveModal && (
+        <Modal open onClose={() => setShowDraftSaveModal(false)}>
+          <div className="flex flex-col max-h-[80vh]">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
+              <h2 className="text-base font-bold text-text-primary">{t('compose.draftSaveModalTitle')}</h2>
+              <button onClick={() => setShowDraftSaveModal(false)} className="text-text-secondary hover:text-text-primary transition-colors" aria-label={t('action.close')}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <p className="text-sm text-text-secondary">{t('compose.draftSaveModalDesc')}</p>
+            </div>
+            {/* Footer */}
+            <div className="p-4 border-t border-border shrink-0 space-y-2">
+              <button
+                onClick={confirmSaveDraft}
+                className="w-full px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-white text-sm font-semibold transition-colors"
+              >
+                {t('compose.saveDraft')}
+              </button>
+              <button
+                onClick={discardDraft}
+                className="w-full px-4 py-2.5 rounded-lg border border-border text-text-secondary hover:bg-surface text-sm font-semibold transition-colors"
+              >
+                {t('compose.discardDraft')}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* ALT confirmation modal */}

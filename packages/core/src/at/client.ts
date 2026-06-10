@@ -129,10 +129,20 @@ export class BskyClient {
               }
               const refreshed = await self._refreshPromise;
               if (refreshed && self.session) {
-                const retryRes = await fetch(request.url, {
+                // Preserve original headers (especially Content-Type) and body for retries,
+                // so that POSTs with binary payloads (e.g. uploadBlob) don't fail on token refresh.
+                const retryHeaders = new Headers(request.headers);
+                retryHeaders.set('Authorization', `Bearer ${self.session.accessJwt}`);
+                // Remove ky-internal headers that shouldn't be forwarded to native fetch
+                retryHeaders.delete('content-length');
+                const retryInit: RequestInit = {
                   method: request.method,
-                  headers: { Authorization: `Bearer ${self.session.accessJwt}` },
-                });
+                  headers: retryHeaders,
+                  body: request.body,
+                  redirect: request.redirect,
+                  signal: request.signal,
+                };
+                const retryRes = await fetch(request.url, retryInit);
                 if (retryRes.ok) return retryRes;
               }
             }
