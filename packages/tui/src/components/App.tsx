@@ -298,7 +298,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (draftSavePrompt) { setDraftSavePrompt(false); return; }
         if (draftListOpen) { setDraftListOpen(false); return; }
         if (imagePathInput !== null) { setImagePathInput(null); return; }
-        if (compose.posts.some(p => p.text.trim())) { setDraftSavePrompt(true); return; }
+        const hasText = compose.posts.some(p => p.text.trim());
+        const hasMedia = composeMedia.length > 0;
+        const hasQuote = postQuotes.size > 0;
+        const hasReply = !!compose.replyTo;
+        const hasThreadgate = compose.threadgateRules !== undefined && compose.threadgateRules !== null && compose.threadgateRules.length > 0;
+        const hasLabels = Array.from(compose.selfLabelsMap?.values() ?? []).some(arr => arr.length > 0) || selfLabels.length > 0;
+        const hasLangs = compose.langs?.length > 0;
+        if (hasText || hasMedia || hasQuote || hasReply || hasThreadgate || hasLabels || hasLangs) { setDraftSavePrompt(true); return; }
         goBack(); return;
       }
       if (currentView.type !== 'feed') { goBack(); return; }

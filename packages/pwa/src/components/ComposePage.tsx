@@ -293,6 +293,32 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     }
   }, [draftId, drafts]);
 
+  // Warn before closing/refreshing if there is unsaved compose state
+  useEffect(() => {
+    const hasUnsaved = () => {
+      const hasText = posts.some(p => p.text.trim());
+      const hasImages = posts.some(p => (perPostImages.get(p.id) ?? []).length > 0);
+      const hasVideo = posts.some(p => !!(perPostVideos.get(p.id) ?? null));
+      const hasQuote = postQuoteUris.size > 0;
+      const hasReply = !!replyTo;
+      const hasThreadgate = threadgateRules !== undefined && threadgateRules !== null && threadgateRules.length > 0;
+      const hasLabels = Array.from(selfLabelsMap.values()).some(arr => arr.length > 0);
+      const hasLangs = langs.length > 0;
+      return hasText || hasImages || hasVideo || hasQuote || hasReply || hasThreadgate || hasLabels || hasLangs;
+    };
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsaved()) {
+        e.preventDefault();
+        // Modern browsers show a generic message; returnValue is required for legacy support
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [posts, perPostImages, perPostVideos, postQuoteUris, replyTo, threadgateRules, selfLabelsMap, langs]);
+
   // Bridge the currently-focused post's draft to widget system
   useEffect(() => {
     const targetPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
@@ -394,13 +420,22 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   }, []);
 
   const handleBack = useCallback(async () => {
-    const hasContent = posts.some(p => p.text.trim());
-    if (hasContent) {
+    // Detect any meaningful compose state that the user might want to preserve
+    const hasText = posts.some(p => p.text.trim());
+    const hasImages = posts.some(p => (perPostImages.get(p.id) ?? []).length > 0);
+    const hasVideo = posts.some(p => !!(perPostVideos.get(p.id) ?? null));
+    const hasQuote = postQuoteUris.size > 0;
+    const hasReply = !!replyTo;
+    const hasThreadgate = threadgateRules !== undefined && threadgateRules !== null && threadgateRules.length > 0;
+    const hasLabels = Array.from(selfLabelsMap.values()).some(arr => arr.length > 0);
+    const hasLangs = langs.length > 0;
+
+    if (hasText || hasImages || hasVideo || hasQuote || hasReply || hasThreadgate || hasLabels || hasLangs) {
       setDraftSaveHint(true);
     } else {
       goBack();
     }
-  }, [posts, goBack]);
+  }, [posts, perPostImages, perPostVideos, postQuoteUris, replyTo, threadgateRules, selfLabelsMap, langs, goBack]);
 
   const confirmSaveDraft = useCallback(async () => {
     const data = toDraftData();
