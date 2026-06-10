@@ -129,6 +129,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const textareaRefs = useRef<Map<string, HTMLTextAreaElement>>(new Map());
   const [showPostedOverlay, setShowPostedOverlay] = useState(false);
   const postedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const submitProgressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAltConfirmModal, setShowAltConfirmModal] = useState(false);
   const [altMissingCount, setAltMissingCount] = useState(0);
 
@@ -136,7 +137,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   useEffect(() => { perPostImagesRef.current = perPostImages; }, [perPostImages]);
   useEffect(() => { perPostVideosRef.current = perPostVideos; }, [perPostVideos]);
 
-  // Cleanup all blob URLs on unmount
+  // Cleanup all blob URLs + pending timers on unmount
   useEffect(() => {
     return () => {
       for (const imgs of perPostImagesRef.current.values()) {
@@ -144,6 +145,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       }
       for (const vid of perPostVideosRef.current.values()) {
         if (vid) URL.revokeObjectURL(vid.preview);
+      }
+      if (submitProgressTimerRef.current) {
+        clearTimeout(submitProgressTimerRef.current);
+        submitProgressTimerRef.current = null;
       }
     };
   }, []);
@@ -586,8 +591,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
     try {
       await submit(mediaMap, quoteMap.size > 0 ? quoteMap : undefined);
+      // Success: show done state briefly then auto-hide
+      setSubmitProgress({ visible: true, phase: 'done', current: totalItems, total: totalItems, message: t('compose.posted') });
+      if (submitProgressTimerRef.current) clearTimeout(submitProgressTimerRef.current);
+      submitProgressTimerRef.current = setTimeout(() => {
+        setSubmitProgress(prev => ({ ...prev, visible: false }));
+        submitProgressTimerRef.current = null;
+      }, 1200);
     } catch {
-      // Error handled in submit
+      // Error handled in submit — submitProgress stays on 'posting' or 'error'
     }
   }, [posts, perPostImages, perPostVideos, submit, client, t, postQuoteUris]);
 
