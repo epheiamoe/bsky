@@ -1,0 +1,297 @@
+<template id="scene-01-opening-template">
+  <div data-composition-id="scene-01-opening" data-width="1920" data-height="1080">
+    <!-- Three.js canvas layer -->
+    <canvas id="s01-canvas"></canvas>
+
+    <!-- Background layers -->
+    <div class="s01-bg-radial"></div>
+    <div class="s01-vignette"></div>
+
+    <!-- Decorative elements -->
+    <div class="s01-corner-tl"></div>
+    <div class="s01-corner-br"></div>
+    <div class="s01-accent-line"></div>
+
+    <!-- Foreground content -->
+    <div class="s01-content">
+      <h1 class="s01-title">AI Bluesky</h1>
+      <p class="s01-label">CLIENT</p>
+    </div>
+
+    <style>
+      [data-composition-id="scene-01-opening"] {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #050505;
+        overflow: hidden;
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      }
+
+      #s01-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        display: block;
+        z-index: 1;
+      }
+
+      .s01-bg-radial {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(ellipse at 50% 45%, rgba(100, 210, 255, 0.08) 0%, transparent 65%);
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .s01-vignette {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(5, 5, 5, 0.6) 100%);
+        z-index: 3;
+        pointer-events: none;
+      }
+
+      .s01-corner-tl {
+        position: absolute;
+        top: 48px;
+        left: 48px;
+        width: 32px;
+        height: 32px;
+        border-top: 1px solid rgba(100, 210, 255, 0.25);
+        border-left: 1px solid rgba(100, 210, 255, 0.25);
+        z-index: 4;
+        pointer-events: none;
+      }
+
+      .s01-corner-br {
+        position: absolute;
+        bottom: 48px;
+        right: 48px;
+        width: 32px;
+        height: 32px;
+        border-bottom: 1px solid rgba(100, 210, 255, 0.25);
+        border-right: 1px solid rgba(100, 210, 255, 0.25);
+        z-index: 4;
+        pointer-events: none;
+      }
+
+      .s01-accent-line {
+        position: absolute;
+        bottom: 420px;
+        left: 160px;
+        width: 64px;
+        height: 1px;
+        background: rgba(100, 210, 255, 0.4);
+        z-index: 4;
+        pointer-events: none;
+      }
+
+      .s01-content {
+        position: absolute;
+        bottom: 280px;
+        left: 160px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .s01-title {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 60px;
+        font-weight: 300;
+        letter-spacing: -0.03em;
+        color: #FFFFFF;
+        line-height: 1.1;
+        margin: 0;
+      }
+
+      .s01-label {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 20px;
+        font-weight: 400;
+        letter-spacing: 0.05em;
+        color: #86868B;
+        margin: 0;
+        text-transform: uppercase;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.181.2/+esm";
+
+      // ---- Seeded Random (mulberry32) ----
+      function mulberry32(a) {
+        return function() {
+          var t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+      }
+      const rand = mulberry32(42);
+
+      // ---- Three.js Setup ----
+      const canvas = document.getElementById("s01-canvas");
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(1920, 1080, false);
+      renderer.setPixelRatio(1);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, 1920 / 1080, 0.1, 100);
+      camera.position.set(0, 0, 12);
+
+      // ---- Particle System ----
+      const PARTICLE_COUNT = 900;
+      const geometry = new THREE.BufferGeometry();
+      const positions = new Float32Array(PARTICLE_COUNT * 3);
+      const colors = new Float32Array(PARTICLE_COUNT * 3);
+      const startPositions = new Float32Array(PARTICLE_COUNT * 3);
+      const endPositions = new Float32Array(PARTICLE_COUNT * 3);
+      const sizes = new Float32Array(PARTICLE_COUNT);
+
+      const color1 = new THREE.Color(0x64D2FF);
+      const color2 = new THREE.Color(0xFFFFFF);
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        // Scattered start positions (large volume)
+        const sx = (rand() - 0.5) * 18;
+        const sy = (rand() - 0.5) * 12;
+        const sz = (rand() - 0.5) * 10;
+        startPositions[i * 3] = sx;
+        startPositions[i * 3 + 1] = sy;
+        startPositions[i * 3 + 2] = sz;
+
+        // Spherical end positions
+        const theta = rand() * Math.PI * 2;
+        const phi = Math.acos(2 * rand() - 1);
+        const radius = 2.2 + (rand() - 0.5) * 0.6; // Slight variation in radius
+        const ex = radius * Math.sin(phi) * Math.cos(theta);
+        const ey = radius * Math.sin(phi) * Math.sin(theta);
+        const ez = radius * Math.cos(phi);
+        endPositions[i * 3] = ex;
+        endPositions[i * 3 + 1] = ey;
+        endPositions[i * 3 + 2] = ez;
+
+        // Mix of two colors
+        const mixFactor = rand();
+        const c = color1.clone().lerp(color2, mixFactor);
+        colors[i * 3] = c.r;
+        colors[i * 3 + 1] = c.g;
+        colors[i * 3 + 2] = c.b;
+
+        // Size variation
+        sizes[i] = 1.5 + rand() * 2.5;
+      }
+
+      geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
+
+      const particleMaterial = new THREE.PointsMaterial({
+        size: 2.5,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+      });
+
+      const particles = new THREE.Points(geometry, particleMaterial);
+      scene.add(particles);
+
+      // Ambient light
+      scene.add(new THREE.AmbientLight(0x404040, 1));
+      const pointLight = new THREE.PointLight(0x64D2FF, 2, 20);
+      pointLight.position.set(0, 0, 5);
+      scene.add(pointLight);
+
+      // ---- Render Function ----
+      function renderAt(time) {
+        const t = Math.max(0, Math.min(1, time / 8)); // Normalize 0-8s to 0-1
+        const ease = 1 - Math.pow(1 - t, 3); // power3.out approximation
+
+        const posArray = geometry.attributes.position.array;
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const idx = i * 3;
+          // Orbit motion during hold phase (8-15s)
+          let orbitX = 0, orbitY = 0, orbitZ = 0;
+          if (time > 8) {
+            const orbitTime = time - 8;
+            const orbitSpeed = 0.15 + (i % 5) * 0.02;
+            const orbitAngle = orbitTime * orbitSpeed + i * 0.01;
+            orbitX = Math.sin(orbitAngle) * 0.15;
+            orbitY = Math.cos(orbitAngle * 0.7) * 0.1;
+            orbitZ = Math.sin(orbitAngle * 0.5) * 0.08;
+          }
+
+          posArray[idx] = startPositions[idx] + (endPositions[idx] - startPositions[idx]) * ease + orbitX;
+          posArray[idx + 1] = startPositions[idx + 1] + (endPositions[idx + 1] - startPositions[idx + 1]) * ease + orbitY;
+          posArray[idx + 2] = startPositions[idx + 2] + (endPositions[idx + 2] - startPositions[idx + 2]) * ease + orbitZ;
+        }
+        geometry.attributes.position.needsUpdate = true;
+
+        // Gentle camera drift
+        camera.position.x = Math.sin(time * 0.08) * 0.3;
+        camera.position.y = Math.cos(time * 0.06) * 0.2;
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+      }
+
+      // ---- hf-seek Event ----
+      window.addEventListener("hf-seek", (event) => {
+        renderAt(event.detail.time);
+      });
+
+      // Initial render
+      renderAt(window.__hfThreeTime || 0);
+
+      // ---- GSAP Timeline ----
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Entrance animations (offset 0.2s)
+      // Corner accents fade in
+      tl.fromTo(".s01-corner-tl",
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 0.8, ease: "power3.out" }, 0.2);
+      tl.fromTo(".s01-corner-br",
+        { opacity: 0, scale: 0.8 },
+        { opacity: 1, scale: 1, duration: 0.8, ease: "power3.out" }, 0.3);
+
+      // Accent line scales in
+      tl.fromTo(".s01-accent-line",
+        { scaleX: 0, transformOrigin: "left center" },
+        { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, 0.5);
+
+      // Title fade in (8-12s window)
+      tl.fromTo(".s01-title",
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1.0, ease: "power3.out" }, 8.0);
+
+      // Label fade in
+      tl.fromTo(".s01-label",
+        { y: 20, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 8.6);
+
+      // Background radial subtle pulse (attached to timeline)
+      tl.fromTo(".s01-bg-radial",
+        { opacity: 0.6 },
+        { opacity: 1, duration: 3, ease: "sine.inOut", yoyo: true, repeat: 2 }, 2);
+
+      window.__timelines["scene-01-opening"] = tl;
+    </script>
+  </div>
+</template>

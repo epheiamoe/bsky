@@ -1,0 +1,429 @@
+<template id="scene-04-template">
+  <div data-composition-id="scene-04-ai-core" data-width="1920" data-height="1080">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+      [data-composition-id="scene-04-ai-core"] {
+        width: 1920px;
+        height: 1080px;
+        position: relative;
+        background: #050505;
+        overflow: hidden;
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      }
+
+      /* Background layer */
+      [data-composition-id="scene-04-ai-core"] .bg-radial-glow {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background: radial-gradient(ellipse at 30% 50%, rgba(100, 210, 255, 0.06) 0%, transparent 60%);
+        pointer-events: none;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .dot-grid {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background-image: radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px);
+        background-size: 32px 32px;
+        pointer-events: none;
+      }
+
+      /* Three.js canvas layer */
+      [data-composition-id="scene-04-ai-core"] #three-canvas-04 {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      /* Midground: content panels */
+      [data-composition-id="scene-04-ai-core"] .scene-content {
+        position: relative;
+        z-index: 2;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: row;
+        padding: 100px 120px 100px 140px;
+        box-sizing: border-box;
+      }
+
+      /* Left stats panel */
+      [data-composition-id="scene-04-ai-core"] .stats-panel {
+        width: 38%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 48px;
+        padding-right: 60px;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .stat-block {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .stat-number {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 180px;
+        font-weight: 900;
+        line-height: 1;
+        color: #64D2FF;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .stat-label {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 36px;
+        font-weight: 400;
+        color: #FFFFFF;
+        letter-spacing: -0.02em;
+      }
+
+      /* Right tool grid panel */
+      [data-composition-id="scene-04-ai-core"] .tools-panel {
+        width: 62%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+      }
+
+      [data-composition-id="scene-04-ai-core"] .tool-card {
+        background: rgba(28, 28, 30, 0.6);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 10px 8px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.85);
+        text-align: center;
+        line-height: 1.3;
+        word-break: break-word;
+        min-height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      /* Decorative accent line */
+      [data-composition-id="scene-04-ai-core"] .accent-line {
+        position: absolute;
+        left: 38%;
+        top: 15%;
+        width: 1px;
+        height: 70%;
+        background: linear-gradient(to bottom, transparent, rgba(100, 210, 255, 0.2), transparent);
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      /* Subtle corner accent */
+      [data-composition-id="scene-04-ai-core"] .corner-accent {
+        position: absolute;
+        bottom: 60px;
+        left: 60px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 16px;
+        font-weight: 400;
+        color: #86868B;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        z-index: 2;
+      }
+    </style>
+
+    <!-- Background layers -->
+    <div class="bg-radial-glow"></div>
+    <div class="dot-grid"></div>
+    <canvas id="three-canvas-04"></canvas>
+
+    <!-- Decorative elements -->
+    <div class="accent-line"></div>
+    <div class="corner-accent">Intelligence Engine</div>
+
+    <!-- Foreground content -->
+    <div class="scene-content">
+      <!-- Left: Stats -->
+      <div class="stats-panel">
+        <div class="stat-block" id="stat-block-1">
+          <div class="stat-number" id="stat-33">0</div>
+          <div class="stat-label">Tools</div>
+        </div>
+        <div class="stat-block" id="stat-block-2">
+          <div class="stat-number" id="stat-7">0</div>
+          <div class="stat-label">AI Providers</div>
+        </div>
+        <div class="stat-block" id="stat-block-3">
+          <div class="stat-number" id="stat-3">0</div>
+          <div class="stat-label">Platforms</div>
+        </div>
+      </div>
+
+      <!-- Right: Tool grid -->
+      <div class="tools-panel">
+        <div class="tools-grid" id="tools-grid"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.181.2/+esm";
+
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // ===== Build tool grid =====
+      const toolNames = [
+        "search_posts", "get_timeline", "get_author_feed", "list_notifications",
+        "create_post", "like", "repost", "follow", "search_actors", "get_profile",
+        "get_connections", "get_lists", "create_list", "edit_list_members",
+        "get_feed", "get_post_thread", "get_quotes", "get_post_interactions",
+        "extract_images", "extract_link", "download_image", "view_image",
+        "get_context", "get_record", "feed_generator", "popular_feeds",
+        "get_list_feed", "suggested", "resolve_handle", "execute_python",
+        "search_web", "search_wiki", "send_dm", "mute_user", "block_user", "get_likes"
+      ];
+
+      const grid = document.getElementById("tools-grid");
+      toolNames.forEach((name, i) => {
+        const card = document.createElement("div");
+        card.className = "tool-card";
+        card.textContent = name;
+        card.id = `tool-${i}`;
+        grid.appendChild(card);
+      });
+
+      // ===== Three.js background: floating icosahedrons =====
+      const canvas = document.getElementById("three-canvas-04");
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(1920, 1080, false);
+      renderer.setPixelRatio(1);
+
+      const scene3d = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, 1920 / 1080, 0.1, 100);
+      camera.position.set(0, 0, 12);
+
+      // Seeded random (mulberry32)
+      function mulberry32(a) {
+        return function() {
+          a |= 0; a = a + 0x6D2B79F5 | 0;
+          let t = Math.imul(a ^ (a >>> 15), 1 | a);
+          t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      const rand = mulberry32(42);
+
+      const icosahedrons = [];
+      const geo = new THREE.IcosahedronGeometry(0.6, 0);
+      const matBase = new THREE.MeshStandardMaterial({
+        color: 0x64d2ff,
+        roughness: 0.4,
+        metalness: 0.6,
+        transparent: true,
+        opacity: 0.25
+      });
+      const matWire = new THREE.MeshBasicMaterial({
+        color: 0x64d2ff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.12
+      });
+
+      for (let i = 0; i < 8; i++) {
+        const mesh = new THREE.Mesh(geo, matBase.clone());
+        mesh.position.set(
+          (rand() - 0.5) * 18,
+          (rand() - 0.5) * 10,
+          (rand() - 0.5) * 6 - 4
+        );
+        mesh.userData = {
+          rotSpeedX: (rand() - 0.5) * 0.8,
+          rotSpeedY: (rand() - 0.5) * 0.8,
+          floatSpeed: 0.3 + rand() * 0.4,
+          floatPhase: rand() * Math.PI * 2,
+          baseY: mesh.position.y
+        };
+        scene3d.add(mesh);
+        icosahedrons.push(mesh);
+
+        const wire = new THREE.Mesh(geo, matWire.clone());
+        wire.scale.setScalar(1.15);
+        mesh.add(wire);
+      }
+
+      scene3d.add(new THREE.HemisphereLight(0xffffff, 0x0a1a2a, 1.5));
+      const pointLight = new THREE.PointLight(0x64d2ff, 1, 20);
+      pointLight.position.set(0, 2, 6);
+      scene3d.add(pointLight);
+
+      function renderThree(time) {
+        icosahedrons.forEach((mesh) => {
+          mesh.rotation.x += mesh.userData.rotSpeedX * 0.016;
+          mesh.rotation.y += mesh.userData.rotSpeedY * 0.016;
+          mesh.position.y = mesh.userData.baseY + Math.sin(time * mesh.userData.floatSpeed + mesh.userData.floatPhase) * 0.5;
+        });
+        renderer.render(scene3d, camera);
+      }
+
+      window.addEventListener("hf-seek", (event) => {
+        renderThree(event.detail.time);
+      });
+      renderThree(window.__hfThreeTime || 0);
+
+      // ===== GSAP Animations =====
+
+      // Background elements entrance
+      tl.fromTo(".bg-radial-glow",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.2, ease: "power2.out" },
+        0
+      );
+      tl.fromTo(".dot-grid",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.0, ease: "power2.out" },
+        0.2
+      );
+      tl.fromTo("#three-canvas-04",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.5, ease: "power2.out" },
+        0.1
+      );
+      tl.fromTo(".accent-line",
+        { scaleY: 0, opacity: 0 },
+        { scaleY: 1, opacity: 1, duration: 0.8, ease: "power2.inOut", transformOrigin: "center center" },
+        0.5
+      );
+      tl.fromTo(".corner-accent",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        1.0
+      );
+
+      // Stat 1: 33 Tools
+      const counter33 = { val: 0 };
+      tl.to(counter33, {
+        val: 33,
+        duration: 1.5,
+        ease: "power2.out",
+        onUpdate: () => {
+          document.getElementById("stat-33").textContent = Math.round(counter33.val);
+        }
+      }, 0.5);
+      tl.fromTo("#stat-block-1 .stat-label",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        1.2
+      );
+
+      // Stat 2: 7 AI Providers
+      const counter7 = { val: 0 };
+      tl.to(counter7, {
+        val: 7,
+        duration: 1.5,
+        ease: "power2.out",
+        onUpdate: () => {
+          document.getElementById("stat-7").textContent = Math.round(counter7.val);
+        }
+      }, 1.8);
+      tl.fromTo("#stat-block-2 .stat-label",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        2.5
+      );
+
+      // Stat 3: 3 Platforms
+      const counter3 = { val: 0 };
+      tl.to(counter3, {
+        val: 3,
+        duration: 1.5,
+        ease: "power2.out",
+        onUpdate: () => {
+          document.getElementById("stat-3").textContent = Math.round(counter3.val);
+        }
+      }, 2.6);
+      tl.fromTo("#stat-block-3 .stat-label",
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        3.3
+      );
+
+      // Stat blocks entrance (scale from below)
+      tl.fromTo("#stat-block-1",
+        { opacity: 0, scale: 0.9, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: "power3.out" },
+        0.4
+      );
+      tl.fromTo("#stat-block-2",
+        { opacity: 0, scale: 0.9, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: "power3.out" },
+        0.7
+      );
+      tl.fromTo("#stat-block-3",
+        { opacity: 0, scale: 0.9, y: 30 },
+        { opacity: 1, scale: 1, y: 0, duration: 0.7, ease: "power3.out" },
+        1.0
+      );
+
+      // Tool grid staggered fade-in
+      const toolCards = document.querySelectorAll(".tool-card");
+      tl.fromTo(toolCards,
+        { opacity: 0, y: 15, scale: 0.95 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.4,
+          ease: "power2.out",
+          stagger: 0.05
+        },
+        2.0
+      );
+
+      // Ambient: subtle pulse on tool cards (attached to timeline)
+      tl.fromTo(toolCards,
+        { opacity: 0.85 },
+        {
+          opacity: 1,
+          duration: 2.0,
+          ease: "sine.inOut",
+          stagger: { each: 0.08, repeat: 18 }
+        },
+        5.0
+      );
+
+      // Ambient: accent line subtle glow pulse
+      tl.fromTo(".accent-line",
+        { opacity: 0.15 },
+        {
+          opacity: 0.35,
+          duration: 3.0,
+          ease: "sine.inOut",
+          repeat: 10
+        },
+        4.0
+      );
+
+      window.__timelines["scene-04-ai-core"] = tl;
+    </script>
+  </div>
+</template>
