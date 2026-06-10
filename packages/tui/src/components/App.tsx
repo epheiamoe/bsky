@@ -121,9 +121,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [threadKey, setThreadKey] = useState(0);
 
   // Compose
-  const compose = useCompose(client, goBack, (uris) => {
+  const compose = useCompose(client, (uris) => {
+    goBack();
     if (uris && uris.length > 0) {
-      goTo({ type: 'thread', uri: uris[0]! });
+      const targetUri = uris.length > 1 ? uris[uris.length - 1] : uris[0];
+      goTo({ type: 'thread', uri: targetUri! });
     } else {
       goHome();
     }

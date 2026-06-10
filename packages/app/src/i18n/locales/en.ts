@@ -131,6 +131,7 @@ const en: LocaleMessages = {
   'compose.altPlaceholder': 'ALT text (describe the image, optional)',
   'compose.altLabel': 'ALT',
   'compose.uploadFailed': 'Upload failed. Check your connection and try again.',
+  'compose.backToCompose': 'Back to Edit',
   'compose.replyRestriction': 'Who can reply?',
   'compose.everyone': 'Everyone',
   'compose.nobody': 'Nobody',

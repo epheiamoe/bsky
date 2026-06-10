@@ -24,7 +24,7 @@ export interface Draft {
   updatedAt: string;
 }
 
-export function useCompose(client: BskyClient | null, goBack: () => void, onSuccess?: (uris?: string[]) => void) {
+export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string[]) => void) {
   const [posts, setPosts] = useState<ComposePostItem[]>([{ id: crypto.randomUUID(), text: '' }]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +71,8 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
 
   const submit = useCallback(async (mediaMap?: Map<string, ComposeMedia[]>, quoteMap?: Map<string, string>) => {
     if (!client || posts.length === 0) return;
-    const nonEmptyPosts = posts.filter(p => p.text.trim());
+    // Allow posts with text OR media (images/video) to be submitted
+    const nonEmptyPosts = posts.filter(p => p.text.trim() || (mediaMap?.get(p.id)?.length ?? 0) > 0);
     if (nonEmptyPosts.length === 0) return;
 
     setSubmitting(true);
@@ -248,7 +249,6 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
       setThreadgateRules(undefined);
       setSelfLabelsMap(new Map());
       setLangs([]);
-      goBack();
       onSuccess?.(createdUris);
     } catch (e) {
       const created = createdUris.length;
@@ -261,7 +261,7 @@ export function useCompose(client: BskyClient | null, goBack: () => void, onSucc
     } finally {
       setSubmitting(false);
     }
-  }, [client, goBack, onSuccess, posts, replyTo, quoteUri, selfLabelsMap, langs, threadgateRules]);
+  }, [client, onSuccess, posts, replyTo, quoteUri, selfLabelsMap, langs, threadgateRules]);
 
   return {
     posts,

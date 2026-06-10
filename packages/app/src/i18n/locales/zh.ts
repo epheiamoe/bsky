@@ -129,6 +129,7 @@ const zh: LocaleMessages = {
   'compose.altPlaceholder': '输入ALT文字（描述图片内容，可选）',
   'compose.altLabel': 'ALT',
   'compose.uploadFailed': '上传失败，请检查网络连接后重试',
+  'compose.backToCompose': '返回编辑',
   'compose.replyRestriction': '谁能回复？',
   'compose.everyone': '所有人',
   'compose.nobody': '无人',

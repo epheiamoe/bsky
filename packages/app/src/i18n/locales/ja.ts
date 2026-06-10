@@ -131,6 +131,7 @@ const ja: LocaleMessages = {
   'compose.altPlaceholder': 'ALTテキストを入力（画像の説明、任意）',
   'compose.altLabel': 'ALT',
   'compose.uploadFailed': 'アップロードに失敗しました。接続を確認して再試行してください。',
+  'compose.backToCompose': '編集に戻る',
   'compose.replyRestriction': '誰が返信できますか？',
   'compose.everyone': '全員',
   'compose.nobody': 'なし',

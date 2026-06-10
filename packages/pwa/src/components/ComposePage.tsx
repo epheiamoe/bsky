@@ -65,13 +65,19 @@ interface SubmitProgress {
 export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, goBack, goHome, goTo, polishConfig }: ComposePageProps) {
   const { t, locale: currentLocale } = useI18n();
   const handlePosted = useCallback((uris?: string[]) => {
-    if (uris && uris.length > 0) {
-      goTo({ type: 'thread', uri: uris[0] });
-    } else {
-      goHome();
-    }
-  }, [goTo, goHome]);
-  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, goBack, handlePosted);
+    goBack();
+    // Use setTimeout to ensure goBack completes before goTo
+    setTimeout(() => {
+      if (uris && uris.length > 0) {
+        // Thread: jump to last post; Reply/Quote: jump to first (new) post
+        const targetUri = uris.length > 1 ? uris[uris.length - 1] : uris[0];
+        goTo({ type: 'thread', uri: targetUri });
+      } else {
+        goHome();
+      }
+    }, 0);
+  }, [goBack, goTo, goHome]);
+  const { posts, addPost, removePost, setPostText, submitting, error, setReplyTo, setQuoteUri, threadgateRules, setThreadgateRules, langs, setLangs, submit, loadFromDraft, toDraftData } = useCompose(client, handlePosted);
   const { drafts, saveDraft } = useDrafts(client);
   const [replyHandle, setReplyHandle] = useState<string | null>(null);
   const [replyAncestors, setReplyAncestors] = useState<PostView[]>([]);
@@ -264,6 +270,15 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     el.style.height = Math.max(el.scrollHeight, 56) + 'px';
   }, []);
 
+  // [fix] Resize textareas after loading from draft or when posts change
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      for (const [, el] of textareaRefs.current) {
+        autoResize(el);
+      }
+    });
+  }, [posts, autoResize]);
+
   // Load draft if draftId is provided
   useEffect(() => {
     if (draftId) {
@@ -405,22 +420,27 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     e.preventDefault();
     if (submitting) return;
 
+    // Count posts that have text or media
+    const hasContent = (post: typeof posts[0]) => {
+      const hasText = !!post.text.trim();
+      const hasImages = (perPostImages.get(post.id) ?? []).length > 0;
+      const hasVideo = !!(perPostVideos.get(post.id) ?? null);
+      return hasText || hasImages || hasVideo;
+    };
+    const contentPosts = posts.filter(hasContent);
     let totalItems = 0;
-    for (const post of posts) {
-      if (!post.text.trim()) continue;
+    for (const post of contentPosts) {
       totalItems += (perPostImages.get(post.id) ?? []).length;
       if (perPostVideos.get(post.id) ?? null) totalItems += 1;
     }
-    const nonEmptyCount = posts.filter(p => p.text.trim()).length;
-    totalItems += nonEmptyCount;
+    totalItems += contentPosts.length;
 
     let currentItem = 0;
     setSubmitProgress({ visible: true, phase: 'media', current: 0, total: totalItems, message: '' });
 
     const mediaMap = new Map<string, ComposeMedia[]>();
 
-    for (const post of posts) {
-      if (!post.text.trim()) continue;
+    for (const post of contentPosts) {
       const imgs = perPostImages.get(post.id) ?? [];
       const vid = perPostVideos.get(post.id) ?? null;
       if (imgs.length === 0 && !vid) continue;
@@ -483,7 +503,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
       if (uri) quoteMap.set(postId, uri);
     }
 
-    setSubmitProgress({ visible: true, phase: 'posting', current: 0, total: nonEmptyCount, message: t('compose.postProgress', { current: '0', total: String(nonEmptyCount) }) });
+    setSubmitProgress({ visible: true, phase: 'posting', current: 0, total: contentPosts.length, message: t('compose.postProgress', { current: '0', total: String(contentPosts.length) }) });
 
     try {
       await submit(mediaMap, quoteMap.size > 0 ? quoteMap : undefined);
