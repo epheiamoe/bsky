@@ -5,7 +5,7 @@
 
 ## Symptom
 
-Long compose threads with images **always** failed with "Upload failed" on PWA. Short posts or text-only posts worked fine.
+During investigation of long compose threads with images failing on PWA, a second bug was discovered in `BskyClient._withRefresh`.
 
 ## Root Cause
 
@@ -56,7 +56,7 @@ Also improved error visibility in `ComposePage.executeSubmit`: upload failures n
 
 - Any retry path that uses raw `fetch` must forward **body + all original headers**.
 - For ky hooks, prefer returning a `Response` from `afterResponse` only when the retry truly mirrors the original request.
-- Long-running operations (multi-image uploads) are the most likely to hit token expiry; test them explicitly.
+- Long-running operations (multi-image uploads) are the most likely to hit token expiry; test them explicitly after forcing token rotation.
 
 ## Related
 

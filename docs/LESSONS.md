@@ -15,7 +15,7 @@
 | **AI/Prompting** | [lessons/ai.md](lessons/ai.md) | 2, 3, 17, 18, 68 | 工具调用、格式化、数据映射 |
 | **API/Network** | [lessons/api.md](lessons/api.md) | 9, 13, 20, 46, 47, 48 | 端点、重试、CORS、去重 |
 | **Auth/Session** | [lessons/auth.md](lessons/auth.md) | 53, 55, 77 | JWT、认证钩子、凭证管理 |
-| **Storage** | [lessons/storage.md](lessons/storage.md) | 10, 11, 49, 50, 51, 69 | IndexedDB、文件系统、缓存、竞态 |
+| **Storage** | [lessons/storage.md](lessons/storage.md) | 10, 11, 49, 50, 51, 69, 78 | IndexedDB、文件系统、缓存、竞态 |
 | **DM/Messaging** | [lessons/dm.md](lessons/dm.md) | 19, 30, 31, 33, 35 | 私信、对话、反应、认证演进 |
 | **Worker/WASM** | [lessons/worker-wasm.md](lessons/worker-wasm.md) | 57, 58, 59, 60, 61, 62, 63, 67, 70, 71, 72, 73, 74, 75, 76 | Pyodide、Worker、二进制数据、字体、Python API 设计 |
 | **React/Hooks** | [lessons/react-hooks.md](lessons/react-hooks.md) | 66 | useCallback、闭包、依赖项 |
@@ -84,6 +84,7 @@
 | 75 | Fail-Safe Security Defaults | Security | [worker-wasm.md](lessons/worker-wasm.md) |
 | 76 | sys.modules Registration for import Support | Python | [worker-wasm.md](lessons/worker-wasm.md) |
 | 77 | JWT Refresh Retry Must Preserve Body | Auth | [2026-06-11-jwt-retry-lost-body.md](lessons/2026-06-11-jwt-retry-lost-body.md) |
+| 78 | File Reference Becomes Stale Before Upload | Browser / Storage | [2026-06-11-file-reference-stale-upload.md](lessons/2026-06-11-file-reference-stale-upload.md) |
 
 ---
 
