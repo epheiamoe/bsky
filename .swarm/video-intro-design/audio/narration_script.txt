@@ -1,0 +1,29 @@
+What if your social client understood you?
+Introducing the AI Native Bluesky Client.
+Built for the open web. Designed around intelligence.
+
+Every pixel follows three principles.
+Clean. Breathable. Accessible.
+Light and dark modes adapt seamlessly.
+Colors meet WCAG standards.
+And AI features are first-class citizens, not afterthoughts.
+
+The architecture is ruthlessly simple.
+Core holds zero UI dependencies: the Bluesky client, AI engine, and thirty-three tools live here once.
+App layer shares React hooks and stores across both surfaces.
+TUI brings it to the terminal. PWA brings it to the browser.
+One truth. Three platforms.
+
+Intelligence is pluggable.
+Seven providers. Two API adapters. One unified assistant.
+Chat completions or responses API — your choice.
+Thirty-three tools let the AI search, analyze, translate, and act.
+Always with your consent.
+
+Need deeper analysis? The Python sandbox runs code safely.
+In the browser via WebAssembly. On desktop via Node. Through MCP for external agents.
+The bsky_tools library exposes the entire Bluesky API to Python — batch operations, data science, visualization.
+
+This is more than a client.
+It is a new surface for the AT Protocol — intelligent, cross-platform, and open source.
+Try it today at ai dash bsky dot pages dot dev.
