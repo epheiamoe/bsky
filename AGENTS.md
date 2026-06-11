@@ -101,7 +101,8 @@ pnpm -r typecheck
 8. **Commit → Build → Deploy**: Commit before build for correct `__COMMIT_HASH__`
 9. **PDS**: `chatKy` direct to `api.bsky.chat` + session JWT. No PDS proxy (returns 501)
 10. **Widget**: `WidgetPanel` provides header; widget provides content only. All `toggleWidget()` calls persist via `_onWidgetToggle` → `saveAppConfig()`
-11. **Documentation**: When changes affect documented behavior, update relevant docs immediately:
+11. **Version bumping**: When a change requires a version bump, check `packages/pwa/package.json` and the current version in `docs/CONTEXT.md`. If the next version is uncertain — especially for cross-feature releases — **ask the user** before bumping. After bumping, immediately update version references in `README.md`, `README.zh.md`, `CHANGELOG.md`, and `docs/CONTEXT.md`.
+12. **Documentation**: When changes affect documented behavior, update relevant docs immediately:
     - Code changes that alter hook signatures → update `docs/hooks/`
     - New/modified AI tools → update `docs/ai/tools.md`
     - New providers or adapter changes → update `docs/ai/providers.md` or `docs/ai/adapter.md`

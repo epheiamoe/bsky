@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.1] — 2026-06-12
+
+### Added
+
+- **Video preprocessing reliability**: `BskyClient.uploadVideo()` now surfaces failures explicitly instead of silently falling back to raw `uploadBlob`.
+- **Video error classification**: new `VideoServiceError` / `VideoServiceErrorCode` with recoverable vs non-recoverable semantics.
+- **Video response normalization**: `normalizeJobStatus()` handles both lexicon-wrapped `{ jobStatus }` and flat `JobStatus` shapes returned by `video.bsky.app`.
+- **Unique video upload names**: `{timestamp}-{random}-{safeFileName}` to reduce `already_exists` collisions.
+- **PDS DID fallback**: `_resolvePdsDid()` uses `com.atproto.server.describeServer` for custom PDS hostname mismatches.
+- **Compose video error modal**: on recoverable `VideoServiceError`, users can retry preprocessing, upload without preprocessing, or return to editing with the draft preserved.
+- **Unprocessed video placeholder**: `VideoCard` shows an explicit "processing / unavailable" state instead of requesting a non-existent HLS playlist.
+- **TUI video placeholder**: `PostItem` guards against missing `playlistUrl`.
+- **Delete-post toast**: `Toast` component; after deleting a post, success shows a bottom-right auto-dismiss toast and navigates back; failure shows the error message.
+- **Tests**: `packages/core/tests/video-upload.test.ts` with 26 tests covering normalization, error classification, polling, 409 handling, and fallback behavior.
+
+### Changed
+
+- `uploadVideo()` default `allowFallback` is now `false`; fallback only occurs when explicitly opted in and the error is recoverable.
+- `ExtractVideo` type: `playlistUrl` is now optional; added `processing` flag.
+
+### Fixed
+
+- **Videos uploaded via AI bsky were unplayable**: raw MP4 blobs were being posted because Video Service responses were mis-parsed and silently fell back to `uploadBlob`.
+- **409 `already_exists` now returns the processed blob** instead of throwing.
+- **`JOB_STATE_FAILED` with a `blob` is treated as success** during polling.
+- **Thread view "post not found" for raw videos**: placeholder rendering prevents broken HLS player errors.
+
 ## [0.14.0] — 2026-05-22
 
 ### Added
