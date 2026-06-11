@@ -732,6 +732,11 @@ export class BskyClient {
       if (signal?.aborted || (e instanceof Error && e.name === 'AbortError')) {
         throw e;
       }
+      // Don't fallback on 413 (Payload Too Large) or 429 (Rate Limited)
+      const errMsg = e instanceof Error ? e.message : String(e);
+      if (/\b413\b/.test(errMsg) || /\b429\b/.test(errMsg)) {
+        throw e;
+      }
       // Fallback to uploadBlob for any other error
       return this._fallbackToUploadBlob(data, mimeType, timeoutMs, signal, onProgress);
     }
@@ -785,36 +790,62 @@ export class BskyClient {
     url.searchParams.set('did', did);
     url.searchParams.set('name', name);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const maxRetries = 2; // Retry on 5xx network errors
+    const retryDelayMs = 2000;
 
-    // Link external abort signal
-    signal?.addEventListener('abort', () => controller.abort());
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      if (signal?.aborted) throw new Error('Aborted');
 
-    try {
-      const res = await fetch(url.toString(), {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'video/mp4',
-        },
-        body: data,
-        signal: controller.signal,
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-      clearTimeout(timeoutId);
+      // Link external abort signal
+      const abortHandler = () => controller.abort();
+      signal?.addEventListener('abort', abortHandler);
 
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Video upload failed: ${res.status} ${body}`);
+      try {
+        const res = await fetch(url.toString(), {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'video/mp4',
+          },
+          body: data,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!res.ok) {
+          const body = await res.text();
+          // 413/429: don't retry, throw immediately
+          if (res.status === 413 || res.status === 429) {
+            throw new Error(`Video upload failed: ${res.status} ${body}`);
+          }
+          // 5xx or other errors: retry if attempts remain
+          if (attempt < maxRetries && res.status >= 500) {
+            await new Promise(r => setTimeout(r, retryDelayMs));
+            continue;
+          }
+          throw new Error(`Video upload failed: ${res.status} ${body}`);
+        }
+
+        const json = await res.json() as { jobStatus: VideoJobStatus };
+        return json.jobStatus;
+      } catch (e) {
+        clearTimeout(timeoutId);
+        // Network errors: retry if attempts remain
+        if (attempt < maxRetries && !(e instanceof Error && /\b413\b/.test(e.message)) && !(e instanceof Error && /\b429\b/.test(e.message))) {
+          await new Promise(r => setTimeout(r, retryDelayMs));
+          continue;
+        }
+        throw e;
+      } finally {
+        signal?.removeEventListener('abort', abortHandler);
       }
-
-      const json = await res.json() as { jobStatus: VideoJobStatus };
-      return json.jobStatus;
-    } catch (e) {
-      clearTimeout(timeoutId);
-      throw e;
     }
+
+    throw new Error('Video upload failed after retries');
   }
 
   private async _pollVideoJobStatus(
@@ -832,38 +863,49 @@ export class BskyClient {
     while (Date.now() - startTime < options.maxProcessingTimeMs) {
       if (options.signal?.aborted) throw new Error('Aborted');
 
-      const res = await fetch(`https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=${encodeURIComponent(jobId)}`);
+      const controller = new AbortController();
+      const abortHandler = () => controller.abort();
+      options.signal?.addEventListener('abort', abortHandler);
 
-      if (!res.ok) {
-        // If getJobStatus fails, wait and retry
+      try {
+        const res = await fetch(
+          `https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=${encodeURIComponent(jobId)}`,
+          { signal: controller.signal },
+        );
+
+        if (!res.ok) {
+          // If getJobStatus fails, wait and retry
+          await new Promise(r => setTimeout(r, interval));
+          interval = Math.min(interval * 1.5, 5000);
+          continue;
+        }
+
+        const json = await res.json() as { jobStatus: VideoJobStatus };
+        const jobStatus = json.jobStatus;
+
+        // Report processing progress
+        if (jobStatus.progress !== undefined) {
+          options.onProgress?.({ phase: 'processing', progress: jobStatus.progress });
+        }
+
+        // Check for completion
+        if (jobStatus.state === 'JOB_STATE_COMPLETED') {
+          if (jobStatus.blob) return jobStatus;
+          // Completed but no blob — unusual, treat as failure
+          throw new Error('Video processing completed but no blob returned');
+        }
+
+        // Check for failure
+        if (jobStatus.state === 'JOB_STATE_FAILED') {
+          throw new Error(jobStatus.error || jobStatus.message || 'Video processing failed');
+        }
+
+        // Still processing — wait and poll again
         await new Promise(r => setTimeout(r, interval));
         interval = Math.min(interval * 1.5, 5000);
-        continue;
+      } finally {
+        options.signal?.removeEventListener('abort', abortHandler);
       }
-
-      const json = await res.json() as { jobStatus: VideoJobStatus };
-      const jobStatus = json.jobStatus;
-
-      // Report processing progress
-      if (jobStatus.progress !== undefined) {
-        options.onProgress?.({ phase: 'processing', progress: jobStatus.progress });
-      }
-
-      // Check for completion
-      if (jobStatus.state === 'JOB_STATE_COMPLETED') {
-        if (jobStatus.blob) return jobStatus;
-        // Completed but no blob — unusual, treat as failure
-        throw new Error('Video processing completed but no blob returned');
-      }
-
-      // Check for failure
-      if (jobStatus.state === 'JOB_STATE_FAILED') {
-        throw new Error(jobStatus.error || jobStatus.message || 'Video processing failed');
-      }
-
-      // Still processing — wait and poll again
-      await new Promise(r => setTimeout(r, interval));
-      interval = Math.min(interval * 1.5, 5000);
     }
 
     throw new Error('Video processing timed out');
