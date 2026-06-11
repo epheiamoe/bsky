@@ -54,7 +54,69 @@ import type {
   VideoJobStatus,
   GetServiceAuthResponse,
 } from './types.js';
-import { parseAtUri } from './types.js';
+import { parseAtUri, VideoServiceError, VideoServiceErrorCode } from './types.js';
+
+// Exported for unit tests. These are pure functions with no client state.
+export function normalizeJobStatus(payload: unknown): VideoJobStatus | undefined {
+  if (!payload || typeof payload !== 'object') return undefined;
+  const p = payload as Record<string, unknown>;
+  const jobStatus = (p.jobStatus ?? p) as Record<string, unknown>;
+  if (!jobStatus.jobId || typeof jobStatus.jobId !== 'string') return undefined;
+  return jobStatus as unknown as VideoJobStatus;
+}
+
+export function classifyHttpError(status: number, body?: string): VideoServiceError {
+  const message = body?.trim() ? `Video upload failed: ${status} ${body}` : `Video upload failed: ${status}`;
+  switch (status) {
+    case 400:
+      return new VideoServiceError('invalid_video', message, false, status);
+    case 401:
+    case 403:
+      return new VideoServiceError('auth', message, false, status);
+    case 413:
+      return new VideoServiceError('payload_too_large', message, false, status);
+    case 429:
+      return new VideoServiceError('rate_limited', message, false, status);
+    case 408:
+      return new VideoServiceError('timeout', message, true, status);
+    case 409:
+      return new VideoServiceError('invalid_video', message, false, status);
+    default:
+      if (status >= 500 && status < 600) {
+        return new VideoServiceError('service_unavailable', message, true, status);
+      }
+      // Any unrecognised status is treated as non-recoverable by default.
+      return new VideoServiceError('service_unavailable', message, false, status);
+  }
+}
+
+export function classifyError(error: unknown): VideoServiceError {
+  if (error instanceof VideoServiceError) return error;
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return new VideoServiceError('cancelled', error.message || 'Upload cancelled', false);
+  }
+  if (error instanceof Error && error.name === 'AbortError') {
+    return new VideoServiceError('cancelled', error.message || 'Upload cancelled', false);
+  }
+  const msg = error instanceof Error ? error.message : String(error);
+  const lower = msg.toLowerCase();
+  if (lower.includes('timeout') || lower.includes('timed out')) {
+    return new VideoServiceError('timeout', msg, true);
+  }
+  // Network errors from fetch are typically TypeError with message like 'fetch failed'.
+  if (error instanceof TypeError || lower.includes('network') || lower.includes('fetch') || lower.includes('econnreset')) {
+    return new VideoServiceError('network', msg, true);
+  }
+  return new VideoServiceError('service_unavailable', msg, false);
+}
+
+export function makeUniqueVideoName(fileName: string): string {
+  const safeFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/^_+|_+$/g, '') || 'video.mp4';
+  const randomId = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().slice(0, 8)
+    : Math.random().toString(36).slice(2, 10);
+  return `${Date.now()}-${randomId}-${safeFileName}`;
+}
 
 const BSKY_SERVICE = 'https://bsky.social';
 const PUBLIC_API = 'https://public.api.bsky.app';
@@ -81,7 +143,7 @@ export class BskyClient {
 
   session: CreateSessionResponse | null = null;
   pdsUrl: string;
-  private ky: KyInstance;
+  private ky!: KyInstance;
   private publicKy: KyInstance;
   private chatKy: KyInstance;
   private _withRefresh: (request: Request, _options: unknown, response: Response) => Promise<Response | void>;
@@ -157,12 +219,7 @@ export class BskyClient {
       }
     };
 
-    this.ky = ky.create({
-      prefixUrl: entryPds + '/xrpc',
-      timeout: 30000,
-      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
-      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
-    });
+    this._rebuildKy(entryPds);
     this.publicKy = ky.create({
       prefixUrl: PUBLIC_API + '/xrpc',
       timeout: 30000,
@@ -172,6 +229,15 @@ export class BskyClient {
       prefixUrl: CHAT_API + '/xrpc',
       timeout: 30000,
       retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
+    });
+  }
+
+  private _rebuildKy(pdsUrl: string): void {
+    this.ky = ky.create({
+      prefixUrl: pdsUrl + '/xrpc',
+      timeout: 30000,
+      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
   }
@@ -242,12 +308,7 @@ export class BskyClient {
     }
 
     this.pdsUrl = userPdsUrl;
-    this.ky = ky.create({
-      prefixUrl: this.pdsUrl + '/xrpc',
-      timeout: 30000,
-      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
-      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
-    });
+    this._rebuildKy(this.pdsUrl);
 
     await this.resolveActualPds();
     return res;
@@ -289,12 +350,7 @@ export class BskyClient {
           // so that restoreSession (and subsequent requests) target the user's real PDS.
           if (actualUrl !== this.pdsUrl) {
             this.pdsUrl = actualUrl;
-            this.ky = ky.create({
-              prefixUrl: this.pdsUrl + '/xrpc',
-              timeout: 30000,
-              retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
-              hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
-            });
+            this._rebuildKy(this.pdsUrl);
           }
         }
       }
@@ -732,11 +788,15 @@ export class BskyClient {
     const pollIntervalMs = options?.pollIntervalMs ?? 1000;
     const signal = options?.signal;
     const onProgress = options?.onProgress;
+    const allowFallback = options?.allowFallback ?? false;
+
+    // TODO: replace with structured log
+    const pdsDid = await this._resolvePdsDid();
+    console.log('[bsky] video_upload_start', { did: this.getDID(), name, size: data.length, pdsDid, lxm: 'com.atproto.repo.uploadBlob' });
 
     try {
       // Step 1: Get service auth tokens (retry 3 times)
       // pdsToken is used to upload the bytes; videoServiceToken is required to poll getJobStatus.
-      const pdsDid = this._derivePdsDid();
       const exp = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes
       const pdsToken = await this._getVideoServiceAuthWithRetry(pdsDid, 'com.atproto.repo.uploadBlob', exp, signal);
       const videoServiceToken = await this._getVideoServiceAuthWithRetry('did:web:video.bsky.app', 'app.bsky.video.getJobStatus', exp, signal);
@@ -769,32 +829,66 @@ export class BskyClient {
         };
       }
 
-      // No blob after polling — fall back
-      throw new Error('Video processing completed but no blob returned');
+      // No blob after polling — this should not happen; treat as non-recoverable.
+      throw new VideoServiceError('invalid_video', 'Video processing completed but no blob returned', false);
     } catch (e) {
-      // Don't fallback on abort
-      if (signal?.aborted || (e instanceof Error && e.name === 'AbortError')) {
-        throw e;
+      if (signal?.aborted || (e instanceof Error && e.name === 'AbortError') || (e instanceof DOMException && e.name === 'AbortError')) {
+        throw new VideoServiceError('cancelled', 'Upload cancelled', false);
       }
-      // Don't fallback on 413 (Payload Too Large) or 429 (Rate Limited)
-      const errMsg = e instanceof Error ? e.message : String(e);
-      if (/\b413\b/.test(errMsg) || /\b429\b/.test(errMsg)) {
-        throw e;
-      }
-      console.warn('[bsky] Video Service failed, falling back to uploadBlob:', errMsg);
-      // Fallback to uploadBlob for any other error
-      return this._fallbackToUploadBlob(data, mimeType, timeoutMs, signal, onProgress);
+      const classified = classifyError(e);
+      // TODO: replace with structured log
+      console.warn('[bsky] video_upload_decision', { decision: allowFallback && classified.recoverable ? 'fallback' : 'throw', code: classified.code, reason: classified.message });
+      if (!classified.recoverable || !allowFallback) throw classified;
+      // TODO: replace with structured log
+      console.warn('[bsky] Video Service failed, falling back to uploadBlob:', classified.code, classified.message);
+      return this._fallbackToUploadBlob(data, mimeType, timeoutMs, signal, onProgress, classified.message);
     }
   }
 
+  private _pdsDidCache?: { url: string; did: string };
+
   private _derivePdsDid(): string {
+    // Kept for synchronous callers. Async code should prefer _resolvePdsDid()
+    // so it can use com.atproto.server.describeServer for custom PDS hostname mismatches.
     const pdsUrl = this.actualPdsUrl ?? this.pdsUrl;
     try {
       const url = new URL(pdsUrl);
       return `did:web:${url.host}`;
     } catch {
-      return `did:web:${pdsUrl.replace(/^https?:\/\//, '')}`;
+      return `did:web:${pdsUrl.replace(/^https?:\/\//, '').split('/')[0]}`;
     }
+  }
+
+  private async _resolvePdsDid(): Promise<string> {
+    const pdsUrl = this.actualPdsUrl ?? this.pdsUrl;
+    if (this._pdsDidCache?.url === pdsUrl) return this._pdsDidCache.did;
+    try {
+      const url = new URL(pdsUrl);
+      const derived = `did:web:${url.host}`;
+      // For custom PDS, prefer the DID declared by describeServer to avoid hostname mismatch.
+      const described = await this._describeServerDid(pdsUrl);
+      const did = described || derived;
+      this._pdsDidCache = { url: pdsUrl, did };
+      return did;
+    } catch {
+      const host = pdsUrl.replace(/^https?:\/\//, '').split('/')[0];
+      const did = `did:web:${host}`;
+      this._pdsDidCache = { url: pdsUrl, did };
+      return did;
+    }
+  }
+
+  private async _describeServerDid(pdsUrl: string): Promise<string | undefined> {
+    try {
+      const res = await fetch(`${pdsUrl}/xrpc/com.atproto.server.describeServer`, {
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return undefined;
+      const json = await res.json() as Record<string, unknown>;
+      const did = json.did as string | undefined;
+      if (did?.startsWith('did:web:')) return did;
+    } catch { /* ignore — fall back to URL-derived DID */ }
+    return undefined;
   }
 
   private async _getVideoServiceAuthWithRetry(
@@ -832,13 +926,13 @@ export class BskyClient {
     url.searchParams.set('did', did);
     url.searchParams.set('name', name);
 
-    console.log('[bsky] Uploading video to Video Service:', { did, name, size: data.length, aud: this._derivePdsDid() });
+    console.log('[bsky] video_upload_start', { did, name, size: data.length, lxm: 'com.atproto.repo.uploadBlob' });
 
     const maxRetries = 2; // Retry on 5xx network errors
     const retryDelayMs = 2000;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      if (signal?.aborted) throw new Error('Aborted');
+      if (signal?.aborted) throw new VideoServiceError('cancelled', 'Upload cancelled', false);
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -861,31 +955,26 @@ export class BskyClient {
 
         clearTimeout(timeoutId);
 
+        const body = await res.text();
         if (!res.ok) {
-          const body = await res.text();
-          console.error('[bsky] Video Service upload failed:', { status: res.status, body });
-          // 409 already_exists — parse jobStatus and return it so the caller can use the blob
+          // 409 already_exists — parse jobStatus and return it so the caller can use the blob.
           if (res.status === 409) {
             try {
-              const json = JSON.parse(body) as { jobStatus: VideoJobStatus };
-              if (json.jobStatus) return json.jobStatus;
+              const jobStatus = normalizeJobStatus(JSON.parse(body));
+              if (jobStatus) {
+                console.log('[bsky] video_upload_response', { status: res.status, state: jobStatus.state, hasBlob: !!jobStatus.blob, error: jobStatus.error, message: jobStatus.message });
+                return jobStatus;
+              }
             } catch { /* ignore parse error, fall through */ }
           }
-          // 413/429: don't retry, throw immediately
-          if (res.status === 413 || res.status === 429) {
-            throw new Error(`Video upload failed: ${res.status} ${body}`);
-          }
-          // 5xx or other errors: retry if attempts remain
-          if (attempt < maxRetries && res.status >= 500) {
-            await new Promise(r => setTimeout(r, retryDelayMs));
-            continue;
-          }
-          throw new Error(`Video upload failed: ${res.status} ${body}`);
+          console.log('[bsky] video_upload_response', { status: res.status, hasBlob: false, body });
+          throw classifyHttpError(res.status, body);
         }
 
-        const json = await res.json() as { jobStatus: VideoJobStatus };
-        console.log('[bsky] Video Service upload success:', { jobId: json.jobStatus.jobId, state: json.jobStatus.state });
-        return json.jobStatus;
+        const jobStatus = normalizeJobStatus(JSON.parse(body));
+        console.log('[bsky] video_upload_response', { status: res.status, state: jobStatus?.state, hasBlob: !!jobStatus?.blob, error: jobStatus?.error, message: jobStatus?.message });
+        if (!jobStatus) throw new VideoServiceError('service_unavailable', 'Unexpected upload response', false);
+        return jobStatus;
       } catch (e) {
         clearTimeout(timeoutId);
         // Network errors: retry if attempts remain
@@ -899,7 +988,7 @@ export class BskyClient {
       }
     }
 
-    throw new Error('Video upload failed after retries');
+    throw new VideoServiceError('service_unavailable', 'Video upload failed after retries', true);
   }
 
   private async _pollVideoJobStatus(
@@ -914,11 +1003,14 @@ export class BskyClient {
   ): Promise<VideoJobStatus> {
     const startTime = Date.now();
     let interval = options.pollIntervalMs;
+    let attempt = 0;
 
     while (Date.now() - startTime < options.maxProcessingTimeMs) {
-      if (options.signal?.aborted) throw new Error('Aborted');
+      if (options.signal?.aborted) throw new VideoServiceError('cancelled', 'Upload cancelled', false);
+      attempt++;
 
       const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
       const abortHandler = () => controller.abort();
       options.signal?.addEventListener('abort', abortHandler);
 
@@ -931,6 +1023,8 @@ export class BskyClient {
           },
         );
 
+        clearTimeout(timeoutId);
+
         if (!res.ok) {
           // If getJobStatus fails, wait and retry
           await new Promise(r => setTimeout(r, interval));
@@ -938,48 +1032,53 @@ export class BskyClient {
           continue;
         }
 
-        const json = await res.json() as { jobStatus: VideoJobStatus };
-        const jobStatus = json.jobStatus;
+        const jobStatus = normalizeJobStatus(await res.json());
 
-        console.log('[bsky] Video job status:', { jobId, state: jobStatus.state, progress: jobStatus.progress });
-
-        // Report processing progress
-        if (jobStatus.progress !== undefined) {
-          options.onProgress?.({ phase: 'processing', progress: jobStatus.progress });
+        if (!jobStatus) {
+          // Unrecognised shape — back off and retry
+          await new Promise(r => setTimeout(r, interval));
+          interval = Math.min(interval * 1.5, 5000);
+          continue;
         }
 
-        // Check for completion
-        if (jobStatus.state === 'JOB_STATE_COMPLETED') {
-          console.log('[bsky] Video processing completed:', { jobId, blob: !!jobStatus.blob });
-          if (jobStatus.blob) return jobStatus;
-          // Completed but no blob — unusual, treat as failure
-          throw new Error('Video processing completed but no blob returned');
-        }
+        // TODO: replace with structured log
+        console.log('[bsky] video_job_status', { jobId, state: jobStatus.state, progress: jobStatus.progress, attempt, elapsedMs: Date.now() - startTime });
 
-        // Check for failure. Some failure modes (e.g. already_exists) still carry the blob, so return it.
-        if (jobStatus.state === 'JOB_STATE_FAILED') {
-          if (jobStatus.blob) return jobStatus;
-          if (jobStatus.error === 'already_exists' && jobStatus.blob) return jobStatus;
-          throw new Error(jobStatus.error || jobStatus.message || 'Video processing failed');
-        }
+        // Any response that carries a blob is usable, even if state is FAILED / already_exists.
+        if (jobStatus.blob) return jobStatus;
 
-        // Still processing — wait and poll again
-        await new Promise(r => setTimeout(r, interval));
-        interval = Math.min(interval * 1.5, 5000);
+        switch (jobStatus.state) {
+          case 'JOB_STATE_COMPLETED':
+            throw new VideoServiceError('invalid_video', 'Processing completed but no blob returned', false);
+          case 'JOB_STATE_FAILED':
+            throw new VideoServiceError('invalid_video', jobStatus.error || jobStatus.message || 'Video processing failed', false);
+          case 'JOB_STATE_CREATED':
+          case 'JOB_STATE_ENCODING':
+          case 'JOB_STATE_SCANNING':
+            options.onProgress?.({ phase: 'processing', progress: jobStatus.progress ?? 0 });
+            await new Promise(r => setTimeout(r, interval));
+            interval = Math.min(interval * 1.5, 5000);
+            break;
+          default:
+            await new Promise(r => setTimeout(r, interval));
+            interval = Math.min(interval * 1.5, 5000);
+        }
       } finally {
+        clearTimeout(timeoutId);
         options.signal?.removeEventListener('abort', abortHandler);
       }
     }
 
-    throw new Error('Video processing timed out');
+    throw new VideoServiceError('timeout', 'Video processing timed out', true);
   }
 
   private async _fallbackToUploadBlob(
     data: Uint8Array,
     mimeType: string,
     timeoutMs: number,
-    signal?: AbortSignal,
-    onProgress?: VideoUploadOptions['onProgress'],
+    signal: AbortSignal | undefined,
+    onProgress: VideoUploadOptions['onProgress'] | undefined,
+    fallbackReason: string,
   ): Promise<VideoUploadResult> {
     onProgress?.({ phase: 'uploading', progress: 0 });
     const res = await this.uploadBlob(data, mimeType, { timeoutMs });
@@ -987,6 +1086,7 @@ export class BskyClient {
     return {
       blobRef: { $link: res.blob.ref.$link, mimeType, size: data.length },
       processed: false,
+      fallbackReason,
     };
   }
 
@@ -1040,15 +1140,15 @@ export class BskyClient {
   }
 
   async restoreSession(session: CreateSessionResponse, pdsUrl?: string): Promise<void> {
+    const oldPds = pdsUrl ?? this.pdsUrl;
     this.session = session;
     if (pdsUrl) this.pdsUrl = pdsUrl;
-    this.ky = ky.create({
-      prefixUrl: this.pdsUrl + '/xrpc',
-      timeout: 30000,
-      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
-      hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
-    });
+    this._rebuildKy(this.pdsUrl);
     await this.resolveActualPds();
+    // resolveActualPds() already rebuilds ky when actual PDS differs
+    const actualPds = this.actualPdsUrl ?? this.pdsUrl;
+    // TODO: replace with structured log
+    console.log('[bsky] session_restore_pds', { oldPds, actualPds, updated: oldPds !== actualPds });
   }
 
   async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {

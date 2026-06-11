@@ -199,6 +199,9 @@ const zh: LocaleMessages = {
   'compose.retryVideoProcessing': '重试预处理',
   'compose.skipVideoProcessing': '跳过预处理，直接上传',
   'compose.videoFallbackNotice': '视频预处理服务不可用，已直接上传。',
+  'compose.videoProcessingErrorTitle': '视频预处理失败',
+  'compose.videoProcessingErrorMessage': 'Bluesky 视频服务无法处理此视频。你可以重试、直接上传原始文件（播放可能异常）或返回编辑。',
+  'compose.uploadWithoutPreprocessing': '直接上传（不预处理）',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '添加字幕',
   'compose.removeCaption': '移除字幕',
@@ -210,6 +213,10 @@ const zh: LocaleMessages = {
   'compose.uploadTimeoutDetail': '上传超时。文件大小：{size}。请检查网络连接或尝试更小的文件。',
   'compose.videoMetadataButton': '字幕及替代文本',
   'compose.subtitleAltLabel': '字幕及替代文本',
+
+  'video.processing': '视频正在处理中',
+  'video.unavailable': '视频暂不可用',
+  'video.openInBsky': '在 bsky.app 打开',
 
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',

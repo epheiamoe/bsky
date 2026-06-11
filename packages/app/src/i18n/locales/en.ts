@@ -201,6 +201,9 @@ const en: LocaleMessages = {
   'compose.retryVideoProcessing': 'Retry preprocessing',
   'compose.skipVideoProcessing': 'Upload without preprocessing',
   'compose.videoFallbackNotice': 'Video service unavailable; uploaded directly.',
+  'compose.videoProcessingErrorTitle': 'Video preprocessing failed',
+  'compose.videoProcessingErrorMessage': "Bluesky's video service couldn't process this video. You can retry, upload the raw file (playback may not work), or go back to edit.",
+  'compose.uploadWithoutPreprocessing': 'Upload without preprocessing',
   'compose.captionsTitle': 'Captions (.vtt)',
   'compose.addCaption': 'Add caption',
   'compose.removeCaption': 'Remove caption',
@@ -212,6 +215,10 @@ const en: LocaleMessages = {
   'compose.uploadTimeoutDetail': 'Upload timed out. File size: {size}. Please check your connection or try a smaller file.',
   'compose.videoMetadataButton': 'Subtitles & Alt Text',
   'compose.subtitleAltLabel': 'Subtitles & Alt Text',
+
+  'video.processing': 'Video is being processed',
+  'video.unavailable': 'Video unavailable',
+  'video.openInBsky': 'Open in bsky.app',
 
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',

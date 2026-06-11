@@ -14,9 +14,11 @@ export interface ExtractExternalLink {
 
 export interface ExtractVideo {
   thumbnailUrl: string;
-  playlistUrl: string;
+  playlistUrl?: string;
   alt: string;
   aspectRatio?: { width: number; height: number };
+  /** True when no API-resolved playlist is available (raw blob or still processing). */
+  processing?: boolean;
 }
 
 export interface ExtractQuotedPost {
@@ -72,14 +74,20 @@ export function extractVideo(post: PostView): ExtractVideo | null {
   if (!embed) return null;
   if ((embed.$type as string) !== 'app.bsky.embed.video') return null;
 
-  const viewEmbed = (post as any).embed as { cid?: string } | undefined;
+  const viewEmbed = (post as any).embed as {
+    cid?: string;
+    thumbnail?: string;
+    playlist?: string;
+  } | undefined;
   const cid = viewEmbed?.cid ?? ((embed.video as any)?.ref?.$link as string | undefined) ?? '';
+  const playlistUrl = viewEmbed?.playlist;
 
   return {
-    thumbnailUrl: (viewEmbed as any)?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
-    playlistUrl: (viewEmbed as any)?.playlist || getVideoPlaylistUrl(post.author.did, cid),
+    thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
+    playlistUrl,
     alt: (embed.alt as string) || '',
     aspectRatio: embed.aspectRatio as { width: number; height: number } | undefined,
+    processing: !playlistUrl,
   };
 }
 

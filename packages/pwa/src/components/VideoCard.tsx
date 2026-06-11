@@ -4,12 +4,13 @@ import { Icon } from './Icon.js';
 
 interface VideoData {
   thumbnailUrl: string;
-  playlistUrl: string;
+  playlistUrl?: string;
   alt?: string;
   aspectRatio?: { width: number; height: number };
+  processing?: boolean;
 }
 
-export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: VideoData) {
+export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio, processing }: VideoData) {
   const { t } = useI18n();
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState(false);
@@ -31,7 +32,7 @@ export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: Video
         if (Hls.isSupported()) {
           const hls = new Hls();
           hlsRef.current = hls;
-          hls.loadSource(playlistUrl);
+          hls.loadSource(playlistUrl!);
           hls.attachMedia(videoRef.current!);
 
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -49,7 +50,7 @@ export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: Video
             }
           });
         } else if (videoRef.current!.canPlayType('application/vnd.apple.mpegurl')) {
-          videoRef.current!.src = playlistUrl;
+          videoRef.current!.src = playlistUrl!;
           if (!cancelled) {
             videoRef.current!.play().catch(() => {
               if (!cancelled) setError(true);
@@ -92,6 +93,25 @@ export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio }: Video
       ? { aspectRatio: `${aspectRatio.width}/${aspectRatio.height}` }
       : {}),
   };
+
+  // Explicit placeholder for raw or still-processing videos. Trying to load a
+  // non-existent HLS playlist produces a generic playback error, so we show a
+  // clear "processing / unavailable" state instead.
+  if (processing || !playlistUrl) {
+    return (
+      <div className="mt-2 rounded-xl overflow-hidden border border-border relative bg-black" style={containerStyle}>
+        <img
+          src={thumbnailUrl}
+          alt={alt || t('video.unavailable') || 'Video unavailable'}
+          className="w-full h-full object-contain"
+          loading="lazy"
+        />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <span className="text-white text-sm">{t('video.processing') || 'Video is being processed'}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-2 rounded-xl overflow-hidden border border-border relative bg-black" style={containerStyle}>

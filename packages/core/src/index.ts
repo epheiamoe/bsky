@@ -76,7 +76,11 @@ export type {
   VideoUploadPhase,
   VideoJobStatus,
   GetServiceAuthResponse,
+  VideoServiceErrorCode,
 } from './at/types.js';
+
+export { VideoServiceError } from './at/types.js';
+export { makeUniqueVideoName } from './at/client.js';
 
 // AI exports
 export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft, generateChatTitle, describeImage } from './ai/assistant.js';

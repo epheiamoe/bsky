@@ -628,12 +628,35 @@ export interface VideoUploadOptions {
   signal?: AbortSignal;
   /** Reserved for future chunked upload. Currently ignored. */
   chunkSize?: number;
+  /** Allow falling back to raw uploadBlob only for transient errors. Default: false. */
+  allowFallback?: boolean;
 }
 
 export interface VideoUploadResult {
   blobRef: { $link: string; mimeType: string; size: number };
   /** True if processed via Video Service, false if fell back to uploadBlob */
   processed: boolean;
+  /** Present only when processed:false after an explicit transient fallback. */
+  fallbackReason?: string;
+}
+
+export type VideoServiceErrorCode =
+  | 'auth'
+  | 'payload_too_large'
+  | 'rate_limited'
+  | 'invalid_video'
+  | 'service_unavailable'
+  | 'network'
+  | 'timeout'
+  | 'cancelled';
+
+export class VideoServiceError extends Error {
+  constructor(
+    public code: VideoServiceErrorCode,
+    message: string,
+    public recoverable: boolean,
+    public status?: number,
+  ) { super(message); }
 }
 
 export interface VideoJobStatus {

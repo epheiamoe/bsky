@@ -41,7 +41,7 @@ interface ComposeMedia {
 }
 ```
 
-**Video upload** (v0.14.2+): Uses Bluesky Video Service (`video.bsky.app`) for preprocessing before posting. The service transcodes the video and stores it as a blob on the PDS. ComposePage shows upload/progress stages (`video_uploading` → `video_processing`) with percentage. On Video Service failure, automatically falls back to direct `uploadBlob`.
+**Video upload** (v0.14.2+): Uses Bluesky Video Service (`video.bsky.app`) for preprocessing before posting. The service transcodes the video and stores it as a blob on the PDS. ComposePage generates a unique `name` for each upload, shows upload/progress stages (`video_uploading` → `video_processing`) with percentage, and defaults to `allowFallback: false`. On a recoverable Video Service failure, ComposePage shows a modal with **Retry preprocessing**, **Upload without preprocessing**, and **Back to Edit** options. Raw-blob fallback only happens after explicit user consent and is flagged with `fallbackReason`.
 
 ## useDrafts
 

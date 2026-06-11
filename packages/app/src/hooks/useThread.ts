@@ -102,8 +102,10 @@ export function useThread(
         setThreadgate(undefined);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      console.error('Thread load error:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      // TODO: replace with structured log
+      console.error(JSON.stringify({ event: 'thread_load_error', uri, error: msg }));
+      setError(msg);
     } finally {
       setLoading(false);
     }

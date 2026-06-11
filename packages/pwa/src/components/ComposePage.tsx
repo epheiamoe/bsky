@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCompose, useI18n, useDrafts, extractImages, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds, formatThreadgateSummary, buildThreadgateRules } from '@bsky/app';
 import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app';
-import { BskyClient } from '@bsky/core';
-import type { PostView, AIConfig, ListView } from '@bsky/core';
+import { BskyClient, makeUniqueVideoName, VideoServiceError } from '@bsky/core';
+import type { PostView, AIConfig, ListView, VideoUploadOptions, VideoUploadResult } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 import { formatTime } from '../utils/format.js';
@@ -140,6 +140,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const submitProgressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showAltConfirmModal, setShowAltConfirmModal] = useState(false);
   const [altMissingCount, setAltMissingCount] = useState(0);
+
+  const [showVideoErrorModal, setShowVideoErrorModal] = useState(false);
+  const [videoErrorMessage, setVideoErrorMessage] = useState('');
+  const videoErrorResolveRef = useRef<((choice: 'retry' | 'skip' | 'cancel') => void) | null>(null);
 
   // Keep refs in sync with latest state for unmount cleanup
   useEffect(() => { perPostImagesRef.current = perPostImages; }, [perPostImages]);
@@ -601,66 +605,130 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
       if (vid) {
         currentItem++;
-        try {
-          const result = await client.uploadVideo(vid.data, vid.fileName, {
-            onProgress: ({ phase, progress }) => {
-              if (phase === 'uploading') {
-                setSubmitProgress({
-                  visible: true,
-                  phase: 'video_uploading',
-                  current: progress,
-                  total: 100,
-                  message: t('compose.videoUploading'),
-                });
-              } else {
-                setSubmitProgress({
-                  visible: true,
-                  phase: 'video_processing',
-                  current: progress,
-                  total: 100,
-                  message: t('compose.videoProcessing', { progress: String(progress) }),
-                });
+        const onVideoProgress: VideoUploadOptions['onProgress'] = ({ phase, progress }) => {
+          if (phase === 'uploading') {
+            setSubmitProgress({
+              visible: true,
+              phase: 'video_uploading',
+              current: progress,
+              total: 100,
+              message: t('compose.videoUploading'),
+            });
+          } else {
+            setSubmitProgress({
+              visible: true,
+              phase: 'video_processing',
+              current: progress,
+              total: 100,
+              message: t('compose.videoProcessing', { progress: String(progress) }),
+            });
+          }
+        };
+
+        const tryUploadVideo = async (allowFallback: boolean): Promise<{ result?: VideoUploadResult; error?: VideoServiceError }> => {
+          const uniqueName = makeUniqueVideoName(vid.fileName);
+          try {
+            const result = await client.uploadVideo(vid.data, uniqueName, {
+              onProgress: onVideoProgress,
+              allowFallback,
+            });
+            return { result };
+          } catch (e) {
+            if (e instanceof VideoServiceError) {
+              if (e.recoverable && !allowFallback) {
+                return { error: e };
               }
-            },
-          });
-
-          // Log fallback for observability
-          if (!result.processed) {
-            console.warn('[compose] Video Service unavailable; fell back to uploadBlob');
-          }
-
-          // Upload caption blobs (still use uploadBlob)
-          const uploadedCaptions = [];
-          for (const caption of vid.captions) {
-            currentItem++;
-            setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
-            try {
-              const capRes = await client.uploadBlob(caption.data, 'text/vtt');
-              uploadedCaptions.push({
-                lang: caption.lang,
-                blobRef: { $link: capRes.blob.ref.$link, mimeType: 'text/vtt', size: caption.data.length },
-              });
-            } catch (capErr) {
-              console.warn('Caption upload failed:', capErr);
             }
+            throw e;
           }
+        };
 
-          uploaded.push({
-            type: 'video',
-            blobRef: result.blobRef,
-            alt: vid.alt,
-            captions: uploadedCaptions.length > 0 ? uploadedCaptions : undefined,
-            aspectRatio: vid.aspectRatio,
-          });
+        let uploadOutcome: VideoUploadResult | null = null;
+        try {
+          const firstTry = await tryUploadVideo(false);
+          if (firstTry.error) {
+            // Recoverable preprocessing failure — ask user whether to retry, skip, or cancel.
+            // TODO: replace with structured log
+            console.warn('[compose] Video preprocessing failed, showing decision modal:', { postId: post.id, code: firstTry.error.code });
+            const choice = await new Promise<'retry' | 'skip' | 'cancel'>((resolve) => {
+              setVideoErrorMessage(firstTry.error!.message);
+              setShowVideoErrorModal(true);
+              videoErrorResolveRef.current = resolve;
+            });
+            // TODO: replace with structured log
+            console.warn('[compose] Video preprocessing decision:', { choice, postId: post.id });
+            if (choice === 'retry') {
+              const retry = await tryUploadVideo(false);
+              if (retry.error) {
+                // Second failure on retry — stop and preserve draft.
+                setShowVideoErrorModal(false);
+                setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: t('compose.videoProcessingFailed', { message: retry.error.message }) });
+                return;
+              }
+              uploadOutcome = retry.result ?? null;
+            } else if (choice === 'skip') {
+              const skip = await tryUploadVideo(true);
+              if (skip.error) {
+                setShowVideoErrorModal(false);
+                setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: t('compose.videoProcessingFailed', { message: skip.error.message }) });
+                return;
+              }
+              uploadOutcome = skip.result ?? null;
+            } else {
+              // cancel: preserve all compose state and close the progress modal
+              setShowVideoErrorModal(false);
+              setSubmitProgress(prev => ({ ...prev, visible: false }));
+              return;
+            }
+          } else {
+            uploadOutcome = firstTry.result ?? null;
+          }
         } catch (e) {
           const isTimeout = e instanceof Error &&
             (e.name === 'TimeoutError' || e.message.toLowerCase().includes('timeout'));
           const detail = isTimeout
             ? t('compose.uploadTimeoutDetail', { size: formatSize(vid.data.length) })
             : (e instanceof Error ? e.message : String(e));
+          setShowVideoErrorModal(false);
           setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: `${t('compose.uploadFailed')}: ${detail}` });
           return;
         }
+
+        if (!uploadOutcome) {
+          setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: t('compose.uploadFailed') });
+          return;
+        }
+
+        // Log fallback for observability
+        if (!uploadOutcome.processed) {
+          // TODO: replace with structured log
+          console.warn('[compose] Video Service unavailable; uploaded without preprocessing:', uploadOutcome.fallbackReason);
+          setSubmitProgress({ visible: true, phase: 'video_processing', current: 100, total: 100, message: t('compose.videoFallbackNotice') });
+        }
+
+        // Upload caption blobs (still use uploadBlob)
+        const uploadedCaptions = [];
+        for (const caption of vid.captions) {
+          currentItem++;
+          setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
+          try {
+            const capRes = await client.uploadBlob(caption.data, 'text/vtt');
+            uploadedCaptions.push({
+              lang: caption.lang,
+              blobRef: { $link: capRes.blob.ref.$link, mimeType: 'text/vtt', size: caption.data.length },
+            });
+          } catch (capErr) {
+            console.warn('Caption upload failed:', capErr);
+          }
+        }
+
+        uploaded.push({
+          type: 'video',
+          blobRef: uploadOutcome.blobRef,
+          alt: vid.alt,
+          captions: uploadedCaptions.length > 0 ? uploadedCaptions : undefined,
+          aspectRatio: vid.aspectRatio,
+        });
       }
 
       if (imgs.length > 0) {
@@ -1470,6 +1538,64 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                 className="w-full px-4 py-2.5 rounded-lg border border-border text-text-secondary hover:bg-surface text-sm font-semibold transition-colors"
               >
                 {t('compose.discardDraft')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Video preprocessing error modal */}
+      {showVideoErrorModal && (
+        <Modal open onClose={() => {
+          setShowVideoErrorModal(false);
+          videoErrorResolveRef.current?.('cancel');
+          videoErrorResolveRef.current = null;
+        }}>
+          <div className="p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-text-primary">{t('compose.videoProcessingErrorTitle')}</h3>
+                <p className="text-sm text-text-secondary mt-1">{t('compose.videoProcessingErrorMessage')}</p>
+                {videoErrorMessage && (
+                  <p className="text-xs text-text-secondary mt-1 font-mono">{videoErrorMessage}</p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2 mt-5">
+              <button
+                onClick={() => {
+                  setShowVideoErrorModal(false);
+                  videoErrorResolveRef.current?.('retry');
+                  videoErrorResolveRef.current = null;
+                }}
+                className="w-full px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover transition-colors"
+              >
+                {t('compose.retryVideoProcessing')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowVideoErrorModal(false);
+                  videoErrorResolveRef.current?.('skip');
+                  videoErrorResolveRef.current = null;
+                }}
+                className="w-full px-4 py-2.5 rounded-lg border border-yellow-500/50 text-yellow-700 dark:text-yellow-400 text-sm font-medium hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+              >
+                {t('compose.uploadWithoutPreprocessing')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowVideoErrorModal(false);
+                  videoErrorResolveRef.current?.('cancel');
+                  videoErrorResolveRef.current = null;
+                }}
+                className="w-full px-4 py-2.5 rounded-lg border border-border text-text-secondary text-sm font-medium hover:bg-surface transition-colors"
+              >
+                {t('compose.backToCompose')}
               </button>
             </div>
           </div>

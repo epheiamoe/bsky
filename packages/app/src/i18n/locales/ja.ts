@@ -201,6 +201,9 @@ const ja: LocaleMessages = {
   'compose.retryVideoProcessing': '前処理を再試行',
   'compose.skipVideoProcessing': '前処理をスキップしてアップロード',
   'compose.videoFallbackNotice': '動画前処理サービスが利用できないため、直接アップロードしました。',
+  'compose.videoProcessingErrorTitle': '動画の前処理に失敗しました',
+  'compose.videoProcessingErrorMessage': 'Blueskyの動画サービスでこの動画を処理できませんでした。再試行する、元のファイルをアップロードする（再生できない場合があります）、編集に戻ることができます。',
+  'compose.uploadWithoutPreprocessing': '前処理なしでアップロード',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '字幕を追加',
   'compose.removeCaption': '字幕を削除',
@@ -212,6 +215,10 @@ const ja: LocaleMessages = {
   'compose.uploadTimeoutDetail': 'アップロードがタイムアウトしました。ファイルサイズ：{size}。接続を確認するか、より小さいファイルを試してください。',
   'compose.videoMetadataButton': '字幕と代替テキスト',
   'compose.subtitleAltLabel': '字幕と代替テキスト',
+
+  'video.processing': '動画を処理中です',
+  'video.unavailable': '動画を利用できません',
+  'video.openInBsky': 'bsky.app で開く',
 
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',
