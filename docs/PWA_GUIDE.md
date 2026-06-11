@@ -49,7 +49,7 @@ packages/pwa/
     │   ├── PostCard.tsx         # Dual PostView/FlatLine + avatar + image grid + lightbox
     │   ├── FeedTimeline.tsx     # Virtual scroll + auto-load (IntersectionObserver)
     │   ├── ThreadView.tsx       # Thread + labels + reply tree + translate
-    │   ├── ComposePage.tsx      # Post/reply/thread + image/video upload (max 4 images) + ALT + draft save modal + polish
+    │   ├── ComposePage.tsx      # Post/reply/thread + image/video upload (max 4 images) + ALT + VTT captions + dynamic upload timeout + draft save modal + polish
     │   ├── AIChatPage.tsx       # AI chat + history + streaming + markdown
     │   ├── ProfilePage.tsx      # User profile + avatar
     │   ├── SearchPage.tsx       # Post search

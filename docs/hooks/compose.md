@@ -34,6 +34,10 @@ interface ComposeMedia {
   type: 'image' | 'video';
   blobRef: { $link: string; mimeType: string; size: number };
   alt: string;
+  /** For video: uploaded caption blob refs (VTT subtitles) */
+  captions?: Array<{ lang: string; blobRef: { $link: string; mimeType: string; size: number } }>;
+  /** For video: aspect ratio { width, height } */
+  aspectRatio?: { width: number; height: number };
 }
 ```
 
@@ -69,3 +73,5 @@ interface AppDraft {
 Uses module-level `_clientRef` to avoid stale closures. PDS-first sync with local fallback.
 
 **PWA compose media handling**: selected image/video bytes are read into `Uint8Array` immediately on selection and stored in component state. Upload uses the stored bytes — never the original `File` reference, which can become stale on mobile (especially after backgrounding or cloud-picker virtualization).
+
+**Video metadata** (v0.14.2+): Videos support ALT text (max 10000 chars), VTT caption tracks (up to 20, max 20KB each), and aspect ratio. Caption files are uploaded as separate blobs and referenced in the `app.bsky.embed.video` record.
