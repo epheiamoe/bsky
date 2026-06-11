@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useCompose, useI18n, useDrafts, extractImages, setComposeDraftForWidgets, registerComposeDraftSetter, getEnabledWidgetIds, formatThreadgateSummary, buildThreadgateRules } from '@bsky/app';
 import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app';
-import type { BskyClient, PostView, AIConfig, ListView } from '@bsky/core';
+import { BskyClient } from '@bsky/core';
+import type { PostView, AIConfig, ListView } from '@bsky/core';
 import { Icon } from './Icon.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 import { formatTime } from '../utils/format.js';
 import { WidgetModal } from './WidgetModal.js';
 import { CircularProgress } from './CircularProgress.js';
 import { EmojiPicker } from './EmojiPicker.js';
-import { AltTextModal } from './AltTextModal.js';
+import { MediaMetadataModal, type LocalCaption } from './AltTextModal.js';
 import { ContentWarningModal } from './ContentWarningModal.js';
 import { ReplyOptionsModal } from './ReplyOptionsModal.js';
 import { LanguageSelector } from './LanguageSelector.js';
@@ -16,7 +17,8 @@ import { Modal } from './Modal.js';
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 300 * 1024 * 1024; // 300MB
+const WARN_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB — warning threshold
 
 interface ComposePageProps {
   client: BskyClient;
@@ -52,6 +54,12 @@ interface LocalVideo {
   preview: string;
   uploading: boolean;
   error?: string;
+  /** Video ALT text (max 10000 chars in lexicon) */
+  alt: string;
+  /** VTT caption tracks */
+  captions: LocalCaption[];
+  /** Detected or user-specified aspect ratio */
+  aspectRatio?: { width: number; height: number };
 }
 
 interface QuotePreview {
@@ -159,6 +167,12 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const [altModalInitialAlt, setAltModalInitialAlt] = useState('');
   const [altModalPostId, setAltModalPostId] = useState('');
   const [altModalImageIdx, setAltModalImageIdx] = useState(0);
+
+  // Video metadata modal state
+  const [videoMetaModalOpen, setVideoMetaModalOpen] = useState(false);
+  const [videoMetaModalPostId, setVideoMetaModalPostId] = useState('');
+  const [videoMetaModalVideo, setVideoMetaModalVideo] = useState<LocalVideo | null>(null);
+
   const [showReplyOptions, setShowReplyOptions] = useState(false);
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [dragOverPostId, setDragOverPostId] = useState<string | null>(null);
@@ -361,7 +375,20 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     if (videoFile) {
       if (currentVideo) { alert('Only 1 video allowed'); return; }
       if (currentImages.length > 0) { alert('Cannot mix video with images'); return; }
-      if (videoFile.size > MAX_VIDEO_SIZE) { alert(`"${videoFile.name}" exceeds 100MB limit`); return; }
+      if (videoFile.size > MAX_VIDEO_SIZE) {
+        alert(t('compose.maxVideoSize', { size: formatSize(MAX_VIDEO_SIZE) }));
+        return;
+      }
+      // Warning for files between 100MB and 300MB
+      if (videoFile.size > WARN_VIDEO_SIZE) {
+        const proceed = window.confirm(
+          t('compose.videoSizeWarning', {
+            size: formatSize(videoFile.size),
+            warnSize: formatSize(WARN_VIDEO_SIZE),
+          }),
+        );
+        if (!proceed) return;
+      }
       try {
         const data = new Uint8Array(await videoFile.arrayBuffer());
         const blob = new Blob([data], { type: videoFile.type });
@@ -371,7 +398,30 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
           mimeType: videoFile.type,
           preview: URL.createObjectURL(blob),
           uploading: false,
+          alt: '',
+          captions: [],
         }));
+        // Detect aspect ratio asynchronously
+        const videoEl = document.createElement('video');
+        videoEl.preload = 'metadata';
+        videoEl.onloadedmetadata = () => {
+          setPerPostVideos(prev => {
+            const next = new Map(prev);
+            const vid = next.get(postId);
+            if (vid) {
+              next.set(postId, {
+                ...vid,
+                aspectRatio: { width: videoEl.videoWidth, height: videoEl.videoHeight },
+              });
+            }
+            return next;
+          });
+          URL.revokeObjectURL(videoEl.src);
+        };
+        videoEl.onerror = () => {
+          URL.revokeObjectURL(videoEl.src);
+        };
+        videoEl.src = URL.createObjectURL(blob);
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
         alert(`${t('compose.uploadFailed')}: ${detail}`);
@@ -500,11 +550,13 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     e.preventDefault();
     if (submitting) return;
 
-    // [UX] Check ALT immediately before any upload
+    // [UX] Check ALT immediately before any upload (images + video)
     let noAltCount = 0;
     for (const post of posts) {
       const imgs = perPostImages.get(post.id) ?? [];
       noAltCount += imgs.filter(img => !img.altText.trim()).length;
+      const vid = perPostVideos.get(post.id) ?? null;
+      if (vid && !vid.alt.trim()) noAltCount++;
     }
     if (noAltCount > 0) {
       setAltMissingCount(noAltCount);
@@ -513,7 +565,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     }
 
     await executeSubmit();
-  }, [posts, perPostImages, submitting]);
+  }, [posts, perPostImages, perPostVideos, submitting]);
 
   const executeSubmit = useCallback(async () => {
     // Count posts that have text or media
@@ -527,7 +579,11 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     let totalItems = 0;
     for (const post of contentPosts) {
       totalItems += (perPostImages.get(post.id) ?? []).length;
-      if (perPostVideos.get(post.id) ?? null) totalItems += 1;
+      const vid = perPostVideos.get(post.id) ?? null;
+      if (vid) {
+        totalItems += 1; // video blob
+        totalItems += vid.captions.length; // caption blobs
+      }
     }
     totalItems += contentPosts.length;
 
@@ -547,14 +603,40 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         currentItem++;
         setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
         try {
-          const res = await client.uploadBlob(vid.data, vid.mimeType);
+          // Use dynamic timeout based on file size
+          const timeoutMs = BskyClient.calculateUploadTimeout(vid.data.length);
+          const res = await client.uploadBlob(vid.data, vid.mimeType, { timeoutMs });
+
+          // Upload caption blobs
+          const uploadedCaptions = [];
+          for (const caption of vid.captions) {
+            currentItem++;
+            setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
+            try {
+              const capRes = await client.uploadBlob(caption.data, 'text/vtt');
+              uploadedCaptions.push({
+                lang: caption.lang,
+                blobRef: { $link: capRes.blob.ref.$link, mimeType: 'text/vtt', size: caption.data.length },
+              });
+            } catch (capErr) {
+              // Caption upload failed — log but don't block the whole post
+              console.warn('Caption upload failed:', capErr);
+            }
+          }
+
           uploaded.push({
             type: 'video',
             blobRef: { $link: res.blob.ref.$link, mimeType: vid.mimeType, size: vid.data.length },
-            alt: '',
+            alt: vid.alt,
+            captions: uploadedCaptions.length > 0 ? uploadedCaptions : undefined,
+            aspectRatio: vid.aspectRatio,
           });
         } catch (e) {
-          const detail = e instanceof Error ? e.message : String(e);
+          const isTimeout = e instanceof Error &&
+            (e.name === 'TimeoutError' || e.message.toLowerCase().includes('timeout'));
+          const detail = isTimeout
+            ? t('compose.uploadTimeoutDetail', { size: formatSize(vid.data.length) })
+            : (e instanceof Error ? e.message : String(e));
           setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: `${t('compose.uploadFailed')}: ${detail}` });
           return;
         }
@@ -651,8 +733,29 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
     setAltModalOpen(true);
   };
 
-  const handleAltSave = (alt: string) => {
+  const handleAltSave = ({ alt }: { alt: string }) => {
     setImageAlt(altModalPostId, altModalImageIdx, alt);
+  };
+
+  const openVideoMetadataModal = (postId: string, vid: LocalVideo) => {
+    setVideoMetaModalPostId(postId);
+    setVideoMetaModalVideo(vid);
+    setVideoMetaModalOpen(true);
+  };
+
+  const handleVideoMetadataSave = ({ alt, captions }: { alt: string; captions?: LocalCaption[] }) => {
+    setPerPostVideos(prev => {
+      const next = new Map(prev);
+      const vid = next.get(videoMetaModalPostId);
+      if (vid) {
+        next.set(videoMetaModalPostId, {
+          ...vid,
+          alt,
+          captions: captions ?? [],
+        });
+      }
+      return next;
+    });
   };
 
   const insertEmoji = (emoji: string) => {
@@ -869,9 +972,17 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
                 {/* Video preview */}
                 {vid && (
-                  <div className="mb-2 relative rounded-lg overflow-hidden border border-border"
-                  >
+                  <div className="mb-2 relative rounded-lg overflow-hidden border border-border">
                     <video src={vid.preview} className="w-full max-h-48 object-contain bg-black" controls preload="metadata" />
+                    {/* Subtitle & Alt button */}
+                    <button
+                      type="button"
+                      onClick={() => openVideoMetadataModal(post.id, vid)}
+                      className="absolute top-1.5 left-1.5 px-2 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-medium rounded-md transition-colors flex items-center gap-1"
+                      aria-label={t('compose.videoMetadataButton')}
+                    >
+                      <span>+ {t('compose.subtitleAltLabel')}</span>
+                    </button>
                     <button type="button" onClick={() => removeVideo(post.id)} className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80 transition-colors"
                       aria-label="Remove video"
                     >
@@ -1169,14 +1280,28 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
       {/* ── Modals ── */}
 
-      {/* ALT text modal */}
+      {/* ALT text modal (image mode) */}
       {altModalOpen && (
-        <AltTextModal
+        <MediaMetadataModal
           open={altModalOpen}
-          imageUrl={altModalImageUrl}
+          mode="image"
+          mediaUrl={altModalImageUrl}
           initialAlt={altModalInitialAlt}
           onClose={() => setAltModalOpen(false)}
           onSave={handleAltSave}
+        />
+      )}
+
+      {/* Video metadata modal (video mode) */}
+      {videoMetaModalVideo && (
+        <MediaMetadataModal
+          open={videoMetaModalOpen}
+          mode="video"
+          mediaUrl={videoMetaModalVideo.preview}
+          initialAlt={videoMetaModalVideo.alt}
+          initialCaptions={videoMetaModalVideo.captions}
+          onClose={() => setVideoMetaModalOpen(false)}
+          onSave={handleVideoMetadataSave}
         />
       )}
 
