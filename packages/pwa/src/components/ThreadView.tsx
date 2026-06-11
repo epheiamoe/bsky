@@ -137,8 +137,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     if (!client || !focused) return;
     try {
       await client.deletePost(focused.uri);
-      goBack();
       setToast({ visible: true, message: t('thread.deleteSuccess'), type: 'success' });
+      setTimeout(() => goBack(), 100);
     } catch (e) {
       const errorMessage = e instanceof Error ? e.message : String(e);
       setToast({ visible: true, message: t('thread.deleteFailed', { error: errorMessage }), type: 'error' });

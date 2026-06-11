@@ -81,6 +81,7 @@ const en: LocaleMessages = {
   'widget.polishHint': 'Press [f] while composing to polish your draft.',
   'action.retry': 'Retry',
   'action.close': 'Close',
+  'action.dismiss': 'Dismiss',
   'action.save': 'Save',
   'action.navigate': 'Navigate',
   'action.add': 'Add',

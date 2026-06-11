@@ -77,6 +77,7 @@ const zh: LocaleMessages = {
   'widget.polishHint': '撰写时按 [f] 润色草稿。',
   'action.retry': '重试',
   'action.close': '关闭',
+  'action.dismiss': '关闭',
   'action.save': '保存',
   'action.navigate': '导航',
   'action.add': '添加',

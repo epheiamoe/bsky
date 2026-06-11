@@ -81,6 +81,7 @@ const ja: LocaleMessages = {
   'widget.polishHint': '作成時に [f] を押して草稿を推敲します。',
   'action.retry': '再試行',
   'action.close': '閉じる',
+  'action.dismiss': '閉じる',
   'action.save': '保存',
   'action.navigate': '移動',
   'action.add': '追加',

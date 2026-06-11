@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 interface ToastProps {
@@ -12,6 +13,7 @@ interface ToastProps {
  * Generic bottom-right auto-dismiss toast.
  */
 export function Toast({ message, type = 'success', duration = 3000, onDismiss }: ToastProps) {
+  const { t } = useI18n();
   const [progress, setProgress] = useState(100);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function Toast({ message, type = 'success', duration = 3000, onDismiss }:
           <button
             onClick={onDismiss}
             className="text-text-secondary hover:text-text-primary transition-colors shrink-0"
-            aria-label="Dismiss"
+            aria-label={t('action.dismiss')}
           >
             <Icon name="x" size={14} />
           </button>
