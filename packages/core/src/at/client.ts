@@ -155,7 +155,7 @@ export class BskyClient {
     this.ky = ky.create({
       prefixUrl: entryPds + '/xrpc',
       timeout: 30000,
-      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
     this.publicKy = ky.create({
@@ -240,7 +240,7 @@ export class BskyClient {
     this.ky = ky.create({
       prefixUrl: this.pdsUrl + '/xrpc',
       timeout: 30000,
-      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
 
@@ -651,14 +651,30 @@ export class BskyClient {
     await this.deleteRecord(this.getDID(), 'app.bsky.graph.follow', rkey);
   }
 
-  async uploadBlob(data: Uint8Array, mimeType: string): Promise<UploadBlobResponse> {
+  async uploadBlob(
+    data: Uint8Array,
+    mimeType: string,
+    options?: { timeoutMs?: number },
+  ): Promise<UploadBlobResponse> {
     return this.ky.post('com.atproto.repo.uploadBlob', {
       headers: {
         ...this.getAuthHeaders(),
         'Content-Type': mimeType,
       },
       body: data,
+      timeout: options?.timeoutMs ?? 30000,
     }).json<UploadBlobResponse>();
+  }
+
+  /**
+   * Calculate a reasonable upload timeout based on file size.
+   * Assumes a conservative upload speed of ~256 KB/s (2 Mbps).
+   * Minimum: 60s, Maximum: 600s (10 min).
+   */
+  static calculateUploadTimeout(fileSizeBytes: number): number {
+    const bytesPerSecond = 256 * 1024; // 256 KB/s conservative estimate
+    const estimatedSeconds = Math.ceil(fileSizeBytes / bytesPerSecond);
+    return Math.min(Math.max(estimatedSeconds * 1000, 60000), 600000);
   }
 
   async downloadBlob(did: string, cid: string): Promise<Uint8Array> {
@@ -705,7 +721,7 @@ export class BskyClient {
     this.ky = ky.create({
       prefixUrl: this.pdsUrl + '/xrpc',
       timeout: 30000,
-      retry: { limit: 1, statusCodes: [408, 413, 429, 500, 502, 503, 504] },
+      retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
   }
