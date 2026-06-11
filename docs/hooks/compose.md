@@ -41,6 +41,8 @@ interface ComposeMedia {
 }
 ```
 
+**Video upload** (v0.14.2+): Uses Bluesky Video Service (`video.bsky.app`) for preprocessing before posting. The service transcodes the video and stores it as a blob on the PDS. ComposePage shows upload/progress stages (`video_uploading` → `video_processing`) with percentage. On Video Service failure, automatically falls back to direct `uploadBlob`.
+
 ## useDrafts
 
 **File**: `packages/app/src/hooks/useDrafts.ts`

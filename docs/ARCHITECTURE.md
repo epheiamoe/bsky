@@ -112,6 +112,8 @@ bsky/
 12. **Auto JWT refresh via ky afterResponse hook** — `BskyClient` registers an `afterResponse` hook on the ky instance that detects `ExpiredToken`/`InvalidToken` errors (HTTP 400/401), calls `refreshSession` with the refresh JWT, and retries the original request with the new access token. The retry forwards the original headers (minus recomputed `content-length`) and body so POSTs with binary payloads (e.g. `uploadBlob`) do not fail on token refresh.
 - `uploadBlob(data, mimeType, options?)` — uploads binary blob to PDS; supports optional `timeoutMs` override for large files
 - `BskyClient.calculateUploadTimeout(fileSizeBytes)` — static helper estimating upload timeout based on conservative 256KB/s speed (60s–600s range)
+- `uploadVideo(data, name, options?)` — uploads video via Bluesky Video Service (app.bsky.video.uploadVideo) with preprocessing; auto-fallback to `uploadBlob` on failure; supports progress callbacks and cancellation via AbortSignal
+- `getServiceAuth(aud, lxm, exp?)` — gets service JWT for Video Service authentication
 13. **Dual-mode translation (simple/json)** — `translateText()` supports `simple` mode (plain text output) and `json` mode (structured `{translated, source_lang}` output); includes retry with exponential backoff up to 3 attempts for empty content or parse failures
 14. **Shared FlatLine now includes imageUrls, externalLink, authorAvatar** — `FlatLine` interface (used by both TUI and PWA thread views) includes `imageUrls: string[]`, `externalLink: {uri, title, description} | null`, and `authorAvatar?: string` for rich post rendering
 
