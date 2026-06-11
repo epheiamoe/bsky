@@ -5,10 +5,45 @@ export interface ComposeMedia {
   type: 'image' | 'video';
   blobRef: { $link: string; mimeType: string; size: number };
   alt: string;
+  /** For video: uploaded caption blob refs */
+  captions?: Array<{ lang: string; blobRef: { $link: string; mimeType: string; size: number } }>;
+  /** For video: aspect ratio { width, height } */
+  aspectRatio?: { width: number; height: number };
 }
 
 /** @deprecated Use ComposeMedia instead */
 export type ComposeImage = ComposeMedia;
+
+function buildVideoEmbed(video: ComposeMedia): Record<string, unknown> {
+  const embed: Record<string, unknown> = {
+    $type: 'app.bsky.embed.video',
+    video: {
+      $type: 'blob',
+      ref: { $link: video.blobRef.$link },
+      mimeType: video.blobRef.mimeType,
+      size: video.blobRef.size,
+    },
+  };
+  if (video.alt) embed.alt = video.alt;
+  if (video.aspectRatio) {
+    embed.aspectRatio = {
+      width: video.aspectRatio.width,
+      height: video.aspectRatio.height,
+    };
+  }
+  if (video.captions && video.captions.length > 0) {
+    embed.captions = video.captions.map(cap => ({
+      lang: cap.lang,
+      file: {
+        $type: 'blob',
+        ref: { $link: cap.blobRef.$link },
+        mimeType: cap.blobRef.mimeType,
+        size: cap.blobRef.size,
+      },
+    }));
+  }
+  return embed;
+}
 
 export interface ComposePostItem {
   id: string;
@@ -134,16 +169,7 @@ export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string
         const images = media?.filter(m => m.type === 'image');
 
         if (isFirstPost && video) {
-          record.embed = {
-            $type: 'app.bsky.embed.video',
-            video: {
-              $type: 'blob',
-              ref: { $link: video.blobRef.$link },
-              mimeType: video.blobRef.mimeType,
-              size: video.blobRef.size,
-            },
-          };
-          if (video.alt) record.embed = { ...record.embed as object, alt: video.alt };
+          record.embed = buildVideoEmbed(video);
         } else if (isFirstPost && effectiveQuoteUri) {
           const parts = uriToParts(effectiveQuoteUri);
           const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
@@ -187,16 +213,7 @@ export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string
         } else if (!isFirstPost && ((video) || (images && images.length > 0))) {
           // Subsequent posts can have media too
           if (video) {
-            record.embed = {
-              $type: 'app.bsky.embed.video',
-              video: {
-                $type: 'blob',
-                ref: { $link: video.blobRef.$link },
-                mimeType: video.blobRef.mimeType,
-                size: video.blobRef.size,
-              },
-            };
-            if (video.alt) record.embed = { ...record.embed as object, alt: video.alt };
+            record.embed = buildVideoEmbed(video);
           } else if (images && images.length > 0) {
             record.embed = {
               $type: 'app.bsky.embed.images',

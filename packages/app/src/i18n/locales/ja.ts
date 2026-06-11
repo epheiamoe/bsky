@@ -192,6 +192,20 @@ const ja: LocaleMessages = {
   'compose.searchLanguage': '言語を検索...',
   'compose.maxLanguages': '最大3つの言語を選択',
 
+  // 動画メタデータ（字幕 + 代替テキスト）
+  'compose.videoAltPlaceholder': 'ALTテキストを入力（動画の説明、任意）',
+  'compose.captionsTitle': '字幕 (.vtt)',
+  'compose.addCaption': '字幕を追加',
+  'compose.removeCaption': '字幕を削除',
+  'compose.captionLang': '言語',
+  'compose.maxCaptions': '最大 {n} 個の字幕',
+  'compose.captionTooLarge': '字幕ファイルが20KBの制限を超えています',
+  'compose.maxVideoSize': '動画が {size} の制限を超えています',
+  'compose.videoSizeWarning': 'この動画は {size} で、推奨の {warnSize} の制限を超えています。大きなファイルはBlueskyによって拒否される可能性があります。それでも続行しますか？',
+  'compose.uploadTimeoutDetail': 'アップロードがタイムアウトしました。ファイルサイズ：{size}。接続を確認するか、より小さいファイルを試してください。',
+  'compose.videoMetadataButton': '字幕と代替テキスト',
+  'compose.subtitleAltLabel': '字幕と代替テキスト',
+
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',
   'drafts.notSynced': 'サーバーに未同期',

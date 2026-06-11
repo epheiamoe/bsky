@@ -190,6 +190,20 @@ const zh: LocaleMessages = {
   'compose.searchLanguage': '搜索语言...',
   'compose.maxLanguages': '最多选择 3 种语言',
 
+  // 视频元数据（字幕 + 替代文本）
+  'compose.videoAltPlaceholder': '输入替代文本（描述视频内容，可选）',
+  'compose.captionsTitle': '字幕 (.vtt)',
+  'compose.addCaption': '添加字幕',
+  'compose.removeCaption': '移除字幕',
+  'compose.captionLang': '语言',
+  'compose.maxCaptions': '最多 {n} 个字幕',
+  'compose.captionTooLarge': '字幕文件超过 20KB 限制',
+  'compose.maxVideoSize': '视频超过 {size} 限制',
+  'compose.videoSizeWarning': '此视频大小为 {size}，超过建议的 {warnSize} 限制。大文件可能被 Bluesky 拒绝。仍要继续吗？',
+  'compose.uploadTimeoutDetail': '上传超时。文件大小：{size}。请检查网络连接或尝试更小的文件。',
+  'compose.videoMetadataButton': '字幕及替代文本',
+  'compose.subtitleAltLabel': '字幕及替代文本',
+
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',
   'drafts.notSynced': '此草稿未保存到服务器',

@@ -192,6 +192,20 @@ const en: LocaleMessages = {
   'compose.searchLanguage': 'Search languages...',
   'compose.maxLanguages': 'Select up to 3 languages',
 
+  // Video metadata (captions + alt)
+  'compose.videoAltPlaceholder': 'ALT text (describe the video, optional)',
+  'compose.captionsTitle': 'Captions (.vtt)',
+  'compose.addCaption': 'Add caption',
+  'compose.removeCaption': 'Remove caption',
+  'compose.captionLang': 'Language',
+  'compose.maxCaptions': 'Up to {n} captions',
+  'compose.captionTooLarge': 'Caption file exceeds 20KB limit',
+  'compose.maxVideoSize': 'Video exceeds {size} limit',
+  'compose.videoSizeWarning': 'This video is {size}, which exceeds the recommended {warnSize} limit. Large files may be rejected by Bluesky. Continue anyway?',
+  'compose.uploadTimeoutDetail': 'Upload timed out. File size: {size}. Please check your connection or try a smaller file.',
+  'compose.videoMetadataButton': 'Subtitles & Alt Text',
+  'compose.subtitleAltLabel': 'Subtitles & Alt Text',
+
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',
   'drafts.notSynced': 'Not synced to server',
