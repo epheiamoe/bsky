@@ -89,6 +89,7 @@ export class BskyClient {
   private _refreshPromise: Promise<CreateSessionResponse | null> | null = null;
   /** Called when a JWT refresh attempt fails and the session becomes invalid. Auth store hooks into this to reset UI state. */
   _onSessionExpired?: () => void;
+  private actualPdsUrl?: string;
 
   constructor(options?: { pdsUrl?: string }) {
     const entryPds = options?.pdsUrl ?? BSKY_SERVICE;
@@ -248,6 +249,7 @@ export class BskyClient {
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
 
+    await this.resolveActualPds();
     return res;
   }
 
@@ -259,6 +261,34 @@ export class BskyClient {
       s => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer'
     );
     return pdsService?.serviceEndpoint?.replace(/\/+$/, '') ?? null;
+  }
+
+  async resolveActualPds(): Promise<void> {
+    if (!this.session) return;
+    try {
+      // Resolve DID document via PLC directory
+      const did = this.session.did;
+      let doc: Record<string, unknown> | null = null;
+
+      if (did.startsWith('did:plc:')) {
+        const res = await fetch(`https://plc.directory/${did}`);
+        if (res.ok) doc = await res.json() as Record<string, unknown>;
+      } else if (did.startsWith('did:web:')) {
+        const host = did.replace('did:web:', '');
+        const res = await fetch(`https://${host}/.well-known/did.json`);
+        if (res.ok) doc = await res.json() as Record<string, unknown>;
+      }
+
+      if (doc) {
+        const services = (doc.service as Array<{ id: string; type: string; serviceEndpoint: string }>) ?? [];
+        const pdsService = services.find(s => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer');
+        if (pdsService?.serviceEndpoint) {
+          this.actualPdsUrl = pdsService.serviceEndpoint;
+        }
+      }
+    } catch (e) {
+      console.warn('[bsky] Failed to resolve actual PDS:', e);
+    }
   }
 
   async resolveHandle(handle: string): Promise<ResolveHandleResponse> {
@@ -737,21 +767,19 @@ export class BskyClient {
       if (/\b413\b/.test(errMsg) || /\b429\b/.test(errMsg)) {
         throw e;
       }
+      console.warn('[bsky] Video Service failed, falling back to uploadBlob:', errMsg);
       // Fallback to uploadBlob for any other error
       return this._fallbackToUploadBlob(data, mimeType, timeoutMs, signal, onProgress);
     }
   }
 
   private _derivePdsDid(): string {
-    // Convert PDS URL to did:web format
-    // https://bsky.social → did:web:bsky.social
-    // https://pds.example.com → did:web:pds.example.com
+    const pdsUrl = this.actualPdsUrl ?? this.pdsUrl;
     try {
-      const url = new URL(this.pdsUrl);
+      const url = new URL(pdsUrl);
       return `did:web:${url.host}`;
     } catch {
-      // Fallback: if pdsUrl is not a valid URL, try to use it as host
-      return `did:web:${this.pdsUrl.replace(/^https?:\/\//, '')}`;
+      return `did:web:${pdsUrl.replace(/^https?:\/\//, '')}`;
     }
   }
 
@@ -790,6 +818,8 @@ export class BskyClient {
     url.searchParams.set('did', did);
     url.searchParams.set('name', name);
 
+    console.log('[bsky] Uploading video to Video Service:', { did, name, size: data.length, aud: this._derivePdsDid() });
+
     const maxRetries = 2; // Retry on 5xx network errors
     const retryDelayMs = 2000;
 
@@ -809,6 +839,7 @@ export class BskyClient {
           headers: {
             Authorization: `Bearer ${token}`,
             'Content-Type': 'video/mp4',
+            'Content-Length': String(data.length),
           },
           body: data,
           signal: controller.signal,
@@ -818,6 +849,7 @@ export class BskyClient {
 
         if (!res.ok) {
           const body = await res.text();
+          console.error('[bsky] Video Service upload failed:', { status: res.status, body });
           // 413/429: don't retry, throw immediately
           if (res.status === 413 || res.status === 429) {
             throw new Error(`Video upload failed: ${res.status} ${body}`);
@@ -831,6 +863,7 @@ export class BskyClient {
         }
 
         const json = await res.json() as { jobStatus: VideoJobStatus };
+        console.log('[bsky] Video Service upload success:', { jobId: json.jobStatus.jobId, state: json.jobStatus.state });
         return json.jobStatus;
       } catch (e) {
         clearTimeout(timeoutId);
@@ -883,6 +916,8 @@ export class BskyClient {
         const json = await res.json() as { jobStatus: VideoJobStatus };
         const jobStatus = json.jobStatus;
 
+        console.log('[bsky] Video job status:', { jobId, state: jobStatus.state, progress: jobStatus.progress });
+
         // Report processing progress
         if (jobStatus.progress !== undefined) {
           options.onProgress?.({ phase: 'processing', progress: jobStatus.progress });
@@ -890,6 +925,7 @@ export class BskyClient {
 
         // Check for completion
         if (jobStatus.state === 'JOB_STATE_COMPLETED') {
+          console.log('[bsky] Video processing completed:', { jobId, blob: !!jobStatus.blob });
           if (jobStatus.blob) return jobStatus;
           // Completed but no blob — unusual, treat as failure
           throw new Error('Video processing completed but no blob returned');
@@ -976,7 +1012,7 @@ export class BskyClient {
     return this.session !== null;
   }
 
-  restoreSession(session: CreateSessionResponse, pdsUrl?: string): void {
+  async restoreSession(session: CreateSessionResponse, pdsUrl?: string): Promise<void> {
     this.session = session;
     if (pdsUrl) this.pdsUrl = pdsUrl;
     this.ky = ky.create({
@@ -985,6 +1021,7 @@ export class BskyClient {
       retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
       hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
     });
+    await this.resolveActualPds();
   }
 
   async createBookmark(uri: string, cid: string): Promise<CreateBookmarkResponse> {

@@ -234,8 +234,9 @@ export function App() {
         refreshJwt: saved.refreshJwt,
         handle: saved.handle,
         did: saved.did,
-      }, saved.pdsUrl ?? 'https://bsky.social');
-      setIsLoggedIn(true);
+      }, saved.pdsUrl ?? 'https://bsky.social').then(() => {
+        setIsLoggedIn(true);
+      });
     }
   }, []);
 

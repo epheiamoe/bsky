@@ -10,7 +10,7 @@ export interface AuthStore {
   error: string | null;
   errorLog: LoginErrorDetail | null;
   login: (handle: string, password: string, pdsUrl?: string) => Promise<void>;
-  restoreSession: (session: CreateSessionResponse, pdsUrl: string) => void;
+  restoreSession: (session: CreateSessionResponse, pdsUrl: string) => Promise<void>;
   listener: (() => void) | null;
 
   _notify(): void;
@@ -54,9 +54,9 @@ export function createAuthStore(): AuthStore {
       }
     },
 
-    restoreSession(session: CreateSessionResponse, pdsUrl: string) {
+    async restoreSession(session: CreateSessionResponse, pdsUrl: string) {
       const c = new BskyClient();
-      c.restoreSession(session, pdsUrl);
+      await c.restoreSession(session, pdsUrl);
 
       // When JWT refresh fails (token expired + refresh unreachable),
       // the client nulls its session. This callback propagates that
