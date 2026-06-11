@@ -195,6 +195,8 @@ const en: LocaleMessages = {
   // Video metadata (captions + alt)
   'compose.videoMetadataModalTitle': 'Subtitles & Alt Text',
   'compose.videoAltPlaceholder': 'ALT text (describe the video, optional)',
+  'compose.videoUploading': 'Uploading video…',
+  'compose.videoProcessing': 'Processing video ({progress}%)…',
   'compose.captionsTitle': 'Captions (.vtt)',
   'compose.addCaption': 'Add caption',
   'compose.removeCaption': 'Remove caption',

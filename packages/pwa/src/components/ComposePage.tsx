@@ -73,7 +73,7 @@ interface QuotePreview {
 
 interface SubmitProgress {
   visible: boolean;
-  phase: 'media' | 'posting' | 'done' | 'error';
+  phase: 'media' | 'video_uploading' | 'video_processing' | 'posting' | 'done' | 'error';
   current: number;
   total: number;
   message: string;
@@ -601,13 +601,35 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
 
       if (vid) {
         currentItem++;
-        setSubmitProgress({ visible: true, phase: 'media', current: currentItem, total: totalItems, message: t('compose.uploadProgress', { current: String(currentItem), total: String(totalItems) }) });
         try {
-          // Use dynamic timeout based on file size
-          const timeoutMs = BskyClient.calculateUploadTimeout(vid.data.length);
-          const res = await client.uploadBlob(vid.data, vid.mimeType, { timeoutMs });
+          const result = await client.uploadVideo(vid.data, vid.fileName, {
+            onProgress: ({ phase, progress }) => {
+              if (phase === 'uploading') {
+                setSubmitProgress({
+                  visible: true,
+                  phase: 'video_uploading',
+                  current: progress,
+                  total: 100,
+                  message: t('compose.videoUploading'),
+                });
+              } else {
+                setSubmitProgress({
+                  visible: true,
+                  phase: 'video_processing',
+                  current: progress,
+                  total: 100,
+                  message: t('compose.videoProcessing', { progress: String(progress) }),
+                });
+              }
+            },
+          });
 
-          // Upload caption blobs
+          // Log fallback for observability
+          if (!result.processed) {
+            console.warn('[compose] Video Service unavailable; fell back to uploadBlob');
+          }
+
+          // Upload caption blobs (still use uploadBlob)
           const uploadedCaptions = [];
           for (const caption of vid.captions) {
             currentItem++;
@@ -619,14 +641,13 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                 blobRef: { $link: capRes.blob.ref.$link, mimeType: 'text/vtt', size: caption.data.length },
               });
             } catch (capErr) {
-              // Caption upload failed — log but don't block the whole post
               console.warn('Caption upload failed:', capErr);
             }
           }
 
           uploaded.push({
             type: 'video',
-            blobRef: { $link: res.blob.ref.$link, mimeType: vid.mimeType, size: vid.data.length },
+            blobRef: result.blobRef,
             alt: vid.alt,
             captions: uploadedCaptions.length > 0 ? uploadedCaptions : undefined,
             aspectRatio: vid.aspectRatio,

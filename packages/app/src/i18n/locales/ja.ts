@@ -195,6 +195,8 @@ const ja: LocaleMessages = {
   // 動画メタデータ（字幕 + 代替テキスト）
   'compose.videoMetadataModalTitle': '字幕と代替テキスト',
   'compose.videoAltPlaceholder': 'ALTテキストを入力（動画の説明、任意）',
+  'compose.videoUploading': '動画をアップロード中…',
+  'compose.videoProcessing': '動画を処理中（{progress}%）…',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '字幕を追加',
   'compose.removeCaption': '字幕を削除',

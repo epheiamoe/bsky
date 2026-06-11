@@ -193,6 +193,8 @@ const zh: LocaleMessages = {
   // 视频元数据（字幕 + 替代文本）
   'compose.videoMetadataModalTitle': '字幕及替代文本',
   'compose.videoAltPlaceholder': '输入替代文本（描述视频内容，可选）',
+  'compose.videoUploading': '上传视频中…',
+  'compose.videoProcessing': '视频处理中（{progress}%）…',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '添加字幕',
   'compose.removeCaption': '移除字幕',
