@@ -31,6 +31,7 @@
 | **深色/浅色主题** | N/A | ✅ | CSS 变量 + localStorage |
 | **PWA 安装** | N/A | ✅ | manifest.json + Service Worker |
 | **图片显示** | ✅ | ✅ | CDN URL 渲染, PWA: 灯箱 portal + ALT SVG 徽章 + 固定定位浮窗; TUI: OSC 8 链接 + ALT 文字完整显示; 单图可选原始宽高比模式 |
+| **单贴文图片上限 10 张** | ⬜ | ⬜ | Bluesky 官方已将单贴文图片上限从 4 提升到 10；需修改 `MAX_IMAGES = 4 → 10` 并检查 TUI/PWA 网格布局 |
 | **共享 extractEmbeds** | ✅ | ✅ | v0.13.2: extractImages/extractVideo/extractExternalLink/extractQuotedPost 集中在 @bsky/app，4 个消费者共享，删除 260 行重复代码 |
 | **视频贴** | ✅ | ✅ | PWA: VideoCard (hls.js), TUI: OSC 8 视频链接 |
 | **ALT 文本** | ✅ | ✅ | 上传时输入 + 提交前缺失警告; PWA: SVG 徽章 + 浮窗; TUI: 图片链接下完整显示 |
@@ -43,6 +44,7 @@
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ✅ | ✅ | PWA: ListsPage + ListDetailPage (Posts/Members tabs + 虚拟滚动) + ProfilePage Lists tab; TUI: 内联视图 + L 快捷键 + j/k/Enter/d/r; AI: 4 工具 |
 | **DM 私信** | ✅ | ✅ | Phase 1+2: send/get/list/delete/mute/read + emoji 反应(8 常用) + 引用帖(URI 粘贴) + 动画 + 加载更早 |
+| **DM 群聊 (Group Conversations)** | ⬜ | ⬜ | Bluesky 已支持最多 50 人群聊；需实现群组会话列表、创建/加入群组、成员管理、邀请链接、群消息渲染 |
 | **资料页 DM 按钮** | N/A | ✅ | 互相关注者资料页，SVG-only 私信按钮 |
 | **编辑个人资料** | N/A | ✅ | 底部浮窗：头像/横幅/名称/描述 + putProfile API |
 | **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
