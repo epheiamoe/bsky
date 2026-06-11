@@ -68,4 +68,4 @@ git commit -m "feat(core): extend uploadBlob with optional timeout + dynamic tim
 - Remove 408 from ky retry statusCodes to avoid re-uploading large files on slow networks"
 ```
 
-提交哈希：`799599a`
+提交哈希：`c532a9b`
