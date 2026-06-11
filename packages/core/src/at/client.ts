@@ -49,6 +49,10 @@ import type {
   ThreadgateRule,
   Label,
   LabelerView,
+  VideoUploadOptions,
+  VideoUploadResult,
+  VideoJobStatus,
+  GetServiceAuthResponse,
 } from './types.js';
 import { parseAtUri } from './types.js';
 
@@ -664,6 +668,221 @@ export class BskyClient {
       body: data,
       timeout: options?.timeoutMs ?? 30000,
     }).json<UploadBlobResponse>();
+  }
+
+  async getServiceAuth(aud: string, lxm: string, exp?: number): Promise<GetServiceAuthResponse> {
+    const params: Record<string, string | number> = { aud, lxm };
+    if (exp) params.exp = exp;
+    return this.ky.get('com.atproto.server.getServiceAuth', {
+      headers: this.getAuthHeaders(),
+      searchParams: params,
+    }).json<GetServiceAuthResponse>();
+  }
+
+  async uploadVideo(
+    data: Uint8Array,
+    name: string,
+    options?: VideoUploadOptions,
+  ): Promise<VideoUploadResult> {
+    const mimeType = 'video/mp4';
+    const timeoutMs = BskyClient.calculateUploadTimeout(data.length);
+    const maxProcessingTimeMs = options?.maxProcessingTimeMs ?? 600_000; // 10 min
+    const pollIntervalMs = options?.pollIntervalMs ?? 1000;
+    const signal = options?.signal;
+    const onProgress = options?.onProgress;
+
+    try {
+      // Step 1: Get service auth token (retry 3 times)
+      const pdsDid = this._derivePdsDid();
+      const exp = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes
+      const token = await this._getVideoServiceAuthWithRetry(pdsDid, 'com.atproto.repo.uploadBlob', exp, signal);
+
+      // Step 2: Upload to video service
+      onProgress?.({ phase: 'uploading', progress: 0 });
+      const jobStatus = await this._uploadVideoToService(data, name, token, timeoutMs, signal);
+      onProgress?.({ phase: 'uploading', progress: 100 });
+
+      // If blob is already present (e.g. already_exists case), return immediately
+      if (jobStatus.blob) {
+        return {
+          blobRef: { $link: jobStatus.blob.ref.$link, mimeType: jobStatus.blob.mimeType, size: jobStatus.blob.size },
+          processed: true,
+        };
+      }
+
+      // Step 3: Poll for processing completion
+      const finalStatus = await this._pollVideoJobStatus(jobStatus.jobId, {
+        maxProcessingTimeMs,
+        pollIntervalMs,
+        signal,
+        onProgress,
+      });
+
+      if (finalStatus.blob) {
+        return {
+          blobRef: { $link: finalStatus.blob.ref.$link, mimeType: finalStatus.blob.mimeType, size: finalStatus.blob.size },
+          processed: true,
+        };
+      }
+
+      // No blob after polling — fall back
+      throw new Error('Video processing completed but no blob returned');
+    } catch (e) {
+      // Don't fallback on abort
+      if (signal?.aborted || (e instanceof Error && e.name === 'AbortError')) {
+        throw e;
+      }
+      // Fallback to uploadBlob for any other error
+      return this._fallbackToUploadBlob(data, mimeType, timeoutMs, signal, onProgress);
+    }
+  }
+
+  private _derivePdsDid(): string {
+    // Convert PDS URL to did:web format
+    // https://bsky.social → did:web:bsky.social
+    // https://pds.example.com → did:web:pds.example.com
+    try {
+      const url = new URL(this.pdsUrl);
+      return `did:web:${url.host}`;
+    } catch {
+      // Fallback: if pdsUrl is not a valid URL, try to use it as host
+      return `did:web:${this.pdsUrl.replace(/^https?:\/\//, '')}`;
+    }
+  }
+
+  private async _getVideoServiceAuthWithRetry(
+    aud: string,
+    lxm: string,
+    exp: number,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    const maxRetries = 3;
+    const retryDelayMs = 2000;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (signal?.aborted) throw new Error('Aborted');
+      try {
+        const res = await this.getServiceAuth(aud, lxm, exp);
+        return res.token;
+      } catch (e) {
+        if (attempt === maxRetries - 1) throw e;
+        if (signal?.aborted) throw e;
+        await new Promise(r => setTimeout(r, retryDelayMs));
+      }
+    }
+    throw new Error('Failed to get service auth after retries');
+  }
+
+  private async _uploadVideoToService(
+    data: Uint8Array,
+    name: string,
+    token: string,
+    timeoutMs: number,
+    signal?: AbortSignal,
+  ): Promise<VideoJobStatus> {
+    const did = this.getDID();
+    const url = new URL('https://video.bsky.app/xrpc/app.bsky.video.uploadVideo');
+    url.searchParams.set('did', did);
+    url.searchParams.set('name', name);
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    // Link external abort signal
+    signal?.addEventListener('abort', () => controller.abort());
+
+    try {
+      const res = await fetch(url.toString(), {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'video/mp4',
+        },
+        body: data,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`Video upload failed: ${res.status} ${body}`);
+      }
+
+      const json = await res.json() as { jobStatus: VideoJobStatus };
+      return json.jobStatus;
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  }
+
+  private async _pollVideoJobStatus(
+    jobId: string,
+    options: {
+      maxProcessingTimeMs: number;
+      pollIntervalMs: number;
+      signal?: AbortSignal;
+      onProgress?: VideoUploadOptions['onProgress'];
+    },
+  ): Promise<VideoJobStatus> {
+    const startTime = Date.now();
+    let interval = options.pollIntervalMs;
+
+    while (Date.now() - startTime < options.maxProcessingTimeMs) {
+      if (options.signal?.aborted) throw new Error('Aborted');
+
+      const res = await fetch(`https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=${encodeURIComponent(jobId)}`);
+
+      if (!res.ok) {
+        // If getJobStatus fails, wait and retry
+        await new Promise(r => setTimeout(r, interval));
+        interval = Math.min(interval * 1.5, 5000);
+        continue;
+      }
+
+      const json = await res.json() as { jobStatus: VideoJobStatus };
+      const jobStatus = json.jobStatus;
+
+      // Report processing progress
+      if (jobStatus.progress !== undefined) {
+        options.onProgress?.({ phase: 'processing', progress: jobStatus.progress });
+      }
+
+      // Check for completion
+      if (jobStatus.state === 'JOB_STATE_COMPLETED') {
+        if (jobStatus.blob) return jobStatus;
+        // Completed but no blob — unusual, treat as failure
+        throw new Error('Video processing completed but no blob returned');
+      }
+
+      // Check for failure
+      if (jobStatus.state === 'JOB_STATE_FAILED') {
+        throw new Error(jobStatus.error || jobStatus.message || 'Video processing failed');
+      }
+
+      // Still processing — wait and poll again
+      await new Promise(r => setTimeout(r, interval));
+      interval = Math.min(interval * 1.5, 5000);
+    }
+
+    throw new Error('Video processing timed out');
+  }
+
+  private async _fallbackToUploadBlob(
+    data: Uint8Array,
+    mimeType: string,
+    timeoutMs: number,
+    signal?: AbortSignal,
+    onProgress?: VideoUploadOptions['onProgress'],
+  ): Promise<VideoUploadResult> {
+    onProgress?.({ phase: 'uploading', progress: 0 });
+    const res = await this.uploadBlob(data, mimeType, { timeoutMs });
+    onProgress?.({ phase: 'uploading', progress: 100 });
+    return {
+      blobRef: { $link: res.blob.ref.$link, mimeType, size: data.length },
+      processed: false,
+    };
   }
 
   /**

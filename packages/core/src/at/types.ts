@@ -606,3 +606,46 @@ export interface GetRelationshipsResponse {
   actor?: string;
   relationships: RelationshipInfo[];
 }
+
+// ── Video Service Upload Types ──
+
+export type VideoUploadPhase = 'uploading' | 'processing';
+
+export interface VideoUploadProgress {
+  phase: VideoUploadPhase;
+  /** 0–100 */
+  progress: number;
+}
+
+export interface VideoUploadOptions {
+  /** Max time to wait for processing (ms). Default: 10 minutes. */
+  maxProcessingTimeMs?: number;
+  /** Polling interval base (ms). Default: 1000. */
+  pollIntervalMs?: number;
+  /** Progress callback */
+  onProgress?: (progress: VideoUploadProgress) => void;
+  /** AbortSignal to cancel upload/processing */
+  signal?: AbortSignal;
+  /** Reserved for future chunked upload. Currently ignored. */
+  chunkSize?: number;
+}
+
+export interface VideoUploadResult {
+  blobRef: { $link: string; mimeType: string; size: number };
+  /** True if processed via Video Service, false if fell back to uploadBlob */
+  processed: boolean;
+}
+
+export interface VideoJobStatus {
+  jobId: string;
+  did: string;
+  state: string;
+  progress?: number;
+  blob?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number };
+  error?: string;
+  message?: string;
+}
+
+export interface GetServiceAuthResponse {
+  token: string;
+}
