@@ -271,11 +271,11 @@ export class BskyClient {
       let doc: Record<string, unknown> | null = null;
 
       if (did.startsWith('did:plc:')) {
-        const res = await fetch(`https://plc.directory/${did}`);
+        const res = await fetch(`https://plc.directory/${did}`, { signal: AbortSignal.timeout(10000) });
         if (res.ok) doc = await res.json() as Record<string, unknown>;
       } else if (did.startsWith('did:web:')) {
         const host = did.replace('did:web:', '');
-        const res = await fetch(`https://${host}/.well-known/did.json`);
+        const res = await fetch(`https://${host}/.well-known/did.json`, { signal: AbortSignal.timeout(10000) });
         if (res.ok) doc = await res.json() as Record<string, unknown>;
       }
 
@@ -283,7 +283,19 @@ export class BskyClient {
         const services = (doc.service as Array<{ id: string; type: string; serviceEndpoint: string }>) ?? [];
         const pdsService = services.find(s => s.id === '#atproto_pds' || s.type === 'AtprotoPersonalDataServer');
         if (pdsService?.serviceEndpoint) {
-          this.actualPdsUrl = pdsService.serviceEndpoint;
+          const actualUrl = pdsService.serviceEndpoint.replace(/\/+$/, '');
+          this.actualPdsUrl = actualUrl;
+          // If actual PDS differs from current pdsUrl, update pdsUrl and rebuild ky
+          // so that restoreSession (and subsequent requests) target the user's real PDS.
+          if (actualUrl !== this.pdsUrl) {
+            this.pdsUrl = actualUrl;
+            this.ky = ky.create({
+              prefixUrl: this.pdsUrl + '/xrpc',
+              timeout: 30000,
+              retry: { limit: 1, statusCodes: [413, 429, 500, 502, 503, 504] },
+              hooks: { beforeRequest: [this._authHook], afterResponse: [this._withRefresh] },
+            });
+          }
         }
       }
     } catch (e) {
@@ -722,14 +734,16 @@ export class BskyClient {
     const onProgress = options?.onProgress;
 
     try {
-      // Step 1: Get service auth token (retry 3 times)
+      // Step 1: Get service auth tokens (retry 3 times)
+      // pdsToken is used to upload the bytes; videoServiceToken is required to poll getJobStatus.
       const pdsDid = this._derivePdsDid();
       const exp = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes
-      const token = await this._getVideoServiceAuthWithRetry(pdsDid, 'com.atproto.repo.uploadBlob', exp, signal);
+      const pdsToken = await this._getVideoServiceAuthWithRetry(pdsDid, 'com.atproto.repo.uploadBlob', exp, signal);
+      const videoServiceToken = await this._getVideoServiceAuthWithRetry('did:web:video.bsky.app', 'app.bsky.video.getJobStatus', exp, signal);
 
       // Step 2: Upload to video service
       onProgress?.({ phase: 'uploading', progress: 0 });
-      const jobStatus = await this._uploadVideoToService(data, name, token, timeoutMs, signal);
+      const jobStatus = await this._uploadVideoToService(data, name, pdsToken, timeoutMs, signal);
       onProgress?.({ phase: 'uploading', progress: 100 });
 
       // If blob is already present (e.g. already_exists case), return immediately
@@ -741,7 +755,7 @@ export class BskyClient {
       }
 
       // Step 3: Poll for processing completion
-      const finalStatus = await this._pollVideoJobStatus(jobStatus.jobId, {
+      const finalStatus = await this._pollVideoJobStatus(jobStatus.jobId, videoServiceToken, {
         maxProcessingTimeMs,
         pollIntervalMs,
         signal,
@@ -850,6 +864,13 @@ export class BskyClient {
         if (!res.ok) {
           const body = await res.text();
           console.error('[bsky] Video Service upload failed:', { status: res.status, body });
+          // 409 already_exists — parse jobStatus and return it so the caller can use the blob
+          if (res.status === 409) {
+            try {
+              const json = JSON.parse(body) as { jobStatus: VideoJobStatus };
+              if (json.jobStatus) return json.jobStatus;
+            } catch { /* ignore parse error, fall through */ }
+          }
           // 413/429: don't retry, throw immediately
           if (res.status === 413 || res.status === 429) {
             throw new Error(`Video upload failed: ${res.status} ${body}`);
@@ -883,6 +904,7 @@ export class BskyClient {
 
   private async _pollVideoJobStatus(
     jobId: string,
+    token: string,
     options: {
       maxProcessingTimeMs: number;
       pollIntervalMs: number;
@@ -903,7 +925,10 @@ export class BskyClient {
       try {
         const res = await fetch(
           `https://video.bsky.app/xrpc/app.bsky.video.getJobStatus?jobId=${encodeURIComponent(jobId)}`,
-          { signal: controller.signal },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          },
         );
 
         if (!res.ok) {
@@ -931,8 +956,10 @@ export class BskyClient {
           throw new Error('Video processing completed but no blob returned');
         }
 
-        // Check for failure
+        // Check for failure. Some failure modes (e.g. already_exists) still carry the blob, so return it.
         if (jobStatus.state === 'JOB_STATE_FAILED') {
+          if (jobStatus.blob) return jobStatus;
+          if (jobStatus.error === 'already_exists' && jobStatus.blob) return jobStatus;
           throw new Error(jobStatus.error || jobStatus.message || 'Video processing failed');
         }
 

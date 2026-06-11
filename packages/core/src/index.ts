@@ -70,6 +70,12 @@ export type {
   LabelerView,
   ContentLabelPref,
   ModerationPrefs,
+  VideoUploadOptions,
+  VideoUploadResult,
+  VideoUploadProgress,
+  VideoUploadPhase,
+  VideoJobStatus,
+  GetServiceAuthResponse,
 } from './at/types.js';
 
 // AI exports

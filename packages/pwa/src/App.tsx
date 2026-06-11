@@ -227,17 +227,22 @@ export function App() {
 
   // ── Restore session from localStorage on mount ──
   useEffect(() => {
-    const saved = getSession();
-    if (saved && !client) {
-      restoreSession({
-        accessJwt: saved.accessJwt,
-        refreshJwt: saved.refreshJwt,
-        handle: saved.handle,
-        did: saved.did,
-      }, saved.pdsUrl ?? 'https://bsky.social').then(() => {
-        setIsLoggedIn(true);
-      });
-    }
+    void (async () => {
+      try {
+        const saved = getSession();
+        if (saved && !client) {
+          await restoreSession({
+            accessJwt: saved.accessJwt,
+            refreshJwt: saved.refreshJwt,
+            handle: saved.handle,
+            did: saved.did,
+          }, saved.pdsUrl ?? 'https://bsky.social');
+          setIsLoggedIn(true);
+        }
+      } catch (e) {
+        console.error('Session restore failed:', e);
+      }
+    })();
   }, []);
 
   // ── Save session when login succeeds ──
