@@ -98,16 +98,17 @@ export function VideoCard({ thumbnailUrl, playlistUrl, alt, aspectRatio, process
   // non-existent HLS playlist produces a generic playback error, so we show a
   // clear "processing / unavailable" state instead.
   if (processing || !playlistUrl) {
+    const label = processing ? t('video.processing') : t('video.unavailable');
     return (
       <div className="mt-2 rounded-xl overflow-hidden border border-border relative bg-black" style={containerStyle}>
         <img
           src={thumbnailUrl}
-          alt={alt || t('video.unavailable') || 'Video unavailable'}
+          alt={alt || t('video.unavailable')}
           className="w-full h-full object-contain"
           loading="lazy"
         />
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <span className="text-white text-sm">{t('video.processing') || 'Video is being processed'}</span>
+          <span className="text-white text-sm">{label}</span>
         </div>
       </div>
     );

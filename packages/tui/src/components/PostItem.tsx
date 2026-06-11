@@ -27,10 +27,16 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
     lines.push({ text: l, isSelected, isName: false });
   }
 
-  // Videos — show clickable links (Ctrl+click opens in browser)
+  // Videos — show clickable links when a playlist is available; otherwise
+  // indicate the video is still processing or unavailable (raw blob / failed processing).
   const vidData = extractVideo(post);
   if (vidData) {
-    lines.push({ text: '\x1b]8;;' + vidData.playlistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    if (vidData.playlistUrl) {
+      lines.push({ text: '\x1b]8;;' + vidData.playlistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    } else {
+      const label = vidData.processing ? t('video.processing') : t('video.unavailable');
+      lines.push({ text: '🎬 ' + label, isSelected, isName: false });
+    }
   }
 
   // Image embed — show clickable URLs (Ctrl+click in terminal)

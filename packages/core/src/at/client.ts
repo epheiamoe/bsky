@@ -792,7 +792,7 @@ export class BskyClient {
 
     // TODO: replace with structured log
     const pdsDid = await this._resolvePdsDid();
-    console.log('[bsky] video_upload_start', { did: this.getDID(), name, size: data.length, pdsDid, lxm: 'com.atproto.repo.uploadBlob' });
+    console.log('[bsky] video_upload_start', { did: this.getDID(), name, size: data.length, pdsDid });
 
     try {
       // Step 1: Get service auth tokens (retry 3 times)
@@ -847,16 +847,8 @@ export class BskyClient {
 
   private _pdsDidCache?: { url: string; did: string };
 
-  private _derivePdsDid(): string {
-    // Kept for synchronous callers. Async code should prefer _resolvePdsDid()
-    // so it can use com.atproto.server.describeServer for custom PDS hostname mismatches.
-    const pdsUrl = this.actualPdsUrl ?? this.pdsUrl;
-    try {
-      const url = new URL(pdsUrl);
-      return `did:web:${url.host}`;
-    } catch {
-      return `did:web:${pdsUrl.replace(/^https?:\/\//, '').split('/')[0]}`;
-    }
+  private _isKnownBskyShard(host: string): boolean {
+    return host === 'bsky.social' || host.endsWith('.bsky.network') || host.endsWith('.bsky.app');
   }
 
   private async _resolvePdsDid(): Promise<string> {
@@ -865,9 +857,19 @@ export class BskyClient {
     try {
       const url = new URL(pdsUrl);
       const derived = `did:web:${url.host}`;
-      // For custom PDS, prefer the DID declared by describeServer to avoid hostname mismatch.
-      const described = await this._describeServerDid(pdsUrl);
-      const did = described || derived;
+      let did = derived;
+      // For custom / non-Bluesky PDS, prefer the DID declared by describeServer
+      // to avoid hostname mismatch. If the declared DID's host matches the URL
+      // host, the derived DID is already correct and we skip the network call.
+      if (!this._isKnownBskyShard(url.host)) {
+        const described = await this._describeServerDid(pdsUrl);
+        if (described) {
+          const describedHost = described.replace(/^did:web:/, '');
+          if (describedHost !== url.host) {
+            did = described;
+          }
+        }
+      }
       this._pdsDidCache = { url: pdsUrl, did };
       return did;
     } catch {
@@ -926,10 +928,13 @@ export class BskyClient {
     url.searchParams.set('did', did);
     url.searchParams.set('name', name);
 
-    console.log('[bsky] video_upload_start', { did, name, size: data.length, lxm: 'com.atproto.repo.uploadBlob' });
-
     const maxRetries = 2; // Retry on 5xx network errors
     const retryDelayMs = 2000;
+
+    const isAbortLike = (err: unknown): boolean =>
+      (err instanceof DOMException && err.name === 'AbortError') ||
+      (err instanceof Error && err.name === 'AbortError') ||
+      (err instanceof VideoServiceError && err.code === 'cancelled');
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       if (signal?.aborted) throw new VideoServiceError('cancelled', 'Upload cancelled', false);
@@ -977,8 +982,8 @@ export class BskyClient {
         return jobStatus;
       } catch (e) {
         clearTimeout(timeoutId);
-        // Network errors: retry if attempts remain
-        if (attempt < maxRetries && !(e instanceof Error && /\b413\b/.test(e.message)) && !(e instanceof Error && /\b429\b/.test(e.message))) {
+        // Network errors: retry if attempts remain, but never retry user cancellation.
+        if (attempt < maxRetries && !isAbortLike(e) && !(e instanceof Error && /\b413\b/.test(e.message)) && !(e instanceof Error && /\b429\b/.test(e.message))) {
           await new Promise(r => setTimeout(r, retryDelayMs));
           continue;
         }

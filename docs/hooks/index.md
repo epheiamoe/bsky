@@ -160,7 +160,7 @@ Non-hook utilities exported from files in `packages/app/src/hooks/` and `package
 ```typescript
 export interface ExtractImage { url: string; alt: string; }
 export interface ExtractExternalLink { uri: string; title: string; description: string; }
-export interface ExtractVideo { thumbnailUrl: string; playlistUrl: string; alt: string; aspectRatio?: { width: number; height: number }; }
+export interface ExtractVideo { thumbnailUrl: string; playlistUrl?: string; alt: string; aspectRatio?: { width: number; height: number }; processing?: boolean; }
 export interface ExtractQuotedPost { uri: string; cid: string; text: string; handle: string; displayName: string; authorAvatar?: string; imageDetails: ExtractImage[]; externalLink: ExtractExternalLink | null; }
 
 export function extractImages(post: PostView): ExtractImage[];
