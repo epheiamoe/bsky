@@ -24,6 +24,7 @@ import { ThreadgateEditor } from './ThreadgateEditor.js';
 import { NotFoundCard } from './NotFoundCard.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
 import { ThreadgateDetailModal } from './ThreadgateDetailModal.js';
+import { Toast } from './Toast.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -106,6 +107,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [focusedMediaRevealed, setFocusedMediaRevealed] = useState(false);
   const [showFocusedBadgeModal, setShowFocusedBadgeModal] = useState(false);
   const [showFocusedWarnModal, setShowFocusedWarnModal] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
 
   // Clear translation when focused post changes
   useEffect(() => {
@@ -130,6 +132,18 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
       client.getProfile(focused.handle).then(p => { client.follow(p.did).then(r => { setIsFollowing(true); setFollowUri(r.uri); }).catch(() => {}); }).catch(() => {});
     }
   }, [client, focused, isFollowing, followUri]);
+
+  const handleDeletePost = useCallback(async () => {
+    if (!client || !focused) return;
+    try {
+      await client.deletePost(focused.uri);
+      goBack();
+      setToast({ visible: true, message: t('thread.deleteSuccess'), type: 'success' });
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setToast({ visible: true, message: t('thread.deleteFailed', { error: errorMessage }), type: 'error' });
+    }
+  }, [client, focused, goBack, t]);
 
   const hasText = (focused?.text?.trim().length ?? 0) > 0;
 
@@ -201,6 +215,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
         onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
       />
       <LabelerFailureToast failedLabelers={failedLabelers} />
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onDismiss={() => setToast(prev => ({ ...prev, visible: false }))}
+        />
+      )}
 
       <div className="max-w-content mx-auto py-6 space-y-2">
         {/* ── 讨论源 (parent chain) ── */}
@@ -425,7 +446,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   {focused.handle === client.getHandle() && (
                     <>
                       <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
-                      <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
+                      <button onClick={handleDeletePost} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
                     </>
                   )}
                 </div>

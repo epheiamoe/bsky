@@ -265,6 +265,8 @@ const zh: LocaleMessages = {
   'thread.allowQuote': '允许引用',
   'thread.allowQuoteYes': '允许',
   'thread.allowQuoteNo': '不允许',
+  'thread.deleteSuccess': '帖子已删除',
+  'thread.deleteFailed': '删除帖子失败：{error}',
 
   // ── Notifications ──
   'notifications.title': '通知',

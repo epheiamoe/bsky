@@ -266,6 +266,8 @@ const ja: LocaleMessages = {
   'thread.allowQuote': '引用を許可',
   'thread.allowQuoteYes': '許可',
   'thread.allowQuoteNo': '許可しない',
+  'thread.deleteSuccess': '投稿を削除しました',
+  'thread.deleteFailed': '投稿の削除に失敗しました：{error}',
 
   'notifications.title': '通知',
   'notifications.empty': '通知はありません',
