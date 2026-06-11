@@ -193,6 +193,7 @@ const ja: LocaleMessages = {
   'compose.maxLanguages': '最大3つの言語を選択',
 
   // 動画メタデータ（字幕 + 代替テキスト）
+  'compose.videoMetadataModalTitle': '字幕と代替テキスト',
   'compose.videoAltPlaceholder': 'ALTテキストを入力（動画の説明、任意）',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '字幕を追加',

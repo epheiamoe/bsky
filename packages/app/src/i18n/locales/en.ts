@@ -193,6 +193,7 @@ const en: LocaleMessages = {
   'compose.maxLanguages': 'Select up to 3 languages',
 
   // Video metadata (captions + alt)
+  'compose.videoMetadataModalTitle': 'Subtitles & Alt Text',
   'compose.videoAltPlaceholder': 'ALT text (describe the video, optional)',
   'compose.captionsTitle': 'Captions (.vtt)',
   'compose.addCaption': 'Add caption',

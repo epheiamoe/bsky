@@ -191,6 +191,7 @@ const zh: LocaleMessages = {
   'compose.maxLanguages': '最多选择 3 种语言',
 
   // 视频元数据（字幕 + 替代文本）
+  'compose.videoMetadataModalTitle': '字幕及替代文本',
   'compose.videoAltPlaceholder': '输入替代文本（描述视频内容，可选）',
   'compose.captionsTitle': '字幕 (.vtt)',
   'compose.addCaption': '添加字幕',

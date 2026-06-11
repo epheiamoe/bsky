@@ -35,6 +35,8 @@ export function MediaMetadataModal({
 
   const maxLength = mode === 'image' ? 2000 : 10000;
   const titleKey = mode === 'image' ? 'compose.altTextModalTitle' : 'compose.videoMetadataModalTitle';
+  const maxCaptions = 20;
+  const atMaxCaptions = captions.length >= maxCaptions;
 
   const handleSave = () => {
     onSave({
@@ -47,6 +49,12 @@ export function MediaMetadataModal({
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Hard limit: prevent adding more than 20 captions even if the file input is triggered programmatically
+    if (captions.length >= maxCaptions) {
+      e.target.value = '';
+      return;
+    }
 
     // 大小检查：20KB = 20 * 1024 bytes
     if (file.size > 20 * 1024) {
@@ -156,7 +164,12 @@ export function MediaMetadataModal({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full px-3 py-2 rounded-lg border border-dashed border-border hover:border-primary hover:bg-primary/5 text-text-secondary hover:text-primary text-sm transition-colors flex items-center justify-center gap-1.5"
+                  disabled={atMaxCaptions}
+                  className={`w-full px-3 py-2 rounded-lg border border-dashed text-sm transition-colors flex items-center justify-center gap-1.5 ${
+                    atMaxCaptions
+                      ? 'border-border text-text-secondary opacity-50 cursor-not-allowed'
+                      : 'border-border hover:border-primary hover:bg-primary/5 text-text-secondary hover:text-primary'
+                  }`}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M12 5v14M5 12h14"/>
