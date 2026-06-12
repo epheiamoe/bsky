@@ -24,20 +24,19 @@
 
 ## 当前版本
 
-**v0.14.3 — 照片轮播 + viewExternal 富链接 + 10 图支持 🚧 staging**
+**v0.14.3 — 照片轮播 + viewExternal 富链接 + 10 图支持 ✅ staging**
 
-### v0.14.3 新功能 (开发中 — 部署到 staging):
-- ✅ **`app.bsky.embed.gallery` 照片轮播渲染**：新 `extractGallery()`、`GalleryCard` 轮播组件（CSS translateX、触摸滑动、键盘导航、ALT 徽章、灯箱集成）
-- ✅ **`app.bsky.embed.gallery` 发帖支持**：5+ 图片自动生成 gallery embed、`buildGalleryEmbed()`、`buildFirstPostEmbed()` 分流
+### v0.14.3 新功能 (已完成 — 部署到 staging):
+- ✅ **`app.bsky.embed.gallery` 照片轮播渲染**：新 `extractGallery()`、`GalleryCard` 轮播组件（CSS translateX、触摸滑动、键盘导航、ALT 徽章、灯箱集成、`object-fit: cover` 裁剪）
+- ✅ **`app.bsky.embed.gallery` 发帖支持**：5+ 图片自动生成 gallery embed、`buildGalleryEmbed()`（含 `$type` + 必填 `aspectRatio`）、`buildFirstPostEmbed()` 分流
 - ✅ **`viewExternal` 富元数据渲染**：`ExternalLinkCard` 组件 — 发布者图标+主题色、阅读时间、缩略图、时间戳
 - ✅ **图片上限 4→10**：PWA `ComposePage` + TUI compose MAX_IMAGES
 - ✅ **Moderation 管线**：`extractBlobReferences()` 覆盖 gallery，blur/content-warning 正常
 - ✅ **GIF 检测**：`extractHasGif()` 覆盖 gallery 类型
 - ✅ **TUI gallery 渲染**：索引导航（←/→/h/l），ALT 文本 + 宽高比显示
 - ✅ **i18n**：6 新 key（`gallery.*`、`external.*`），`compose.maxImages` 改为 10
-- 提交：`a390746`（version bump）→ 9 commits on `feature/v0.14.3-bluesky-updates`
-- **staging 部署完成**：`https://staging.ai-bsky.pages.dev` / `https://308f17c6.ai-bsky.pages.dev`（PWA v0.14.3）
-- **生产环境**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（PWA v0.14.2，尚未部署 v0.14.3）
+- **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.3）
+- **生产环境**：`https://bsky.epheia.dev`（PWA v0.14.2，尚未部署 v0.14.3）
 
 v0.14.2 重点修复了视频上传成功后无法播放的问题，并优化了帖子删除交互，修复了图片+引用帖引用丢失的设计缺陷。
 

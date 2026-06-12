@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useMemo } from 'react';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
 
@@ -31,7 +31,9 @@ interface GalleryCardProps {
  * - ALT badge (matching ImageGrid pattern) when alt text is present
  * - Click → onImageClick(current) for lightbox
  * - WCAG: role="region" + aria-roledescription="carousel", slide roles, aria-hidden
- * - Aspect ratio constraint via inline style when provided
+ * - Aspect ratio constraint: all slides share the dominant aspect ratio
+ *   (most common among images; earliest wins on tie). Images cropped via
+ *   object-fit: cover.
  *
  * Accessibility:
  * - Container: role="region" + aria-roledescription="carousel" + aria-label
@@ -110,6 +112,50 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
     [current, onImageClick],
   );
 
+  // ── Dominant aspect ratio ─────────────────────────────────────────
+  // Count occurrences of each aspect ratio; pick the most common.
+  // If tied, pick the one from the earliest image.
+  const dominantAspectRatio = useMemo(() => {
+    if (!images.length) return undefined;
+
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    const ratioCounts = new Map<
+      string,
+      { ratio: { width: number; height: number }; count: number; firstIndex: number }
+    >();
+
+    for (let i = 0; i < images.length; i++) {
+      const ar = images[i]?.aspectRatio;
+      if (!ar?.width || !ar?.height) continue;
+      const g = gcd(ar.width, ar.height);
+      const key = `${ar.width / g}:${ar.height / g}`;
+
+      const existing = ratioCounts.get(key);
+      if (existing) {
+        existing.count++;
+      } else {
+        ratioCounts.set(key, { ratio: { width: ar.width, height: ar.height }, count: 1, firstIndex: i });
+      }
+    }
+
+    if (ratioCounts.size === 0) return undefined;
+
+    let best:
+      | { ratio: { width: number; height: number }; count: number; firstIndex: number }
+      | undefined;
+    for (const entry of ratioCounts.values()) {
+      if (
+        !best ||
+        entry.count > best.count ||
+        (entry.count === best.count && entry.firstIndex < best.firstIndex)
+      ) {
+        best = entry;
+      }
+    }
+
+    return best?.ratio;
+  }, [images]);
+
   // ── Empty state ──────────────────────────────────────────────────
   if (!images.length) return null;
 
@@ -138,8 +184,8 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
             const isCurrent = i === current;
             const hasAlt = !!img.alt?.trim();
             const style: React.CSSProperties = {};
-            if (img.aspectRatio?.width && img.aspectRatio?.height) {
-              style.aspectRatio = `${img.aspectRatio.width}/${img.aspectRatio.height}`;
+            if (dominantAspectRatio?.width && dominantAspectRatio?.height) {
+              style.aspectRatio = `${dominantAspectRatio.width}/${dominantAspectRatio.height}`;
             }
 
             return (
