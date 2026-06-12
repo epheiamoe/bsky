@@ -77,13 +77,11 @@ function buildGalleryEmbed(images: ComposeMedia[]): Record<string, unknown> {
           size: img.blobRef.size,
         },
         alt: img.alt,
+        // aspectRatio is REQUIRED in gallery lexicon — use fallback if not provided
+        aspectRatio: img.aspectRatio
+          ? { width: img.aspectRatio.width, height: img.aspectRatio.height }
+          : { width: 1, height: 1 },
       };
-      if (img.aspectRatio) {
-        item.aspectRatio = {
-          width: img.aspectRatio.width,
-          height: img.aspectRatio.height,
-        };
-      }
       return item;
     }),
   };

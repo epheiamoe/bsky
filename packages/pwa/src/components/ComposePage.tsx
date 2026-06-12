@@ -45,6 +45,8 @@ interface LocalImage {
   wasCompressed?: boolean;
   originalSize?: number;
   compressedSize?: number;
+  /** Detected native dimensions for gallery embed aspectRatio */
+  aspectRatio?: { width: number; height: number };
 }
 
 interface LocalVideo {
@@ -452,16 +454,27 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         }
         const data = new Uint8Array(await result.file.arrayBuffer());
         const blob = new Blob([data], { type: result.file.type });
+        const previewUrl = URL.createObjectURL(blob);
+
+        // Detect native image dimensions for gallery embed aspectRatio
+        let aspectRatio: { width: number; height: number } | undefined;
+        try {
+          const bmp = await createImageBitmap(blob);
+          aspectRatio = { width: bmp.width, height: bmp.height };
+          bmp.close();
+        } catch { /* dimension detection failure is non-fatal */ }
+
         newImages.push({
           data,
           fileName: result.file.name,
           mimeType: result.file.type,
-          preview: URL.createObjectURL(blob),
+          preview: previewUrl,
           uploading: false,
           altText: '',
           wasCompressed: result.wasCompressed,
           originalSize: result.originalSize,
           compressedSize: result.compressedSize,
+          aspectRatio,
         });
       } catch (e) {
         const detail = e instanceof Error ? e.message : String(e);
@@ -742,6 +755,7 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
               type: 'image',
               blobRef: { $link: res.blob.ref.$link, mimeType: img.mimeType, size: img.data.length },
               alt: img.altText,
+              aspectRatio: img.aspectRatio,
             });
           } catch (e) {
             const detail = e instanceof Error ? e.message : String(e);
