@@ -202,6 +202,7 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
         {images.length > 1 && (
           <>
             <button
+              type="button"
               onClick={goPrev}
               disabled={isFirst}
               className={`absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10 ${
@@ -213,6 +214,7 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
               <Icon name="arrow-big-left" size={18} />
             </button>
             <button
+              type="button"
               onClick={goNext}
               disabled={isLast}
               className={`absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10 ${
