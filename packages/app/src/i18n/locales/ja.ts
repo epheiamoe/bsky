@@ -269,6 +269,8 @@ const ja: LocaleMessages = {
   'thread.allowQuoteNo': '許可しない',
   'thread.deleteSuccess': '投稿を削除しました',
   'thread.deleteFailed': '投稿の削除に失敗しました：{error}',
+  'thread.deleteConfirmTitle': '投稿を削除しますか？',
+  'thread.deleteConfirmDesc': 'この操作は元に戻せません。',
 
   'notifications.title': '通知',
   'notifications.empty': '通知はありません',

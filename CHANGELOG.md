@@ -7,16 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.14.2] — 2026-06-12
 
+### Added
+
+- Delete confirmation modal in thread view, styled consistently with the reply-restriction modal.
+- Vitest test setup for `@bsky/app` (`packages/app/vitest.config.ts`).
+- Unit tests for `extractEmbeds` and `buildFirstPostEmbed` in `@bsky/app`.
+
+### Changed
+
+- Quoted post cards now render below media (images/video/external/list embeds) in thread view for consistent visual hierarchy.
+
 ### Fixed
 
 - Fixed missing quote embeds in our client when a post uses `app.bsky.embed.recordWithMedia` (image + quote). The extraction code now correctly unwraps the `recordWithMedia#view` wrapper (`embed.record.record`).
 - Fixed video + quote submissions so the quote is preserved in `recordWithMedia` instead of being dropped.
 - Fixed `extractVideo` to recurse into `recordWithMedia.media`.
-
-### Added
-
-- Unit tests for `extractEmbeds` and `buildFirstPostEmbed` in `@bsky/app`.
-- Vitest test setup for `@bsky/app` (`packages/app/vitest.config.ts`).
+- Fixed reply-restriction (`ThreadgateEditor`) modal layout offset by making the inner container `w-full`.
 
 ## [0.14.1] — 2026-06-12
 

@@ -268,6 +268,8 @@ const zh: LocaleMessages = {
   'thread.allowQuoteNo': '不允许',
   'thread.deleteSuccess': '帖子已删除',
   'thread.deleteFailed': '删除帖子失败：{error}',
+  'thread.deleteConfirmTitle': '删除帖子？',
+  'thread.deleteConfirmDesc': '此操作无法撤销。',
 
   // ── Notifications ──
   'notifications.title': '通知',

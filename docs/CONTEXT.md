@@ -37,17 +37,15 @@ v0.14.1 重点修复了视频上传成功后无法播放的问题，并优化了
 - **批量审核集成**: `useModerationBatch` hook + 6 个 PWA 列表组件集成
 - **举报功能**: `createModerationReport` API，帖子详情页举报 + TUI `!` 快捷键
 
-### 最近修复 (2026-06-12):
-- ✅ 修复视频上传成功但播放失败：关闭静默 `uploadBlob` 兜底，默认 `allowFallback: false`
-- ✅ `uploadVideo` 显式抛出 `VideoServiceError`，按可恢复 / 不可恢复分类错误
-- ✅ `ComposePage` 上传失败时弹窗提供重试 / 跳过 / 取消
-- ✅ `VideoCard` 对未处理完成的视频渲染占位 UI，避免请求不存在的 HLS playlist
-- ✅ 上传前生成唯一文件名，避免 `already_exists` 冲突
-- ✅ `packages/core/tests/video-upload.test.ts`（26 项测试）
-- ✅ TUI `PostItem` 对缺失 `playlistUrl` 的视频显示占位文本，不生成空 OSC 8 链接
-- ✅ 视频上传功能已在 staging 验证通过（`https://staging.ai-bsky.pages.dev`）
-- 提交：`d693eb7`（`fix(video): make video service upload reliable and expose failures explicitly`）、`c84fd76`（`refactor(video): address review minor issues for upload and playback`）
-- 详情：`docs/lessons/2026-06-12-video-upload-fallback-trap.md`
+### 最近修复与优化 (2026-06-12):
+- ✅ 修复 recordWithMedia 引用帖在客户端丢失：`extractQuotedPost` 正确解包 `recordWithMedia#view`
+- ✅ 修复视频+引用提交时引用被丢弃：首帖 embed 构造支持 video + quote → `recordWithMedia`
+- ✅ 修复 `extractVideo` 不递归 `recordWithMedia.media` 的问题
+- ✅ 帖子详情页引用卡片现在显示在主媒体（图片/视频/链接）下方
+- ✅ 帖子删除增加确认弹窗，与「谁能回复？」弹窗风格一致
+- ✅ 修复「谁能回复？」弹窗内容偏移问题
+- 提交：`23fdab5`、`c09e499` 及本次更新
+- 测试环境部署完成：`https://test.ai-bsky.pages.dev`
 
 ### 最近优化 (2026-06-12):
 - ✅ 帖子删除成功：自动返回并弹出右下角提示「帖子成功删除」

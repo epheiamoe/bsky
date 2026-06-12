@@ -269,6 +269,8 @@ const en: LocaleMessages = {
   'thread.allowQuoteNo': 'Not allowed',
   'thread.deleteSuccess': 'Post deleted',
   'thread.deleteFailed': 'Failed to delete post: {error}',
+  'thread.deleteConfirmTitle': 'Delete post?',
+  'thread.deleteConfirmDesc': 'This action cannot be undone.',
 
   'notifications.title': 'Notifications',
   'notifications.empty': 'No notifications',

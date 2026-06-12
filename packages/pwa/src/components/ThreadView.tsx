@@ -133,6 +133,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     }
   }, [client, focused, isFollowing, followUri]);
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   const handleDeletePost = useCallback(async () => {
     if (!client || !focused) return;
     try {
@@ -144,6 +146,11 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
       setToast({ visible: true, message: t('thread.deleteFailed', { error: errorMessage }), type: 'error' });
     }
   }, [client, focused, goBack, t]);
+
+  const confirmDelete = useCallback(() => {
+    setShowDeleteConfirm(false);
+    void handleDeletePost();
+  }, [handleDeletePost]);
 
   const hasText = (focused?.text?.trim().length ?? 0) > 0;
 
@@ -347,28 +354,6 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       onClick={() => goTo({ type: 'listDetail', uri: focusedListEmbed.uri })}
                     />
                   )}
-                  {focused.quotedPost && (
-                    <div
-                      className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
-                      onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        {focused.quotedPost.authorAvatar && (
-                          <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                        )}
-                        <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
-                        <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
-                      </div>
-                      <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
-                      {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
-                        <div className="mt-1 flex gap-1">
-                          {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                            <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
                   {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
                   {translationResult && !translating && (
                     <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
@@ -425,6 +410,28 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
                     </a>
                   ))}
+                  {focused.quotedPost && (
+                    <div
+                      className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
+                      onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {focused.quotedPost.authorAvatar && (
+                          <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                        )}
+                        <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                        <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                      </div>
+                      <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
+                      {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
+                        <div className="mt-1 flex gap-1">
+                          {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                            <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {/* Threadgate restriction badge */}
                 {threadgate && threadgate.rules !== undefined && (
@@ -446,7 +453,7 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   {focused.handle === client.getHandle() && (
                     <>
                       <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
-                      <button onClick={handleDeletePost} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
+                      <button onClick={() => setShowDeleteConfirm(true)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
                     </>
                   )}
                 </div>
@@ -521,6 +528,30 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           onClose={() => setShowThreadgateEditor(false)}
           onSaved={() => { setShowThreadgateEditor(false); window.location.reload(); }}
         />
+      )}
+      {showDeleteConfirm && focused && (
+        <Modal open onClose={() => setShowDeleteConfirm(false)}>
+          <div className="w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-base font-bold text-text-primary">{t('thread.deleteConfirmTitle')}</h2>
+              <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-text-primary">{t('thread.deleteConfirmDesc')}</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+              <button onClick={() => setShowDeleteConfirm(false)} className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">
+                {t('action.cancel')}
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+              >
+                {t('action.delete')}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
       {showThreadgateDetail && threadgate && (
         <ThreadgateDetailModal
