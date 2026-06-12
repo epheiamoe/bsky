@@ -1,6 +1,8 @@
 # AGENTS.md — AI Agent & Developer Guide
 
-> Read this before working on the project. Reference `AGENTS.local.md` for machine-specific notes (gitignored, never pushed).
+> **首次开始工作前，必须先读取 `AGENTS.local.md`**（机器专属配置，gitignored，包含分支/部署/网络等关键本地约定）。它不会被自动加入 AI 上下文。
+
+> Read this before working on the project. Reference `AGENTS.local.md` for machine-specific notes (gitignored, never pushed). **You must read `AGENTS.local.md` manually at the start of each session; it is not auto-loaded into the AI context.**
 
 ## Context Recovery
 
@@ -61,9 +63,11 @@ cd packages/tui && npx tsx src/cli.ts
 # PWA dev
 cd packages/pwa && pnpm dev     # http://localhost:5173
 
-# PWA deploy (staging → test → production)
+# PWA deploy: staging (preview/test) → production
+# 1. Deploy to staging and verify the preview URL
 cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
-# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
+# 2. After verifying staging, deploy to production
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 
 # Tests (real API calls, no mocks)
 cd packages/core && npx vitest run --config vitest.config.ts
