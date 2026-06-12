@@ -44,8 +44,9 @@ v0.14.1 重点修复了视频上传成功后无法播放的问题，并优化了
 - ✅ 帖子详情页引用卡片现在显示在主媒体（图片/视频/链接）下方
 - ✅ 帖子删除增加确认弹窗，与「谁能回复？」弹窗风格一致
 - ✅ 修复「谁能回复？」弹窗内容偏移问题
-- 提交：`23fdab5`、`c09e499` 及本次更新
-- 测试环境部署完成：`https://test.ai-bsky.pages.dev`
+- 提交：`23fdab5`（recordWithMedia 引用修复）、`a710299`（UI 优化）
+- 测试环境（staging）部署完成：`https://staging.ai-bsky.pages.dev` / `https://d5bc81c3.ai-bsky.pages.dev`（PWA v0.14.2）
+- 生产环境部署完成：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev` / `https://443005b4.ai-bsky.pages.dev`（PWA v0.14.2）
 
 ### 最近优化 (2026-06-12):
 - ✅ 帖子删除成功：自动返回并弹出右下角提示「帖子成功删除」
