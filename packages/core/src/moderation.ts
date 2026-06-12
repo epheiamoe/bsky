@@ -389,6 +389,17 @@ export function extractBlobReferences(postUri: string, embed?: Record<string, un
           });
         }
       }
+    } else if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(e.items)) {
+      for (const item of e.items as Array<Record<string, unknown>>) {
+        const cid = ((item as any).image?.ref?.$link as string) || ((item as any).cid as string);
+        if (cid) {
+          refs.push({
+            cid,
+            uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+            type: 'image',
+          });
+        }
+      }
     } else if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
       extractImages(e.media as Record<string, unknown>);
     }
