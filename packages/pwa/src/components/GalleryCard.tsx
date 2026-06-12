@@ -100,9 +100,15 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
   );
 
   // ── Click → delegate to parent for lightbox ─────────────────────
-  const handleImageClick = useCallback(() => {
-    onImageClick?.(current);
-  }, [current, onImageClick]);
+  // Stop propagation so the click doesn't bubble up to PostPreviewCard's
+  // onClick handler, which would navigate to the thread page instead.
+  const handleImageClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onImageClick?.(current);
+    },
+    [current, onImageClick],
+  );
 
   // ── Empty state ──────────────────────────────────────────────────
   if (!images.length) return null;
@@ -118,6 +124,7 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
       className="mt-2 focus:outline-none"
       tabIndex={0}
       onKeyDown={handleKeyDown}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="relative overflow-hidden rounded-xl border border-border">
         {/* ═══ Carousel track ═══ */}
