@@ -17,7 +17,7 @@ const SKIN_TONES = ['\u{1F3FB}', '\u{1F3FC}', '\u{1F3FD}', '\u{1F3FE}', '\u{1F3F
 
 export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageProps) {
   const { t } = useI18n();
-  const { messages, convo, loading, sending, error, loadConvo, loadOlder, sendMessage, toggleReaction, refresh, deleteMessage, markRead, muteConvo, unmuteConvo } = useChatMessages(client);
+  const { messages, convo, loading, sending, error, loadConvo, loadOlder, sendMessage, toggleReaction, refresh, deleteMessage, muteConvo, unmuteConvo } = useChatMessages(client);
   const [input, setInput] = useState('');
   const [quotePreview, setQuotePreview] = useState<{ uri: string; resolved?: { cid: string; text: string; author: string } } | null>(null);
   const [activeReactionMsgId, setActiveReactionMsgId] = useState<string | null>(null);
@@ -37,7 +37,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   const lastMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    loadConvo(conversationId, true).then(() => { markRead(); markConvoRead(conversationId); });
+    loadConvo(conversationId, true).then(() => { markConvoRead(conversationId); });
   }, [conversationId]);
 
   useEffect(() => {
