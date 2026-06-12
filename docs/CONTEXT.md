@@ -53,7 +53,7 @@ v0.14.1 重点修复了视频上传成功后无法播放的问题，并优化了
 - ✅ 帖子删除成功：自动返回并弹出右下角提示「帖子成功删除」
 - ✅ 帖子删除失败：留在当前页并显示失败原因提示
 - ✅ PWA 版本升级到 v0.14.2
-- 提交：`8ece48e`（`fix(compose): restore quote embeds in recordWithMedia and support video+quote submissions (v0.14.2)`）
+- 提交：`23fdab5`（`fix(compose): restore quote embeds in recordWithMedia and support video+quote submissions (v0.14.2)`）
 - 提交：`210cea5`、`3ba2408`
 - 生产环境部署完成：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（Cloudflare Pages deployment `51365f45`，PWA v0.14.1）
 
