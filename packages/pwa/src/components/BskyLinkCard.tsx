@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import type { AppView } from '@bsky/app';
 import { useI18n, parseBskyAppUrl, bskyUrlToAppView, getBskyUrlTypeLabel, isBskyAppUrl } from '@bsky/app';
 import { Icon } from './Icon.js';
@@ -128,12 +129,13 @@ export function BskyLinkCard({ url, onOpenInternal, stopPropagation = true }: Bs
         <p className="text-text-secondary text-xs mt-1 truncate">{url}</p>
       </button>
 
-      {showModal && (
+      {showModal && createPortal(
         <LinkChoiceModal
           url={url}
           onOpenInternal={onOpenInternal}
           onClose={() => setShowModal(false)}
-        />
+        />,
+        document.body
       )}
     </>
   );
