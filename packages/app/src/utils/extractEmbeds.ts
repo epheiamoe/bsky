@@ -6,10 +6,55 @@ export interface ExtractImage {
   alt: string;
 }
 
-export interface ExtractExternalLink {
+/** RGB color definition, per app.bsky.embed.external#colorRGB. All values 0-255. */
+export interface ExternalSourceTheme {
+  backgroundRGB?: { r: number; g: number; b: number };
+  foregroundRGB?: { r: number; g: number; b: number };
+  accentRGB?: { r: number; g: number; b: number };
+  accentForegroundRGB?: { r: number; g: number; b: number };
+}
+
+/** Convert a {r,g,b} color object to CSS "rgb(r,g,b)" string */
+export function colorRGBToString(c?: { r: number; g: number; b: number }): string | undefined {
+  if (!c) return undefined;
+  return `rgb(${c.r},${c.g},${c.b})`;
+}
+
+/** Publication source metadata from viewExternal */
+export interface ExternalSource {
   uri: string;
+  icon?: string;
   title: string;
+  description?: string;
+  theme?: ExternalSourceTheme;
+}
+
+/**
+ * External link embed — enhanced with viewExternal rich metadata.
+ * Fields marked [view] are only available from API-resolved #view data.
+ * Fields without [view] come from record-level embed.external.
+ */
+export interface ExtractExternalLink {
+  /** The external URI */
+  uri: string;
+  /** Link title (from record) */
+  title: string;
+  /** Link description (from record) */
   description: string;
+
+  // ── viewExternal rich metadata (all optional) ──
+  /** Thumbnail image CDN URL [view] */
+  thumb?: string;
+  /** Content creation timestamp [view] */
+  createdAt?: string;
+  /** Content update timestamp [view] */
+  updatedAt?: string;
+  /** Estimated reading time in minutes [view] */
+  readingTime?: number;
+  /** Labels attached to the external content [view] */
+  labels?: Array<{ val: string }>;
+  /** Publication source with icon + theme [view] */
+  source?: ExternalSource;
 }
 
 export interface ExtractVideo {
@@ -45,6 +90,32 @@ export interface ExtractListEmbed {
   purpose: string;
 }
 
+/**
+ * A single image item within a gallery embed.
+ * View-side: contains thumbnail + fullsize CDN URLs.
+ * Record-side: contains image blob ref + alt + aspectRatio.
+ */
+export interface ExtractGalleryItem {
+  /** CDN thumbnail URL (from view) */
+  thumbnail: string;
+  /** CDN fullsize URL (from view) */
+  fullsize: string;
+  /** ALT text (from record or view) */
+  alt: string;
+  /** Aspect ratio { width, height } (from view or record) */
+  aspectRatio?: { width: number; height: number };
+}
+
+/**
+ * Gallery embed — app.bsky.embed.gallery type (2026 H1).
+ * Schema maxLength: 20, client soft limit: 10.
+ * Rendered as a swipeable carousel with count badge.
+ */
+export interface ExtractGallery {
+  /** Gallery images (view-side resolved CDN URLs) */
+  images: ExtractGalleryItem[];
+}
+
 export function extractImages(post: PostView): ExtractImage[] {
   const images: ExtractImage[] = [];
   const embed = post.record.embed as Record<string, unknown> | undefined;
@@ -67,6 +138,46 @@ export function extractImages(post: PostView): ExtractImage[] {
   collect(embed);
 
   return images;
+}
+
+export function extractGallery(post: PostView): ExtractGallery | null {
+  const embed = post.record.embed as Record<string, unknown> | undefined;
+  if (!embed) return null;
+
+  const resolve = (e: Record<string, unknown>): ExtractGallery | null => {
+    const type = e.$type as string | undefined;
+    if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(e.items)) {
+      // Try to get view-side resolved data from (post as any).embed
+      const viewEmbed = (post as any).embed as Record<string, unknown> | undefined;
+      const viewItems = (viewEmbed?.$type === 'app.bsky.embed.gallery#view')
+        ? (viewEmbed.items as Array<Record<string, unknown>> | undefined)
+        : undefined;
+
+      const images: ExtractGalleryItem[] = [];
+      const items = e.items as Array<Record<string, unknown>>;
+      for (let idx = 0; idx < items.length; idx++) {
+        const item = items[idx]!;
+        // Prefer view-side resolved data (has CDN URLs)
+        const viewItem = viewItems?.[idx];
+        images.push({
+          thumbnail: (viewItem?.thumbnail as string) || (item.thumbnail as string) || '',
+          fullsize: (viewItem?.fullsize as string) || (item.fullsize as string) || '',
+          alt: (item.alt as string) || (viewItem?.alt as string) || '',
+          aspectRatio: (viewItem?.aspectRatio as { width: number; height: number })
+            || (item.aspectRatio as { width: number; height: number })
+            || undefined,
+        });
+      }
+      return images.length > 0 ? { images } : null;
+    }
+    // Recurse into recordWithMedia (gallery + quote)
+    if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
+      return resolve(e.media as Record<string, unknown>);
+    }
+    return null;
+  };
+
+  return resolve(embed);
 }
 
 export function extractVideo(post: PostView): ExtractVideo | null {
@@ -98,16 +209,51 @@ export function extractVideo(post: PostView): ExtractVideo | null {
 }
 
 export function extractExternalLink(post: PostView): ExtractExternalLink | null {
-  const embed = post.record.embed as Record<string, unknown> | undefined;
-  if (!embed) return null;
-  if ((embed.$type as string) !== 'app.bsky.embed.external') return null;
-  const ext = embed.external as Record<string, string> | undefined;
+  const recordEmbed = post.record.embed as Record<string, unknown> | undefined;
+  if (!recordEmbed) return null;
+  if ((recordEmbed.$type as string) !== 'app.bsky.embed.external') return null;
+
+  const ext = recordEmbed.external as Record<string, string> | undefined;
   if (!ext) return null;
-  return {
+
+  const result: ExtractExternalLink = {
     uri: ext.uri || '',
     title: ext.title || '',
     description: ext.description || '',
   };
+
+  // ── Merge view-side rich metadata ──
+  const viewEmbed = (post as any).embed as Record<string, unknown> | undefined;
+  if (viewEmbed?.$type === 'app.bsky.embed.external#view') {
+    const viewExt = viewEmbed.external as Record<string, unknown> | undefined;
+    if (viewExt) {
+      if (viewExt.thumb) result.thumb = viewExt.thumb as string;
+      if (viewExt.createdAt) result.createdAt = viewExt.createdAt as string;
+      if (viewExt.updatedAt) result.updatedAt = viewExt.updatedAt as string;
+      if (typeof viewExt.readingTime === 'number') result.readingTime = viewExt.readingTime;
+      if (Array.isArray(viewExt.labels)) result.labels = viewExt.labels as Array<{ val: string }>;
+
+      // source: publication metadata (Standard.site, Ghost, Substack, etc.)
+      const src = viewExt.source as Record<string, unknown> | undefined;
+      if (src) {
+        const theme = src.theme as Record<string, unknown> | undefined;
+        result.source = {
+          uri: (src.uri as string) || '',
+          icon: src.icon as string | undefined,
+          title: (src.title as string) || '',
+          description: src.description as string | undefined,
+          theme: theme ? {
+            backgroundRGB: theme.backgroundRGB as ExternalSourceTheme['backgroundRGB'],
+            foregroundRGB: theme.foregroundRGB as ExternalSourceTheme['foregroundRGB'],
+            accentRGB: theme.accentRGB as ExternalSourceTheme['accentRGB'],
+            accentForegroundRGB: theme.accentForegroundRGB as ExternalSourceTheme['accentForegroundRGB'],
+          } : undefined,
+        };
+      }
+    }
+  }
+
+  return result;
 }
 
 export function extractQuotedPost(post: PostView): ExtractQuotedPost | null {
@@ -206,6 +352,18 @@ export function extractHasGif(post: PostView): boolean {
         return mime.includes('gif');
       });
     }
+    if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(e.items)) {
+      return (e.items as Array<Record<string, unknown>>).some(item => {
+        // Record-side: check image blob mimeType
+        const mime = ((item as any).image?.mimeType as string) || '';
+        // View-side fallback: check URL extension
+        if (!mime) {
+          const url = ((item as any).fullsize as string) || ((item as any).thumbnail as string) || '';
+          return url.toLowerCase().endsWith('.gif');
+        }
+        return mime.includes('gif');
+      });
+    }
     if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
       return checkGif(e.media as Record<string, unknown>);
     }
@@ -214,12 +372,13 @@ export function extractHasGif(post: PostView): boolean {
   return checkGif(embed);
 }
 
-export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; list: ExtractListEmbed | null; hasGif: boolean } {
+export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; list: ExtractListEmbed | null; gallery: ExtractGallery | null; hasGif: boolean } {
   return {
     images: extractImages(post),
     video: extractVideo(post),
     external: extractExternalLink(post),
     list: extractListEmbed(post),
+    gallery: extractGallery(post),
     hasGif: extractHasGif(post),
   };
 }
