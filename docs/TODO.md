@@ -31,7 +31,7 @@
 | **深色/浅色主题** | N/A | ✅ | CSS 变量 + localStorage |
 | **PWA 安装** | N/A | ✅ | manifest.json + Service Worker |
 | **图片显示** | ✅ | ✅ | CDN URL 渲染, PWA: 灯箱 portal + ALT SVG 徽章 + 固定定位浮窗; TUI: OSC 8 链接 + ALT 文字完整显示; 单图可选原始宽高比模式 |
-| **单贴文图片上限 10 张** | ⬜ | ⬜ | Bluesky 官方已将单贴文图片上限从 4 提升到 10；需修改 `MAX_IMAGES = 4 → 10` 并检查 TUI/PWA 网格布局 |
+| **单贴文图片上限 10 张** | ⬜ | ⬜ | 旧 `app.bsky.embed.images` 仍限 4 张；`app.bsky.embed.gallery` 新词表 schema max 20，软限 10 张
 | **共享 extractEmbeds** | ✅ | ✅ | v0.13.2: extractImages/extractVideo/extractExternalLink/extractQuotedPost 集中在 @bsky/app，4 个消费者共享，删除 260 行重复代码 |
 | **视频贴** | ✅ | ✅ | PWA: VideoCard (hls.js), TUI: OSC 8 视频链接 |
 | **ALT 文本** | ✅ | ✅ | 上传时输入 + 提交前缺失警告; PWA: SVG 徽章 + 浮窗; TUI: 图片链接下完整显示 |
@@ -44,7 +44,13 @@
 | **趋势** | ⬜ | ✅ | TrendsWidget + app.bsky.unspecced.getTrends |
 | **List/Feed 浏览** | ✅ | ✅ | PWA: ListsPage + ListDetailPage (Posts/Members tabs + 虚拟滚动) + ProfilePage Lists tab; TUI: 内联视图 + L 快捷键 + j/k/Enter/d/r; AI: 4 工具 |
 | **DM 私信** | ✅ | ✅ | Phase 1+2: send/get/list/delete/mute/read + emoji 反应(8 常用) + 引用帖(URI 粘贴) + 动画 + 加载更早 |
-| **DM 群聊 (Group Conversations)** | ⬜ | ⬜ | Bluesky 已支持最多 50 人群聊；需实现群组会话列表、创建/加入群组、成员管理、邀请链接、群消息渲染 |
+| **DM 群聊 (Group Conversations)** | ⬜ | ⬜ | Bluesky v1.122+ 已支持群聊：多人对话、邀请链接 (`/chat/` 路由)、加入请求管理、群主角色、锁定/结束、表情反应限制。@atproto/api v0.19.9+ 新增 group chat lexicons |
+| **照片轮播 (Gallery Embed)** | ⬜ | ⬜ | **v0.14.3 目标** — 新 `app.bsky.embed.gallery` 词表 (schema max 20, 软限 10)，需渲染和发帖支持。每张图片含 `aspectRatio` |
+| **外部链接富元数据 (viewExternal)** | ⬜ | ⬜ | **v0.14.3 目标** — `viewExternal` 新增 `source`(含 icon/theme 色值)、`readingTime`、`createdAt`/`updatedAt`、`associatedRefs`/`associatedProfiles`。改善链接卡片渲染 |
+| **帖子翻译按钮** | ⬜ | ⬜ | v1.124.0 新增 Google Translate 集成。PWA 可添加帖子溢出菜单翻译选项 |
+| **个人资料 QR 码** | ⬜ | ⬜ | v1.124.0 新增，便于分享和邀请好友 |
+| **多账户支持** | ⬜ | ⬜ | Bluesky 5 月已发布。需添加多账户登录/切换/存储功能 |
+| **长文内容渲染** | ⬜ | ⬜ | 集成 Standard.site/Ghost/Substack 等发布平台。通过 `viewExternal.source` 渲染特殊卡片。对标 X Articles |
 | **资料页 DM 按钮** | N/A | ✅ | 互相关注者资料页，SVG-only 私信按钮 |
 | **编辑个人资料** | N/A | ✅ | 底部浮窗：头像/横幅/名称/描述 + putProfile API |
 | **DM 自定义 emoji 选择器** | ⬜ | ⬜ | 可扩展的常用 emoji 列表 + 搜索 |
@@ -70,7 +76,7 @@
 | **Gemini 适配** | ⬜ | ⬜ | 未实现；v0.13.9 已改用 OpenAI/xAI/Kimi/OpenRouter |
 | **Kimi 适配** | ✅ | ✅ | Moonshot Kimi — 国产视觉模型，无速率限制问题 (v0.13.9) |
 | **思考/视觉模式** | ✅ | ✅ | 从 ModelInfo 自动派生，自定义模型手动设置 |
-| **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩, TUI: sharp, PWA: Canvas API |
+| **图片自动压缩** | ✅ | ✅ | >2MB 自动压缩 (对齐官方 2MB 上限), TUI: sharp, PWA: Canvas API |
 | **色弱友好调色板** | N/A | ✅ | Settings → General 切换 → .cvd class 将 红/绿/黄 映射为 品红/蓝绿/琥珀 |
 | **WCAG 1.4.1 合规** | N/A | ✅ | PostActionsRow aria-pressed + 加粗计数; 所有横幅 role="alert"/"status"; 连接文本标签 |
 | **屏幕阅读器支持** | N/A | ✅ | 语义HTML(landmark/label/list), ARIA(aria-pressed/expanded/current/live), 焦点管理(Modal trap/skip-link), 动态lang/title |
