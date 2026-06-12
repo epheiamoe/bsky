@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl, extractListEmbed } from '@bsky/app';
-import type { AppView, ExtractListEmbed } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl, extractListEmbed, extractEmbeds } from '@bsky/app';
+import type { AppView, ExtractListEmbed, ExtractGalleryItem } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient, AIConfig, PostView, ThreadgateRule, ModerationDecision } from '@bsky/core';
@@ -16,6 +16,8 @@ import { HiddenBanner } from './HiddenBanner.js';
 import { ModerationLabelBar } from './ModerationLabelBar.js';
 import { BskyLinkCard } from './BskyLinkCard.js';
 import { ListEmbedCard } from './ListEmbedCard.js';
+import { GalleryCard } from './GalleryCard.js';
+import { ExternalLinkCard } from './ExternalLinkCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
@@ -25,6 +27,7 @@ import { NotFoundCard } from './NotFoundCard.js';
 import { LabelDetailModal } from './LabelDetailModal.js';
 import { ThreadgateDetailModal } from './ThreadgateDetailModal.js';
 import { Toast } from './Toast.js';
+import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -91,6 +94,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
     return postView ? extractListEmbed(postView) : null;
   }, [focused, getPostView]);
 
+  // Extract all embeds (gallery, images, video, external) from focused post's PostView
+  const focusedEmbeds = useMemo(() => {
+    if (!focused) return null;
+    const postView = getPostView?.(focused.uri);
+    return postView ? extractEmbeds(postView) : null;
+  }, [focused, getPostView]);
+
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
     translateConfig?.apiKey || aiConfig.apiKey,
@@ -108,6 +118,8 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [showFocusedBadgeModal, setShowFocusedBadgeModal] = useState(false);
   const [showFocusedWarnModal, setShowFocusedWarnModal] = useState(false);
   const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
+  const [galleryLightbox, setGalleryLightbox] = useState<number | null>(null);
+const [gallerySourceRect, setGallerySourceRect] = useState<DOMRect | null>(null);
 
   // Clear translation when focused post changes
   useEffect(() => {
@@ -376,7 +388,12 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                     />
                   )}
 
-                  {focused.imageDetails?.length > 0 && (
+                  {focusedEmbeds?.gallery && focusedEmbeds.gallery.images.length > 0 && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <GalleryCard images={focusedEmbeds.gallery.images} onImageClick={(index, e) => { setGalleryLightbox(index); setGallerySourceRect(e.currentTarget.getBoundingClientRect()); }} />
+                    </div>
+                  )}
+                  {focused.imageDetails?.length > 0 && !focusedEmbeds?.gallery && (
                     <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
                       <ImageGrid
                         images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
@@ -399,17 +416,21 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                       />
                     </div>
                   )}
-                  {focused.externalLink && (isBskyAppUrl(focused.externalLink.uri) ? (
-                    <BskyLinkCard url={focused.externalLink.uri} onOpenInternal={(view) => goTo(view)} />
-                  ) : (
-                    <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                      className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-                    >
-                      <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
-                      {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                      <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
-                    </a>
-                  ))}
+                  {focusedEmbeds?.external ? (
+                    <ExternalLinkCard link={focusedEmbeds.external} onOpenInternal={(view) => goTo(view)} />
+                  ) : focused.externalLink ? (
+                    isBskyAppUrl(focused.externalLink.uri) ? (
+                      <BskyLinkCard url={focused.externalLink.uri} onOpenInternal={(view) => goTo(view)} />
+                    ) : (
+                      <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                      >
+                        <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                        {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                        <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                      </a>
+                    )
+                  ) : null}
                   {focused.quotedPost && (
                     <div
                       className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
@@ -516,6 +537,23 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           )
         )}
       </div>
+      {focusedEmbeds?.gallery && (
+        <ImageLightboxDialog
+          open={galleryLightbox !== null}
+          images={focusedEmbeds.gallery.images.map((img: ExtractGalleryItem) => ({ url: img.fullsize, alt: img.alt }))}
+          initial={galleryLightbox ?? 0}
+          sourceRects={gallerySourceRect ? [gallerySourceRect] : [new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
+          naturalAspectRatio={(() => {
+            if (galleryLightbox === null) return 1;
+            const img = focusedEmbeds.gallery.images[galleryLightbox];
+            if (img?.aspectRatio?.width && img.aspectRatio.height) {
+              return img.aspectRatio.width / img.aspectRatio.height;
+            }
+            return 1;
+          })()}
+          onClose={() => setGalleryLightbox(null)}
+        />
+      )}
       {showInfo && focused && getPostView?.(focused.uri) && (
         <PostInfoModal open={showInfo} post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />
       )}

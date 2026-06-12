@@ -16,7 +16,7 @@ export interface GalleryImage {
 interface GalleryCardProps {
   images: GalleryImage[];
   /** Called when the user clicks/taps the current image. Parent opens lightbox at this index. */
-  onImageClick?: (index: number) => void;
+  onImageClick?: (index: number, event: React.MouseEvent) => void;
 }
 
 /**
@@ -105,7 +105,7 @@ export function GalleryCard({ images, onImageClick }: GalleryCardProps) {
   const handleImageClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      onImageClick?.(current);
+      onImageClick?.(current, e);
     },
     [current, onImageClick],
   );

@@ -70,6 +70,7 @@ function buildGalleryEmbed(images: ComposeMedia[]): Record<string, unknown> {
     $type: 'app.bsky.embed.gallery',
     items: images.map(img => {
       const item: Record<string, unknown> = {
+        $type: 'app.bsky.embed.gallery#image',
         image: {
           $type: 'blob',
           ref: { $link: img.blobRef.$link },

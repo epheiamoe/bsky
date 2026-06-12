@@ -139,9 +139,11 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
 
   // ── Gallery lightbox state ──
   const [galleryLightbox, setGalleryLightbox] = useState<number | null>(null);
+  const [gallerySourceRect, setGallerySourceRect] = useState<DOMRect | null>(null);
   const galleryContainerRef = useRef<HTMLDivElement>(null);
-  const handleGalleryClick = useCallback((index: number) => {
+  const handleGalleryClick = useCallback((index: number, e: React.MouseEvent) => {
     setGalleryLightbox(index);
+    setGallerySourceRect(e.currentTarget.getBoundingClientRect());
   }, []);
 
   const replyDepth = post ? getReplyDepth(post) : null;
@@ -310,13 +312,14 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           </ModerationOverlay>
         ) : content}
       </div>
-      {gallery && galleryLightbox !== null && (
+      {gallery && (
         <ImageLightboxDialog
           open={galleryLightbox !== null}
           images={gallery.images.map((img: ExtractGalleryItem) => ({ url: img.fullsize, alt: img.alt }))}
-          initial={galleryLightbox}
-          sourceRects={[new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
+          initial={galleryLightbox ?? 0}
+          sourceRects={gallerySourceRect ? [gallerySourceRect] : [new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
           naturalAspectRatio={(() => {
+            if (galleryLightbox === null) return 1;
             const img = gallery.images[galleryLightbox];
             if (img?.aspectRatio?.width && img.aspectRatio.height) {
               return img.aspectRatio.width / img.aspectRatio.height;
