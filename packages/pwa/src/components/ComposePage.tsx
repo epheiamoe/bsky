@@ -4,6 +4,7 @@ import type { ComposeMedia, ComposePostItem, AppDraft, AppView } from '@bsky/app
 import { BskyClient, makeUniqueVideoName, VideoServiceError } from '@bsky/core';
 import type { PostView, AIConfig, ListView, VideoUploadOptions, VideoUploadResult } from '@bsky/core';
 import { Icon } from './Icon.js';
+import { GalleryCard } from './GalleryCard.js';
 import { compressImage, formatSize } from '../utils/compressImage.js';
 import { formatTime } from '../utils/format.js';
 import { WidgetModal } from './WidgetModal.js';
@@ -15,7 +16,7 @@ import { ReplyOptionsModal } from './ReplyOptionsModal.js';
 import { LanguageSelector } from './LanguageSelector.js';
 import { Modal } from './Modal.js';
 
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 10;
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 300 * 1024 * 1024; // 300MB
 const WARN_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB — warning threshold
@@ -780,6 +781,11 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
   const nonEmptyCount = posts.filter(p => p.text.trim()).length;
   const polishPost = posts.find(p => p.id === polishTargetPostId) ?? posts.find(p => p.text.trim()) ?? posts[0];
 
+  // Derived: can the focused post accept more media?
+  const focusedImgs = perPostImages.get(focusedPostId) ?? [];
+  const focusedVid = perPostVideos.get(focusedPostId) ?? null;
+  const canAddMedia = focusedImgs.length < MAX_IMAGES && !focusedVid && !submitting;
+
   // Drag & drop handlers
   const handleDragOver = useCallback((e: React.DragEvent, postId: string) => {
     e.preventDefault();
@@ -1021,8 +1027,8 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                   </div>
                 )}
 
-                {/* ── Image grid (above text input) ── */}
-                {imgs.length > 0 && (
+                {/* ── Image preview ── */}
+                {imgs.length > 0 && imgs.length <= 4 && (
                   <div className="mb-2 grid grid-cols-2 gap-1">
                     {imgs.map((img, i) => (
                       <div key={i} className="relative rounded-lg overflow-hidden border border-border aspect-square group"
@@ -1056,6 +1062,56 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
                         </button>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {/* ── Gallery preview (5+ images) ── */}
+                {imgs.length > 4 && (
+                  <div className="mb-2">
+                    <GalleryCard
+                      images={imgs.map(img => ({
+                        thumbnail: img.preview,
+                        fullsize: img.preview,
+                        alt: img.altText,
+                      }))}
+                      onImageClick={(index) => openAltModal(post.id, index, imgs[index]!)}
+                    />
+                    {/* Count + add-more bar */}
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-xs text-text-secondary tabular-nums">{imgs.length}/{MAX_IMAGES}</span>
+                      {imgs.length < MAX_IMAGES && !vid && (
+                        <button
+                          type="button"
+                          onClick={() => { setFileTargetPostId(post.id); fileInputRef.current?.click(); }}
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-border bg-surface text-xs text-text-secondary hover:text-primary hover:border-primary/30 transition-colors"
+                          aria-label={t('compose.addImage')}
+                        >
+                          <Icon name="plus" size={10} />
+                          <span>{t('compose.addImage')}</span>
+                        </button>
+                      )}
+                    </div>
+                    {/* Thumbnail strip — tap to edit alt, hover for remove */}
+                    <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1">
+                      {imgs.map((img, i) => (
+                        <div key={i} className="relative shrink-0 group">
+                          <img
+                            src={img.preview}
+                            alt=""
+                            className="w-14 h-14 object-cover rounded-lg border border-border cursor-pointer hover:border-primary/50 transition-colors"
+                            onClick={() => openAltModal(post.id, i, img)}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removeImage(post.id, i); }}
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black/70 hover:bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove image"
+                          >
+                            <Icon name="x" size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -1268,9 +1324,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
             <button
               type="button"
               onClick={() => { setFileTargetPostId(focusedPostId); fileInputRef.current?.click(); }}
-              disabled={submitting}
+              disabled={!canAddMedia}
               className="p-2 text-text-secondary hover:text-primary transition-colors disabled:opacity-30"
               aria-label="Add media"
+              title={canAddMedia ? undefined : t('compose.maxImages', { n: MAX_IMAGES })}
             >
               <Icon name="camera" size={18} />
             </button>
