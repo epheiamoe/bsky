@@ -18,7 +18,7 @@
 | `docs/LABELING.md` | 标记/审核系统架构 (v0.15.0) |
 | `CHANGELOG.md` | 完整版本历史 |
 
-> 其余文档见 `docs/archive/`。详细教训见 `docs/LESSONS.md`（69 课分类索引 → `docs/lessons/*.md`）。
+> 其余文档见 `docs/archive/`。详细教训见 `docs/LESSONS.md`（83 课分类索引 → `docs/lessons/*.md`）。
 > Python 沙箱状态：`docs/PYTHON_SANDBOX_STATUS.md`。MCP 故障排查：`docs/MCP_TROUBLESHOOTING.md`。
 > **下一阶段计划**：`docs/PHASE14_PLAN.md` — AI Batch AT Tool Calls（bluesky_tools Python 库）
 
@@ -34,6 +34,9 @@
 - ✅ **Moderation 管线**：`extractBlobReferences()` 覆盖 gallery，blur/content-warning 正常
 - ✅ **GIF 检测**：`extractHasGif()` 覆盖 gallery 类型
 - ✅ **TUI gallery 渲染**：索引导航（←/→/h/l），ALT 文本 + 宽高比显示
+- ✅ **Gallery 主导宽高比**：轮播容器使用图片中最常见的宽高比，非匹配图片 `object-fit: cover` 裁剪
+- ✅ **DM 自动已读**：进入聊天页自动标记已读
+- ✅ **BskyLinkCard 弹窗 Portal**：`createPortal` 固定定位，修复「在…中打开」选择框定位问题
 - ✅ **i18n**：6 新 key（`gallery.*`、`external.*`），`compose.maxImages` 改为 10
 - **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.3）
 - **生产环境**：`https://bsky.epheia.dev`（PWA v0.14.2，尚未部署 v0.14.3）

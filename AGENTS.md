@@ -9,7 +9,7 @@
 > **会话上下文被压缩后，按此顺序恢复**：
 > 1. `docs/CONTEXT.md` — 版本号、项目状态、关键架构、开发规则
 > 2. `docs/ARCHITECTURE.md` — 系统架构、依赖流、TUI/PWA 差异、关键决策
-> 3. `docs/LESSONS.md` — 历次会话详细教训（69 课分类索引）
+> 3. `docs/LESSONS.md` — 历次会话详细教训（83 课分类索引）
 > 4. `docs/TODO.md` — 功能完成状态对照表
 
 ---
@@ -37,7 +37,7 @@
 | **术语** | `docs/TERMINOLOGY.md` | 主题帖/回复/讨论串等命名规范 |
 | **TUI 工具** | `docs/TUI_UTILS.md` | CJK 文本换行、鼠标追踪 |
 | **功能状态** | `docs/TODO.md` | TUI/PWA 功能完成对照表 |
-| **教训索引** | `docs/LESSONS.md` | 69 课分类索引 → `docs/lessons/*.md` |
+| **教训索引** | `docs/LESSONS.md` | 83 课分类索引 → `docs/lessons/*.md` |
 | **归档文档** | `docs/archive/` | 历史文档、旧版教训 (21-45) |
 
 ---

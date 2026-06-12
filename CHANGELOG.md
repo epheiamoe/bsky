@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3] — 2026-06-13
+
+### Added
+
+- **Gallery embed (`app.bsky.embed.gallery`)**: full support for Bluesky's new photo carousel — 5-10 images per post, swipeable carousel with count badge, keyboard navigation, touch swipe, lightbox integration.
+- **Gallery compose**: `buildGalleryEmbed()` with required `$type`, `alt`, `aspectRatio` per item; automatic image dimension detection via `createImageBitmap`.
+- **Gallery dominant aspect ratio**: carousel container uses the most common aspect ratio among images; non-matching images are cropped (`object-fit: cover`).
+- **`viewExternal` rich metadata**: `ExternalLinkCard` component renders publication source icon/theme, reading time, thumbnail, timestamps.
+- **10-image compose**: `MAX_IMAGES` raised from 4 to 10; 5+ images route to gallery embed.
+- **i18n**: 6 new keys (`gallery.*`, `external.*`).
+- **TUI gallery**: text-based index navigator with ←/→/h/l navigation.
+- **DM auto-read**: opening a chat conversation now automatically marks it as read.
+- **BskyLinkCard portal**: the "open in" choice modal is now portaled to `document.body` for proper fixed positioning.
+
+### Changed
+
+- Gallery lightbox uses actual click position as animation source rect (instead of hardcoded center).
+- `PostPreviewCard` (used by all page views) now renders gallery embeds with lightbox support.
+- `ExternalLinkCard` replaces inline `<a>` tags for external link rendering.
+
+### Fixed
+
+- Fixed gallery posts failing silently: each gallery item now includes required `$type: 'app.bsky.embed.gallery#image'`.
+- Fixed gallery `aspectRatio` being optional: now always included (required by lexicon), with `{width:1, height:1}` fallback.
+- Fixed gallery arrows triggering form submission: added `type="button"` to prevent default `type="submit"`.
+- Fixed gallery click bubbling to post navigation: `stopPropagation` on image click and container.
+- Fixed lightbox close animation: removed immediate unmount guard, using phase-based state machine.
+- Fixed ThreadView gallery rendering: added `extractEmbeds()` call and `GalleryCard` with lightbox.
+- Fixed `extractGallery` to check view-side embed data for CDN URLs.
+
 ## [0.14.2] — 2026-06-12
 
 ### Added

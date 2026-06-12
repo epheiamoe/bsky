@@ -159,16 +159,21 @@ Non-hook utilities exported from files in `packages/app/src/hooks/` and `package
 
 ```typescript
 export interface ExtractImage { url: string; alt: string; }
-export interface ExtractExternalLink { uri: string; title: string; description: string; }
+export interface ExtractGalleryItem { thumbnail: string; fullsize: string; alt: string; aspectRatio?: { width: number; height: number }; }
+export interface ExtractGallery { images: ExtractGalleryItem[]; }
+export interface ExtractExternalLink { uri: string; title: string; description: string; thumb?: string; createdAt?: string; updatedAt?: string; readingTime?: number; labels?: Array<{ val: string }>; source?: { uri: string; icon?: string; title: string; description?: string; theme?: ExternalSourceTheme }; }
 export interface ExtractVideo { thumbnailUrl: string; playlistUrl?: string; alt: string; aspectRatio?: { width: number; height: number }; processing?: boolean; }
 export interface ExtractQuotedPost { uri: string; cid: string; text: string; handle: string; displayName: string; authorAvatar?: string; imageDetails: ExtractImage[]; externalLink: ExtractExternalLink | null; }
+export interface ExternalSourceTheme { bg: string; fg: string; }
+export function colorRGBToString(c: { red: number; green: number; blue: number }): string;
 
 export function extractImages(post: PostView): ExtractImage[];
 export function extractVideo(post: PostView): ExtractVideo | null;
 export function extractExternalLink(post: PostView): ExtractExternalLink | null;
 export function extractQuotedPost(post: PostView): ExtractQuotedPost | null;
 export function extractHasGif(post: PostView): boolean;
-export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; hasGif: boolean };
+export function extractGallery(post: PostView): ExtractGallery | null;
+export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; list: ExtractListEmbed | null; gallery: ExtractGallery | null; hasGif: boolean };
 ```
 
 **Critical**: `extractQuotedPost` reads from `(post as any).embed` (API-resolved `#view`), NEVER `post.record.embed`. All consumers must call these shared functions — no inline extraction.

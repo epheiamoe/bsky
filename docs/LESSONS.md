@@ -1,7 +1,7 @@
 # Lessons Learned — Bsky Project
 
 > 详细教训记录，按类别分组。
-> 当前共 80 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM、视频上传等领域。
+> 当前共 83 课，涵盖 AI、认证、UI、API、存储、DM、Worker、WASM、视频上传、Compose、架构、HTML 等领域。
 >
 > **快速查找**：按类别浏览，或使用下方表格索引。
 
@@ -14,6 +14,9 @@
 | **UI/UX** | [lessons/ui.md](lessons/ui.md) | 1, 4, 5, 6, 7, 8, 12, 14, 16, 52, 54, 56, 64, 79 | 组件、动画、布局、事件、无障碍 |
 | **AI/Prompting** | [lessons/ai.md](lessons/ai.md) | 2, 3, 17, 18, 68 | 工具调用、格式化、数据映射 |
 | **API/Network** | [lessons/api.md](lessons/api.md) | 9, 13, 20, 46, 47, 48, 80 | 端点、重试、CORS、去重 |
+| **Compose** | [lessons/compose.md](lessons/compose.md) | 81 | Gallery embed 构造 |
+| **Architecture** | [lessons/architecture.md](lessons/architecture.md) | 82 | 组件职责、数据流 |
+| **HTML** | [lessons/html.md](lessons/html.md) | 83 | HTML 元素默认行为 |
 | **Auth/Session** | [lessons/auth.md](lessons/auth.md) | 53, 55, 77 | JWT、认证钩子、凭证管理 |
 | **Storage** | [lessons/storage.md](lessons/storage.md) | 10, 11, 49, 50, 51, 69, 78 | IndexedDB、文件系统、缓存、竞态 |
 | **DM/Messaging** | [lessons/dm.md](lessons/dm.md) | 19, 30, 31, 33, 35 | 私信、对话、反应、认证演进 |
@@ -87,6 +90,9 @@
 | 78 | File Reference Becomes Stale Before Upload | Browser / Storage | [2026-06-11-file-reference-stale-upload.md](lessons/2026-06-11-file-reference-stale-upload.md) |
 | 79 | Don't Rely on Component Unmount to Close Modals | UI / React | [2026-06-11-progress-modal-unmount-reliance.md](lessons/2026-06-11-progress-modal-unmount-reliance.md) |
 | 80 | Video Upload Fallback Trap | API/Network | [2026-06-12-video-upload-fallback-trap.md](lessons/2026-06-12-video-upload-fallback-trap.md) |
+| 81 | Gallery embed $type 字段缺失 | Compose | [compose.md](lessons/compose.md) |
+| 82 | PostPreviewCard 才是实际使用的组件 | Architecture | [architecture.md](lessons/architecture.md) |
+| 83 | Button 默认 type=submit | HTML | [html.md](lessons/html.md) |
 
 ---
 
