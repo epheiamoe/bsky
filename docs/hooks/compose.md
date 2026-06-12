@@ -9,7 +9,6 @@ Compose hooks manage post creation, multi-post threads, and draft persistence.
 ```typescript
 function useCompose(
   client: BskyClient | null,
-  goBack: () => void,
   onSuccess?: (uris?: string[]) => void
 ): {
   posts: ComposePostItem[];
@@ -75,5 +74,14 @@ interface AppDraft {
 Uses module-level `_clientRef` to avoid stale closures. PDS-first sync with local fallback.
 
 **PWA compose media handling**: selected image/video bytes are read into `Uint8Array` immediately on selection and stored in component state. Upload uses the stored bytes — never the original `File` reference, which can become stale on mobile (especially after backgrounding or cloud-picker virtualization).
+
+**First-post embed construction**: `useCompose.submit` resolves the quoted record (if any) once for the first post, then delegates to `buildFirstPostEmbed`. The priority is:
+1. Video + quote → `app.bsky.embed.recordWithMedia` (video in `media`, quote in `record`)
+2. Video only → `app.bsky.embed.video`
+3. Quote + images → `app.bsky.embed.recordWithMedia` (images in `media`, quote in `record`)
+4. Quote only → `app.bsky.embed.record`
+5. Images only → `app.bsky.embed.images`
+
+`buildFirstPostEmbed` is exported as a pure helper so the embed-building logic can be unit-tested without rendering React.
 
 **Video metadata** (v0.14.2+): Videos support ALT text (max 10000 chars), VTT caption tracks (up to 20, max 20KB each), and aspect ratio. Caption files are uploaded as separate blobs and referenced in the `app.bsky.embed.video` record.

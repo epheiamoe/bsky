@@ -70,25 +70,31 @@ export function extractImages(post: PostView): ExtractImage[] {
 }
 
 export function extractVideo(post: PostView): ExtractVideo | null {
-  const embed = post.record.embed as Record<string, unknown> | undefined;
-  if (!embed) return null;
-  if ((embed.$type as string) !== 'app.bsky.embed.video') return null;
+  const recordEmbed = post.record.embed as Record<string, unknown> | undefined;
+  const viewEmbed = (post as any).embed as Record<string, unknown> | undefined;
+  if (!recordEmbed) return null;
 
-  const viewEmbed = (post as any).embed as {
-    cid?: string;
-    thumbnail?: string;
-    playlist?: string;
-  } | undefined;
-  const cid = viewEmbed?.cid ?? ((embed.video as any)?.ref?.$link as string | undefined) ?? '';
-  const playlistUrl = viewEmbed?.playlist;
-
-  return {
-    thumbnailUrl: viewEmbed?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
-    playlistUrl,
-    alt: (embed.alt as string) || '',
-    aspectRatio: embed.aspectRatio as { width: number; height: number } | undefined,
-    processing: !playlistUrl,
+  const resolve = (recordE: Record<string, unknown>, viewE?: Record<string, unknown>): ExtractVideo | null => {
+    const type = recordE.$type as string | undefined;
+    if (type === 'app.bsky.embed.video' || type === 'app.bsky.embed.video#view') {
+      const viewVideo = viewE as { cid?: string; thumbnail?: string; playlist?: string } | undefined;
+      const cid = viewVideo?.cid ?? ((recordE.video as any)?.ref?.$link as string | undefined) ?? '';
+      const playlistUrl = viewVideo?.playlist;
+      return {
+        thumbnailUrl: viewVideo?.thumbnail || getVideoThumbnailUrl(post.author.did, cid),
+        playlistUrl,
+        alt: (recordE.alt as string) || '',
+        aspectRatio: recordE.aspectRatio as { width: number; height: number } | undefined,
+        processing: !playlistUrl,
+      };
+    }
+    if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && recordE.media) {
+      return resolve(recordE.media as Record<string, unknown>, viewE?.media as Record<string, unknown> | undefined);
+    }
+    return null;
   };
+
+  return resolve(recordEmbed, viewEmbed);
 }
 
 export function extractExternalLink(post: PostView): ExtractExternalLink | null {
@@ -113,21 +119,26 @@ export function extractQuotedPost(post: PostView): ExtractQuotedPost | null {
   const isRecordWithMedia = type === 'app.bsky.embed.recordWithMedia#view' || type === 'app.bsky.embed.recordWithMedia';
   if (!isRecord && !isRecordWithMedia) return null;
 
-  const rec = embed.record as Record<string, unknown> | undefined;
-  if (!rec?.uri) return null;
+  const recordWrapper = embed.record as Record<string, unknown> | undefined;
+  // For recordWithMedia#view, embed.record is itself an app.bsky.embed.record#view
+  // wrapper; the actual quoted viewRecord lives one level deeper at embed.record.record.
+  const quotedViewRecord = isRecordWithMedia && recordWrapper
+    ? (recordWrapper.record as Record<string, unknown> | undefined)
+    : recordWrapper;
+  if (!quotedViewRecord?.uri) return null;
 
   // Skip non-post records (e.g., lists, feeds)
-  const recordType = rec.$type as string | undefined;
+  const recordType = quotedViewRecord.$type as string | undefined;
   if (recordType === 'app.bsky.graph.defs#listView' || recordType === 'app.bsky.feed.defs#generatorView') return null;
 
   const imageDetails: ExtractImage[] = [];
   let externalLink: ExtractExternalLink | null = null;
-  const recEmbeds = rec.embeds as Array<Record<string, unknown>> | undefined;
+  const recEmbeds = quotedViewRecord.embeds as Array<Record<string, unknown>> | undefined;
   if (recEmbeds?.[0]) {
     const e = recEmbeds[0]!;
     const eType = e.$type as string | undefined;
     if ((eType === 'app.bsky.embed.images#view' || eType === 'app.bsky.embed.images') && Array.isArray(e.images)) {
-      const authorDid = (rec.author as Record<string, string> | undefined)?.did ?? '';
+      const authorDid = (quotedViewRecord.author as Record<string, string> | undefined)?.did ?? '';
       for (const img of e.images as Array<Record<string, unknown>>) {
         const url = (img as any).fullsize || getCdnImageUrl(authorDid, (img as any).image?.ref?.$link || '', (img as any).image?.mimeType || 'image/jpeg');
         if (url) imageDetails.push({ url, alt: (img.alt as string) || '' });
@@ -138,12 +149,12 @@ export function extractQuotedPost(post: PostView): ExtractQuotedPost | null {
     }
   }
 
-  const author = rec.author as Record<string, string> | undefined;
-  const value = rec.value as Record<string, string> | undefined;
+  const author = quotedViewRecord.author as Record<string, string> | undefined;
+  const value = quotedViewRecord.value as Record<string, string> | undefined;
 
   return {
-    uri: rec.uri as string,
-    cid: (rec.cid as string) ?? '',
+    uri: quotedViewRecord.uri as string,
+    cid: (quotedViewRecord.cid as string) ?? '',
     text: value?.text ?? '',
     handle: author?.handle ?? '',
     displayName: author?.displayName ?? author?.handle ?? '',

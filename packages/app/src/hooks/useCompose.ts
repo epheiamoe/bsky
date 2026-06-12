@@ -45,6 +45,81 @@ function buildVideoEmbed(video: ComposeMedia): Record<string, unknown> {
   return embed;
 }
 
+function buildImageEmbed(images: ComposeMedia[]): Record<string, unknown> {
+  return {
+    $type: 'app.bsky.embed.images',
+    images: images.map(img => ({
+      image: {
+        $type: 'blob',
+        ref: { $link: img.blobRef.$link },
+        mimeType: img.blobRef.mimeType,
+        size: img.blobRef.size,
+      },
+      alt: img.alt,
+    })),
+  };
+}
+
+export interface EmbedBuildInputs {
+  video?: ComposeMedia;
+  images?: ComposeMedia[];
+  quoteUri?: string;
+  quoteCid?: string;
+}
+
+/**
+ * Build the embed for the first post of a compose submission.
+ *
+ * Priority:
+ * 1. Video + quote -> app.bsky.embed.recordWithMedia
+ * 2. Video only    -> app.bsky.embed.video
+ * 3. Quote + images -> app.bsky.embed.recordWithMedia
+ * 4. Quote only    -> app.bsky.embed.record
+ * 5. Images only   -> app.bsky.embed.images
+ *
+ * The caller is responsible for resolving the quoted record's CID before calling
+ * this function; quoteUri without a quoteCid is ignored.
+ */
+export function buildFirstPostEmbed(inputs: EmbedBuildInputs): Record<string, unknown> | undefined {
+  const { video, images, quoteUri, quoteCid } = inputs;
+
+  if (video && quoteUri && quoteCid !== undefined) {
+    return {
+      $type: 'app.bsky.embed.recordWithMedia',
+      record: {
+        $type: 'app.bsky.embed.record',
+        record: { uri: quoteUri, cid: quoteCid },
+      },
+      media: buildVideoEmbed(video),
+    };
+  }
+
+  if (video) {
+    return buildVideoEmbed(video);
+  }
+
+  if (quoteUri && quoteCid !== undefined) {
+    const quoteEmbed: Record<string, unknown> = {
+      $type: 'app.bsky.embed.record',
+      record: { uri: quoteUri, cid: quoteCid },
+    };
+    if (images && images.length > 0) {
+      return {
+        $type: 'app.bsky.embed.recordWithMedia',
+        record: quoteEmbed,
+        media: buildImageEmbed(images),
+      };
+    }
+    return quoteEmbed;
+  }
+
+  if (images && images.length > 0) {
+    return buildImageEmbed(images);
+  }
+
+  return undefined;
+}
+
 export interface ComposePostItem {
   id: string;
   text: string;
@@ -168,65 +243,22 @@ export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string
         const video = media?.find(m => m.type === 'video');
         const images = media?.filter(m => m.type === 'image');
 
-        if (isFirstPost && video) {
-          record.embed = buildVideoEmbed(video);
-        } else if (isFirstPost && effectiveQuoteUri) {
+        let quoteCid: string | undefined;
+        if (isFirstPost && effectiveQuoteUri) {
           const parts = uriToParts(effectiveQuoteUri);
           const rec = await client.getRecord(parts.did, parts.collection, parts.rkey);
-          const quoteEmbed: Record<string, unknown> = {
-            $type: 'app.bsky.embed.record',
-            record: { uri: effectiveQuoteUri, cid: rec.cid ?? '' },
-          };
-          if (images && images.length > 0) {
-            record.embed = {
-              $type: 'app.bsky.embed.recordWithMedia',
-              record: quoteEmbed,
-              media: {
-                $type: 'app.bsky.embed.images',
-                images: images.map(img => ({
-                  image: {
-                    $type: 'blob',
-                    ref: { $link: img.blobRef.$link },
-                    mimeType: img.blobRef.mimeType,
-                    size: img.blobRef.size,
-                  },
-                  alt: img.alt,
-                })),
-              },
-            };
-          } else {
-            record.embed = quoteEmbed;
-          }
-        } else if (isFirstPost && images && images.length > 0) {
-          record.embed = {
-            $type: 'app.bsky.embed.images',
-            images: images.map(img => ({
-              image: {
-                $type: 'blob',
-                ref: { $link: img.blobRef.$link },
-                mimeType: img.blobRef.mimeType,
-                size: img.blobRef.size,
-              },
-              alt: img.alt,
-            })),
-          };
-        } else if (!isFirstPost && ((video) || (images && images.length > 0))) {
+          quoteCid = rec.cid ?? '';
+        }
+
+        if (isFirstPost) {
+          const firstEmbed = buildFirstPostEmbed({ video, images, quoteUri: effectiveQuoteUri, quoteCid });
+          if (firstEmbed) record.embed = firstEmbed;
+        } else if ((video) || (images && images.length > 0)) {
           // Subsequent posts can have media too
           if (video) {
             record.embed = buildVideoEmbed(video);
           } else if (images && images.length > 0) {
-            record.embed = {
-              $type: 'app.bsky.embed.images',
-              images: images.map(img => ({
-                image: {
-                  $type: 'blob',
-                  ref: { $link: img.blobRef.$link },
-                  mimeType: img.blobRef.mimeType,
-                  size: img.blobRef.size,
-                },
-                alt: img.alt,
-              })),
-            };
+            record.embed = buildImageEmbed(images);
           }
         }
 

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2] — 2026-06-12
+
+### Fixed
+
+- Fixed missing quote embeds in our client when a post uses `app.bsky.embed.recordWithMedia` (image + quote). The extraction code now correctly unwraps the `recordWithMedia#view` wrapper (`embed.record.record`).
+- Fixed video + quote submissions so the quote is preserved in `recordWithMedia` instead of being dropped.
+- Fixed `extractVideo` to recurse into `recordWithMedia.media`.
+
+### Added
+
+- Unit tests for `extractEmbeds` and `buildFirstPostEmbed` in `@bsky/app`.
+- Vitest test setup for `@bsky/app` (`packages/app/vitest.config.ts`).
+
 ## [0.14.1] — 2026-06-12
 
 ### Added
