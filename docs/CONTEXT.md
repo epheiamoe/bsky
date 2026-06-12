@@ -39,7 +39,7 @@
 - ✅ **BskyLinkCard 弹窗 Portal**：`createPortal` 固定定位，修复「在…中打开」选择框定位问题
 - ✅ **i18n**：6 新 key（`gallery.*`、`external.*`），`compose.maxImages` 改为 10
 - **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.3）
-- **生产环境**：`https://bsky.epheia.dev`（PWA v0.14.2，尚未部署 v0.14.3）
+- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev` / `https://576fb2df.ai-bsky.pages.dev`（PWA v0.14.3）
 
 v0.14.2 重点修复了视频上传成功后无法播放的问题，并优化了帖子删除交互，修复了图片+引用帖引用丢失的设计缺陷。
 
