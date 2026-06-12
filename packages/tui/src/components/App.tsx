@@ -4,7 +4,7 @@ import TextInput from 'ink-text-input';
 import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
-import { setLastFeedUri, getFeedConfig } from '@bsky/app';
+import { setLastFeedUri, getFeedConfig, extractGallery } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import sharp from 'sharp';
@@ -107,6 +107,17 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   // Per-feed selected index so switching feeds preserves the last cursor position.
   const feedIdxMapRef = useRef<Map<string, number>>(new Map());
   const [feedIdx, setFeedIdx] = useState(() => feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
+
+  // [v0.14.3] Gallery navigation — per-post image index for gallery embed
+  const galleryMapRef = useRef<Map<string, number>>(new Map());
+  const [galleryIdx, setGalleryIdx] = useState(0);
+  // Reset gallery index when selected post changes
+  useEffect(() => {
+    const p = posts[feedIdx];
+    if (p) {
+      setGalleryIdx(galleryMapRef.current.get(p.uri) ?? 0);
+    }
+  }, [feedIdx, posts]);
   useEffect(() => {
     setFeedIdx(feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
   }, [effectiveFeedUri]);
@@ -336,6 +347,22 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       });
       return;
     }
+    // [v0.14.3] Gallery navigation — left/right arrows for feed
+    if ((key.leftArrow || key.rightArrow) && currentView.type === 'feed') {
+      const p = posts[feedIdx];
+      if (p) {
+        const g = extractGallery(p);
+        if (g && g.images.length > 0) {
+          const delta = key.leftArrow ? -1 : 1;
+          setGalleryIdx(prev => {
+            const next = (prev + delta + g.images.length) % g.images.length;
+            galleryMapRef.current.set(p.uri, next);
+            return next;
+          });
+        }
+      }
+      return;
+    }
     if (key.upArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1)); return; }
 
@@ -502,7 +529,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               else if (isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Only 1 video allowed'); }
               else if (isVideo && composeMedia.length >= 1) { setComposeUploadError('Video cannot be mixed with images'); }
               else if (!isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Images cannot be mixed with video'); }
-              else if (!isVideo && composeMedia.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
+              else if (!isVideo && composeMedia.length >= 10) { setComposeUploadError(t('compose.maxImages', { n: 10 })); }
               else {
                 const stat = statSync(path);
                 const maxSize = isVideo ? 100 * 1024 * 1024 : 2048 * 1024;
@@ -606,7 +633,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       }
       if (input === 'i' || input === 'I') {
         const hasVideo = composeMedia.some(m => m.type === 'video');
-        if (hasVideo || composeMedia.length < 4) setImagePathInput('');
+        if (hasVideo || composeMedia.length < 10) setImagePathInput('');
         return;
       }
       if (input === 'D') { setDraftListOpen(true); setDraftListIdx(0); return; }
@@ -688,6 +715,21 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (currentView.type === 'feed') {
       if (k === 'j') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
       else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
+      // [v0.14.3] Gallery navigation — h/l to switch gallery images
+      else if (k === 'h' || k === 'l') {
+        const p = posts[feedIdx];
+        if (p) {
+          const g = extractGallery(p);
+          if (g && g.images.length > 0) {
+            const delta = k === 'h' ? -1 : 1;
+            setGalleryIdx(prev => {
+              const next = (prev + delta + g.images.length) % g.images.length;
+              galleryMapRef.current.set(p.uri, next);
+              return next;
+            });
+          }
+        }
+      }
       else if (k === 'm') loadMore?.();
       else if (k === 'r') refresh?.();
       else if (k === 'f') { setFeedConfigInput(''); setShowFeedConfig(true); }
@@ -839,7 +881,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
                   onClose={() => setShowFeedConfig(false)}
                 />
               ) : (
-              <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
+              <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} galleryIdx={galleryIdx} />
             )}
           </Box>
         );
