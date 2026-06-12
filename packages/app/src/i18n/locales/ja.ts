@@ -754,9 +754,19 @@ const ja: LocaleMessages = {
   'redirect.unsupportedPath': '未対応の URL パス',
   'redirect.unsupportedClient': '未対応のクライアント。現在は bsky.app のリンクのみ対応しています。',
 
+  // [v0.14.3] ギャラリー埋め込み
+  'gallery.carouselLabel': '画像カルーセル',
+  'gallery.prevSlide': '前のスライド',
+  'gallery.nextSlide': '次のスライド',
+  'gallery.slideN': 'スライド {current}/{total}',
+
   // [v0.14.0] 通知
   'notifications.markAllAsRead': 'すべて既読にする',
   'keys.markRead': 'M: 既読にする',
+
+  // [v0.14.3] 外部リンクリッチカード
+  'external.readingTime': '読了{minutes}分',
+  'external.bySource': '{source}より',
 };
 
 export default ja;

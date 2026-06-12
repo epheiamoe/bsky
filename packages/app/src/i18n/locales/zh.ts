@@ -895,9 +895,19 @@ const zh: LocaleMessages = {
   'redirect.unsupportedPath': '不支持的 URL 路径',
   'redirect.unsupportedClient': '不支持的客户端。目前仅支持 bsky.app 链接。',
 
+  // [v0.14.3] 图集嵌入
+  'gallery.carouselLabel': '图片轮播',
+  'gallery.prevSlide': '上一张',
+  'gallery.nextSlide': '下一张',
+  'gallery.slideN': '第 {current}/{total} 张',
+
   // [v0.14.0] 通知
   'notifications.markAllAsRead': '全部标记已读',
   'keys.markRead': 'M: 标记已读',
+
+  // [v0.14.3] 外部链接富卡片
+  'external.readingTime': '阅读{minutes}分钟',
+  'external.bySource': '来自{source}',
 };
 
 export default zh;

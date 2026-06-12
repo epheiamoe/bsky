@@ -744,9 +744,19 @@ const en: LocaleMessages = {
   'redirect.unsupportedPath': 'Unsupported URL path',
   'redirect.unsupportedClient': 'Unsupported client. Currently only bsky.app links are supported.',
 
+  // [v0.14.3] Gallery embed
+  'gallery.carouselLabel': 'Image carousel',
+  'gallery.prevSlide': 'Previous slide',
+  'gallery.nextSlide': 'Next slide',
+  'gallery.slideN': 'Slide {current} of {total}',
+
   // [v0.14.0] Notifications
   'notifications.markAllAsRead': 'Mark All as Read',
   'keys.markRead': 'M: Mark read',
+
+  // [v0.14.3] External link rich card
+  'external.readingTime': '{minutes} min read',
+  'external.bySource': 'By {source}',
 };
 
 export default en;
