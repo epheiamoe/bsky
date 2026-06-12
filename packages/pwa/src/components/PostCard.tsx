@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { PostView, AIConfig, BskyClient, ModerationDecision } from '@bsky/core';
 import { parseAtUri, describeImage } from '@bsky/core';
 import type { FlatLine, AppView, ExtractListEmbed } from '@bsky/app';
-import { extractEmbeds, extractQuotedPost, getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl, useI18n, isBskyAppUrl, bskyUrlToAppView } from '@bsky/app';
-import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo } from '@bsky/app';
+import { extractEmbeds, extractQuotedPost } from '@bsky/app';
+import type { ExtractExternalLink, ExtractQuotedPost, ExtractVideo, ExtractGallery, ExtractGalleryItem } from '@bsky/app';
 import { isPostLiked, isPostReposted, likePost, repostPost } from '@bsky/app';
 import { formatTime } from '../utils/format.js';
 import { Icon } from './Icon.js';
@@ -11,7 +11,9 @@ import { VideoCard } from './VideoCard.js';
 import { ImageGrid } from './ImageGrid.js';
 import type { ImageData } from './ImageGrid.js';
 import { ModerationOverlay, BadgeRow } from './ModerationOverlay.js';
-import { BskyLinkCard } from './BskyLinkCard.js';
+import { GalleryCard } from './GalleryCard.js';
+import { ExternalLinkCard } from './ExternalLinkCard.js';
+import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 import { ListEmbedCard } from './ListEmbedCard.js';
 
 function getReplyDepth(post: PostView): number | '2+' | null {
@@ -133,6 +135,15 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   let listEmbed: ExtractListEmbed | null = null;
   let video: ExtractVideo | null = null;
   let hasVideo = false;
+  let gallery: ExtractGallery | null = null;
+
+  // ── Gallery lightbox state ──
+  const [galleryLightbox, setGalleryLightbox] = useState<number | null>(null);
+  const galleryContainerRef = useRef<HTMLDivElement>(null);
+  const handleGalleryClick = useCallback((index: number) => {
+    setGalleryLightbox(index);
+  }, []);
+
   const replyDepth = post ? getReplyDepth(post) : null;
 
   if (post) {
@@ -152,6 +163,7 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
     quotedPost = extractQuotedPost(post);
     video = embeds.video;
     hasVideo = video !== null;
+    gallery = embeds.gallery;
   } else if (line) {
     displayName = line.displayName || line.handle;
     handle = line.handle;
@@ -231,21 +243,15 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
           return describeImage(imageDescConfig, () => client.downloadBlob(did, cid), alt, imageDescLang);
         } : undefined} />}
         {video && <VideoCard thumbnailUrl={video.thumbnailUrl} playlistUrl={video.playlistUrl} alt={video.alt} aspectRatio={video.aspectRatio} />}
-        {externalLink && (isBskyAppUrl(externalLink.uri) ? (
-          <BskyLinkCard url={externalLink.uri} onOpenInternal={(view) => goTo?.(view)} />
-        ) : (
-          <a
-            href={externalLink.uri}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={e => e.stopPropagation()}
-            className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-          >
-            <p className="text-text-primary text-sm font-medium line-clamp-1">{externalLink.title || externalLink.uri}</p>
-            {externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{externalLink.description}</p>}
-            <p className="text-primary text-xs mt-1 truncate">{externalLink.uri}</p>
-          </a>
-        ))}
+        {gallery && gallery.images.length > 0 && (
+          <div ref={galleryContainerRef}>
+            <GalleryCard
+              images={gallery.images}
+              onImageClick={handleGalleryClick}
+            />
+          </div>
+        )}
+        {externalLink && <ExternalLinkCard link={externalLink} onOpenInternal={(view) => goTo?.(view)} />}
         {listEmbed && (
           <ListEmbedCard
             list={listEmbed}
@@ -285,24 +291,42 @@ export function PostCard({ onClick, isSelected, post, line, children, goTo, repo
   );
 
   return (
-    <div
-      onClick={onClick}
-      className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl border border-border bg-surface/20 transition-colors transition-shadow duration-150 hover:shadow-sm ${
-        onClick ? 'cursor-pointer hover:bg-surface/40' : ''
-      } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
-    >
-      {repostBy && (
-        <div className="flex items-center gap-1 mb-2 text-text-secondary text-xs">
-          <span><Icon name="repeat" size={14} /></span>
-          <span>Reposted by @{repostBy}</span>
-        </div>
+    <>
+      <div
+        onClick={onClick}
+        className={`mx-2 my-1.5 px-3 py-2.5 rounded-xl border border-border bg-surface/20 transition-colors transition-shadow duration-150 hover:shadow-sm ${
+          onClick ? 'cursor-pointer hover:bg-surface/40' : ''
+        } ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+      >
+        {repostBy && (
+          <div className="flex items-center gap-1 mb-2 text-text-secondary text-xs">
+            <span><Icon name="repeat" size={14} /></span>
+            <span>Reposted by @{repostBy}</span>
+          </div>
+        )}
+        {moderationDecision ? (
+          <ModerationOverlay decision={moderationDecision}>
+            {content}
+          </ModerationOverlay>
+        ) : content}
+      </div>
+      {gallery && galleryLightbox !== null && (
+        <ImageLightboxDialog
+          open={galleryLightbox !== null}
+          images={gallery.images.map((img: ExtractGalleryItem) => ({ url: img.fullsize, alt: img.alt }))}
+          initial={galleryLightbox}
+          sourceRects={[new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
+          naturalAspectRatio={(() => {
+            const img = gallery.images[galleryLightbox];
+            if (img?.aspectRatio?.width && img.aspectRatio.height) {
+              return img.aspectRatio.width / img.aspectRatio.height;
+            }
+            return 1;
+          })()}
+          onClose={() => setGalleryLightbox(null)}
+        />
       )}
-      {moderationDecision ? (
-        <ModerationOverlay decision={moderationDecision}>
-          {content}
-        </ModerationOverlay>
-      ) : content}
-    </div>
+    </>
   );
 }
 
