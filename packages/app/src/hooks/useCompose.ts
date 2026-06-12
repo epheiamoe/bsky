@@ -60,6 +60,35 @@ function buildImageEmbed(images: ComposeMedia[]): Record<string, unknown> {
   };
 }
 
+/**
+ * Build an app.bsky.embed.gallery record for 5+ images.
+ * Used when a single post contains more than 4 images — Bluesky's
+ * official client routes to gallery embed instead of images embed.
+ */
+function buildGalleryEmbed(images: ComposeMedia[]): Record<string, unknown> {
+  return {
+    $type: 'app.bsky.embed.gallery',
+    items: images.map(img => {
+      const item: Record<string, unknown> = {
+        image: {
+          $type: 'blob',
+          ref: { $link: img.blobRef.$link },
+          mimeType: img.blobRef.mimeType,
+          size: img.blobRef.size,
+        },
+        alt: img.alt,
+      };
+      if (img.aspectRatio) {
+        item.aspectRatio = {
+          width: img.aspectRatio.width,
+          height: img.aspectRatio.height,
+        };
+      }
+      return item;
+    }),
+  };
+}
+
 export interface EmbedBuildInputs {
   video?: ComposeMedia;
   images?: ComposeMedia[];
@@ -107,14 +136,14 @@ export function buildFirstPostEmbed(inputs: EmbedBuildInputs): Record<string, un
       return {
         $type: 'app.bsky.embed.recordWithMedia',
         record: quoteEmbed,
-        media: buildImageEmbed(images),
+        media: images.length > 4 ? buildGalleryEmbed(images) : buildImageEmbed(images),
       };
     }
     return quoteEmbed;
   }
 
   if (images && images.length > 0) {
-    return buildImageEmbed(images);
+    return images.length > 4 ? buildGalleryEmbed(images) : buildImageEmbed(images);
   }
 
   return undefined;
@@ -258,7 +287,7 @@ export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string
           if (video) {
             record.embed = buildVideoEmbed(video);
           } else if (images && images.length > 0) {
-            record.embed = buildImageEmbed(images);
+            record.embed = images.length > 4 ? buildGalleryEmbed(images) : buildImageEmbed(images);
           }
         }
 
