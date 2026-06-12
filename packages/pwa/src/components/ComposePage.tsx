@@ -770,8 +770,10 @@ export function ComposePage({ client, replyTo, quoteUri, draftId, initialText, g
         setSubmitProgress(prev => ({ ...prev, visible: false }));
         submitProgressTimerRef.current = null;
       }, 1200);
-    } catch {
-      // Error handled in submit — submitProgress stays on 'posting' or 'error'
+    } catch (e) {
+      // submit() failed — show the error in the progress modal so the user isn't stuck on "posting"
+      const detail = e instanceof Error ? e.message : String(e);
+      setSubmitProgress({ visible: true, phase: 'error', current: currentItem, total: totalItems, message: t('compose.uploadFailed'), error: detail });
     }
   }, [posts, perPostImages, perPostVideos, submit, client, t, postQuoteUris]);
 

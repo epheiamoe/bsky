@@ -336,6 +336,7 @@ export function useCompose(client: BskyClient | null, onSuccess?: (uris?: string
       } else {
         setError(e instanceof Error ? e.message : String(e));
       }
+      throw e; // Re-throw so callers (e.g. ComposePage) can detect failure and update UI
     } finally {
       setSubmitting(false);
     }
