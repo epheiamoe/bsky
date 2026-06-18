@@ -5,7 +5,7 @@ import type { AIConfig, BskyClient, ChatMessage, ToolCall } from '@bsky/core';
 import type { ChatRecord, AIChatMessage } from '../services/chatStorage.js';
 import { saveChat, loadChat } from '../services/chatService.js';
 import { v4 as uuidv4 } from './uuid.js';
-import { createHelpProvider } from '../utils/helpCenter.js';
+import { createHelpProvider, type Lang } from '../utils/helpCenter.js';
 import { getI18nStore } from '../i18n/store.js';
 
 interface UseAIChatOptions {
@@ -223,7 +223,9 @@ export function useAIChat(
   // Initialize tools and system prompt
   useEffect(() => {
     if (!client) return;
-    const tools = createTools(client, () => chatIdRef.current, createHelpProvider(getI18nStore().t));
+    const store = getI18nStore();
+    const lang: Lang = (store.locale === 'zh' || store.locale === 'ja') ? store.locale : 'en';
+    const tools = createTools(client, () => chatIdRef.current, createHelpProvider(lang));
     assistant.setTools(tools);
 
     // Set context from options (first navigation — in memory, not URL)

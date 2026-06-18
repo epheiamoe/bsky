@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useI18n } from '@bsky/app';
-import { getHelpCategories, getCategoryInfo, type HelpEntry, type Platform } from '@bsky/app';
+import { getHelpCategories, getCategoryInfo, getContent, type HelpEntry, type Platform, type Lang } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 // ── Glass card styles (matching example HTML) ──────────────────────
@@ -8,7 +8,7 @@ import { Icon } from './Icon.js';
 const GLASS_CARD_BASE: React.CSSProperties = {
   background: 'rgba(24, 24, 27, 0.5)',
   backdropFilter: 'blur(16px)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  border: '1px solid transparent',
   boxShadow: '0 0 0 1px rgba(255,255,255,0.02) inset, 0 4px 24px rgba(0,0,0,0.2)',
 };
 
@@ -74,6 +74,9 @@ function ensureStyles() {
       transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s ease;
       transform: translateY(0);
     }
+    .help-modal-sheet.opening {
+      transform: translateY(100%);
+    }
     .help-modal-sheet.closing {
       transform: translateY(100%) !important;
     }
@@ -85,6 +88,10 @@ function ensureStyles() {
     @media (min-width: 768px) {
       .help-modal-sheet {
         transition: all 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+      }
+      .help-modal-sheet.opening {
+        transform: translateY(20px) scale(0.96);
+        opacity: 0;
       }
       .help-modal-sheet.closing {
         transform: translateY(20px) scale(0.96) !important;
@@ -106,7 +113,13 @@ interface HelpPageProps {
 }
 
 export function HelpPage({ goBack }: HelpPageProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+
+  // Map i18n locale to help content language
+  const lang: Lang = useMemo(() => {
+    if (locale === 'zh' || locale === 'ja') return locale;
+    return 'en';
+  }, [locale]);
 
   // ── State ──
   const [query, setQuery] = useState('');
@@ -121,6 +134,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
   const touchStartY = useRef(0);
   const [modalDragY, setModalDragY] = useState(0);
   const [isModalClosing, setIsModalClosing] = useState(false);
+  const [isModalOpening, setIsModalOpening] = useState(false);
 
   // Inject styles on mount
   useEffect(() => { ensureStyles(); }, []);
@@ -128,7 +142,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
   // ── Data ──
   const categories = useMemo(() => getHelpCategories('pwa' as Platform), []);
 
-  // ── Search (by translated text, not i18n keys) ──
+  // ── Search (across inline content in current language + keywords) ──
   const filteredCategories = useMemo(() => {
     const lowerQuery = query.toLowerCase().trim();
     if (!lowerQuery) return categories;
@@ -138,9 +152,10 @@ export function HelpPage({ goBack }: HelpPageProps) {
 
     for (const [cat, entries] of Object.entries(categories)) {
       const matched = entries.filter(entry => {
-        const title = t(entry.titleKey).toLowerCase();
-        const summary = t(entry.summaryKey).toLowerCase();
-        const detail = t(entry.detailKey).toLowerCase();
+        const content = getContent(entry, lang);
+        const title = content.title.toLowerCase();
+        const summary = content.summary.toLowerCase();
+        const detail = content.detail.toLowerCase();
         const keywords = entry.keywords.map(k => k.toLowerCase());
 
         return terms.some(term =>
@@ -153,7 +168,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
       if (matched.length > 0) result[cat] = matched;
     }
     return result;
-  }, [query, categories, t]);
+  }, [query, categories, lang]);
 
   const hasResults = Object.keys(filteredCategories).length > 0;
 
@@ -191,6 +206,13 @@ export function HelpPage({ goBack }: HelpPageProps) {
     setSelectedEntry(entry);
     setModalDragY(0);
     setIsModalClosing(false);
+    setIsModalOpening(true);
+    // Allow the opening class to apply first, then remove it to trigger transition
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setIsModalOpening(false);
+      });
+    });
   }, []);
 
   const closeModal = useCallback(() => {
@@ -356,7 +378,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
                           key={entry.id}
                           entry={entry}
                           index={index}
-                          t={t}
+                          lang={lang}
                           isHovered={hoveredCard === entry.id}
                           isActive={activeCard === entry.id}
                           onHover={() => setHoveredCard(entry.id)}
@@ -407,9 +429,10 @@ export function HelpPage({ goBack }: HelpPageProps) {
       {selectedEntry && (
         <DetailModal
           entry={selectedEntry}
-          t={t}
+          lang={lang}
           onClose={closeModal}
           isClosing={isModalClosing}
+          isOpening={isModalOpening}
           dragY={modalDragY}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -426,7 +449,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
 interface HelpCardProps {
   entry: HelpEntry;
   index: number;
-  t: (key: string) => string;
+  lang: Lang;
   isHovered: boolean;
   isActive: boolean;
   onHover: () => void;
@@ -437,11 +460,13 @@ interface HelpCardProps {
 }
 
 function HelpCard({
-  entry, index, t,
+  entry, index, lang,
   isHovered, isActive,
   onHover, onLeave, onActivate, onDeactivate, onClick,
 }: HelpCardProps) {
+  const { t } = useI18n();
   const isPwaOnly = entry.platforms.length === 1 && entry.platforms[0] === 'pwa';
+  const content = getContent(entry, lang);
 
   return (
     <div
@@ -462,7 +487,7 @@ function HelpCard({
       onMouseLeave={onLeave}
       onMouseDown={onActivate}
       onMouseUp={onDeactivate}
-      aria-label={`${t(entry.titleKey)} \u2014 ${t(entry.summaryKey)}`}
+      aria-label={`${content.title} \u2014 ${content.summary}`}
     >
       <div className="flex items-start gap-4">
         {/* Icon box */}
@@ -483,7 +508,7 @@ function HelpCard({
               className="font-semibold text-[15px] transition-colors"
               style={{ color: isHovered ? '#93c5fd' : '#ffffff' }}
             >
-              {t(entry.titleKey)}
+              {content.title}
             </h3>
             {isPwaOnly && (
               <span
@@ -499,7 +524,7 @@ function HelpCard({
             )}
           </div>
           <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2">
-            {t(entry.summaryKey)}
+            {content.summary}
           </p>
         </div>
 
@@ -518,13 +543,159 @@ function HelpCard({
   );
 }
 
+// ── Simple Markdown renderer ────────────────────────────────────────
+
+/** Convert basic markdown to React elements. Supports: **bold**, `- lists`, `code` */
+function renderMarkdown(text: string): React.ReactNode[] {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: React.ReactNode[] = [];
+  let inCodeBlock = false;
+  let codeLines: string[] = [];
+
+  const flushList = () => {
+    if (listItems.length > 0) {
+      elements.push(
+        <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 mb-4 text-zinc-400">
+          {listItems}
+        </ul>
+      );
+      listItems = [];
+    }
+  };
+
+  const flushCodeBlock = () => {
+    if (codeLines.length > 0) {
+      elements.push(
+        <pre key={`code-${elements.length}`} className="mb-4 p-3 rounded-lg text-sm overflow-x-auto" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <code className="text-zinc-300">{codeLines.join('\n')}</code>
+        </pre>
+      );
+      codeLines = [];
+    }
+  };
+
+  const renderInline = (line: string): React.ReactNode => {
+    // Split by **bold** and `code`
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+    while (remaining.length > 0) {
+      const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+      const codeMatch = remaining.match(/`(.+?)`/);
+
+      let firstMatch: { type: 'bold' | 'code'; index: number; full: string; content: string } | null = null;
+
+      if (boldMatch && boldMatch.index !== undefined) {
+        firstMatch = { type: 'bold', index: boldMatch.index, full: boldMatch[0], content: boldMatch[1]! };
+      }
+      if (codeMatch && codeMatch.index !== undefined) {
+        if (!firstMatch || codeMatch.index < firstMatch.index) {
+          firstMatch = { type: 'code', index: codeMatch.index, full: codeMatch[0], content: codeMatch[1]! };
+        }
+      }
+
+      if (!firstMatch) {
+        parts.push(remaining);
+        break;
+      }
+
+      if (firstMatch.index > 0) {
+        parts.push(remaining.slice(0, firstMatch.index));
+      }
+
+      if (firstMatch.type === 'bold') {
+        parts.push(<strong key={key++} className="text-zinc-200 font-semibold">{firstMatch.content}</strong>);
+      } else {
+        parts.push(
+          <code key={key++} className="px-1.5 py-0.5 rounded text-[13px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#93c5fd' }}>
+            {firstMatch.content}
+          </code>
+        );
+      }
+
+      remaining = remaining.slice(firstMatch.index + firstMatch.full.length);
+    }
+    return parts.length === 1 ? parts[0] : <>{parts}</>;
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+
+    // Code block toggle
+    if (line.startsWith('```')) {
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        flushList();
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    // List item
+    if (line.startsWith('- ')) {
+      listItems.push(<li key={`li-${i}`}>{renderInline(line.slice(2))}</li>);
+      continue;
+    }
+
+    // Numbered list
+    const numberedMatch = line.match(/^(\d+)\.\s/);
+    if (numberedMatch) {
+      flushList();
+      // Collect consecutive numbered items
+      const numItems: React.ReactNode[] = [];
+      let j = i;
+      while (j < lines.length) {
+        const nm = lines[j]!.match(/^(\d+)\.\s(.+)/);
+        if (!nm) break;
+        numItems.push(<li key={`oli-${j}`}>{renderInline(nm[2]!)}</li>);
+        j++;
+      }
+      elements.push(
+        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 mb-4 text-zinc-400">
+          {numItems}
+        </ol>
+      );
+      i = j - 1; // skip consumed lines
+      continue;
+    }
+
+    // Empty line = flush list
+    if (line.trim() === '') {
+      flushList();
+      continue;
+    }
+
+    // Normal paragraph
+    flushList();
+    elements.push(
+      <p key={`p-${elements.length}`} className="text-zinc-400 leading-relaxed mb-3 text-[15px]">
+        {renderInline(line)}
+      </p>
+    );
+  }
+
+  flushList();
+  flushCodeBlock();
+
+  return elements;
+}
+
 // ── Detail Modal Sub-component ─────────────────────────────────────
 
 interface DetailModalProps {
   entry: HelpEntry;
-  t: (key: string) => string;
+  lang: Lang;
   onClose: () => void;
   isClosing: boolean;
+  isOpening: boolean;
   dragY: number;
   onTouchStart: (e: React.TouchEvent) => void;
   onTouchMove: (e: React.TouchEvent) => void;
@@ -533,10 +704,12 @@ interface DetailModalProps {
 }
 
 function DetailModal({
-  entry, t, onClose, isClosing, dragY,
+  entry, lang, onClose, isClosing, isOpening, dragY,
   onTouchStart, onTouchMove, onTouchEnd, modalRef,
 }: DetailModalProps) {
+  const { t } = useI18n();
   const isPwaOnly = entry.platforms.length === 1 && entry.platforms[0] === 'pwa';
+  const content = getContent(entry, lang);
 
   return (
     <div
@@ -552,7 +725,7 @@ function DetailModal({
     >
       <div
         ref={modalRef}
-        className={`help-modal-sheet w-full md:w-[640px] md:max-h-[80vh] overflow-hidden flex flex-col ${isClosing ? 'closing' : ''} ${dragY > 0 ? 'dragging' : ''}`}
+        className={`help-modal-sheet w-full md:w-[640px] md:max-h-[80vh] overflow-hidden flex flex-col ${isOpening ? 'opening' : ''} ${isClosing ? 'closing' : ''} ${dragY > 0 ? 'dragging' : ''}`}
         style={{
           background: '#131316',
           border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -589,7 +762,7 @@ function DetailModal({
             </div>
             <div>
               <h2 id="help-modal-title" className="text-lg font-semibold text-white">
-                {t(entry.titleKey)}
+                {content.title}
               </h2>
               {isPwaOnly && (
                 <span
@@ -621,13 +794,14 @@ function DetailModal({
 
         {/* Modal content */}
         <div className="px-6 py-6 overflow-y-auto help-modal-content">
-          <p className="text-zinc-400 leading-relaxed mb-6 text-[15px]">
-            {t(entry.detailKey)}
-          </p>
+          {/* Detail as markdown */}
+          <div className="mb-6">
+            {renderMarkdown(content.detail)}
+          </div>
 
           {/* Tips */}
           <div className="space-y-2">
-            {entry.tips.map((tip, i) => (
+            {content.tips.map((tip, i) => (
               <div
                 key={i}
                 className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:translate-x-1"
@@ -645,7 +819,7 @@ function DetailModal({
                 >
                   <Icon name={tip.icon} size={16} className="text-blue-400" />
                 </div>
-                <span className="text-sm text-zinc-300">{t(tip.textKey)}</span>
+                <span className="text-sm text-zinc-300">{tip.text}</span>
               </div>
             ))}
           </div>

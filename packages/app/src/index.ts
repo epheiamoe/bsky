@@ -119,5 +119,5 @@ export { getLabelName, LABEL_I18N_KEYS } from './i18n/label-i18n.js';
 export { parseBskyAppUrl, bskyUrlToAppView, getBskyUrlTypeLabel, isBskyAppUrl, normalizeBskyInput, parseAtUri } from './utils/parseBskyUrl.js';
 export type { BskyUrlInfo } from './utils/parseBskyUrl.js';
 
-export { getHelpEntries, getHelpEntry, getHelpCategories, getCategoryInfo, iconToEmoji, searchHelp } from './utils/helpCenter.js';
-export type { HelpEntry, HelpTip, Platform, HelpCategory } from './utils/helpCenter.js';
+export { getHelpEntries, getHelpEntry, getHelpCategories, getCategoryInfo, iconToEmoji, searchHelp, getContent, getLocalizedText, createHelpProvider } from './utils/helpCenter.js';
+export type { HelpEntry, HelpTip, Platform, HelpCategory, Lang } from './utils/helpCenter.js';

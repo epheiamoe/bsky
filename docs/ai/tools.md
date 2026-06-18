@@ -127,11 +127,12 @@ The `ai-bsky_help` tool uses **dependency injection** to bridge the core↔app l
 
 ```
 packages/core/src/ai/tools.ts   — defines HelpProvider interface + tool handler
-packages/app/src/utils/helpCenter.ts — implements createHelpProvider(t) using i18n
+packages/app/src/data/help-content.ts — self-contained help entries with inline i18n (EN/ZH/JA)
+packages/app/src/utils/helpCenter.ts — implements createHelpProvider(lang) using inline content
 packages/app/src/hooks/useAIChat.ts  — wires provider into createTools()
 ```
 
-**Why DI?** `@bsky/core` cannot import from `@bsky/app` (dependency direction). The help center data and i18n live in `@bsky/app`. The `HelpProvider` interface lets the app layer inject translated help data into the core-layer tool.
+**Why DI?** `@bsky/core` cannot import from `@bsky/app` (dependency direction). The help center data lives in `@bsky/app` as self-contained entries with inline i18n. The `HelpProvider` interface lets the app layer inject localized help data into the core-layer tool.
 
 **MCP/ToolDispatcher**: When no `helpProvider` is passed, the tool returns a graceful error. MCP and the Python sandbox dispatcher don't need help center access.
 

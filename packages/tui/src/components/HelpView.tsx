@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { getHelpCategories, searchHelp, getCategoryInfo, iconToEmoji, type HelpEntry, type Platform } from '@bsky/app';
+import { getHelpCategories, searchHelp, getCategoryInfo, iconToEmoji, getContent, type HelpEntry, type Platform, type Lang } from '@bsky/app';
 import { useI18n } from '@bsky/app';
 
 interface HelpViewProps {
@@ -18,7 +18,14 @@ interface DisplayItem {
 }
 
 export function HelpView({ goBack, cols, rows }: HelpViewProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+
+  // Map i18n locale to help content language
+  const lang: Lang = useMemo(() => {
+    if (locale === 'zh' || locale === 'ja') return locale;
+    return 'en';
+  }, [locale]);
+
   const [query, setQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -211,15 +218,16 @@ export function HelpView({ goBack, cols, rows }: HelpViewProps) {
       const entry = item.entry;
       const isExpanded = expandedId === entry.id;
       const emoji = iconToEmoji(entry.icon);
-      const title = t(entry.titleKey);
-      const summary = t(entry.summaryKey);
+      const content = getContent(entry, lang);
+      const title = content.title;
+      const summary = content.summary;
       const platformTag = entry.platforms.length === 1
         ? entry.platforms[0] === 'pwa' ? ' [PWA]' : ' [TUI]'
         : '';
 
       // Render expanded content
       if (isExpanded) {
-        const detailText = t(entry.detailKey);
+        const detailText = content.detail;
         const detailLines = wrapText(detailText, cols - 6);
 
         return (
@@ -245,9 +253,9 @@ export function HelpView({ goBack, cols, rows }: HelpViewProps) {
               </Box>
             ))}
             {/* Tips */}
-            {entry.tips.map((tip, i) => (
+            {content.tips.map((tip, i) => (
               <Box key={`tip-${i}`} height={1} paddingLeft={4}>
-                <Text dimColor>{iconToEmoji(tip.icon)} {t(tip.textKey)}</Text>
+                <Text dimColor>{iconToEmoji(tip.icon)} {tip.text}</Text>
               </Box>
             ))}
           </Box>

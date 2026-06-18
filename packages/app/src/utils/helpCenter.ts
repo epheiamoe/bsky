@@ -1,25 +1,9 @@
-import helpData from '../data/help-center.json';
+import { HELP_ENTRIES, type HelpEntry, type HelpTip } from '../data/help-content.js';
 import type { HelpProvider, HelpEntry as CoreHelpEntry } from '@bsky/core';
 
-// ── Types ─────────────────────────────────────────────────────────────
+// ── Re-exports ───────────────────────────────────────────────────────
 
-export interface HelpTip {
-  icon: string;
-  textKey: string;
-}
-
-export interface HelpEntry {
-  id: string;
-  category: string;
-  icon: string;
-  titleKey: string;
-  summaryKey: string;
-  detailKey: string;
-  platforms: Array<'pwa' | 'tui'>;
-  tips: HelpTip[];
-  keywords: string[];
-  related?: string[];
-}
+export type { HelpEntry, HelpTip } from '../data/help-content.js';
 
 export type Platform = 'pwa' | 'tui';
 
@@ -31,6 +15,36 @@ export type HelpCategory =
   | 'settings'
   | 'social'
   | 'advanced';
+
+// ── Localized content extraction ─────────────────────────────────────
+
+export type Lang = 'en' | 'zh' | 'ja';
+
+/** Extract the localized string from an inline i18n object */
+export function getLocalizedText(
+  obj: { en: string; zh: string; ja: string },
+  lang: Lang,
+): string {
+  return obj[lang] ?? obj.en;
+}
+
+/** Extract all localized content from a help entry for a given language */
+export function getContent(entry: HelpEntry, lang: Lang): {
+  title: string;
+  summary: string;
+  detail: string;
+  tips: Array<{ icon: string; text: string }>;
+} {
+  return {
+    title: getLocalizedText(entry.title, lang),
+    summary: getLocalizedText(entry.summary, lang),
+    detail: getLocalizedText(entry.detail, lang),
+    tips: entry.tips.map(tip => ({
+      icon: tip.icon,
+      text: getLocalizedText(tip, lang),
+    })),
+  };
+}
 
 // ── Category metadata (for rendering category headers) ────────────────
 
@@ -95,14 +109,13 @@ const ICON_EMOJI_MAP: Record<string, string> = {
 
 /** Get all help entries, optionally filtered by platform */
 export function getHelpEntries(platform?: Platform): HelpEntry[] {
-  const entries = helpData as HelpEntry[];
-  if (!platform) return entries;
-  return entries.filter(e => e.platforms.includes(platform));
+  if (!platform) return HELP_ENTRIES;
+  return HELP_ENTRIES.filter(e => e.platforms.includes(platform));
 }
 
 /** Get a single help entry by ID */
 export function getHelpEntry(id: string): HelpEntry | undefined {
-  return (helpData as HelpEntry[]).find(e => e.id === id);
+  return HELP_ENTRIES.find(e => e.id === id);
 }
 
 /** Get all categories with their entries, optionally filtered by platform */
@@ -132,7 +145,10 @@ export function iconToEmoji(icon: string): string {
   return ICON_EMOJI_MAP[icon] ?? ICON_EMOJI_MAP['default']!;
 }
 
-/** Search help entries by query string. Returns results sorted by relevance. */
+/**
+ * Search help entries by query string across inline content.
+ * Searches title, summary, detail, and keywords in all languages.
+ */
 export function searchHelp(query: string, platform?: Platform): HelpEntry[] {
   const entries = getHelpEntries(platform);
   const lowerQuery = query.toLowerCase().trim();
@@ -142,19 +158,27 @@ export function searchHelp(query: string, platform?: Platform): HelpEntry[] {
 
   const scored = entries.map(entry => {
     let score = 0;
-    const titleLower = entry.titleKey.toLowerCase();
-    const summaryLower = entry.summaryKey.toLowerCase();
-    const detailLower = entry.detailKey.toLowerCase();
+
+    // Search across all languages
+    const titleText = `${entry.title.en} ${entry.title.zh} ${entry.title.ja}`.toLowerCase();
+    const summaryText = `${entry.summary.en} ${entry.summary.zh} ${entry.summary.ja}`.toLowerCase();
+    const detailText = `${entry.detail.en} ${entry.detail.zh} ${entry.detail.ja}`.toLowerCase();
+    const tipText = entry.tips
+      .map(tip => `${tip.en} ${tip.zh} ${tip.ja}`)
+      .join(' ')
+      .toLowerCase();
 
     for (const term of terms) {
       // Title match: highest weight
-      if (titleLower.includes(term)) score += 10;
+      if (titleText.includes(term)) score += 10;
       // Keyword match: high weight
       if (entry.keywords.some(k => k.toLowerCase().includes(term))) score += 5;
       // Summary match: medium weight
-      if (summaryLower.includes(term)) score += 3;
+      if (summaryText.includes(term)) score += 3;
+      // Tip match: medium weight
+      if (tipText.includes(term)) score += 2;
       // Detail match: low weight
-      if (detailLower.includes(term)) score += 1;
+      if (detailText.includes(term)) score += 1;
     }
 
     return { entry, score };
@@ -168,56 +192,78 @@ export function searchHelp(query: string, platform?: Platform): HelpEntry[] {
 
 // ── AI Tool HelpProvider ──────────────────────────────────────────────
 
-/** Translate a raw HelpEntry (with i18n keys) into a CoreHelpEntry (with translated text) */
-function translateEntry(entry: HelpEntry, t: (key: string) => string): CoreHelpEntry {
-  return {
-    id: entry.id,
-    category: entry.category,
-    title: t(entry.titleKey),
-    summary: t(entry.summaryKey),
-    detail: t(entry.detailKey),
-    platforms: entry.platforms,
-    tips: entry.tips.map(tip => ({ icon: tip.icon, text: t(tip.textKey) })),
-    related: entry.related,
-  };
-}
-
 /**
  * Create a HelpProvider for the AI tool system.
- * Bridges the app-layer help center data (with i18n keys) to the core-layer
+ * Bridges the app-layer help center data (with inline content) to the core-layer
  * HelpProvider interface (with translated text).
  *
- * @param t - i18n translation function (e.g., from getI18nStore().t)
+ * @param lang - Language code ('en', 'zh', 'ja')
  */
-export function createHelpProvider(t: (key: string) => string): HelpProvider {
+export function createHelpProvider(lang: Lang): HelpProvider {
   return {
     search(query: string): CoreHelpEntry[] {
       const results = searchHelp(query);
-      return results.map(e => translateEntry(e, t));
+      return results.map(e => {
+        const content = getContent(e, lang);
+        return {
+          id: e.id,
+          category: e.category,
+          title: content.title,
+          summary: content.summary,
+          detail: content.detail,
+          platforms: e.platforms,
+          tips: content.tips,
+          related: e.related,
+        };
+      });
     },
 
     get(id: string): CoreHelpEntry | undefined {
       const entry = getHelpEntry(id);
-      return entry ? translateEntry(entry, t) : undefined;
+      if (!entry) return undefined;
+      const content = getContent(entry, lang);
+      return {
+        id: entry.id,
+        category: entry.category,
+        title: content.title,
+        summary: content.summary,
+        detail: content.detail,
+        platforms: entry.platforms,
+        tips: content.tips,
+        related: entry.related,
+      };
     },
 
     listCategories(): Array<{ name: string; count: number }> {
       const categories = getHelpCategories();
       return Object.entries(categories).map(([name, entries]) => ({
-        name: t(`help.category.${name}`) || name,
+        name: CATEGORY_META[name as HelpCategory]?.labelKey
+          ? name
+          : name,
         count: entries.length,
       }));
     },
 
     listByCategory(category: string): CoreHelpEntry[] {
       const categories = getHelpCategories();
-      // Match by category key (e.g., "media") or translated name (e.g., "Media")
       const entries = categories[category]
         ?? Object.entries(categories).find(
-          ([key, _]) => t(`help.category.${key}`).toLowerCase() === category.toLowerCase()
+          ([key, _]) => key.toLowerCase() === category.toLowerCase()
         )?.[1];
       if (!entries) return [];
-      return entries.map(e => translateEntry(e, t));
+      return entries.map(e => {
+        const content = getContent(e, lang);
+        return {
+          id: e.id,
+          category: e.category,
+          title: content.title,
+          summary: content.summary,
+          detail: content.detail,
+          platforms: e.platforms,
+          tips: content.tips,
+          related: e.related,
+        };
+      });
     },
   };
 }
