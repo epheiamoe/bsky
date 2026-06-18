@@ -308,6 +308,37 @@ export function bskyUrlToAppView(info: BskyUrlInfo): AppView | null {
 }
 
 /**
+ * Parse an AT URI (at://did/collection/rkey) into a BskyUrlInfo.
+ * Supports: app.bsky.feed.post, app.bsky.feed.generator, app.bsky.graph.list,
+ *           app.bsky.actor.profile.
+ * Returns null if the URI cannot be parsed.
+ */
+export function parseAtUri(uri: string): BskyUrlInfo | null {
+  // at://did:plc:xxx/collection/rkey
+  const match = uri.match(/^at:\/\/([^/]+)\/([^/]+)(?:\/([^/]+))?$/);
+  if (!match) return null;
+
+  const [, did, collection, rkey] = match;
+  if (!did || !collection) return null;
+
+  switch (collection) {
+    case 'app.bsky.feed.post':
+      if (!rkey) return null;
+      return { type: 'post', handleOrDid: did, rkey, rawUrl: uri, path: uri };
+    case 'app.bsky.feed.generator':
+      if (!rkey) return null;
+      return { type: 'feed', handleOrDid: did, feedRkey: rkey, feedUri: uri, rawUrl: uri, path: uri };
+    case 'app.bsky.graph.list':
+      if (!rkey) return null;
+      return { type: 'list', handleOrDid: did, listRkey: rkey, rawUrl: uri, path: uri };
+    case 'app.bsky.actor.profile':
+      return { type: 'profile', handleOrDid: did, rawUrl: uri, path: uri };
+    default:
+      return null;
+  }
+}
+
+/**
  * Get a human-readable label for a bsky.app URL type
  */
 export function getBskyUrlTypeLabel(type: BskyUrlInfo['type'], t: (key: string) => string): string {

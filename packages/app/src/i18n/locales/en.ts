@@ -88,6 +88,12 @@ const en: LocaleMessages = {
   'action.done': 'Done',
   'action.open': 'Open',
   'action.original': 'Original',
+  'action.pasteAndGo': 'Paste & Go',
+
+  // ── Clipboard ──
+  'clipboard.empty': 'Clipboard is empty',
+  'clipboard.notUrl': 'No recognizable URL in clipboard',
+  'clipboard.permissionDenied': 'Clipboard access denied',
 
   'status.loading': 'Loading…',
   'status.error': 'Load Failed',
@@ -747,6 +753,7 @@ const en: LocaleMessages = {
   'redirect.invalidUrl': 'Invalid URL format',
   'redirect.unsupportedPath': 'Unsupported URL path',
   'redirect.unsupportedClient': 'Unsupported client. Currently only bsky.app links are supported.',
+  'redirect.unsupportedFormat': 'Unsupported URL format. Only bsky.app links and AT URIs are supported.',
 
   // [v0.14.3] Gallery embed
   'gallery.carouselLabel': 'Image carousel',

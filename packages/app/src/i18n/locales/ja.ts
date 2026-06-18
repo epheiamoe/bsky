@@ -88,6 +88,12 @@ const ja: LocaleMessages = {
   'action.done': '完了',
   'action.open': '開く',
   'action.original': '原文',
+  'action.pasteAndGo': 'ペーストして移動',
+
+  // ── Clipboard ──
+  'clipboard.empty': 'クリップボードが空です',
+  'clipboard.notUrl': 'クリップボードに認識可能なURLがありません',
+  'clipboard.permissionDenied': 'クリップボードへのアクセスが拒否されました',
 
   'status.loading': '読み込み中…',
   'status.error': '読み込み失敗',
@@ -757,6 +763,7 @@ const ja: LocaleMessages = {
   'redirect.invalidUrl': '無効な URL 形式',
   'redirect.unsupportedPath': '未対応の URL パス',
   'redirect.unsupportedClient': '未対応のクライアント。現在は bsky.app のリンクのみ対応しています。',
+  'redirect.unsupportedFormat': '未対応の URL 形式。bsky.app リンクと AT URI のみ対応しています。',
 
   // [v0.14.3] ギャラリー埋め込み
   'gallery.carouselLabel': '画像カルーセル',

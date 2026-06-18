@@ -84,6 +84,12 @@ const zh: LocaleMessages = {
   'action.done': '完成',
   'action.open': '打开',
   'action.original': '原文',
+  'action.pasteAndGo': '粘贴并跳转',
+
+  // ── Clipboard ──
+  'clipboard.empty': '剪贴板为空',
+  'clipboard.notUrl': '剪贴板中没有可识别的链接',
+  'clipboard.permissionDenied': '剪贴板访问被拒绝',
 
   // ── Status ──
   'status.loading': '加载中…',
@@ -898,6 +904,7 @@ const zh: LocaleMessages = {
   'redirect.invalidUrl': '无效的 URL 格式',
   'redirect.unsupportedPath': '不支持的 URL 路径',
   'redirect.unsupportedClient': '不支持的客户端。目前仅支持 bsky.app 链接。',
+  'redirect.unsupportedFormat': '不支持的 URL 格式。仅支持 bsky.app 链接和 AT URI。',
 
   // [v0.14.3] 图集嵌入
   'gallery.carouselLabel': '图片轮播',

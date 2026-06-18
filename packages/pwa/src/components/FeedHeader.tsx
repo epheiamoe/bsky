@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed, useSubscribedLists } from '@bsky/app';
+import { useI18n, getFeedConfig, addFeed, setDefaultFeed, removeFeed, useSubscribedLists, normalizeBskyInput, parseBskyAppUrl, bskyUrlToAppView, parseAtUri } from '@bsky/app';
+import type { BskyUrlInfo } from '@bsky/app';
 import { getFeedLabel, RECOMMENDED_FEEDS, BUILTIN_FEEDS } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import type { BskyClient, FeedGeneratorView } from '@bsky/core';
@@ -86,6 +87,28 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
     goTo({ type: 'feed', feedUri: tab.uri });
     setExpanded(false);
   };
+
+  const handlePasteAndNavigate = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text?.trim()) return; // silent fail: empty clipboard
+      const normalized = normalizeBskyInput(text.trim());
+      if (!normalized) return; // silent fail: not a recognizable URL
+      let info: BskyUrlInfo | null;
+      if (normalized.startsWith('at://')) {
+        info = parseAtUri(normalized);
+      } else {
+        info = parseBskyAppUrl(normalized);
+      }
+      if (!info) return;
+      const view = bskyUrlToAppView(info);
+      if (view) {
+        goTo(view);
+      }
+    } catch {
+      // Silent fail: clipboard permission denied or other error
+    }
+  }, [goTo]);
 
   const refreshFeeds = () => {
     const cfg = getFeedConfig();
@@ -185,8 +208,17 @@ export function FeedHeader({ goTo, currentFeedUri, refresh, client, mobileMenuBu
               </AnimatePresence>
             </div>
 
-            {/* Right: refresh + settings icons */}
+            {/* Right: clipboard-paste + refresh + settings icons */}
             <div className="flex items-center gap-0.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handlePasteAndNavigate}
+                className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-colors"
+                aria-label={t('action.pasteAndGo')}
+                title={t('action.pasteAndGo')}
+              >
+                <Icon name="clipboard-paste" size={18} />
+              </button>
               <button
                 onClick={refresh}
                 className="p-2 text-text-secondary hover:text-text-primary hover:bg-surface rounded-full transition-colors"
