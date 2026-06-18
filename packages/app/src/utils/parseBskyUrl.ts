@@ -1,7 +1,7 @@
 import type { AppView } from '../state/navigation.js';
 
 export interface BskyUrlInfo {
-  type: 'profile' | 'post' | 'search' | 'feed' | 'list' | 'unknown';
+  type: 'profile' | 'post' | 'search' | 'feed' | 'list' | 'hashtag' | 'intent' | 'messages' | 'notifications' | 'unknown';
   /** Handle or DID from the URL */
   handleOrDid?: string;
   /** Post rkey (for post type) */
@@ -14,6 +14,10 @@ export interface BskyUrlInfo {
   query?: string;
   /** Full AT URI for feed (when using /feed/{did}/{rkey} format) */
   feedUri?: string;
+  /** Hashtag tag (for hashtag type) */
+  tag?: string;
+  /** Compose text (for intent type) */
+  text?: string;
   /** The raw URL that was parsed */
   rawUrl: string;
   /** The path segments */
@@ -33,6 +37,70 @@ export function isBskyAppUrl(url: string): boolean {
 }
 
 /**
+ * Normalize raw user input into a standard bsky.app URL or AT URI.
+ * Handles bare domains, /i/ redirects, bluesky:// scheme, http→https, etc.
+ * Returns null if the input cannot be normalized to a bsky resource.
+ */
+export function normalizeBskyInput(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // AT URI — return as-is
+  if (trimmed.startsWith('at://')) return trimmed;
+
+  // /i/ redirect prefix (Twitter-style redirects that wrap bsky URLs)
+  if (trimmed.startsWith('/i/')) {
+    const rest = trimmed.slice(3);
+    if (!rest) return null;
+
+    // /i/https://bsky.app/xxx → strip /i/, force https
+    if (rest.startsWith('https://') || rest.startsWith('http://')) {
+      const stripped = rest.startsWith('http://') ? 'https://' + rest.slice(7) : rest;
+      return stripped;
+    }
+
+    // /i/bsky/xxx → https://bsky.app/xxx
+    if (rest.startsWith('bsky/')) return 'https://bsky.app/' + rest.slice(5);
+
+    // /i/bsky.app/xxx → https://bsky.app/xxx
+    if (rest.startsWith('bsky.app/') || rest.startsWith('www.bsky.app/'))
+      return 'https://' + rest;
+
+    // Non-bsky domain inside /i/ — not a bsky resource
+    return null;
+  }
+
+  // bluesky:// custom scheme
+  if (trimmed.startsWith('bluesky://')) {
+    const rest = trimmed.slice('bluesky://'.length);
+    return 'https://bsky.app/' + rest;
+  }
+
+  // Bare domain (no protocol)
+  if (trimmed.startsWith('bsky.app/') || trimmed.startsWith('www.bsky.app/'))
+    return 'https://' + trimmed;
+
+  // Case-insensitive bare domain (e.g. BSKY.APP/...)
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('bsky.app/') || lower.startsWith('www.bsky.app/'))
+    return 'https://' + lower;
+
+  // Full URL with protocol
+  if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) {
+    try {
+      const parsed = new URL(trimmed.startsWith('http://') ? 'https://' + trimmed.slice(7) : trimmed);
+      if (parsed.hostname === 'bsky.app' || parsed.hostname === 'www.bsky.app')
+        return parsed.toString();
+    } catch {
+      // Invalid URL
+    }
+    return null;
+  }
+
+  return null;
+}
+
+/**
  * Parse a bsky.app URL into structured info
  * Supports:
  * - /profile/{handle}
@@ -41,6 +109,10 @@ export function isBskyAppUrl(url: string): boolean {
  * - /profile/{handle}/feed/{rkey}
  * - /search?q={query}
  * - /feed/{did}/{rkey}
+ * - /hashtag/{tag}
+ * - /intent/compose?text={text}
+ * - /messages
+ * - /notifications
  */
 export function parseBskyAppUrl(url: string): BskyUrlInfo | null {
   if (!isBskyAppUrl(url)) return null;
@@ -120,6 +192,44 @@ export function parseBskyAppUrl(url: string): BskyUrlInfo | null {
       };
     }
 
+    // /hashtag/{tag}
+    if (segments[0] === 'hashtag' && segments.length >= 2) {
+      return {
+        type: 'hashtag',
+        tag: decodeURIComponent(segments[1]!),
+        rawUrl: url,
+        path,
+      };
+    }
+
+    // /intent/compose?text={text}
+    if (segments[0] === 'intent' && segments[1] === 'compose') {
+      return {
+        type: 'intent',
+        text: parsed.searchParams.get('text') || undefined,
+        rawUrl: url,
+        path,
+      };
+    }
+
+    // /messages
+    if (segments[0] === 'messages') {
+      return {
+        type: 'messages',
+        rawUrl: url,
+        path,
+      };
+    }
+
+    // /notifications
+    if (segments[0] === 'notifications') {
+      return {
+        type: 'notifications',
+        rawUrl: url,
+        path,
+      };
+    }
+
     return {
       type: 'unknown',
       rawUrl: url,
@@ -179,6 +289,19 @@ export function bskyUrlToAppView(info: BskyUrlInfo): AppView | null {
       if (!info.query) return { type: 'search' };
       return { type: 'search', query: info.query, searchTab: 'top' };
     }
+    case 'hashtag': {
+      if (!info.tag) return { type: 'search' };
+      return { type: 'search', query: '#' + info.tag, searchTab: 'top' };
+    }
+    case 'intent': {
+      return { type: 'compose', initialText: info.text };
+    }
+    case 'messages': {
+      return { type: 'dm' };
+    }
+    case 'notifications': {
+      return { type: 'notifications' };
+    }
     default:
       return null;
   }
@@ -194,6 +317,10 @@ export function getBskyUrlTypeLabel(type: BskyUrlInfo['type'], t: (key: string) 
     case 'search': return t('link.type.search');
     case 'feed': return t('link.type.feed');
     case 'list': return t('link.type.list');
+    case 'hashtag': return t('link.type.hashtag');
+    case 'intent': return t('link.type.intent');
+    case 'messages': return t('link.type.messages');
+    case 'notifications': return t('link.type.notifications');
     default: return t('link.type.unknown');
   }
 }
