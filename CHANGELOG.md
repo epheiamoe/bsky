@@ -9,18 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`normalizeBskyInput()`**: unified URL normalization — bare domains, `/i/https://...`, `/i/bsky/...`, `at://` URIs, `bluesky://` scheme all resolve to standard bsky.app URLs or AT URIs.
-- **Third-party client URL support**: `normalizeBskyInput()` now recognizes URLs from deer.social, tokimeki.blue, useouranos.app, deck.blue and rewrites them to bsky.app URLs via `THIRD_PARTY_DOMAIN_MAP` (8 domain entries including `www.` variants).
-- **Expanded URL types**: `parseBskyAppUrl()` now handles `/hashtag/{tag}`, `/intent/compose?text=`, `/messages`, `/notifications`.
-- **`parseAtUri()`**: direct parsing of `at://` AT Protocol URIs into `BskyUrlInfo`.
-- **Clipboard paste button**: in FeedHeader, left of refresh. Reads clipboard, normalizes URL, and navigates. Silent failure for empty/non-URL clipboard.
-- **Help page**: new `HelpPage.tsx` component accessible from sidebar, documents 7 unique features (clipboard paste, URL compatibility, rich embeds, AI assistant, keyboard shortcuts, AT Play, widgets). Added `{ type: 'help' }` to `AppView`.
-- **i18n**: 26 new keys — 9 URL/clipboard keys (`action.pasteAndGo`, `link.type.hashtag/intent/messages/notifications`, `redirect.unsupportedFormat`, `clipboard.empty/notUrl/permissionDenied`) + 17 help page keys.
+- **Help center system**: shared data layer (`help-content.ts`) with 22 entries across 7 categories, consumed by PWA, TUI, and MCP AI tool. Self-contained trilingual content (EN/ZH/JA) with markdown support.
+- **PWA Help page**: glass-card UI with search, category sections, responsive modal/bottom-sheet, light mode + CVD support. Accessible via sidebar button and `#/help` hash URL.
+- **TUI Help view**: list-based help with `j/k` navigation, `Enter` to expand, `/` to search, platform tags `[PWA]`/`[TUI]`. Markdown rendering in detail view.
+- **`ai-bsky_help` AI tool**: 4 actions (search, get, listCategories, listByCategory) for help content retrieval. Dependency-injected `HelpProvider` pattern.
+- **`normalizeBskyInput()`**: unified URL normalization — bare domains, `/i/https://...`, `/i/bsky/...`, `at://` URIs, `bluesky://` scheme.
+- **Third-party client URL support**: deer.social, tokimeki.blue, useouranos.app, deck.blue URLs auto-rewritten to bsky.app.
+- **Expanded URL types**: `/hashtag/{tag}`, `/intent/compose?text=`, `/messages`, `/notifications`.
+- **`parseAtUri()`**: direct parsing of `at://` AT Protocol URIs.
+- **Clipboard paste button**: FeedHeader button (PWA) + `Ctrl+V` shortcut (TUI) for clipboard URL navigation.
+- **TUI `Ctrl+V` paste & go**: reads clipboard via `clipboardy`, normalizes with `normalizeBskyInput()`, navigates to parsed view.
 
 ### Changed
 
-- `parseRedirectPath()` refactored to use `normalizeBskyInput()` — now supports `/i/https://bsky.app/xxx`, `/i/bsky/xxx`, `/i/at://...` formats.
+- `parseRedirectPath()` refactored to use `normalizeBskyInput()`.
 - `RedirectPage.tsx` uses `normalizeBskyInput()` for path normalization.
+- Help center content verified by 4 fact-checkers against actual code (not docs). All platform tags, feature descriptions, and tool counts corrected.
+- `**bold**` markdown support added to TUI `renderMarkdown()` utility.
+- Glass card hover effects moved to CSS `:hover` pseudo-class for reliability.
+- AI tool count updated from 33/34 to 35 across all documentation (10 files, 17 references).
+
+### Fixed
+
+- Fixed glass card border highlight persisting after mouse leave.
+- Fixed modal open/close causing page content shift (scrollbar width compensation).
+- Fixed mobile modal content overflow (max-height + scroll).
+- Fixed TUI HelpView global shortcuts interfering with search input.
+- Fixed `/view` slash command description (injects context, not URI parameter).
+- Fixed help entries with incorrect platform tags (keyboard-shortcuts, at-play, widgets, rich-embeds, etc.).
 
 ## [0.14.3] — 2026-06-13
 

@@ -24,19 +24,21 @@
 
 ## 当前版本
 
-**v0.14.4 — URL 标准化 + 剪贴板粘贴 + 第三方客户端 URL + 帮助页面 ✅ staging**
+**v0.14.4 — URL 标准化 + 剪贴板粘贴 + 第三方客户端 URL + 帮助中心系统 ✅ production**
 
-### v0.14.4 新功能 (已完成):
-- ✅ **`normalizeBskyInput()`**：统一 URL 标准化 — 裸域名、`/i/https://...`、`/i/bsky/...`、`at://` URI、`bluesky://` scheme 全部解析为标准 bsky.app URL 或 AT URI
-- ✅ **第三方客户端 URL 支持**：`normalizeBskyInput()` 自动识别 deer.social、tokimeki.blue、useouranos.app、deck.blue 的 URL 并重写为 bsky.app URL（`THIRD_PARTY_DOMAIN_MAP`，8 个域名条目含 `www.` 变体）
-- ✅ **扩展 URL 类型**：`parseBskyAppUrl()` 新增 `/hashtag/{tag}`、`/intent/compose?text=`、`/messages`、`/notifications` 支持
-- ✅ **`parseAtUri()`**：直接解析 `at://` AT Protocol URI 为 `BskyUrlInfo`
-- ✅ **剪贴板粘贴按钮**：FeedHeader 中刷新按钮左侧，读取剪贴板 → 标准化 URL → 导航。空/非 URL 剪贴板静默失败
-- ✅ **帮助页面**：侧边栏可访问的 `HelpPage.tsx` 组件，展示 7 个独特功能（剪贴板粘贴、URL 兼容性、富嵌入、AI 助手、键盘快捷键、AT Play、小组件）。`AppView` 新增 `{ type: 'help' }`
-- ✅ **新 SVG 图标**：`clipboard-paste.svg`
-- ✅ **i18n**：26 新 key — 9 URL/剪贴板 key + 17 帮助页面 key
+### v0.14.4 新功能 (已完成 — 部署到 production):
+- ✅ **帮助中心系统**：共享数据层 `help-content.ts`（22 条目 × 7 分类），PWA glass-card UI + TUI 列表 + MCP `ai-bsky_help` AI 工具。自包含三语内容（EN/ZH/JA），支持 markdown
+- ✅ **`normalizeBskyInput()`**：统一 URL 标准化 — 裸域名、`/i/https://...`、`/i/bsky/...`、`at://` URI、`bluesky://` scheme
+- ✅ **第三方客户端 URL 支持**：deer.social、tokimeki.blue、useouranos.app、deck.blue 自动重写为 bsky.app URL
+- ✅ **扩展 URL 类型**：`/hashtag/{tag}`、`/intent/compose?text=`、`/messages`、`/notifications`
+- ✅ **`parseAtUri()`**：直接解析 `at://` AT Protocol URI
+- ✅ **剪贴板粘贴**：PWA FeedHeader 按钮 + TUI `Ctrl+V` 快捷键
+- ✅ **`ai-bsky_help` AI 工具**：4 个 action（search/get/listCategories/listByCategory）
+- ✅ **i18n**：26+ 新 key
+- **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.4）
+- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（PWA v0.14.4）
 
-### v0.14.3 新功能 (已完成 — 部署到 staging):
+### v0.14.3 新功能 (已完成 — 部署到 production):
 - ✅ **`app.bsky.embed.gallery` 照片轮播渲染**：新 `extractGallery()`、`GalleryCard` 轮播组件（CSS translateX、触摸滑动、键盘导航、ALT 徽章、灯箱集成、`object-fit: cover` 裁剪）
 - ✅ **`app.bsky.embed.gallery` 发帖支持**：5+ 图片自动生成 gallery embed、`buildGalleryEmbed()`（含 `$type` + 必填 `aspectRatio`）、`buildFirstPostEmbed()` 分流
 - ✅ **`viewExternal` 富元数据渲染**：`ExternalLinkCard` 组件 — 发布者图标+主题色、阅读时间、缩略图、时间戳
@@ -49,7 +51,7 @@
 - ✅ **BskyLinkCard 弹窗 Portal**：`createPortal` 固定定位，修复「在…中打开」选择框定位问题
 - ✅ **i18n**：6 新 key（`gallery.*`、`external.*`），`compose.maxImages` 改为 10
 - **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.3）
-- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev` / `https://576fb2df.ai-bsky.pages.dev`（PWA v0.14.3）
+- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（PWA v0.14.3）
 
 v0.14.2 重点修复了视频上传成功后无法播放的问题，并优化了帖子删除交互，修复了图片+引用帖引用丢失的设计缺陷。
 
