@@ -5,7 +5,7 @@ import type { SearchTab } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
 import type { AppView } from '@bsky/app';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { truncateName } from './PostCard.js';
 import { MobileHeaderCtx } from './Layout.js';
@@ -45,7 +45,20 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const { onSidebarOpen, dmCount } = useContext(MobileHeaderCtx);
   const { config } = useModerationConfig();
   const { tab, posts, users, feeds, loading, search, setTab } = useSearch(client, initialTab, initialQuery);
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
   const [input, setInput] = useState(initialQuery ?? '');
   const [searched, setSearched] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -58,7 +71,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
   const getItemKey = (item: any) => item.uri ?? item.did;
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    items, `search-${input}`, itemHeight, getItemKey, { initialScrollTop, onScrollTopChange },
+    items, `search-${input}`, itemHeight, getItemKey, { initialScrollTop, onScrollTopChange, decisions },
   );
 
   // Sync searched state with items availability (e.g. from cache-restored search)
@@ -126,10 +139,14 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
       </div>
 
       {(() => {
-        const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+        const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+        const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
         return (
           <>
-            <LabelerFailureBanner failedLabelers={bannerFailures} />
+            <LabelerFailureBanner
+              failedLabelers={bannerFailures}
+              onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+            />
             <LabelerFailureToast failedLabelers={failedLabelers} />
           </>
         );
@@ -185,7 +202,7 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                   }}
                 >
                   {isPostsTab ? (
-              <PostCard post={item}
+              <PostPreviewCard post={item}
                 onClick={() => goTo({ type: 'thread', uri: item.uri })} goTo={goTo}
                   imageDescConfig={imageDescConfig}
                   imageDescLang={imageDescLang}
@@ -193,10 +210,10 @@ export function SearchPage({ client, initialQuery, initialTab, goBack, goTo, ini
                 client={client}
                 previewLines={previewLines}
                 quotedPreviewLines={quotedPreviewLines}
-                moderationDecision={moderationDecisions.get(item.uri) ?? null}
+                moderationDecision={decisions.get(item.uri) ?? null}
               >
                       <PostActionsRow client={client} goTo={goTo} post={item} />
-                    </PostCard>
+                    </PostPreviewCard>
                   ) : tab === 'users' ? (
                     <div className="px-4 py-3 border-b border-border cursor-pointer hover:bg-surface transition-colors"
                       onClick={() => goTo({ type: 'profile', actor: item.handle })}>

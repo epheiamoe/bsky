@@ -5,7 +5,7 @@ import { Icon } from './Icon.js';
 
 interface LabelerFailureBannerProps {
   failedLabelers: FailedLabelerInfo[];
-  onDismiss?: () => void;
+  onDismiss?: (did: string) => void;
   onRetry?: () => void;
 }
 
@@ -65,7 +65,7 @@ export function LabelerFailureBanner({ failedLabelers, onDismiss, onRetry }: Lab
             )}
             {onDismiss && (
               <button
-                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                onClick={(e) => { e.stopPropagation(); failedLabelers.forEach(f => onDismiss(f.did)); }}
                 className="opacity-70 hover:opacity-100 transition-opacity"
                 aria-label={t('a11y.close')}
               >
@@ -82,12 +82,12 @@ export function LabelerFailureBanner({ failedLabelers, onDismiss, onRetry }: Lab
           <div className="pt-2 space-y-2">
             {failedLabelers.map(labeler => (
               <div key={labeler.did} className="flex items-start gap-2 text-xs">
-                <Icon 
-                  name={labeler.behavior === 'block' ? 'shield-alert' : 'shield'} 
-                  size={12} 
-                  className="shrink-0 mt-0.5" 
+                <Icon
+                  name={labeler.behavior === 'block' ? 'shield-alert' : 'shield'}
+                  size={12}
+                  className="shrink-0 mt-0.5"
                 />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="font-medium truncate">{labeler.name}</div>
                   <div className="opacity-70 truncate">{labeler.error}</div>
                   <div className="opacity-60 text-[10px] uppercase tracking-wider mt-0.5">
@@ -96,6 +96,15 @@ export function LabelerFailureBanner({ failedLabelers, onDismiss, onRetry }: Lab
                     {labeler.behavior === 'silent' && t('moderation.failureBehavior.silent')}
                   </div>
                 </div>
+                {onDismiss && (
+                  <button
+                    onClick={() => onDismiss(labeler.did)}
+                    className="opacity-50 hover:opacity-100 transition-opacity shrink-0"
+                    aria-label={t('a11y.close')}
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

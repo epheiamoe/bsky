@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
-import { setLastFeedUri, getFeedConfig } from '@bsky/app';
+import { setLastFeedUri, getFeedConfig, extractGallery } from '@bsky/app';
 import type { AIConfig, BskyClient } from '@bsky/core';
 import { readFileSync, existsSync, statSync } from 'fs';
 import sharp from 'sharp';
@@ -92,9 +92,35 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [showFeedConfig, setShowFeedConfig] = useState(false);
   const [feedConfigInput, setFeedConfigInput] = useState('');
 
+  const { lists: subscribedLists } = useSubscribedLists(client);
+  const allFeedUris = useMemo(() => {
+    const uris = [...feedConfig];
+    for (const l of subscribedLists) {
+      if (!uris.includes(l.uri)) uris.push(l.uri);
+    }
+    return uris;
+  }, [feedConfig, subscribedLists]);
+
   const effectiveFeedUri = currentFeedUri ?? defaultFeedUri;
   const { posts, loading: feedLoading, cursor, loadMore, refresh } = useTimeline(client, effectiveFeedUri);
-  const [feedIdx, setFeedIdx] = useState(0);
+
+  // Per-feed selected index so switching feeds preserves the last cursor position.
+  const feedIdxMapRef = useRef<Map<string, number>>(new Map());
+  const [feedIdx, setFeedIdx] = useState(() => feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
+
+  // [v0.14.3] Gallery navigation — per-post image index for gallery embed
+  const galleryMapRef = useRef<Map<string, number>>(new Map());
+  const [galleryIdx, setGalleryIdx] = useState(0);
+  // Reset gallery index when selected post changes
+  useEffect(() => {
+    const p = posts[feedIdx];
+    if (p) {
+      setGalleryIdx(galleryMapRef.current.get(p.uri) ?? 0);
+    }
+  }, [feedIdx, posts]);
+  useEffect(() => {
+    setFeedIdx(feedIdxMapRef.current.get(effectiveFeedUri ?? 'following') ?? 0);
+  }, [effectiveFeedUri]);
 
   // Track last active feed URI for sidebar/home navigation (shared PWA+TUI)
   useEffect(() => {
@@ -106,9 +132,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [threadKey, setThreadKey] = useState(0);
 
   // Compose
-  const compose = useCompose(client, goBack, (uris) => {
+  const compose = useCompose(client, (uris) => {
+    goBack();
     if (uris && uris.length > 0) {
-      goTo({ type: 'thread', uri: uris[0]! });
+      const targetUri = uris.length > 1 ? uris[uris.length - 1] : uris[0];
+      goTo({ type: 'thread', uri: targetUri! });
     } else {
       goHome();
     }
@@ -122,6 +150,20 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [draftListIdx, setDraftListIdx] = useState(0);
   const [draftSavePrompt, setDraftSavePrompt] = useState(false);
   const [threadgateMode, setThreadgateMode] = useState<string>('everyone');
+  // Self-labels
+  const [selfLabels, setSelfLabelsState] = useState<string[]>([]);
+  const [labelSelectActive, setLabelSelectActive] = useState(false);
+  const [labelSelectIdx, setLabelSelectIdx] = useState(0);
+  const LABEL_OPTIONS = ['sexual', 'nudity', 'porn', 'graphic-media'];
+  // Per-post quotes
+  const [postQuotes, setPostQuotes] = useState<Map<number, string>>(new Map());
+  const [quoteInputActive, setQuoteInputActive] = useState(false);
+  const [quoteInputText, setQuoteInputText] = useState('');
+  // Threadgate list selection
+  const [listSelectActive, setListSelectActive] = useState(false);
+  const [listSelectIdx, setListSelectIdx] = useState(0);
+  const [userLists, setUserLists] = useState<Array<{ uri: string; name: string }>>([]);
+  const [selectedListUri, setSelectedListUri] = useState<string | undefined>(undefined);
   // Polish
   const [polishPhase, setPolishPhase] = useState<'idle' | 'req' | 'loading' | 'result'>('idle');
   const [polishRequirement, setPolishRequirement] = useState('');
@@ -209,6 +251,16 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (draft) compose.loadFromDraft(draft.posts, draft.replyTo, draft.quoteUri);
       }
       setThreadgateMode('everyone');
+      setSelfLabelsState([]);
+      setLabelSelectActive(false);
+      setLabelSelectIdx(0);
+      setPostQuotes(new Map());
+      setQuoteInputActive(false);
+      setQuoteInputText('');
+      setListSelectActive(false);
+      setListSelectIdx(0);
+      setUserLists([]);
+      setSelectedListUri(undefined);
     }
   }, [currentView.type]);
 
@@ -257,7 +309,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (draftSavePrompt) { setDraftSavePrompt(false); return; }
         if (draftListOpen) { setDraftListOpen(false); return; }
         if (imagePathInput !== null) { setImagePathInput(null); return; }
-        if (compose.posts.some(p => p.text.trim())) { setDraftSavePrompt(true); return; }
+        const hasText = compose.posts.some(p => p.text.trim());
+        const hasMedia = composeMedia.length > 0;
+        const hasQuote = postQuotes.size > 0;
+        const hasReply = !!compose.replyTo;
+        const hasThreadgate = compose.threadgateRules !== undefined && compose.threadgateRules !== null && compose.threadgateRules.length > 0;
+        const hasLabels = Array.from(compose.selfLabelsMap?.values() ?? []).some(arr => arr.length > 0) || selfLabels.length > 0;
+        const hasLangs = compose.langs?.length > 0;
+        if (hasText || hasMedia || hasQuote || hasReply || hasThreadgate || hasLabels || hasLangs) { setDraftSavePrompt(true); return; }
         goBack(); return;
       }
       if (currentView.type !== 'feed') { goBack(); return; }
@@ -272,8 +331,38 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (creatingList || editingListUri) return;
 
     // Arrows — feed + bookmarks
-    if (key.upArrow && currentView.type === 'feed') { setFeedIdx(i => Math.max(0, i - 1)); return; }
-    if (key.downArrow && currentView.type === 'feed') { setFeedIdx(i => Math.min(posts.length - 1, i + 1)); return; }
+    if (key.upArrow && currentView.type === 'feed') {
+      setFeedIdx(i => {
+        const next = Math.max(0, i - 1);
+        feedIdxMapRef.current.set(effectiveFeedUri ?? 'following', next);
+        return next;
+      });
+      return;
+    }
+    if (key.downArrow && currentView.type === 'feed') {
+      setFeedIdx(i => {
+        const next = Math.min(posts.length - 1, i + 1);
+        feedIdxMapRef.current.set(effectiveFeedUri ?? 'following', next);
+        return next;
+      });
+      return;
+    }
+    // [v0.14.3] Gallery navigation — left/right arrows for feed
+    if ((key.leftArrow || key.rightArrow) && currentView.type === 'feed') {
+      const p = posts[feedIdx];
+      if (p) {
+        const g = extractGallery(p);
+        if (g && g.images.length > 0) {
+          const delta = key.leftArrow ? -1 : 1;
+          setGalleryIdx(prev => {
+            const next = (prev + delta + g.images.length) % g.images.length;
+            galleryMapRef.current.set(p.uri, next);
+            return next;
+          });
+        }
+      }
+      return;
+    }
     if (key.upArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.max(0, i - 1)); return; }
     if (key.downArrow && currentView.type === 'bookmarks') { setBookmarkIdx(i => Math.min(bookmarks.bookmarks.length - 1, i + 1)); return; }
 
@@ -289,7 +378,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (bm) goTo({ type: 'thread', uri: bm.uri });
         return;
       }
-      if (currentView.type === 'compose' && !draftSavePrompt && !draftListOpen && imagePathInput === null && polishPhase === 'idle' && !altReqActive) {
+      if (currentView.type === 'compose' && !draftSavePrompt && !draftListOpen && imagePathInput === null && polishPhase === 'idle' && !altReqActive && !labelSelectActive && !quoteInputActive && !listSelectActive) {
         // ALT check before submit
         const noAlt = composeMedia.filter(m => m.type === 'image' && !m.alt.trim()).length;
         if (noAlt > 0) {
@@ -299,7 +388,17 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         const nonEmpty = compose.posts.filter(p => p.text.trim());
         if (nonEmpty.length > 0) {
           const mediaMap = composeMedia.length > 0 ? new Map<string, ComposeMedia[]>([[compose.posts[composePostIdx]?.id ?? compose.posts[0]!.id, composeMedia]]) : undefined;
-          compose.submit(mediaMap);
+          // Build quoteMap from postQuotes
+          const quoteMap = new Map<string, string>();
+          for (const [postIdx, uri] of postQuotes) {
+            const post = compose.posts[postIdx];
+            if (post && uri.startsWith('at://')) {
+              quoteMap.set(post.id, uri);
+            }
+          }
+          const targetPostId = compose.posts[composePostIdx]?.id ?? compose.posts[0]!.id;
+          compose.setSelfLabelsMap(new Map([[targetPostId, selfLabels]]));
+          compose.submit(mediaMap, quoteMap.size > 0 ? quoteMap : undefined);
         }
         return;
       }
@@ -430,7 +529,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
               else if (isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Only 1 video allowed'); }
               else if (isVideo && composeMedia.length >= 1) { setComposeUploadError('Video cannot be mixed with images'); }
               else if (!isVideo && composeMedia.some(m => m.type === 'video')) { setComposeUploadError('Images cannot be mixed with video'); }
-              else if (!isVideo && composeMedia.length >= 4) { setComposeUploadError(t('compose.maxImages', { n: 4 })); }
+              else if (!isVideo && composeMedia.length >= 10) { setComposeUploadError(t('compose.maxImages', { n: 10 })); }
               else {
                 const stat = statSync(path);
                 const maxSize = isVideo ? 100 * 1024 * 1024 : 2048 * 1024;
@@ -482,9 +581,59 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         if (key.escape) { setImagePathInput(null); return; }
         return;
       }
+      // Label selection overlay
+      if (labelSelectActive) {
+        if (key.escape) { setLabelSelectActive(false); return; }
+        if (key.upArrow || input === 'k' || input === 'K') { setLabelSelectIdx(i => Math.max(0, i - 1)); return; }
+        if (key.downArrow || input === 'j' || input === 'J') { setLabelSelectIdx(i => Math.min(LABEL_OPTIONS.length - 1, i + 1)); return; }
+        if (input === ' ') {
+          const label = LABEL_OPTIONS[labelSelectIdx]!;
+          setSelfLabelsState(prev => prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]);
+          return;
+        }
+        return;
+      }
+      // Quote input overlay
+      if (quoteInputActive) {
+        if (key.escape) { setQuoteInputActive(false); setQuoteInputText(''); return; }
+        if (key.return) {
+          const trimmed = quoteInputText.trim();
+          if (trimmed.startsWith('at://')) {
+            setPostQuotes(prev => new Map(prev).set(composePostIdx, trimmed));
+          }
+          setQuoteInputActive(false);
+          setQuoteInputText('');
+          return;
+        }
+        return;
+      }
+      // Threadgate list selection overlay
+      if (listSelectActive) {
+        if (key.escape) {
+          setListSelectActive(false);
+          setListSelectIdx(0);
+          if (!selectedListUri) {
+            setThreadgateMode('everyone');
+            compose.setThreadgateRules(buildThreadgateRules('everyone'));
+          }
+          return;
+        }
+        if (key.upArrow || input === 'k' || input === 'K') { setListSelectIdx(i => Math.max(0, i - 1)); return; }
+        if (key.downArrow || input === 'j' || input === 'J') { setListSelectIdx(i => Math.min(userLists.length - 1, i + 1)); return; }
+        if (key.return) {
+          const list = userLists[listSelectIdx];
+          if (list) {
+            setSelectedListUri(list.uri);
+            compose.setThreadgateRules(buildThreadgateRules('list', list.uri));
+            setListSelectActive(false);
+          }
+          return;
+        }
+        return;
+      }
       if (input === 'i' || input === 'I') {
         const hasVideo = composeMedia.some(m => m.type === 'video');
-        if (hasVideo || composeMedia.length < 4) setImagePathInput('');
+        if (hasVideo || composeMedia.length < 10) setImagePathInput('');
         return;
       }
       if (input === 'D') { setDraftListOpen(true); setDraftListIdx(0); return; }
@@ -495,17 +644,52 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return;
       }
       if (input === 'X' && compose.posts.length > 1) {
-        const id = compose.posts[composePostIdx]?.id;
+        const deletedIdx = composePostIdx;
+        const id = compose.posts[deletedIdx]?.id;
         if (id) compose.removePost(id);
-        if (composePostIdx >= compose.posts.length - 1) setComposePostIdx(i => Math.max(0, i - 1));
+        const newIdx = deletedIdx >= compose.posts.length - 1 ? Math.max(0, deletedIdx - 1) : deletedIdx;
+        setComposePostIdx(newIdx);
+        // Shift postQuotes indices after deletion
+        setPostQuotes(prev => {
+          const next = new Map<number, string>();
+          for (const [idx, uri] of prev) {
+            if (idx < deletedIdx) next.set(idx, uri);
+            else if (idx > deletedIdx) next.set(idx - 1, uri);
+          }
+          return next;
+        });
+        return;
+      }
+      if (input === 'l' || input === 'L') {
+        setLabelSelectActive(a => !a);
+        setLabelSelectIdx(0);
+        return;
+      }
+      if (input === 'Q') {
+        setQuoteInputActive(true);
+        setQuoteInputText('');
         return;
       }
       if ((input === 'g' || input === 'G') && !compose.replyTo) {
-        const cycle = ['everyone', 'nobody', 'mentioned', 'followers', 'following'];
+        const cycle = ['everyone', 'nobody', 'mentioned', 'followers', 'following', 'list'];
         const idx = Math.max(0, cycle.indexOf(threadgateMode));
         const next = cycle[(idx + 1) % cycle.length]!;
         setThreadgateMode(next);
-        compose.setThreadgateRules(buildThreadgateRules(next));
+        if (next === 'list') {
+          if (client) {
+            client.getLists(client.getHandle()).then(res => {
+              setUserLists(res.lists.map(l => ({ uri: l.uri, name: l.name })));
+              setListSelectActive(true);
+              setListSelectIdx(0);
+            }).catch(() => {
+              setThreadgateMode('everyone');
+              compose.setThreadgateRules(buildThreadgateRules('everyone'));
+            });
+          }
+        } else {
+          compose.setThreadgateRules(buildThreadgateRules(next));
+          setSelectedListUri(undefined);
+        }
         return;
       }
       return;
@@ -531,6 +715,21 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (currentView.type === 'feed') {
       if (k === 'j') setFeedIdx(i => Math.min(posts.length - 1, i + 1));
       else if (k === 'k') setFeedIdx(i => Math.max(0, i - 1));
+      // [v0.14.3] Gallery navigation — h/l to switch gallery images
+      else if (k === 'h' || k === 'l') {
+        const p = posts[feedIdx];
+        if (p) {
+          const g = extractGallery(p);
+          if (g && g.images.length > 0) {
+            const delta = k === 'h' ? -1 : 1;
+            setGalleryIdx(prev => {
+              const next = (prev + delta + g.images.length) % g.images.length;
+              galleryMapRef.current.set(p.uri, next);
+              return next;
+            });
+          }
+        }
+      }
       else if (k === 'm') loadMore?.();
       else if (k === 'r') refresh?.();
       else if (k === 'f') { setFeedConfigInput(''); setShowFeedConfig(true); }
@@ -657,23 +856,32 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
             <Box height={1}>
-              <Text bold>{'📋 '}{t('nav.feed')}{effectiveFeedUri ? ' - ' + getFeedLabel(effectiveFeedUri) : ''}</Text>
+              <Text bold>
+                {'📋 '}
+                {t('nav.feed')}
+                {effectiveFeedUri
+                  ? ' - ' + (isListUri(effectiveFeedUri)
+                    ? (subscribedLists.find(l => l.uri === effectiveFeedUri)?.name ?? getFeedLabel(effectiveFeedUri))
+                    : getFeedLabel(effectiveFeedUri))
+                  : ''}
+              </Text>
               <Text dimColor>{' '}{showFeedConfig ? 'Esc:关闭' : t('keys.feed')}</Text>
             </Box>
-            {showFeedConfig ? (
-              <FeedConfigOverlay
-                feeds={feedConfig}
-                currentFeedUri={effectiveFeedUri}
-                defaultFeedUri={defaultFeedUri}
-                client={client}
-                onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
-                onSetDefault={(uri) => setDefaultFeedUri(uri)}
-                onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
-                onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
-                onClose={() => setShowFeedConfig(false)}
-              />
-            ) : (
-              <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} />
+              {showFeedConfig ? (
+                <FeedConfigOverlay
+                  feeds={allFeedUris}
+                  subscribedLists={subscribedLists}
+                  currentFeedUri={effectiveFeedUri}
+                  defaultFeedUri={defaultFeedUri}
+                  client={client}
+                  onSelect={(uri) => { setCurrentFeedUri(uri); setShowFeedConfig(false); }}
+                  onSetDefault={(uri) => setDefaultFeedUri(uri)}
+                  onAdd={(uri) => { setFeedConfig(prev => [...prev, uri]); }}
+                  onRemove={(uri) => { setFeedConfig(prev => prev.filter(f => f !== uri)); if (currentFeedUri === uri) setCurrentFeedUri(undefined); }}
+                  onClose={() => setShowFeedConfig(false)}
+                />
+              ) : (
+              <PostList posts={posts} loading={feedLoading} cursor={cursor} selectedIndex={feedIdx} width={mainW - 4} height={rows - 5} galleryIdx={galleryIdx} />
             )}
           </Box>
         );
@@ -706,7 +914,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             composeMedia={composeMedia}
             uploadError={composeUploadError}
             composeInfo={composeInfo}
-            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : altReqActive ? 'altReq' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : 'text'}
+            mode={draftSavePrompt ? 'savePrompt' : draftListOpen ? 'drafts' : altReqActive ? 'altReq' : polishPhase !== 'idle' ? (polishPhase === 'req' ? 'polishReq' : 'polishResult') : imagePathInput !== null ? 'media' : quoteInputActive ? 'quote' : labelSelectActive ? 'labels' : listSelectActive ? 'listSelect' : 'text'}
             imagePathInput={imagePathInput}
             setImagePathInput={setImagePathInput}
             drafts={drafts}
@@ -720,6 +928,14 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             altReqText={altReqText}
             setAltReqText={setAltReqText}
             threadgateMode={threadgateMode}
+            postQuotes={postQuotes}
+            selfLabels={selfLabels}
+            labelSelectIdx={labelSelectIdx}
+            labelOptions={LABEL_OPTIONS}
+            quoteInputText={quoteInputText}
+            setQuoteInputText={setQuoteInputText}
+            listSelectIdx={listSelectIdx}
+            userLists={userLists}
           />
         );
       case 'profile':
@@ -934,8 +1150,13 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   );
 }
 
-function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSelect, onSetDefault, onAdd, onRemove, onClose }: {
+function isListUri(uri: string): boolean {
+  return uri.includes('app.bsky.graph.list');
+}
+
+function FeedConfigOverlay({ feeds, subscribedLists, currentFeedUri, defaultFeedUri, client, onSelect, onSetDefault, onAdd, onRemove, onClose }: {
   feeds: string[];
+  subscribedLists: Array<{ uri: string; name: string }>;
   currentFeedUri: string | undefined;
   defaultFeedUri: string | undefined;
   client: BskyClient | null;
@@ -950,6 +1171,14 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
   const [addInput, setAddInput] = useState('');
   const [suggested, setSuggested] = useState<Array<{ uri: string; label: string }>>([]);
   const [loadingSuggested, setLoadingSuggested] = useState(false);
+
+  const getItemLabel = (uri: string) => {
+    if (isListUri(uri)) {
+      const list = subscribedLists.find(l => l.uri === uri);
+      return list ? `📋 ${list.name}` : getFeedLabel(uri);
+    }
+    return getFeedLabel(uri);
+  };
 
   useEffect(() => {
     if (!client) return;
@@ -1003,7 +1232,7 @@ function FeedConfigOverlay({ feeds, currentFeedUri, defaultFeedUri, client, onSe
       <Box flexDirection="column" marginTop={1}>
         {feeds.map((f, i) => (
           <Text key={f} color={i === idx ? 'cyan' : undefined}>
-            {i === idx ? '▸' : ' '} {f === defaultFeedUri ? '★ ' : '  '}{getFeedLabel(f)}
+            {i === idx ? '▸' : ' '} {f === defaultFeedUri ? '★ ' : '  '}{getItemLabel(f)}
           </Text>
         ))}
         <Text dimColor>{'┈┈ 推荐 Feed ┈┈'}</Text>

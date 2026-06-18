@@ -46,6 +46,36 @@ const virtualizer = useVirtualizer({
 </div>
 ```
 
+### 审核状态感知的高度缓存 (v0.15.0)
+
+当帖子被标记为 `hide` 时，实际渲染高度会大幅缩小（如从 300px 变为 60px 的隐藏横幅）。如果用户点击「显示」，虚拟列表必须重新测量该条目，否则会出现内容重叠或滚动漂移。
+
+**`useVirtualizedList` 已支持自动失效**：
+
+```tsx
+// 传入 moderation decisions，hook 会自动比较 contentAction/mediaAction 变化
+const { decisions } = useModerationBatch(posts, config, client);
+
+const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+  items,
+  'page-key',
+  120,
+  item => item.uri,
+  { 
+    initialScrollTop, 
+    onScrollTopChange,
+    decisions, // ← v0.15.0 新增：自动失效缓存
+  },
+);
+```
+
+**失效逻辑**：
+- 比较前后两次 `decisions` Map 中每个 URI 的 `contentAction` 和 `mediaAction`
+- 若发生变化，清除该 URI 在 `_globalHeightCaches` 中的缓存
+- 调用 `virtualizer.measure()` 触发重新测量
+
+**已集成页面**：FeedTimeline、SearchPage、ProfilePage、BookmarkPage、ListDetailPage
+
 ### 页面适配状态
 
 | 页面 | 虚拟滚动 | 实现方式 | 状态 |

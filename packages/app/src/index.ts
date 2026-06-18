@@ -19,6 +19,16 @@ export { useActiveFeed, getLastFeedUri, setLastFeedUri } from './hooks/useActive
 export { useScrollRestore, saveScrollTop, getScrollTop } from './hooks/useScrollRestore.js';
 export { useVirtualizedList } from './hooks/useVirtualizedList.js';
 export { hasCache } from './stores/cache.js';
+export {
+  getFeedCache,
+  setFeedCache,
+  appendToFeedCache,
+  saveFeedScrollTop,
+  getFeedScrollTop,
+  clearFeedCache,
+  isFeedCacheFull,
+  getFeedCacheSize,
+} from './stores/feedCache.js';
 export { saveViewState, getViewState } from './state/viewStateStore.js';
 export { usePostActions, isPostLiked, isPostReposted, getLikeCount, getRepostCount, likePost, repostPost, seedPostViewers, seedPostViewer } from './hooks/usePostActions.js';
 export { useAIChat } from './hooks/useAIChat.js';
@@ -42,18 +52,23 @@ export { useNotifications } from './hooks/useNotifications.js';
 export { useBookmarks } from './hooks/useBookmarks.js';
 export { useLists } from './hooks/useLists.js';
 export { useListDetail } from './hooks/useListDetail.js';
+export { useSubscribedLists } from './hooks/useSubscribedLists.js';
 export { useSocialCircle } from './hooks/useSocialCircle.js';
 export type { SocialCircleOptions, SocialCircleResult, SocialCircleState, SocialCircleProgress, InteractorInfo, SocialCircleSummary } from './hooks/useSocialCircle.js';
 export { generateSocialGraphMermaid, buildSocialCircleShareText, INTERACTION_WEIGHTS } from './hooks/useSocialCircle.js';
 export { useConvoList, markConvoRead } from './hooks/useConvoList.js';
 export { useChatMessages, parsePostUri } from './hooks/useChatMessages.js';
 export { useLabelerInfo, fetchLabelerInfos } from './hooks/useLabelerInfo.js';
-export { useModeration, useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
-export type { ModerationSubject, FailedLabelerInfo, ModerationBatchResult, UseModerationBatchResult } from './hooks/useModeration.js';
+export { useModeration } from './hooks/useModeration.js';
+export type { ModerationSubject } from './hooks/useModeration.js';
+export { usePostsWithModeration, usePostModeration } from './hooks/usePostsWithModeration.js';
+export type { PostWithModeration, UsePostsWithModerationResult } from './hooks/usePostsWithModeration.js';
+export { useModerationBatch, resolveModerationBatch } from './hooks/useModeration.js';
+export type { FailedLabelerInfo } from './hooks/useModeration.js';
 export type { ChatMessage, ChatDeletedMessage, ChatSystemMessage, AnyChatMessage } from './hooks/useChatMessages.js';
 export { getCdnImageUrl, getVideoThumbnailUrl, getVideoPlaylistUrl } from './utils/imageUrl.js';
-export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds } from './utils/extractEmbeds.js';
-export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost } from './utils/extractEmbeds.js';
+export { extractImages, extractVideo, extractExternalLink, extractQuotedPost, extractHasGif, extractEmbeds, extractListEmbed, extractGallery } from './utils/extractEmbeds.js';
+export type { ExtractImage, ExtractExternalLink, ExtractVideo, ExtractQuotedPost, ExtractListEmbed, ExtractGallery, ExtractGalleryItem } from './utils/extractEmbeds.js';
 export { formatThreadgateSummary, buildThreadgateRules, rulesToThreadgateType, getThreadgateDisplayKey } from './utils/formatThreadgate.js';
 export { useI18n, getI18nStore } from './i18n/index.js';
 export type { UseI18nReturn, Locale, LocaleMessages } from './i18n/index.js';
@@ -65,6 +80,8 @@ export {
   addFeed,
   removeFeed,
   setDefaultFeed,
+  addSubscribedList,
+  removeSubscribedList,
 } from './state/feedConfig.js';
 export type { FeedConfigData } from './state/feedConfig.js';
 
@@ -98,3 +115,6 @@ export {
 } from './hooks/widgetStore.js';
 
 export { BUILTIN_LABELERS } from './data/default-labelers.js';
+export { getLabelName, LABEL_I18N_KEYS } from './i18n/label-i18n.js';
+export { parseBskyAppUrl, bskyUrlToAppView, getBskyUrlTypeLabel, isBskyAppUrl } from './utils/parseBskyUrl.js';
+export type { BskyUrlInfo } from './utils/parseBskyUrl.js';

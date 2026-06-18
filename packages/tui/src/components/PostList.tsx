@@ -12,20 +12,23 @@ export interface PostListProps {
   selectedIndex: number;
   width: number;
   height: number;
+  /** Gallery image index for the currently selected post (if it has a gallery embed) */
+  galleryIdx?: number;
 }
 
-export function PostList({ posts, loading, selectedIndex, width, height }: PostListProps) {
+export function PostList({ posts, loading, selectedIndex, width, height, galleryIdx }: PostListProps) {
   const { t, locale } = useI18n();
 
   // Pre-compute all lines for all posts
   const allLines = useMemo(() => {
     const lines: PostLine[] = [];
     for (let i = 0; i < posts.length; i++) {
-      const postLines = postToLines(posts[i]!, i, i === selectedIndex, width, t, locale);
+      const isSelected = i === selectedIndex;
+      const postLines = postToLines(posts[i]!, i, isSelected, width, t, locale, isSelected ? galleryIdx : undefined);
       for (const l of postLines) lines.push(l);
     }
     return lines;
-  }, [posts, selectedIndex, width, t, locale]);
+  }, [posts, selectedIndex, width, t, locale, galleryIdx]);
 
   // Find which range of lines is visible. selectedIndex should be centered.
   const visibleLines = height - 4; // header + margins

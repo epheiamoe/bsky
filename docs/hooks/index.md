@@ -29,6 +29,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useScrollRestore` | [UI](./ui.md) | `packages/app/src/hooks/useScrollRestore.ts` |
 | `useSearchHistory` | [UI](./ui.md) | `packages/app/src/hooks/useSearchHistory.ts` |
 | `useDmEmojiConfig` | [UI](./ui.md) | `packages/app/src/hooks/useDmEmojiConfig.ts` |
+| `useModerationBatch` | [UI](./ui.md) | `packages/app/src/hooks/useModeration.ts` |
+| `usePostsWithModeration` | [UI](./ui.md) | `packages/app/src/hooks/usePostsWithModeration.ts` |
 | `widgetRegistry` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetRegistry.ts` |
 | `widgetStore` | [Widgets](./widgets.md) | `packages/app/src/hooks/widgetStore.ts` |
 | `useActiveFeed` | [Widgets](./widgets.md) | `packages/app/src/hooks/useActiveFeed.ts` |
@@ -60,6 +62,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useLists` | ✓ | ✓ |
 | `useListDetail` | ✓ | ✓ |
 | `useVirtualizedList` | ✓ | — |
+| `useModerationBatch` | ✓ | ✓ |
+| `usePostsWithModeration` | ✓ | — |
 | `useDmEmojiConfig` | ✓ | ✓ |
 | `useActiveFeed` | ✓ | ✓ |
 | `usePostActions` | ✓ | ✓ |
@@ -78,7 +82,7 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useThread` | (inline state) | `{ flatLines, loading, error, focusedIndex, focused, themeUri, threadgate, likePost, repostPost, expandReplies, isLiked, isReposted, getPostView }` |
 | `useCompose` | (inline state) | `{ posts, addPost, removePost, setPostText, submitting, error, replyTo, setReplyTo, quoteUri, setQuoteUri, threadgateRules, setThreadgateRules, submit, loadFromDraft, toDraftData }` |
 | `useAIChat` | `AIAssistant` instance | `{ messages, loading, guidingQuestions, send, stop, addUserImage, chatId, pendingConfirmation, confirmAction, rejectAction, edit, editByIndex }` |
-| `useDrafts` | `createDraftsStore(client)` | `{ drafts, loading, saving, saveDraft, deleteDraft, syncDraft, refreshDrafts, loadDraft }` |
+| `useDrafts` | `createDraftsStore(client)` | `{ drafts, loading, saving, saveDraft, deleteDraft, syncDraft, refreshDrafts, loadDraft, findDuplicateOnServer }` |
 | `useI18n` | Singleton store | `{ t, locale, setLocale, availableLocales, localeLabels }` |
 | `useChatHistory` | `ChatStorage` | `{ conversations, loading, loadConversation, saveConversation, deleteConversation, refresh, storage }` |
 | `useTranslation` | (inline cache) | `{ translate, loading, cache, lang, setLang, mode, setMode, LANG_LABELS }` |
@@ -92,6 +96,8 @@ All hooks live in `packages/app/src/hooks/`. They are React hooks that consume p
 | `useLists` | (inline state + cache) | `{ lists, loading, error, createList, deleteList, updateListInfo, refresh }` |
 | `useListDetail` | (inline state + cache) | `{ list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, addMember, removeMember, updateListInfo, deleteList, refresh }` |
 | `useVirtualizedList` | `@tanstack/react-virtual` | `{ scrollRef, virtualizer, measureAndCache }` |
+| `useModerationBatch` | (inline state) | `{ decisions: Map<string, ModerationDecision>, failedLabelers: FailedLabelerInfo[], isLoading: boolean }` |
+| `usePostsWithModeration` | (inline state) | `{ posts: PostWithModeration<T>[], failedLabelers: FailedLabelerInfo[], isLoading: boolean }` |
 | `useDmEmojiConfig` | `localStorage` | `{ getDmEmojiConfig, saveDmEmojiConfig, fetchAllEmojis }` |
 | `useActiveFeed` | Module-level ref | `{ resolveFeed, recordFeed, goHomeFeed }` |
 | `usePostActions` | Module-level Sets/Maps | `{ isLiked, isReposted, likePost, repostPost, seedFromPosts, seedFromPost }` |
@@ -153,16 +159,21 @@ Non-hook utilities exported from files in `packages/app/src/hooks/` and `package
 
 ```typescript
 export interface ExtractImage { url: string; alt: string; }
-export interface ExtractExternalLink { uri: string; title: string; description: string; }
-export interface ExtractVideo { thumbnailUrl: string; playlistUrl: string; alt: string; aspectRatio?: { width: number; height: number }; }
+export interface ExtractGalleryItem { thumbnail: string; fullsize: string; alt: string; aspectRatio?: { width: number; height: number }; }
+export interface ExtractGallery { images: ExtractGalleryItem[]; }
+export interface ExtractExternalLink { uri: string; title: string; description: string; thumb?: string; createdAt?: string; updatedAt?: string; readingTime?: number; labels?: Array<{ val: string }>; source?: { uri: string; icon?: string; title: string; description?: string; theme?: ExternalSourceTheme }; }
+export interface ExtractVideo { thumbnailUrl: string; playlistUrl?: string; alt: string; aspectRatio?: { width: number; height: number }; processing?: boolean; }
 export interface ExtractQuotedPost { uri: string; cid: string; text: string; handle: string; displayName: string; authorAvatar?: string; imageDetails: ExtractImage[]; externalLink: ExtractExternalLink | null; }
+export interface ExternalSourceTheme { bg: string; fg: string; }
+export function colorRGBToString(c: { red: number; green: number; blue: number }): string;
 
 export function extractImages(post: PostView): ExtractImage[];
 export function extractVideo(post: PostView): ExtractVideo | null;
 export function extractExternalLink(post: PostView): ExtractExternalLink | null;
 export function extractQuotedPost(post: PostView): ExtractQuotedPost | null;
 export function extractHasGif(post: PostView): boolean;
-export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; hasGif: boolean };
+export function extractGallery(post: PostView): ExtractGallery | null;
+export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: ExtractVideo | null; external: ExtractExternalLink | null; list: ExtractListEmbed | null; gallery: ExtractGallery | null; hasGif: boolean };
 ```
 
 **Critical**: `extractQuotedPost` reads from `(post as any).embed` (API-resolved `#view`), NEVER `post.record.embed`. All consumers must call these shared functions — no inline extraction.

@@ -1,0 +1,440 @@
+<template id="scene-03-architecture-template">
+  <div data-composition-id="scene-03-architecture" data-width="1920" data-height="1080">
+    <!-- Three.js canvas layer -->
+    <canvas id="s03-canvas"></canvas>
+
+    <!-- Background layers -->
+    <div class="s03-bg-radial"></div>
+    <div class="s03-dot-grid"></div>
+
+    <!-- Decorative elements -->
+    <div class="s03-corner-frame"></div>
+    <div class="s03-accent-dot"></div>
+
+    <!-- SVG connecting lines overlay -->
+    <svg class="s03-connections" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+      <line class="s03-line s03-line-1" x1="460" y1="420" x2="860" y2="380" />
+      <line class="s03-line s03-line-2" x1="860" y1="380" x2="1260" y2="420" />
+      <line class="s03-line s03-line-3" x1="1260" y1="420" x2="1060" y2="700" />
+      <line class="s03-line s03-line-4" x1="460" y1="420" x2="1060" y2="700" />
+      <line class="s03-line s03-line-5" x1="860" y1="380" x2="1060" y2="700" />
+    </svg>
+
+    <!-- Foreground title -->
+    <div class="s03-title-group">
+      <h2 class="s03-title">Architecture</h2>
+      <p class="s03-subtitle">Monorepo Design</p>
+    </div>
+
+    <!-- Floating cards -->
+    <div class="s03-card s03-card-1">
+      <div class="s03-card-name">@bsky/core</div>
+      <div class="s03-card-desc">API client, auth, storage</div>
+      <div class="s03-card-meta">12 modules · REST + WebSocket</div>
+    </div>
+
+    <div class="s03-card s03-card-2">
+      <div class="s03-card-name">@bsky/app</div>
+      <div class="s03-card-desc">Shared hooks, state, logic</div>
+      <div class="s03-card-meta">8 hooks · 3 stores</div>
+    </div>
+
+    <div class="s03-card s03-card-3">
+      <div class="s03-card-name">@bsky/tui</div>
+      <div class="s03-card-desc">Terminal interface</div>
+      <div class="s03-card-meta">Ink · React · 6 views</div>
+    </div>
+
+    <div class="s03-card s03-card-4">
+      <div class="s03-card-name">@bsky/pwa</div>
+      <div class="s03-card-desc">Progressive web app</div>
+      <div class="s03-card-meta">Vite · Tailwind · 12 routes</div>
+    </div>
+
+    <style>
+      [data-composition-id="scene-03-architecture"] {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        background: #050505;
+        overflow: hidden;
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      }
+
+      #s03-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        display: block;
+        z-index: 1;
+      }
+
+      .s03-bg-radial {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(ellipse at 65% 45%, rgba(100, 210, 255, 0.06) 0%, transparent 60%);
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .s03-dot-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: radial-gradient(circle, rgba(100, 210, 255, 0.03) 1px, transparent 1px);
+        background-size: 64px 64px;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .s03-corner-frame {
+        position: absolute;
+        top: 48px;
+        left: 48px;
+        right: 48px;
+        bottom: 48px;
+        border: 1px solid rgba(255, 255, 255, 0.03);
+        z-index: 3;
+        pointer-events: none;
+      }
+
+      .s03-accent-dot {
+        position: absolute;
+        top: 60px;
+        right: 80px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #64D2FF;
+        z-index: 4;
+        pointer-events: none;
+      }
+
+      .s03-connections {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 3;
+        pointer-events: none;
+      }
+
+      .s03-line {
+        stroke: #64D2FF;
+        stroke-width: 1;
+        stroke-dasharray: 6 4;
+        opacity: 0.3;
+        stroke-linecap: round;
+      }
+
+      .s03-title-group {
+        position: absolute;
+        top: 120px;
+        left: 160px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .s03-title {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 48px;
+        font-weight: 300;
+        letter-spacing: -0.02em;
+        color: #FFFFFF;
+        line-height: 1.1;
+        margin: 0;
+      }
+
+      .s03-subtitle {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 28px;
+        font-weight: 400;
+        letter-spacing: 0.02em;
+        color: #86868B;
+        line-height: 1.2;
+        margin: 0;
+      }
+
+      .s03-card {
+        position: absolute;
+        width: 280px;
+        padding: 32px;
+        background: rgba(28, 28, 30, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transform-style: preserve-3d;
+        will-change: transform;
+      }
+
+      .s03-card-1 {
+        top: 320px;
+        left: 320px;
+      }
+
+      .s03-card-2 {
+        top: 280px;
+        left: 720px;
+      }
+
+      .s03-card-3 {
+        top: 320px;
+        left: 1120px;
+      }
+
+      .s03-card-4 {
+        top: 600px;
+        left: 920px;
+      }
+
+      .s03-card-name {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 24px;
+        font-weight: 400;
+        color: #64D2FF;
+        line-height: 1.3;
+      }
+
+      .s03-card-desc {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 18px;
+        font-weight: 400;
+        color: #FFFFFF;
+        line-height: 1.4;
+      }
+
+      .s03-card-meta {
+        font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+        font-size: 16px;
+        font-weight: 400;
+        color: #86868B;
+        line-height: 1.3;
+        margin-top: 4px;
+      }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script type="module">
+      import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.181.2/+esm";
+
+      // ---- Seeded Random (mulberry32) ----
+      function mulberry32(a) {
+        return function() {
+          var t = a += 0x6D2B79F5;
+          t = Math.imul(t ^ t >>> 15, t | 1);
+          t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+          return ((t ^ t >>> 14) >>> 0) / 4294967296;
+        }
+      }
+      const rand = mulberry32(2024);
+
+      // ---- Three.js Setup ----
+      const canvas = document.getElementById("s03-canvas");
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setSize(1920, 1080, false);
+      renderer.setPixelRatio(1);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(40, 1920 / 1080, 0.1, 100);
+      camera.position.set(0, 0, 14);
+
+      // ---- Background Particles ----
+      const BG_PARTICLE_COUNT = 300;
+      const bgGeometry = new THREE.BufferGeometry();
+      const bgPositions = new Float32Array(BG_PARTICLE_COUNT * 3);
+      const bgColors = new Float32Array(BG_PARTICLE_COUNT * 3);
+      const bgBasePositions = new Float32Array(BG_PARTICLE_COUNT * 3);
+
+      for (let i = 0; i < BG_PARTICLE_COUNT; i++) {
+        const x = (rand() - 0.5) * 24;
+        const y = (rand() - 0.5) * 14;
+        const z = (rand() - 0.5) * 8 - 4;
+        bgBasePositions[i * 3] = x;
+        bgBasePositions[i * 3 + 1] = y;
+        bgBasePositions[i * 3 + 2] = z;
+        bgPositions[i * 3] = x;
+        bgPositions[i * 3 + 1] = y;
+        bgPositions[i * 3 + 2] = z;
+
+        const c = new THREE.Color().setHSL(0.55, 0.6, 0.5 + rand() * 0.4);
+        bgColors[i * 3] = c.r;
+        bgColors[i * 3 + 1] = c.g;
+        bgColors[i * 3 + 2] = c.b;
+      }
+
+      bgGeometry.setAttribute("position", new THREE.BufferAttribute(bgPositions, 3));
+      bgGeometry.setAttribute("color", new THREE.BufferAttribute(bgColors, 3));
+
+      const bgMaterial = new THREE.PointsMaterial({
+        size: 1.8,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+      });
+
+      const bgParticles = new THREE.Points(bgGeometry, bgMaterial);
+      scene.add(bgParticles);
+
+      // ---- Wireframe Icosahedrons (decorative) ----
+      const wireGeo = new THREE.IcosahedronGeometry(0.6, 0);
+      const wireMat = new THREE.MeshBasicMaterial({
+        color: 0x64D2FF,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.12,
+      });
+
+      const ico1 = new THREE.Mesh(wireGeo, wireMat);
+      ico1.position.set(-7, 3, -3);
+      scene.add(ico1);
+
+      const ico2 = new THREE.Mesh(wireGeo, wireMat);
+      ico2.position.set(8, -2, -4);
+      ico2.scale.set(1.4, 1.4, 1.4);
+      scene.add(ico2);
+
+      const ico3 = new THREE.Mesh(wireGeo, wireMat);
+      ico3.position.set(6, 4, -5);
+      ico3.scale.set(0.8, 0.8, 0.8);
+      scene.add(ico3);
+
+      // ---- Render Function ----
+      function renderAt(time) {
+        // Background particles gentle float
+        const posArray = bgGeometry.attributes.position.array;
+        for (let i = 0; i < BG_PARTICLE_COUNT; i++) {
+          const idx = i * 3;
+          const phase = i * 0.1;
+          posArray[idx] = bgBasePositions[idx] + Math.sin(time * 0.2 + phase) * 0.3;
+          posArray[idx + 1] = bgBasePositions[idx + 1] + Math.cos(time * 0.15 + phase) * 0.2;
+        }
+        bgGeometry.attributes.position.needsUpdate = true;
+
+        // Icosahedrons rotation
+        ico1.rotation.x = time * 0.12;
+        ico1.rotation.y = time * 0.18;
+        ico2.rotation.x = time * 0.15;
+        ico2.rotation.y = time * 0.1;
+        ico3.rotation.x = time * 0.08;
+        ico3.rotation.y = time * 0.22;
+
+        // Slow camera orbit in final phase (36-40s)
+        if (time > 36) {
+          const orbitT = (time - 36) / 4;
+          const angle = orbitT * Math.PI * 0.15;
+          camera.position.x = Math.sin(angle) * 2;
+          camera.position.z = 14 - Math.cos(angle) * 0.5;
+        } else {
+          camera.position.x = Math.sin(time * 0.03) * 0.5;
+          camera.position.z = 14;
+        }
+        camera.lookAt(0, 0, 0);
+
+        renderer.render(scene, camera);
+      }
+
+      // ---- hf-seek Event ----
+      window.addEventListener("hf-seek", (event) => {
+        renderAt(event.detail.time);
+      });
+
+      // Initial render
+      renderAt(window.__hfThreeTime || 0);
+
+      // ---- GSAP Timeline ----
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Title group fade in
+      tl.fromTo(".s03-title-group",
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, ease: "power3.out" }, 0.5);
+
+      // Corner frame fade in
+      tl.fromTo(".s03-corner-frame",
+        { opacity: 0 },
+        { opacity: 1, duration: 1.0, ease: "power2.out" }, 0.2);
+
+      // Accent dot scale in
+      tl.fromTo(".s03-accent-dot",
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(1.7)" }, 0.6);
+
+      // Cards cascade in with stagger, each from different direction
+      tl.fromTo(".s03-card-1",
+        { y: 60, opacity: 0, rotateY: -15, transformPerspective: 1200 },
+        { y: 0, opacity: 1, rotateY: 0, transformPerspective: 1200, duration: 0.8, ease: "power3.out" }, 1.0);
+
+      tl.fromTo(".s03-card-2",
+        { y: -50, opacity: 0, rotateY: 10, transformPerspective: 1200 },
+        { y: 0, opacity: 1, rotateY: 0, transformPerspective: 1200, duration: 0.8, ease: "expo.out" }, 1.3);
+
+      tl.fromTo(".s03-card-3",
+        { y: 60, opacity: 0, rotateY: 15, transformPerspective: 1200 },
+        { y: 0, opacity: 1, rotateY: 0, transformPerspective: 1200, duration: 0.8, ease: "power3.out" }, 1.6);
+
+      tl.fromTo(".s03-card-4",
+        { y: 80, opacity: 0, rotateX: -10, transformPerspective: 1200 },
+        { y: 0, opacity: 1, rotateX: 0, transformPerspective: 1200, duration: 0.8, ease: "power2.out" }, 1.9);
+
+      // Connecting lines draw in
+      tl.fromTo(".s03-line-1",
+        { strokeDashoffset: 200 },
+        { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 2.2);
+      tl.fromTo(".s03-line-2",
+        { strokeDashoffset: 200 },
+        { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 2.4);
+      tl.fromTo(".s03-line-3",
+        { strokeDashoffset: 200 },
+        { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 2.6);
+      tl.fromTo(".s03-line-4",
+        { strokeDashoffset: 200 },
+        { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 2.8);
+      tl.fromTo(".s03-line-5",
+        { strokeDashoffset: 200 },
+        { strokeDashoffset: 0, duration: 0.6, ease: "power2.inOut" }, 3.0);
+
+      // Set initial dashoffset for lines
+      gsap.set(".s03-line", { strokeDashoffset: 200 });
+
+      // Card ambient float (attached to timeline)
+      // Card 1: gentle vertical float
+      tl.to(".s03-card-1",
+        { y: "-=12", duration: 3, ease: "sine.inOut", yoyo: true, repeat: 10 }, 3);
+      // Card 2: gentle rotation + float
+      tl.to(".s03-card-2",
+        { y: "+=10", rotateY: 3, duration: 3.5, ease: "sine.inOut", yoyo: true, repeat: 8 }, 3.5);
+      // Card 3: different phase
+      tl.to(".s03-card-3",
+        { y: "-=8", rotateY: -2, duration: 4, ease: "sine.inOut", yoyo: true, repeat: 7 }, 4);
+      // Card 4: slower float
+      tl.to(".s03-card-4",
+        { y: "+=15", rotateX: 2, duration: 3.2, ease: "sine.inOut", yoyo: true, repeat: 9 }, 3.2);
+
+      // Background radial pulse
+      tl.fromTo(".s03-bg-radial",
+        { opacity: 0.5 },
+        { opacity: 1, duration: 5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 2);
+
+      window.__timelines["scene-03-architecture"] = tl;
+    </script>
+  </div>
+</template>

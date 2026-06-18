@@ -24,6 +24,7 @@ import type {
 import {
   resolveModeration,
   LabelCache,
+  extractBlobReferences,
 } from '@bsky/core';
 
 export interface ModerationSubject {
@@ -80,12 +81,28 @@ async function fetchLabelerPolicies(
   }
 
   if (toFetch.length > 0) {
+    // [v0.14.0-fix] Fetch policies via getRecord for each labeler
+    // app.bsky.labeler.getServices does NOT include policies field,
+    // so we must fetch the service record directly.
+    const fetchPromises = toFetch.map(async (did) => {
+      try {
+        const record = await client.getRecord(did, 'app.bsky.labeler.service', 'self');
+        const serviceRecord = record.value as {
+          policies?: { labelValueDefinitions?: LabelValueDefinition[] };
+        };
+        const defs = serviceRecord.policies?.labelValueDefinitions || [];
+        return { did, defs };
+      } catch {
+        // Service record may not exist or be inaccessible
+        return { did, defs: [] as LabelValueDefinition[] };
+      }
+    });
+
     try {
-      const views = await client.getLabelerServices(toFetch);
-      for (const view of views) {
-        const defs = view.policies?.labelValueDefinitions || [];
-        result.set(view.creator.did, defs);
-        cache[view.creator.did] = { policies: defs, fetchedAt: Date.now() };
+      const resolved = await Promise.all(fetchPromises);
+      for (const { did, defs } of resolved) {
+        result.set(did, defs);
+        cache[did] = { policies: defs, fetchedAt: Date.now() };
       }
     } catch {
       // Silently fail — we'll use defaults
@@ -96,8 +113,93 @@ async function fetchLabelerPolicies(
 }
 
 /**
+ * Resolve moderation decisions with blob-level label support.
+ *
+ * Queries both post URIs and blob URIs (for media-level labels),
+ * then merges results when resolving decisions.
+ */
+async function resolveModerationWithBlobs(
+  posts: PostView[],
+  config: ModerationConfig,
+  client: BskyClient,
+  cache: LabelCache,
+  policiesCache: LabelerPoliciesCache
+): Promise<{ decisions: Map<string, ModerationDecision>; failedLabelers: FailedLabelerInfo[] }> {
+  const activeLabelers = config.labelers.filter(l => l.isActive);
+  const activeDids = activeLabelers.map(l => l.did);
+
+  // Collect all URIs to query: post URIs + blob URIs
+  const allUris: string[] = [];
+  const blobUriMap = new Map<string, string[]>(); // postUri -> blobUris
+
+  for (const post of posts) {
+    allUris.push(post.uri);
+
+    // Extract blob URIs from embed
+    const embed = post.record?.embed as Record<string, unknown> | undefined;
+    const blobRefs = extractBlobReferences(post.uri, embed);
+    if (blobRefs.length > 0) {
+      const blobUris = blobRefs.map((r: import('@bsky/core').BlobReference) => r.uri);
+      blobUriMap.set(post.uri, blobUris);
+      allUris.push(...blobUris);
+    }
+  }
+
+  // Batch fetch all labels (post + blob)
+  if (allUris.length > 0) {
+    await cache.getLabelsBatch(client, allUris, activeDids);
+  }
+
+  // Fetch policies once
+  const definitions = await fetchLabelerPolicies(client, activeDids, policiesCache);
+
+  // Build labeler name lookup
+  const labelerNames = new Map<string, string>();
+  for (const l of config.labelers) {
+    labelerNames.set(l.did, l.name);
+  }
+
+  // Resolve decisions for each post (merging post + blob labels)
+  const decisions = new Map<string, ModerationDecision>();
+  for (const post of posts) {
+    const postLabels = await cache.getLabels(client, post.uri, activeDids);
+
+    // Get blob labels for this post
+    const blobUris = blobUriMap.get(post.uri) || [];
+    const blobLabels: Label[] = [];
+    for (const blobUri of blobUris) {
+      const labels = await cache.getLabels(client, blobUri, activeDids);
+      blobLabels.push(...labels);
+    }
+
+    // Merge post + blob labels
+    const allLabels = [...postLabels, ...blobLabels];
+    const dec = resolveModeration(allLabels, config, definitions, labelerNames);
+    decisions.set(post.uri, dec);
+  }
+
+  // Collect failed labelers
+  const failedLabelers: FailedLabelerInfo[] = [];
+  const failedStates = cache.getFailedLabelers();
+
+  for (const state of failedStates) {
+    const labeler = activeLabelers.find(l => l.did === state.did);
+    if (labeler) {
+      failedLabelers.push({
+        did: state.did,
+        name: labeler.name,
+        behavior: labeler.failureBehavior,
+        error: state.lastError,
+      });
+    }
+  }
+
+  return { decisions, failedLabelers };
+}
+
+/**
  * React hook for moderation decisions.
- * 
+ *
  * @param subject — The post or profile to evaluate
  * @param config — User's moderation configuration
  * @param client — BskyClient instance (for fetching labels if not present)
@@ -160,71 +262,42 @@ export function useModeration(
 /**
  * Batch-resolve moderation decisions for multiple subjects.
  * More efficient than individual useModeration() for timelines.
- * 
+ *
  * [v0.14.1] Now returns failed labelers information.
- * 
+ * [v0.15.0] Enhanced with blob-level label support.
+ *
  * @returns ModerationBatchResult with decisions and failed labelers
  */
 export async function resolveModerationBatch(
   subjects: Array<{ uri: string; labels?: Label[] }>,
   config: ModerationConfig,
-  client: BskyClient
+  client: BskyClient,
+  labelCache?: LabelCache,
+  policiesCache?: LabelerPoliciesCache
 ): Promise<ModerationBatchResult> {
-  const cache = new LabelCache();
-  const policiesCache: LabelerPoliciesCache = {};
+  const cache = labelCache || new LabelCache();
+  const policiesCacheInstance: LabelerPoliciesCache = policiesCache || {};
 
-  const activeLabelers = config.labelers.filter(l => l.isActive);
-  const activeDids = activeLabelers.map(l => l.did);
+  // Convert subjects to PostView-like objects for blob-aware resolution
+  const posts = subjects.map(s => ({
+    uri: s.uri,
+    cid: '',
+    author: { did: '', handle: '' } as any,
+    record: { text: '', embed: (s as any).embed } as any,
+    labels: s.labels,
+  } as PostView));
 
-  // Batch fetch all missing labels
-  const urisNeedingFetch = subjects
-    .filter(s => !s.labels || s.labels.length === 0)
-    .map(s => s.uri);
-
-  if (urisNeedingFetch.length > 0) {
-    await cache.getLabelsBatch(client, urisNeedingFetch, activeDids);
-  }
-
-  // Fetch policies once
-  const definitions = await fetchLabelerPolicies(client, activeDids, policiesCache);
-
-  const labelerNames = new Map<string, string>();
-  for (const l of config.labelers) {
-    labelerNames.set(l.did, l.name);
-  }
-
-  const results = new Map<string, ModerationDecision>();
-  for (const subject of subjects) {
-    const labels = subject.labels || (await cache.getLabels(client, subject.uri, activeDids));
-    const dec = resolveModeration(labels, config, definitions, labelerNames);
-    results.set(subject.uri, dec);
-  }
-
-  // [v0.14.1] Collect failed labelers
-  const failedLabelers: FailedLabelerInfo[] = [];
-  const failedStates = cache.getFailedLabelers();
-  
-  for (const state of failedStates) {
-    const labeler = activeLabelers.find(l => l.did === state.did);
-    if (labeler) {
-      failedLabelers.push({
-        did: state.did,
-        name: labeler.name,
-        behavior: labeler.failureBehavior,
-        error: state.lastError,
-      });
-    }
-  }
-
-  return { decisions: results, failedLabelers };
+  return resolveModerationWithBlobs(posts, config, client, cache, policiesCacheInstance);
 }
 
 /**
  * React hook for batch moderation decisions on a list of posts.
  * Automatically recalculates when posts, config, or client changes.
- * 
+ *
  * [v0.14.1] Now returns failed labelers and loading state.
- * 
+ * [v0.14.1] Incremental resolution: only processes new posts on each render,
+ * reusing the LabelCache across batches for efficiency.
+ *
  * @param posts — Array of posts/flatLines with uri and optional labels
  * @param config — User's moderation configuration
  * @param client — BskyClient instance
@@ -241,29 +314,66 @@ export function useModerationBatch(
     isLoading: false,
   });
 
+  // [v0.14.1] Persist label cache and processed URIs across renders for incremental resolution
+  const labelCacheRef = useRef(new LabelCache());
+  const processedUrisRef = useRef(new Set<string>());
+  const policiesCacheRef = useRef<LabelerPoliciesCache>({});
+
+  // Reset caches when config or client changes fundamentally
+  useEffect(() => {
+    labelCacheRef.current.clear();
+    processedUrisRef.current.clear();
+    policiesCacheRef.current = {};
+    setResult({
+      decisions: new Map(),
+      failedLabelers: [],
+      isLoading: false,
+    });
+  }, [config, client]);
+
   useEffect(() => {
     if (!client || posts.length === 0) {
       setResult({ decisions: new Map(), failedLabelers: [], isLoading: false });
       return;
     }
 
+    // Only process posts we haven't seen before
+    const newPosts = posts.filter(p => !processedUrisRef.current.has(p.uri));
+    if (newPosts.length === 0) return;
+
+    // Mark as processed before async to prevent duplicate in-flight requests
+    newPosts.forEach(p => processedUrisRef.current.add(p.uri));
+
     setResult(prev => ({ ...prev, isLoading: true }));
-    
+
     let cancelled = false;
-    resolveModerationBatch(posts, config, client).then(res => {
-      if (!cancelled) setResult({
-        decisions: res.decisions,
-        failedLabelers: res.failedLabelers,
-        isLoading: false,
+    resolveModerationBatch(newPosts, config, client, labelCacheRef.current, policiesCacheRef.current)
+      .then(res => {
+        if (!cancelled) {
+          setResult(prev => ({
+            decisions: new Map([...prev.decisions, ...res.decisions]),
+            // LabelCache maintains cumulative failure state across batches
+            failedLabelers: res.failedLabelers,
+            isLoading: false,
+          }));
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Moderation batch failed:', err);
+        if (!cancelled) {
+          const activeLabelers = config.labelers.filter(l => l.isActive);
+          setResult({
+            decisions: new Map(),
+            failedLabelers: activeLabelers.map(l => ({
+              did: l.did,
+              name: l.name,
+              behavior: l.failureBehavior,
+              error: 'Moderation unavailable',
+            })),
+            isLoading: false,
+          });
+        }
       });
-    }).catch(() => {
-      // Silently fail — moderation is best-effort
-      if (!cancelled) setResult({
-        decisions: new Map(),
-        failedLabelers: [],
-        isLoading: false,
-      });
-    });
 
     return () => { cancelled = true; };
   }, [posts, config, client]);

@@ -3,7 +3,7 @@ import type { BskyClient } from '@bsky/core';
 import type { AppView, TargetLang, TranslationResult } from '@bsky/app';
 import { useProfile, useI18n, useTranslation, getCdnImageUrl, useVirtualizedList, isWidgetEnabled, toggleWidget, useModerationBatch } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
-import { PostCard } from './PostCard';
+import { PostPreviewCard } from './PostPreviewCard';
 import { PostActionsRow } from './PostActionsRow.js';
 import { EditProfileModal } from './EditProfileModal.js';
 import { ImageLightboxDialog } from './ImageLightboxDialog.js';
@@ -52,7 +52,19 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
     followList, followItems, followListCursor, followListLoading,
     openFollowList, closeFollowList, loadMoreFollowList,
   } = useProfile(client, actor, initialTab as 'posts' | 'replies' | undefined);
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
 
   // Update URL when tab changes so it survives back navigation
   useEffect(() => {
@@ -83,7 +95,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   const isOwn = client.isAuthenticated() && (actor === client.getHandle() || profile?.did === client.getDID());
 
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange },
+    posts, `profile-${actor}`, 150, p => p.uri, { initialScrollTop, onScrollTopChange, decisions },
   );
   const sentinelRef = useRef<HTMLDivElement>(null);
   const followScrollRef = useRef<HTMLDivElement>(null);
@@ -215,10 +227,15 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
   }
 
   // ── Main profile view ──
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
   return (
     <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refreshFeed?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       {/* Header bar */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3 flex items-center gap-3">
@@ -494,7 +511,7 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                 ref={(el) => measureAndCache(el, post)}
                 data-index={virtualItem.index}
               >
-                <PostCard
+                <PostPreviewCard
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
@@ -505,10 +522,10 @@ export function ProfilePage({ client, actor, initialTab, goBack, goTo, aiConfig,
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
-                  moderationDecision={moderationDecisions.get(post.uri) ?? null}
+                  moderationDecision={decisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
-                </PostCard>
+                </PostPreviewCard>
               </div>
             );
           })}

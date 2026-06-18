@@ -3,7 +3,7 @@ import type { BskyClient, ConvoView, ConvoListResponse } from '@bsky/core';
 
 const POLL_INTERVAL = 30000;
 
-// Module-level setter for optimistic unread clear (called by DMChatPage after markRead)
+// Module-level setter for optimistic unread clear (called by DMChatPage after loading convo)
 let _clearUnread: ((convoId: string) => void) | null = null;
 
 /** Called after reading a conversation to immediately clear the badge */

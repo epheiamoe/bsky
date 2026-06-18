@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { BskyClient } from '@bsky/core';
-import type { ThreadViewPost, NotFoundPost as NFP, PostView, ThreadgateRule, ListViewBasic } from '@bsky/core';
+import type { ThreadViewPost, NotFoundPost as NFP, PostView, ThreadgateRule, ListViewBasic, Label } from '@bsky/core';
 import { extractImages, extractVideo, extractExternalLink, extractQuotedPost } from '../utils/extractEmbeds.js';
 import { isPostLiked, isPostReposted, likePost, repostPost, seedPostViewers } from './usePostActions.js';
 
@@ -40,7 +40,10 @@ export interface FlatLine {
   threadgate?: {
     rules: ThreadgateRule[];
     listInfo?: Array<{ uri: string; name: string }>;
+    allowQuote?: boolean;
   };
+  /** [v0.15.0] Labels attached to this post for moderation rendering */
+  labels?: Label[];
 }
 
 const INITIAL_SIBLINGS = 5;
@@ -88,15 +91,21 @@ export function useThread(
       if (!themeUri) setThemeUri(uri);
       // Parse threadgate
       const tg = res.threadgate;
-      if (tg?.record?.allow) {
+      if (tg?.record) {
         const listInfo: Array<{ uri: string; name: string }> | undefined = tg.lists?.map(l => ({ uri: l.uri, name: l.name }));
-        setThreadgate({ rules: tg.record.allow, listInfo });
+        setThreadgate({ 
+          rules: tg.record.allow ?? [], 
+          listInfo,
+          allowQuote: tg.record.allowQuote !== false // default true
+        });
       } else {
         setThreadgate(undefined);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      console.error('Thread load error:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      // TODO: replace with structured log
+      console.error(JSON.stringify({ event: 'thread_load_error', uri, error: msg }));
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -201,6 +210,7 @@ function flattenThreadTree(thread: ThreadViewPost | NFP, maxSiblings = 5, onPost
       repostCount: post.repostCount ?? 0,
       replyCount: post.replyCount ?? 0,
       indexedAt: post.indexedAt ?? '',
+      labels: (post as any).labels,
     });
 
     if (node.replies && d >= 0) {

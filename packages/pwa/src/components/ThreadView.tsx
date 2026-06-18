@@ -1,24 +1,33 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react';
-import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch } from '@bsky/app';
-import type { AppView } from '@bsky/app';
+import { useThread, useBookmarks, useTranslation, useI18n, setFocusedProfileActor, useModerationBatch, usePostModeration, isBskyAppUrl, extractListEmbed, extractEmbeds } from '@bsky/app';
+import type { AppView, ExtractListEmbed, ExtractGalleryItem } from '@bsky/app';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
-import type { BskyClient, AIConfig, PostView, ThreadgateRule } from '@bsky/core';
+import type { BskyClient, AIConfig, PostView, ThreadgateRule, ModerationDecision } from '@bsky/core';
 import { describeImage } from '@bsky/core';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Icon } from './Icon.js';
 import { ReportButton } from './ReportButton.js';
-import { truncateName, linkifyText } from './PostCard.js';
+import { truncateName, linkifyText } from './PostPreviewCard.js';
 import { ImageGrid } from './ImageGrid.js';
-import type { VideoData } from './VideoCard.js';
 import { VideoCard } from './VideoCard.js';
+import { HiddenBanner } from './HiddenBanner.js';
+import { ModerationLabelBar } from './ModerationLabelBar.js';
+import { BskyLinkCard } from './BskyLinkCard.js';
+import { ListEmbedCard } from './ListEmbedCard.js';
+import { GalleryCard } from './GalleryCard.js';
+import { ExternalLinkCard } from './ExternalLinkCard.js';
 import { formatTime, getPostUrl } from '../utils/format.js';
 import { getThreadgateDisplayKey } from '@bsky/app';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
 import { Modal } from './Modal.js';
 import { ThreadgateEditor } from './ThreadgateEditor.js';
 import { NotFoundCard } from './NotFoundCard.js';
+import { LabelDetailModal } from './LabelDetailModal.js';
+import { ThreadgateDetailModal } from './ThreadgateDetailModal.js';
+import { Toast } from './Toast.js';
+import { ImageLightboxDialog } from './ImageLightboxDialog.js';
 
 interface ThreadViewProps {
   client: BskyClient;
@@ -60,9 +69,37 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   } = useThread(client, uri);
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(flatLines, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(flatLines, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
   const [showInfo, setShowInfo] = useState(false);
   const [showThreadgateEditor, setShowThreadgateEditor] = useState(false);
+  const [showThreadgateDetail, setShowThreadgateDetail] = useState(false);
+
+  // Extract list embed from focused post
+  const focusedListEmbed: ExtractListEmbed | null = useMemo(() => {
+    if (!focused) return null;
+    const postView = getPostView?.(focused.uri);
+    return postView ? extractListEmbed(postView) : null;
+  }, [focused, getPostView]);
+
+  // Extract all embeds (gallery, images, video, external) from focused post's PostView
+  const focusedEmbeds = useMemo(() => {
+    if (!focused) return null;
+    const postView = getPostView?.(focused.uri);
+    return postView ? extractEmbeds(postView) : null;
+  }, [focused, getPostView]);
 
   const { isBookmarked, toggleBookmark } = useBookmarks(client);
   const { translate, loading: translating } = useTranslation(
@@ -76,6 +113,13 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
   const [translationResult, setTranslationResult] = useState<{ translated: string; sourceLang?: string } | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followUri, setFollowUri] = useState<string | undefined>();
+  const [focusedContentRevealed, setFocusedContentRevealed] = useState(false);
+  const [focusedMediaRevealed, setFocusedMediaRevealed] = useState(false);
+  const [showFocusedBadgeModal, setShowFocusedBadgeModal] = useState(false);
+  const [showFocusedWarnModal, setShowFocusedWarnModal] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: 'success' | 'error' }>({ visible: false, message: '', type: 'success' });
+  const [galleryLightbox, setGalleryLightbox] = useState<number | null>(null);
+const [gallerySourceRect, setGallerySourceRect] = useState<DOMRect | null>(null);
 
   // Clear translation when focused post changes
   useEffect(() => {
@@ -100,6 +144,25 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
       client.getProfile(focused.handle).then(p => { client.follow(p.did).then(r => { setIsFollowing(true); setFollowUri(r.uri); }).catch(() => {}); }).catch(() => {});
     }
   }, [client, focused, isFollowing, followUri]);
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeletePost = useCallback(async () => {
+    if (!client || !focused) return;
+    try {
+      await client.deletePost(focused.uri);
+      setToast({ visible: true, message: t('thread.deleteSuccess'), type: 'success' });
+      setTimeout(() => goBack(), 100);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      setToast({ visible: true, message: t('thread.deleteFailed', { error: errorMessage }), type: 'error' });
+    }
+  }, [client, focused, goBack, t]);
+
+  const confirmDelete = useCallback(() => {
+    setShowDeleteConfirm(false);
+    void handleDeletePost();
+  }, [handleDeletePost]);
 
   const hasText = (focused?.text?.trim().length ?? 0) > 0;
 
@@ -136,10 +199,19 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
   const isTheme = focused?.isRoot && focused?.depth === 0;
   const focusedTitle = isTheme ? t('thread.rootPost') : t('thread.currentPost');
+  const { decision: focusedModeration } = usePostModeration(
+    focused ? { uri: focused.uri, labels: (focused as any).labels, record: (focused as any).record } : null,
+    config,
+    client
+  );
+  const showFocusedContentHidden = focusedModeration.contentAction === 'hide' && !focusedContentRevealed;
+  const isFocusedContentBlurred = focusedModeration.contentAction === 'warn' && !focusedContentRevealed;
+  const isFocusedMediaBlurred = focusedModeration.mediaAction === 'blur' && !focusedMediaRevealed;
 
   if (loading) return <Spinner />;
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
 
   return (
     <div className="min-h-[100dvh] bg-background animate-fadeIn">
@@ -157,8 +229,18 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           <h1 className="text-lg font-semibold text-text-primary">{t('thread.title')}</h1>
         </div>
       </header>
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
+      {toast.visible && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onDismiss={() => setToast(prev => ({ ...prev, visible: false }))}
+        />
+      )}
 
       <div className="max-w-content mx-auto py-6 space-y-2">
         {/* ── 讨论源 (parent chain) ── */}
@@ -194,130 +276,210 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
 
         {/* ── 主题帖 / 当前帖子 ── */}
         {focused && (
-          <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30">
+          <article className="mx-2 px-4 py-3 rounded-xl border border-border bg-surface/30 overflow-hidden">
             <p className="text-xs text-text-secondary font-medium mb-2">── {focusedTitle} ──</p>
-            <div className="flex items-start gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mt-0.5"
-                onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
-              >
-                {focused.authorAvatar ? (
-                  <img src={focused.authorAvatar} alt={focused.displayName} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
-                    {focused.displayName?.charAt(0) || '?'}
-                  </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-base font-semibold text-text-primary truncate">
-                    {truncateName(focused.displayName)}
-                  </span>
-                  <button
-                    onClick={handleFollow}
-                    className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors shrink-0 ${
-                      isFollowing
-                        ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
-                        : 'bg-primary text-white hover:bg-primary-hover'
-                    }`}
+            {showFocusedContentHidden ? (
+              <HiddenBanner
+                decision={focusedModeration!}
+                onShow={() => setFocusedContentRevealed(true)}
+              />
+            ) : (
+              <>
+                <div className="flex items-start gap-3 mb-3">
+                  <div
+                    className="w-10 h-10 rounded-full bg-primary flex-shrink-0 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity mt-0.5"
+                    onClick={(e) => { e.stopPropagation(); goTo({ type: 'profile', actor: focused.handle }); }}
                   >
-                    {isFollowing ? t('profile.unfollow') : t('profile.follow')}
-                  </button>
-                </div>
-                <div className="flex items-center gap-1.5 text-sm text-text-secondary">
-                  <span>@{focused.handle}</span>
-                  <span>·</span>
-                  <span>{formatTime(focused.indexedAt)}</span>
-                </div>
-              </div>
-            </div>
-            <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
-              {linkifyText(focused.text)}
-            </p>
-            {focused.quotedPost && (
-              <div
-                className="mt-3 border border-border rounded-xl p-3 bg-surface cursor-pointer hover:bg-surface/80 hover:border-primary/30 transition-colors"
-                onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {focused.quotedPost.authorAvatar && (
-                    <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
-                  )}
-                  <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
-                  <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
-                </div>
-                <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
-                {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
-                  <div className="mt-1 flex gap-1">
-                    {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
-                      <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
-                    ))}
+                    {focused.authorAvatar ? (
+                      <img src={focused.authorAvatar} alt={focused.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="w-full h-full flex items-center justify-center text-white font-bold text-sm">
+                        {focused.displayName?.charAt(0) || '?'}
+                      </span>
+                    )}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base font-semibold text-text-primary truncate">
+                        {truncateName(focused.displayName)}
+                      </span>
+                      <button
+                        onClick={handleFollow}
+                        className={`ml-auto text-xs px-3 py-1 rounded-full font-medium transition-colors shrink-0 ${
+                          isFollowing
+                            ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100'
+                            : 'bg-primary text-white hover:bg-primary-hover'
+                        }`}
+                      >
+                        {isFollowing ? t('profile.unfollow') : t('profile.follow')}
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-sm text-text-secondary">
+                      <span>@{focused.handle}</span>
+                      <span>·</span>
+                      <span>{formatTime(focused.indexedAt)}</span>
+                    </div>
+                    {/* Badge row for focused post */}
+                    {focusedModeration && focusedModeration.contentAction === 'none' && focusedModeration.badges.length > 0 && (
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setShowFocusedBadgeModal(true); }}
+                          className="flex items-center gap-1 mt-1 max-w-full overflow-hidden"
+                        >
+                          <div className="flex items-center gap-1 overflow-hidden">
+                            {focusedModeration.sources.map((source: ModerationDecision['sources'][number]) =>
+                              source.labels.map((label: ModerationDecision['sources'][number]['labels'][number]) => (
+                                <span
+                                  key={`${source.labelerDid}-${label.val}`}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 shrink-0 whitespace-nowrap"
+                                >
+                                  @{source.labelerName || source.labelerDid}/{label.name || label.val}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </button>
+                        {showFocusedBadgeModal && (
+                          <LabelDetailModal sources={focusedModeration.sources} onClose={() => setShowFocusedBadgeModal(false)} />
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Content-level moderation banner — between header and content */}
+                {focusedModeration.contentAction === 'warn' && (
+                  <ModerationLabelBar
+                    decision={focusedModeration}
+                    isRevealed={focusedContentRevealed}
+                    onToggle={() => setFocusedContentRevealed(!focusedContentRevealed)}
+                  />
                 )}
-              </div>
-            )}
-            {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
-            {translationResult && !translating && (
-              <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                <p className="text-xs text-primary font-medium mb-1">
-                  <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
-                  {translationResult.sourceLang && (
-                    <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+
+                <div className={`${isFocusedContentBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none select-none' : ''}`}>
+                  <p className="text-lg text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+                    {linkifyText(focused.text)}
+                  </p>
+                  {focusedListEmbed && (
+                    <ListEmbedCard
+                      list={focusedListEmbed}
+                      onClick={() => goTo({ type: 'listDetail', uri: focusedListEmbed.uri })}
+                    />
                   )}
-                </p>
-                <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
-              </div>
+                  {translating && <p className="text-text-secondary text-sm mt-1"><Icon name="languages" size={18} /> {t('action.translating')}</p>}
+                  {translationResult && !translating && (
+                    <div className="mt-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                      <p className="text-xs text-primary font-medium mb-1">
+                        <Icon name="languages" size={18} /> {t('action.translate')} ({targetLang})
+                        {translationResult.sourceLang && (
+                          <span className="text-text-secondary ml-2">{t('thread.sourceLang')}: {translationResult.sourceLang}</span>
+                        )}
+                      </p>
+                      <p className="text-text-primary text-sm leading-relaxed whitespace-pre-wrap">{translationResult.translated}</p>
+                    </div>
+                  )}
+
+                  {/* Media-level moderation banner — between text and media */}
+                  {focusedModeration.mediaAction === 'blur' && focusedModeration.contentAction === 'none' && (
+                    <ModerationLabelBar
+                      decision={focusedModeration}
+                      isRevealed={focusedMediaRevealed}
+                      onToggle={() => setFocusedMediaRevealed(!focusedMediaRevealed)}
+                    />
+                  )}
+
+                  {focusedEmbeds?.gallery && focusedEmbeds.gallery.images.length > 0 && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <GalleryCard images={focusedEmbeds.gallery.images} onImageClick={(index, e) => { setGalleryLightbox(index); setGallerySourceRect(e.currentTarget.getBoundingClientRect()); }} />
+                    </div>
+                  )}
+                  {focused.imageDetails?.length > 0 && !focusedEmbeds?.gallery && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <ImageGrid
+                        images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
+                        imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
+                          const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
+                          if (!m) throw new Error('Could not parse image URL');
+                          return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
+                        }                 : undefined}
+                        singleImageFill={singleImageFill}
+                      />
+                    </div>
+                  )}
+                  {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
+                    <div className={`overflow-hidden rounded-lg ${isFocusedMediaBlurred ? 'blur-2xl brightness-50 transition-all duration-300 pointer-events-none' : ''}`}>
+                      <VideoCard
+                        thumbnailUrl={focused.videoThumbnailUrl}
+                        playlistUrl={focused.videoPlaylistUrl}
+                        alt={focused.videoAlt}
+                        aspectRatio={focused.videoAspectRatio}
+                      />
+                    </div>
+                  )}
+                  {focusedEmbeds?.external ? (
+                    <ExternalLinkCard link={focusedEmbeds.external} onOpenInternal={(view) => goTo(view)} />
+                  ) : focused.externalLink ? (
+                    isBskyAppUrl(focused.externalLink.uri) ? (
+                      <BskyLinkCard url={focused.externalLink.uri} onOpenInternal={(view) => goTo(view)} />
+                    ) : (
+                      <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
+                        className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
+                      >
+                        <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
+                        {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
+                        <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
+                      </a>
+                    )
+                  ) : null}
+                  {focused.quotedPost && (
+                    <div
+                      className="mt-3 border border-border rounded-xl p-3 bg-surface hover:bg-surface/80 hover:border-primary/30 transition-colors cursor-pointer"
+                      onClick={() => goTo({ type: 'thread', uri: focused.quotedPost!.uri })}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        {focused.quotedPost.authorAvatar && (
+                          <img src={focused.quotedPost.authorAvatar} className="w-4 h-4 rounded-full" alt="" />
+                        )}
+                        <span className="text-xs font-semibold text-text-primary">{focused.quotedPost.displayName}</span>
+                        <span className="text-xs text-text-secondary">@{focused.quotedPost.handle}</span>
+                      </div>
+                      <p className="text-sm text-text-primary break-words" style={{ WebkitLineClamp: quotedPostPreviewLines }}>{linkifyText(focused.quotedPost.text)}</p>
+                      {focused.quotedPost.imageDetails && focused.quotedPost.imageDetails.length > 0 && (
+                        <div className="mt-1 flex gap-1">
+                          {focused.quotedPost.imageDetails.slice(0, 2).map((d: { url: string; alt: string }, idx: number) => (
+                            <img key={idx} src={d.url} className="w-16 h-16 object-cover rounded-md" alt={d.alt || ''} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Threadgate restriction badge */}
+                {threadgate && threadgate.rules !== undefined && (
+                  <button 
+                    onClick={() => setShowThreadgateDetail(true)}
+                    className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                  >
+                    <Icon name="corner-down-right" size={12} />
+                    {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
+                  </button>
+                )}
+                {/* Unified action row + extras */}
+                <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
+                  <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
+                  {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
+                  <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
+                  <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
+                  <ReportButton client={client} post={focused} />
+                  {focused.handle === client.getHandle() && (
+                    <>
+                      <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
+                      <button onClick={() => setShowDeleteConfirm(true)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
+                    </>
+                  )}
+                </div>
+              </>
             )}
-            {focused.imageDetails?.length > 0 && (
-              <ImageGrid
-                images={focused.imageDetails.map((d: { url: string; alt: string }) => ({ url: d.url, alt: d.alt }))}
-                imageDescCallback={imageDescConfig && client ? async (index, cdnUrl, alt) => {
-                  const m = cdnUrl.match(/\/plain\/([^/]+)\/([^@]+)/);
-                  if (!m) throw new Error('Could not parse image URL');
-                  return describeImage(imageDescConfig, () => client.downloadBlob(decodeURIComponent(m[1]!), decodeURIComponent(m[2]!)), alt, targetLang);
-                }                 : undefined}
-                singleImageFill={singleImageFill}
-              />
-            )}
-            {focused.hasVideo && focused.videoThumbnailUrl && focused.videoPlaylistUrl && (
-              <VideoCard
-                thumbnailUrl={focused.videoThumbnailUrl}
-                playlistUrl={focused.videoPlaylistUrl}
-                alt={focused.videoAlt}
-                aspectRatio={focused.videoAspectRatio}
-              />
-            )}
-            {focused.externalLink && (
-              <a href={focused.externalLink.uri} target="_blank" rel="noopener noreferrer"
-                className="mt-2 block border border-border rounded-lg p-3 hover:bg-surface transition-colors no-underline"
-              >
-                <p className="text-text-primary text-sm font-medium line-clamp-1">{focused.externalLink.title || focused.externalLink.uri}</p>
-                {focused.externalLink.description && <p className="text-text-secondary text-xs mt-0.5 line-clamp-2">{focused.externalLink.description}</p>}
-                <p className="text-primary text-xs mt-1 truncate">{focused.externalLink.uri}</p>
-              </a>
-            )}
-            {/* Threadgate restriction badge */}
-            {threadgate && threadgate.rules !== undefined && (
-              <div role="alert" className="mt-3 text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-3 py-1.5 flex items-center gap-1.5">
-                <Icon name="corner-down-right" size={12} />
-                {t(getThreadgateDisplayKey(threadgate.rules, threadgate.listInfo))}
-              </div>
-            )}
-            {/* Unified action row + extras */}
-            <div className="flex items-center gap-3 text-sm text-text-secondary mt-3">
-              <PostActionsRow client={client} goTo={goTo} post={focused} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-              {hasText && <button onClick={handleTranslate} className="hover:text-blue-500 transition-colors" aria-label={t('action.translate')}><Icon name="languages" size={18} /></button>}
-              <button onClick={() => { const url = getPostUrl(focused.handle, focused.rkey); navigator.clipboard.writeText(url).catch(() => {}); }} className="hover:text-blue-500 transition-colors" aria-label={t('action.copy')}><Icon name="copy" size={18} /></button>
-              <button onClick={() => setShowInfo(true)} className="hover:text-blue-500 transition-colors" title={t('post.info')} aria-label={t('post.info')}><Icon name="badge-info" size={18} /></button>
-              <ReportButton client={client} post={focused} />
-              {focused.handle === client.getHandle() && (
-                <>
-                  <button onClick={() => setShowThreadgateEditor(true)} className="hover:text-yellow-500 transition-colors" title={t('thread.changeReplyRestriction')} aria-label={t('thread.changeReplyRestriction')} aria-expanded={showThreadgateEditor}><Icon name="message-square-off" size={18} /></button>
-                  <button onClick={() => client.deletePost(focused.uri)} className="hover:text-red-500 transition-colors" aria-label={t('action.delete')}><Icon name="trash-2" size={18} /></button>
-                </>
-              )}
-            </div>
           </article>
         )}
 
@@ -338,25 +500,26 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
                   </div>
                 );
               }
+              const decision = decisions.get(line.uri) ?? null;
               return (
                 <div
                   key={line.uri || line.rkey}
                   style={{ marginLeft: Math.min((line.depth - 1) * 20, 60) }}
                 >
-            <PostCard
-              line={line}
-              onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
-              goTo={goTo}
-              imageDescConfig={imageDescConfig}
-              imageDescLang={imageDescLang}
-              singleImageFill={singleImageFill}
-              client={client}
-              previewLines={threadPreviewLines}
-              quotedPreviewLines={quotedPostPreviewLines}
-              moderationDecision={line.uri ? moderationDecisions.get(line.uri) ?? null : null}
-            >
-                      <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
-                    </PostCard>
+                  <PostPreviewCard
+                    line={line}
+                    onClick={line.uri ? () => goTo({ type: 'thread', uri: line.uri }) : undefined}
+                    goTo={goTo}
+                    imageDescConfig={imageDescConfig}
+                    imageDescLang={imageDescLang}
+                    singleImageFill={singleImageFill}
+                    client={client}
+                    previewLines={threadPreviewLines}
+                    quotedPreviewLines={quotedPostPreviewLines}
+                    moderationDecision={decision}
+                  >
+                    <PostActionsRow client={client} goTo={goTo} post={line} showBookmark isBookmarked={isBookmarked} onBookmark={toggleBookmark} />
+                  </PostPreviewCard>
                 </div>
               );
             })}
@@ -368,12 +531,29 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
             <NotFoundCard uri={uri} goBack={goBack} />
           ) : (
             <div className="text-center py-16 text-text-secondary">
-              <p className="text-4xl mb-3">📭</p>
+              <Icon name="inbox" size={48} className="mx-auto mb-3" />
               <p>{t('thread.loadFailed')}</p>
             </div>
           )
         )}
       </div>
+      {focusedEmbeds?.gallery && (
+        <ImageLightboxDialog
+          open={galleryLightbox !== null}
+          images={focusedEmbeds.gallery.images.map((img: ExtractGalleryItem) => ({ url: img.fullsize, alt: img.alt }))}
+          initial={galleryLightbox ?? 0}
+          sourceRects={gallerySourceRect ? [gallerySourceRect] : [new DOMRect(window.innerWidth / 2 - 60, window.innerHeight / 2 - 60, 120, 120)]}
+          naturalAspectRatio={(() => {
+            if (galleryLightbox === null) return 1;
+            const img = focusedEmbeds.gallery.images[galleryLightbox];
+            if (img?.aspectRatio?.width && img.aspectRatio.height) {
+              return img.aspectRatio.width / img.aspectRatio.height;
+            }
+            return 1;
+          })()}
+          onClose={() => setGalleryLightbox(null)}
+        />
+      )}
       {showInfo && focused && getPostView?.(focused.uri) && (
         <PostInfoModal open={showInfo} post={getPostView!(focused.uri)!} onClose={() => setShowInfo(false)} />
       )}
@@ -385,6 +565,39 @@ export function ThreadView({ client, uri, goBack, goTo, aiConfig, targetLang, tr
           listInfo={threadgate?.listInfo}
           onClose={() => setShowThreadgateEditor(false)}
           onSaved={() => { setShowThreadgateEditor(false); window.location.reload(); }}
+        />
+      )}
+      {showDeleteConfirm && focused && (
+        <Modal open onClose={() => setShowDeleteConfirm(false)}>
+          <div className="w-full" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h2 className="text-base font-bold text-text-primary">{t('thread.deleteConfirmTitle')}</h2>
+              <button onClick={() => setShowDeleteConfirm(false)} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
+            </div>
+            <div className="p-4">
+              <p className="text-sm text-text-primary">{t('thread.deleteConfirmDesc')}</p>
+            </div>
+            <div className="flex items-center justify-end gap-2 p-4 border-t border-border">
+              <button onClick={() => setShowDeleteConfirm(false)} className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors">
+                {t('action.cancel')}
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-3 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors"
+              >
+                {t('action.delete')}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      {showThreadgateDetail && threadgate && (
+        <ThreadgateDetailModal
+          open={showThreadgateDetail}
+          rules={threadgate.rules}
+          listInfo={threadgate.listInfo}
+          allowQuote={threadgate.allowQuote ?? true}
+          onClose={() => setShowThreadgateDetail(false)}
         />
       )}
     </div>

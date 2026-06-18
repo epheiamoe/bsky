@@ -131,13 +131,15 @@ export interface LabelValueDefinition {
   identifier: string;
   severity: 'inform' | 'alert' | 'none';
   blurs: 'content' | 'media' | 'none';
-  defaultSetting: 'ignore' | 'warn' | 'hide';
+  defaultSetting: 'show' | 'badge' | 'warn' | 'hide';
   adultOnly: boolean;
   locales: Array<{
     lang: string;
     name: string;
     description: string;
   }>;
+  /** [v0.15.0] i18n key for label name translation */
+  i18nKey?: string;
 }
 
 export interface LabelerPolicies {
@@ -165,7 +167,7 @@ export interface LabelerView {
 
 export interface ContentLabelPref {
   label: string;
-  visibility: 'hide' | 'warn' | 'ignore';
+  visibility: 'show' | 'warn' | 'hide';
 }
 
 export interface ModerationPrefs {
@@ -260,6 +262,7 @@ export interface ThreadgateRecord {
   allow?: ThreadgateRule[];
   createdAt: string;
   hiddenReplies?: string[];
+  allowQuote?: boolean;
 }
 
 export interface ThreadgateView {
@@ -602,4 +605,70 @@ export interface RelationshipInfo {
 export interface GetRelationshipsResponse {
   actor?: string;
   relationships: RelationshipInfo[];
+}
+
+// ── Video Service Upload Types ──
+
+export type VideoUploadPhase = 'uploading' | 'processing';
+
+export interface VideoUploadProgress {
+  phase: VideoUploadPhase;
+  /** 0–100 */
+  progress: number;
+}
+
+export interface VideoUploadOptions {
+  /** Max time to wait for processing (ms). Default: 10 minutes. */
+  maxProcessingTimeMs?: number;
+  /** Polling interval base (ms). Default: 1000. */
+  pollIntervalMs?: number;
+  /** Progress callback */
+  onProgress?: (progress: VideoUploadProgress) => void;
+  /** AbortSignal to cancel upload/processing */
+  signal?: AbortSignal;
+  /** Reserved for future chunked upload. Currently ignored. */
+  chunkSize?: number;
+  /** Allow falling back to raw uploadBlob only for transient errors. Default: false. */
+  allowFallback?: boolean;
+}
+
+export interface VideoUploadResult {
+  blobRef: { $link: string; mimeType: string; size: number };
+  /** True if processed via Video Service, false if fell back to uploadBlob */
+  processed: boolean;
+  /** Present only when processed:false after an explicit transient fallback. */
+  fallbackReason?: string;
+}
+
+export type VideoServiceErrorCode =
+  | 'auth'
+  | 'payload_too_large'
+  | 'rate_limited'
+  | 'invalid_video'
+  | 'service_unavailable'
+  | 'network'
+  | 'timeout'
+  | 'cancelled';
+
+export class VideoServiceError extends Error {
+  constructor(
+    public code: VideoServiceErrorCode,
+    message: string,
+    public recoverable: boolean,
+    public status?: number,
+  ) { super(message); }
+}
+
+export interface VideoJobStatus {
+  jobId: string;
+  did: string;
+  state: string;
+  progress?: number;
+  blob?: { $type: 'blob'; ref: { $link: string }; mimeType: string; size: number };
+  error?: string;
+  message?: string;
+}
+
+export interface GetServiceAuthResponse {
+  token: string;
 }

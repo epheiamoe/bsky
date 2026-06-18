@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useListDetail, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
+import { useListDetail, useI18n, useVirtualizedList, useModerationBatch, useSubscribedLists } from '@bsky/app';
 import { Icon } from './Icon.js';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { Modal } from './Modal.js';
 import { NotFoundCard } from './NotFoundCard.js';
@@ -29,7 +29,19 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const { t } = useI18n();
   const { config } = useModerationConfig();
   const { list, loading, error, members, membersCursor, loadMoreMembers, feed, feedCursor, loadMoreFeed, isMuted, toggleMute, removeMember, updateListInfo, deleteList, refresh } = useListDetail(client, listUri);
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(feed, config, client);
+  const { decisions, failedLabelers } = useModerationBatch(feed, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
   const [tab, setTab] = useState<'posts' | 'members'>(initialTab ?? 'posts');
   const [editingName, setEditingName] = useState(false);
   const [editingDesc, setEditingDesc] = useState(false);
@@ -37,16 +49,27 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
   const [editDesc, setEditDesc] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { subscribe, unsubscribe, isSubscribed: checkSubscribed } = useSubscribedLists(client);
+  const isSubscribed = checkSubscribed(listUri);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const isOwnList = list?.creator?.did === client.getDID();
 
+  const handleSubscribe = async () => {
+    if (!list) return;
+    subscribe(listUri, list.name);
+  };
+
+  const handleUnsubscribe = async () => {
+    await unsubscribe(listUri);
+  };
+
   const {
     scrollRef: feedScrollRef,
     virtualizer: feedVirtualizer,
     measureAndCache: feedMeasureAndCache,
-  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange });
+  } = useVirtualizedList(feed, `listDetail-posts-${listUri}`, 120, p => p.uri, { initialScrollTop, onScrollTopChange, decisions });
 
   const {
     scrollRef: memberScrollRef,
@@ -71,11 +94,16 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
     if (membersCursor && !loading) loadMoreMembers();
   }, [membersCursor, loading, loadMoreMembers]);
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       {/* Header */}
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
@@ -95,6 +123,28 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                 <Icon name="trash-2" size={16} />
               </button>
             </>
+          )}
+          {!isOwnList && (
+            isSubscribed ? (
+              <button
+                onClick={handleUnsubscribe}
+                className="rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-xs px-3 py-1.5 transition-colors flex items-center gap-1"
+                title={t('list.unsubscribeFromTimeline')}
+                aria-label={t('list.unsubscribeFromTimeline')}
+              >
+                <Icon name="check" size={14} /> {t('list.unsubscribeFromTimeline')}
+              </button>
+            ) : (
+              <button
+                onClick={handleSubscribe}
+                disabled={!list}
+                className="rounded-full bg-surface hover:bg-primary/10 text-text-primary text-xs px-3 py-1.5 transition-colors disabled:opacity-50 flex items-center gap-1"
+                title={t('list.subscribeToTimeline')}
+                aria-label={t('list.subscribeToTimeline')}
+              >
+                <Icon name="plus" size={14} /> {t('list.subscribeToTimeline')}
+              </button>
+            )
           )}
           <button onClick={() => refresh()} disabled={loading} className="text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50" aria-label={t('action.refresh')}>
             <Icon name="refresh-cw" size={16} />
@@ -226,11 +276,11 @@ export function ListDetailPage({ client, listUri, goBack, goTo, initialTab, init
                         ref={(el) => feedMeasureAndCache(el, post)}
                         style={{ position: 'absolute', top: 0, left: 0, transform: `translateY(${vi.start}px)`, width: '100%' }}
                       >
-                        <PostCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
+                        <PostPreviewCard post={post} onClick={() => goTo({ type: 'thread', uri: post.uri })} goTo={goTo}
                           previewLines={previewLines} quotedPreviewLines={quotedPreviewLines}
-                          moderationDecision={moderationDecisions.get(post.uri) ?? null}>
+                          moderationDecision={decisions.get(post.uri) ?? null}>
                           <PostActionsRow client={client} goTo={goTo} post={post} />
-                        </PostCard>
+                        </PostPreviewCard>
                       </div>
                     );
                   })}

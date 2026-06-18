@@ -258,7 +258,12 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
     const vv = window.visualViewport;
     const el = chatContainerRef.current;
     if (!vv || !el) return;
-    const update = () => { el.style.height = `${vv.height - 48}px`; };
+    const update = () => {
+      // When keyboard is open (visualViewport < window height), use full vv.height
+      // When keyboard is closed, subtract header height (48px) for desktop layout
+      const keyboardOpen = vv.height < window.innerHeight - 100;
+      el.style.height = keyboardOpen ? `${vv.height}px` : `${vv.height - 48}px`;
+    };
     update();
     vv.addEventListener('resize', update);
     return () => vv.removeEventListener('resize', update);
@@ -830,7 +835,7 @@ export function AIChatPage({ client, aiConfig, sessionId, contextPost, contextPr
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto px-4 pt-4 pb-14 space-y-1"
+          className="flex-1 overflow-y-auto px-4 pt-4 pb-4 space-y-1"
         >
           {messages.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center h-full text-center px-4">

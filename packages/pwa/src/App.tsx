@@ -6,7 +6,7 @@ import { BskyClient } from '@bsky/core';
 import { getSession, saveSession, clearSession } from './hooks/useSessionPersistence.js';
 import { getAppConfig, type AppConfig } from './hooks/useAppConfig.js';
 import { useModerationConfig } from './hooks/useModerationConfig.js';
-import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId } from '@bsky/app';
+import { getFeedConfig, setLastFeedUri, seedPostViewers, getAIChatSessionId, saveFeedScrollTop, getFeedScrollTop } from '@bsky/app';
 import { getProviderById, getModelInfo } from '@bsky/core';
 import { useHashRouter } from './hooks/useHashRouter.js';
 import { Layout } from './components/Layout.js';
@@ -42,6 +42,7 @@ import { Icon } from './components/Icon.js';
 import { AIGuidance } from './components/AIGuidance.js';
 import { WelcomeCard } from './components/WelcomeCard.js';
 import { ProfilePreviewWidget } from './components/widgets/ProfilePreviewWidget.js';
+import { RedirectPage } from './components/RedirectPage.js';
 
 export function App() {
   // Register storage factories (browser: IndexedDB)
@@ -58,9 +59,17 @@ export function App() {
   BskyClient.buildTime = typeof __BUILD_TIME__ !== 'undefined' ? __BUILD_TIME__ : '(dev)';
 
   const { currentView, canGoBack, goTo, goBack, goHome } = useHashRouter();
+
+  // Handle /i/ redirect paths (e.g. /i/bsky.app/profile/xxx)
+  const [redirectPath, setRedirectPath] = useState<string | null>(() => {
+    const pathname = window.location.pathname;
+    return pathname.startsWith('/i/') ? pathname : null;
+  });
+
   const { client, loading: authLoading, error: authError, errorLog, login, session, restoreSession, profile } = useAuth();
+  const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const feedUri = currentView.type === 'feed' ? ((currentView as { feedUri?: string }).feedUri ?? getFeedConfig().defaultFeedUri ?? undefined) : undefined;
-  const timeline = useTimeline(client, feedUri);
+  const timeline = useTimeline(client, feedUri, appConfig.feedCacheLimit);
   const postActions = usePostActions(client);
   // Seed timeline posts into global like/repost state
   useEffect(() => { if (timeline.posts.length > 0) seedPostViewers(timeline.posts as any[]); }, [timeline.posts]);
@@ -71,9 +80,7 @@ export function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed_v2'));
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [appConfig, setAppConfig] = useState<AppConfig>(getAppConfig);
   const moderationConfigState = useModerationConfig();
-  const feedScrollTopRef = useRef(0);
   const profileScrollTopRef = useRef(0);
   const notifsScrollTopRef = useRef(0);
   const searchScrollTopRef = useRef(0);
@@ -220,16 +227,22 @@ export function App() {
 
   // ── Restore session from localStorage on mount ──
   useEffect(() => {
-    const saved = getSession();
-    if (saved && !client) {
-      restoreSession({
-        accessJwt: saved.accessJwt,
-        refreshJwt: saved.refreshJwt,
-        handle: saved.handle,
-        did: saved.did,
-      }, saved.pdsUrl ?? 'https://bsky.social');
-      setIsLoggedIn(true);
-    }
+    void (async () => {
+      try {
+        const saved = getSession();
+        if (saved && !client) {
+          await restoreSession({
+            accessJwt: saved.accessJwt,
+            refreshJwt: saved.refreshJwt,
+            handle: saved.handle,
+            did: saved.did,
+          }, saved.pdsUrl ?? 'https://bsky.social');
+          setIsLoggedIn(true);
+        }
+      } catch (e) {
+        console.error('Session restore failed:', e);
+      }
+    })();
   }, []);
 
   // ── Save session when login succeeds ──
@@ -276,6 +289,21 @@ export function App() {
     }
   }, [login]);
 
+  // ── Redirect page handler ──
+  // Must be checked BEFORE auth/welcome states so /i/ links work even when not logged in
+  if (redirectPath) {
+    return (
+      <RedirectPage
+        pathname={redirectPath}
+        client={client}
+        onNavigate={(view) => {
+          setRedirectPath(null);
+          goTo(view, true);
+        }}
+      />
+    );
+  }
+
   // ── Loading ──
   if (authLoading) {
     return (
@@ -319,6 +347,7 @@ export function App() {
       case 'feed':
         return (
           <FeedTimeline
+            key={feedUri ?? 'following'}
             goTo={goTo}
             posts={timeline.posts}
             loading={timeline.loading}
@@ -326,9 +355,9 @@ export function App() {
             error={timeline.error}
             loadMore={timeline.loadMore}
             refresh={timeline.refresh}
-            initialScrollTop={feedScrollTopRef.current}
-            onScrollTopChange={(top) => { feedScrollTopRef.current = top; }}
-            feedUri={(currentView as { feedUri?: string }).feedUri}
+            initialScrollTop={getFeedScrollTop(feedUri) ?? 0}
+            onScrollTopChange={(top) => { saveFeedScrollTop(feedUri, top); }}
+            feedUri={feedUri}
             client={client}
             isLiked={postActions.isLiked}
             isReposted={postActions.isReposted}
@@ -497,7 +526,10 @@ export function App() {
             }}
             client={client}
             moderationConfig={moderationConfigState.config}
+            moderationSyncState={moderationConfigState.syncState}
             onModerationConfigChange={moderationConfigState.updateConfig}
+            onSyncFromPDS={() => moderationConfigState.syncFromPDS(client)}
+            onSaveToPDS={() => moderationConfigState.saveToPDS(client)}
           />
         );
       default:

@@ -39,7 +39,28 @@ export function useNotifications(client: BskyClient | null) {
     }
   }, [client]);
 
+  const markAllAsRead = useCallback(async () => {
+    if (!client) return false;
+    try {
+      await client.updateNotificationsSeen();
+      // Optimistic update: mark all as read locally
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+      const current = readCache<NotifCache>(CACHE_KEY);
+      if (current) {
+        writeCache(CACHE_KEY, {
+          notifications: current.notifications.map(n => ({ ...n, isRead: true })),
+          unreadCount: 0,
+        });
+      }
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  }, [client]);
+
   useEffect(() => { void load(false, hasCache(CACHE_KEY)); }, [load]);
 
-  return { notifications, loading, unreadCount, error, refresh: load };
+  return { notifications, loading, unreadCount, error, refresh: load, markAllAsRead };
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import type { PostView } from '@bsky/core';
-import { useI18n, extractImages, extractVideo, extractQuotedPost } from '@bsky/app';
+import { useI18n, extractImages, extractVideo, extractQuotedPost, extractGallery } from '@bsky/app';
 import { wrapLines } from '../utils/text.js';
 
 export interface PostLine {
@@ -11,7 +11,7 @@ export interface PostLine {
   quoteUri?: string;
 }
 
-export function postToLines(post: PostView, index: number, isSelected: boolean, cols: number, t: (key: string, params?: Record<string, string | number>) => string, locale: string): PostLine[] {
+export function postToLines(post: PostView, index: number, isSelected: boolean, cols: number, t: (key: string, params?: Record<string, string | number>) => string, locale: string, galleryIdx?: number): PostLine[] {
   const lines: PostLine[] = [];
   const name = post.author.displayName || post.author.handle;
   const text = post.record.text.replace(/\n/g, ' ');
@@ -27,10 +27,16 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
     lines.push({ text: l, isSelected, isName: false });
   }
 
-  // Videos — show clickable links (Ctrl+click opens in browser)
+  // Videos — show clickable links when a playlist is available; otherwise
+  // indicate the video is still processing or unavailable (raw blob / failed processing).
   const vidData = extractVideo(post);
   if (vidData) {
-    lines.push({ text: '\x1b]8;;' + vidData.playlistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    if (vidData.playlistUrl) {
+      lines.push({ text: '\x1b]8;;' + vidData.playlistUrl + '\x07🎬 ' + t('post.videoHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    } else {
+      const label = vidData.processing ? t('video.processing') : t('video.unavailable');
+      lines.push({ text: '🎬 ' + label, isSelected, isName: false });
+    }
   }
 
   // Image embed — show clickable URLs (Ctrl+click in terminal)
@@ -52,6 +58,29 @@ export function postToLines(post: PostView, index: number, isSelected: boolean, 
     const img = imageUrls[i]!;
     // OSC 8 — clickable hyperlink in modern terminals
     lines.push({ text: '\x1b]8;;' + img.url + '\x07🖼 ' + t('post.imageCount', { n: imageUrls.length > 1 ? i + 1 : 1 }) + ' ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
+  }
+
+  // Gallery embed — [v0.14.3] text-based navigator (terminal can't display images)
+  const gallery = extractGallery(post);
+  if (gallery && gallery.images.length > 0) {
+    const cur = galleryIdx ?? 0;
+    const total = gallery.images.length;
+    const curImg = gallery.images[cur]!;
+    const navHint = isSelected ? ' ← h · l →' : '';
+    const countLabel = t('gallery.slideN', { current: cur + 1, total });
+    lines.push({ text: `🖼 [${countLabel}]${navHint}`, isSelected, isName: false });
+    // Show current image details: ALT text
+    if (curImg.alt) {
+      lines.push({ text: `   ALT: ${curImg.alt}`, isSelected, isName: false });
+    }
+    // Show aspect ratio if available
+    if (curImg.aspectRatio) {
+      lines.push({ text: `   📐 ${curImg.aspectRatio.width}×${curImg.aspectRatio.height}`, isSelected, isName: false });
+    }
+    // Clickable link to fullsize image via OSC 8
+    if (curImg.fullsize) {
+      lines.push({ text: '\x1b]8;;' + curImg.fullsize + '\x07   🔗 ' + t('image.cdnHint') + '\x1b]8;;\x07', isSelected, isName: false });
+    }
   }
 
   // @handle and #tag — OSC 8 clickable links

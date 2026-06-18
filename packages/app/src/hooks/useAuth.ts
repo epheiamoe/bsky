@@ -19,6 +19,6 @@ export function useAuth() {
     error: store.error,
     errorLog: store.errorLog as LoginErrorDetail | null,
     login: (h: string, p: string, pdsUrl?: string) => store.login(h, p, pdsUrl),
-    restoreSession: (s: CreateSessionResponse, pdsUrl: string) => store.restoreSession(s, pdsUrl),
+    restoreSession: async (s: CreateSessionResponse, pdsUrl: string) => store.restoreSession(s, pdsUrl),
   };
 }

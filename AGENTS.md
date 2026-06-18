@@ -1,13 +1,15 @@
 # AGENTS.md — AI Agent & Developer Guide
 
-> Read this before working on the project. Reference `AGENTS.local.md` for machine-specific notes (gitignored, never pushed).
+> **首次开始工作前，必须先读取 `AGENTS.local.md`**（机器专属配置，gitignored，包含分支/部署/网络等关键本地约定）。它不会被自动加入 AI 上下文。
+
+> Read this before working on the project. Reference `AGENTS.local.md` for machine-specific notes (gitignored, never pushed). **You must read `AGENTS.local.md` manually at the start of each session; it is not auto-loaded into the AI context.**
 
 ## Context Recovery
 
 > **会话上下文被压缩后，按此顺序恢复**：
 > 1. `docs/CONTEXT.md` — 版本号、项目状态、关键架构、开发规则
 > 2. `docs/ARCHITECTURE.md` — 系统架构、依赖流、TUI/PWA 差异、关键决策
-> 3. `docs/LESSONS.md` — 历次会话详细教训（69 课分类索引）
+> 3. `docs/LESSONS.md` — 历次会话详细教训（83 课分类索引）
 > 4. `docs/TODO.md` — 功能完成状态对照表
 
 ---
@@ -35,7 +37,7 @@
 | **术语** | `docs/TERMINOLOGY.md` | 主题帖/回复/讨论串等命名规范 |
 | **TUI 工具** | `docs/TUI_UTILS.md` | CJK 文本换行、鼠标追踪 |
 | **功能状态** | `docs/TODO.md` | TUI/PWA 功能完成对照表 |
-| **教训索引** | `docs/LESSONS.md` | 69 课分类索引 → `docs/lessons/*.md` |
+| **教训索引** | `docs/LESSONS.md` | 83 课分类索引 → `docs/lessons/*.md` |
 | **归档文档** | `docs/archive/` | 历史文档、旧版教训 (21-45) |
 
 ---
@@ -61,9 +63,11 @@ cd packages/tui && npx tsx src/cli.ts
 # PWA dev
 cd packages/pwa && pnpm dev     # http://localhost:5173
 
-# PWA deploy (staging → test → production)
+# PWA deploy: staging (preview/test) → production
+# 1. Deploy to staging and verify the preview URL
 cd packages/pwa && pnpm build && npx wrangler pages deploy dist --project-name ai-bsky --branch=staging
-# [test] && npx wrangler pages deploy dist --project-name ai-bsky --branch=production
+# 2. After verifying staging, deploy to production
+npx wrangler pages deploy dist --project-name ai-bsky --branch=production
 
 # Tests (real API calls, no mocks)
 cd packages/core && npx vitest run --config vitest.config.ts
@@ -101,7 +105,8 @@ pnpm -r typecheck
 8. **Commit → Build → Deploy**: Commit before build for correct `__COMMIT_HASH__`
 9. **PDS**: `chatKy` direct to `api.bsky.chat` + session JWT. No PDS proxy (returns 501)
 10. **Widget**: `WidgetPanel` provides header; widget provides content only. All `toggleWidget()` calls persist via `_onWidgetToggle` → `saveAppConfig()`
-11. **Documentation**: When changes affect documented behavior, update relevant docs immediately:
+11. **Version bumping**: When a change requires a version bump, check `packages/pwa/package.json` and the current version in `docs/CONTEXT.md`. If the next version is uncertain — especially for cross-feature releases — **ask the user** before bumping. After bumping, immediately update version references in `README.md`, `README.zh.md`, `CHANGELOG.md`, and `docs/CONTEXT.md`.
+12. **Documentation**: When changes affect documented behavior, update relevant docs immediately:
     - Code changes that alter hook signatures → update `docs/hooks/`
     - New/modified AI tools → update `docs/ai/tools.md`
     - New providers or adapter changes → update `docs/ai/providers.md` or `docs/ai/adapter.md`

@@ -18,7 +18,12 @@ import type {
 export type ModerationAction = 'hide' | 'warn' | 'blurMedia' | 'showBadge' | 'none';
 
 export interface ModerationDecision {
+  /** Backward-compatible most restrictive action */
   action: ModerationAction;
+  /** Whether post content (text, author) should be hidden or warned */
+  contentAction: 'hide' | 'warn' | 'none';
+  /** Whether media should be blurred */
+  mediaAction: 'blur' | 'none';
   /** Labels that contributed to this decision, grouped by labeler */
   sources: Array<{
     labelerDid: string;
@@ -29,6 +34,7 @@ export interface ModerationDecision {
       description: string;
       severity: string;
       blurs: string;
+      i18nKey?: string;
     }>;
   }>;
   /** Raw warning text key (UI layer should localize via t()) */
@@ -44,7 +50,7 @@ export interface LabelerConfig {
   avatar?: string;
   labels: LabelValueDefinition[];
   /** Per-label visibility override for this labeler */
-  labelPrefs: Record<string, 'hide' | 'warn' | 'ignore'>;
+  labelPrefs: Record<string, 'show' | 'warn' | 'hide'>;
   isActive: boolean;
   /** How to handle service failures for this labeler (v0.14.1) */
   failureBehavior: 'silent' | 'banner' | 'block';
@@ -77,34 +83,38 @@ export const BUILTIN_LABEL_DEFINITIONS: LabelValueDefinition[] = [
   {
     identifier: 'porn',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'hide',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Adult Content', description: 'Explicit sexual images.' }],
+    i18nKey: 'moderation.labels.porn',
   },
   {
     identifier: 'sexual',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Sexual', description: 'Sexual content (less intense).' }],
+    i18nKey: 'moderation.labels.sexual',
   },
   {
     identifier: 'nudity',
     severity: 'alert',
-    blurs: 'content',
-    defaultSetting: 'warn',
+    blurs: 'media',
+    defaultSetting: 'show',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Nudity', description: 'E.g. artistic nudity.' }],
+    i18nKey: 'moderation.labels.nudity',
   },
   {
     identifier: 'graphic-media',
     severity: 'alert',
-    blurs: 'content',
+    blurs: 'media',
     defaultSetting: 'warn',
     adultOnly: true,
     locales: [{ lang: 'en', name: 'Graphic Media', description: 'Blood, gore, or other potentially disturbing media.' }],
+    i18nKey: 'moderation.labels.graphic-media',
   },
 ];
 
@@ -118,9 +128,9 @@ for (const def of BUILTIN_LABEL_DEFINITIONS) {
 export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
   adultContentEnabled: false,
   contentLabels: [
-    { label: 'porn', visibility: 'warn' },
+    { label: 'porn', visibility: 'hide' },
     { label: 'sexual', visibility: 'warn' },
-    { label: 'nudity', visibility: 'ignore' },
+    { label: 'nudity', visibility: 'warn' },
     { label: 'graphic-media', visibility: 'warn' },
   ],
   labelers: [
@@ -140,23 +150,32 @@ export const DEFAULT_MODERATION_CONFIG: ModerationConfig = {
 
 /**
  * Resolve moderation decision for a subject based on its labels and user config.
- * 
+ *
+ * [v0.15.0] 3-value visibility system (show/warn/hide) + separate content/media actions:
+ * - contentAction: 'hide' | 'warn' | 'none' — affects post text, author, interactions
+ * - mediaAction: 'blur' | 'none' — affects images, video, external media
+ *
+ * Badge vs overlay is NOT a user preference. It is determined by label definition blurs:
+ *   blurs=none    → warn renders as badge (contentAction='none', but badge shown)
+ *   blurs=content → warn renders as content overlay (contentAction='warn')
+ *   blurs=media   → warn renders as media blur (mediaAction='blur')
+ *
  * Decision hierarchy (most restrictive wins):
  *   hide > warn > blurMedia > showBadge > none
- * 
+ *
  * Logic:
  * 1. Group labels by labeler DID.
  * 2. For each label, resolve visibility preference:
- *    a. Check the labeler's labelPrefs[label.val] (if labeler is configured)
+ *    a. Check the labeler's labelPrefs[label.val] (3 values only)
  *    b. Fall back to global contentLabels[label.val]
- *    c. Fall back to the label definition's defaultSetting
+ *    c. Fall back to the label definition's defaultSetting (badge maps to warn)
  * 3. If adult-only label and adultContentEnabled=false → force 'hide'
  * 4. Determine action from visibility + label definition:
+ *    - show → 'none'
+ *    - warn + blurs=content → 'warn' (contentAction)
+ *    - warn + blurs=media → 'blurMedia' (mediaAction)
+ *    - warn + blurs=none + severity≠none → 'showBadge' (badge row)
  *    - hide → 'hide'
- *    - warn + blurs=content → 'warn'
- *    - warn + blurs=media → 'blurMedia'
- *    - warn + blurs=none + severity≠none → 'showBadge'
- *    - ignore → 'none'
  * 5. Combine: most restrictive action wins across all providers.
  * 6. Collect all contributing labels into sources for info display.
  */
@@ -168,11 +187,17 @@ export function resolveModeration(
 ): ModerationDecision {
   // Handle empty / no labels
   if (!labels || labels.length === 0) {
-    return { action: 'none', sources: [], badges: [] };
+    return {
+      action: 'none',
+      contentAction: 'none',
+      mediaAction: 'none',
+      sources: [],
+      badges: [],
+    };
   }
 
   // Build global preference lookup
-  const globalPrefs = new Map<string, 'hide' | 'warn' | 'ignore'>();
+  const globalPrefs = new Map<string, 'show' | 'warn' | 'hide'>();
   for (const pref of config.contentLabels) {
     globalPrefs.set(pref.label, pref.visibility);
   }
@@ -187,6 +212,8 @@ export function resolveModeration(
 
   // Track the most restrictive action and all contributing sources
   let finalAction: ModerationAction = 'none';
+  let contentAction: 'hide' | 'warn' | 'none' = 'none';
+  let mediaAction: 'blur' | 'none' = 'none';
   const sources: ModerationDecision['sources'] = [];
   const badges = new Set<string>();
 
@@ -210,10 +237,10 @@ export function resolveModeration(
     for (const label of labelerLabels) {
       // [v0.14.1] Use fetched definition if available, otherwise fall back to built-in
       const def = defMap.get(label.val) || BUILTIN_DEF_MAP.get(label.val);
-      
+
       // Resolve visibility preference
-      let visibility: 'hide' | 'warn' | 'ignore';
-      
+      let visibility: 'show' | 'warn' | 'hide';
+
       // a. Labeler-specific override
       const labelerPref = labelerConfig?.labelPrefs[label.val];
       if (labelerPref) {
@@ -224,8 +251,10 @@ export function resolveModeration(
         visibility = globalPrefs.get(label.val)!;
       }
       // c. Label definition default
+      // [v0.15.0] defaultSetting='badge' maps to 'warn' because badge is a
+      // rendering mode of warn (blurs=none), not a separate user preference.
       else if (def) {
-        visibility = def.defaultSetting;
+        visibility = def.defaultSetting === 'badge' ? 'warn' : def.defaultSetting;
       }
       // d. Ultimate fallback
       else {
@@ -239,13 +268,15 @@ export function resolveModeration(
 
       // Determine action from visibility + definition
       let action: ModerationAction = 'none';
-      if (visibility === 'hide') {
-        action = 'hide';
+      if (visibility === 'show') {
+        action = 'none';
       } else if (visibility === 'warn') {
         if (def?.blurs === 'content') action = 'warn';
         else if (def?.blurs === 'media') action = 'blurMedia';
         else if (def?.severity !== 'none') action = 'showBadge';
         else action = 'none';
+      } else if (visibility === 'hide') {
+        action = 'hide';
       }
 
       // Update most restrictive action
@@ -254,8 +285,19 @@ export function resolveModeration(
         finalAction = action;
       }
 
-      // Collect badge if applicable
-      if (action !== 'none' && action !== 'hide') {
+      // Update contentAction / mediaAction separately
+      if (action === 'hide') {
+        contentAction = 'hide';
+      } else if (action === 'warn') {
+        contentAction = 'warn';
+      }
+      if (action === 'blurMedia') {
+        mediaAction = 'blur';
+      }
+
+      // Collect badge only for blurs=none labels (display-only badges like impersonation)
+      // blurs=content or blurs=media use overlays instead of badges.
+      if (action !== 'none' && action !== 'hide' && def?.blurs === 'none') {
         const badgeName = def?.locales?.[0]?.name || label.val;
         badges.add(badgeName);
       }
@@ -267,6 +309,7 @@ export function resolveModeration(
         description: def?.locales?.[0]?.description || '',
         severity: def?.severity || 'none',
         blurs: def?.blurs || 'none',
+        i18nKey: (def as any)?.i18nKey,
       });
     }
 
@@ -291,6 +334,8 @@ export function resolveModeration(
 
   return {
     action: finalAction,
+    contentAction,
+    mediaAction,
     sources,
     warningTextKey,
     badges: Array.from(badges),
@@ -302,4 +347,76 @@ export function resolveModeration(
  */
 export function isStandardLabel(val: string): boolean {
   return STANDARD_LABELS.includes(val as typeof STANDARD_LABELS[number]);
+}
+
+/**
+ * [v0.15.0] Extract blob references from a post for media-level label querying.
+ *
+ * Blob URIs follow the format: at://{did}/app.bsky.feed.post/{rkey}#/{blobCid}
+ * These are used with com.atproto.label.queryLabels to fetch labels attached
+ * to specific media blobs (images/video) rather than the entire post.
+ */
+export interface BlobReference {
+  cid: string;
+  /** at://{did}/app.bsky.feed.post/{rkey}#/{cid} */
+  uri: string;
+  type: 'image' | 'video';
+}
+
+export function extractBlobReferences(postUri: string, embed?: Record<string, unknown>): BlobReference[] {
+  const refs: BlobReference[] = [];
+
+  // Parse post URI to get did and rkey
+  const match = postUri.match(/^at:\/\/(did:[^:]+:[^\/]+)\/[^\/]+\/([^\/]+)$/);
+  if (!match) return refs;
+
+  const did = match[1];
+  const rkey = match[2];
+
+  if (!embed) return refs;
+
+  // Extract image blobs
+  const extractImages = (e: Record<string, unknown>) => {
+    const type = e.$type as string | undefined;
+    if ((type === 'app.bsky.embed.images' || type === 'app.bsky.embed.images#view') && Array.isArray(e.images)) {
+      for (const img of e.images as Array<Record<string, unknown>>) {
+        const cid = ((img as any).image?.ref?.$link as string) || ((img as any).cid as string);
+        if (cid) {
+          refs.push({
+            cid,
+            uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+            type: 'image',
+          });
+        }
+      }
+    } else if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(e.items)) {
+      for (const item of e.items as Array<Record<string, unknown>>) {
+        const cid = ((item as any).image?.ref?.$link as string) || ((item as any).cid as string);
+        if (cid) {
+          refs.push({
+            cid,
+            uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+            type: 'image',
+          });
+        }
+      }
+    } else if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
+      extractImages(e.media as Record<string, unknown>);
+    }
+  };
+  extractImages(embed);
+
+  // Extract video blob
+  if ((embed.$type as string) === 'app.bsky.embed.video') {
+    const cid = ((embed.video as any)?.ref?.$link as string);
+    if (cid) {
+      refs.push({
+        cid,
+        uri: `at://${did}/app.bsky.feed.post/${rkey}#/${cid}`,
+        type: 'video',
+      });
+    }
+  }
+
+  return refs;
 }

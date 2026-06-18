@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { BskyClient } from '@bsky/core';
 import type { AppView } from '@bsky/app';
 import { useBookmarks, useI18n, useVirtualizedList, useModerationBatch } from '@bsky/app';
 import { Icon } from './Icon.js';
-import { PostCard } from './PostCard.js';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { PullToRefresh } from './PullToRefresh.js';
 import { LabelerFailureBanner } from './LabelerFailureBanner.js';
@@ -27,16 +27,34 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
   const { t } = useI18n();
   const { bookmarks, loading, error, removeBookmark, refresh } = useBookmarks(client);
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
-  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange },
-  );
+  const { decisions, failedLabelers } = useModerationBatch(bookmarks, config, client);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
 
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
+
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
+  const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
+    bookmarks, 'bookmarks', 120, p => p.uri, { initialScrollTop, onScrollTopChange, decisions },
+  );
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] animate-fadeIn">
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       
       <div className="border-b border-border px-4 py-3 flex items-center justify-between">
@@ -88,7 +106,7 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
             className="relative group"
             role="listitem"
           >
-                  <PostCard
+                  <PostPreviewCard
                     post={post}
                     onClick={() => goTo({ type: 'thread', uri: post.uri })}
                     goTo={goTo}
@@ -98,10 +116,10 @@ export function BookmarkPage({ client, goBack, goTo, initialScrollTop, onScrollT
                     client={client}
                     previewLines={previewLines}
                     quotedPreviewLines={quotedPreviewLines}
-                    moderationDecision={moderationDecisions.get(post.uri) ?? null}
+                    moderationDecision={decisions.get(post.uri) ?? null}
                   >
                     <PostActionsRow client={client} goTo={goTo} post={post} />
-                  </PostCard>
+                  </PostPreviewCard>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

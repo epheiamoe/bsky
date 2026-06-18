@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useCallback, useState, useContext } from 'rea
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { PostView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useI18n, useModerationBatch } from '@bsky/app';
-import { PostCard } from './PostCard';
+import { useI18n, useModerationBatch, isFeedCacheFull } from '@bsky/app';
+import { PostPreviewCard } from './PostPreviewCard.js';
 import { PostActionsRow } from './PostActionsRow.js';
 import { FeedHeader } from './FeedHeader';
 import { PullToRefresh, REFRESH_NOOP } from './PullToRefresh.js';
@@ -13,6 +13,7 @@ import { LabelerFailureBanner } from './LabelerFailureBanner.js';
 import { LabelerFailureToast } from './LabelerFailureToast.js';
 import type { BskyClient } from '@bsky/core';
 import { useModerationConfig } from '../hooks/useModerationConfig.js';
+import { getAppConfig } from '../hooks/useAppConfig.js';
 
 interface FeedTimelineProps {
   goTo: (v: AppView) => void;
@@ -60,12 +61,41 @@ const _heightCache = new Map<string, number>();
 export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, refresh, initialScrollTop, onScrollTopChange, feedUri, client, isLiked, isReposted, likePost, repostPost, imageDescConfig, imageDescLang, singleImageFill, previewLines = 10, quotedPreviewLines = 8 }: FeedTimelineProps) {
   const { t } = useI18n();
   const { config } = useModerationConfig();
-  const { decisions: moderationDecisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
+  const { decisions, failedLabelers } = useModerationBatch(posts, config, client ?? null);
   const { onSidebarOpen, setTabBarHidden, tabBarHidden, dmCount } = useContext(MobileHeaderCtx);
   const [mobileCollapsed, setMobileCollapsed] = useState(false);
+  const [dismissedDids, setDismissedDids] = useState<Set<string>>(new Set());
   const lastScrollY = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const prevDecisionsRef = useRef<Map<string, import('@bsky/core').ModerationDecision>>(new Map());
+
+  // ── Invalidate height cache when moderation decisions change ──
+  useEffect(() => {
+    const prevDecisions = prevDecisionsRef.current;
+    let hasChanges = false;
+
+    for (const [uri, decision] of decisions) {
+      const prev = prevDecisions.get(uri);
+      if (!prev || prev.contentAction !== decision.contentAction || prev.mediaAction !== decision.mediaAction) {
+        _heightCache.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    for (const uri of prevDecisions.keys()) {
+      if (!decisions.has(uri)) {
+        _heightCache.delete(uri);
+        hasChanges = true;
+      }
+    }
+
+    if (hasChanges) {
+      virtualizer.measure();
+    }
+
+    prevDecisionsRef.current = new Map(decisions);
+  }, [decisions]);
 
   // ── Virtual scroll ──
   const virtualizer = useVirtualizer({
@@ -82,6 +112,22 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     overscan: 5,
     initialOffset: (initialScrollTop ?? 0) > 0 ? initialScrollTop : 0,
   });
+
+  // ── Restore scroll position when feed changes ──
+  // With per-feed caching the posts are already present, so we can restore
+  // immediately without waiting for a network load.
+  const restoredForRef = useRef<string | null>(null);
+  useEffect(() => {
+    const key = feedUri ?? 'following';
+    if (restoredForRef.current === key) return;
+    restoredForRef.current = key;
+
+    if (posts.length > 0 && initialScrollTop !== undefined && initialScrollTop >= 0 && scrollRef.current) {
+      requestAnimationFrame(() => {
+        virtualizer.scrollToOffset(initialScrollTop, { align: 'start' });
+      });
+    }
+  }, [feedUri, posts.length, initialScrollTop, virtualizer]);
 
   // ── Report scroll position to parent ──
   const reportScrollTop = useCallback(() => {
@@ -110,7 +156,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [loadMore, cursor, posts.length]);
+  }, [loadMore, cursor]);
 
   // ── Hide header/footer on scroll down (mobile) ──
   useEffect(() => {
@@ -144,10 +190,24 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
     </div>
   );
 
-  const settingsBtn = null;
+  // Auto-reset dismissed state when failedLabelers changes (a did recovers and fails again)
+  useEffect(() => {
+    const currentDids = new Set(failedLabelers.map(f => f.did));
+    setDismissedDids(prev => {
+      const next = new Set(prev);
+      for (const did of prev) {
+        if (!currentDids.has(did)) next.delete(did);
+      }
+      return next;
+    });
+  }, [failedLabelers]);
 
-  // Filter banner/block level failures for banner display
-  const bannerFailures = failedLabelers.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+  // Filter banner/block level failures for banner display, excluding dismissed ones
+  const visibleFailures = failedLabelers.filter(f => !dismissedDids.has(f.did));
+  const bannerFailures = visibleFailures.filter(f => f.behavior === 'banner' || f.behavior === 'block');
+
+  const cacheLimit = getAppConfig().feedCacheLimit ?? 1000;
+  const cacheFull = isFeedCacheFull(feedUri, cacheLimit);
 
   return (
     <div className="flex flex-col h-dvh md:h-[calc(100dvh-3rem)] animate-fadeIn">
@@ -159,7 +219,11 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         mobileMenuButton={menuBtn}
         mobileCollapsed={mobileCollapsed}
       />
-      <LabelerFailureBanner failedLabelers={bannerFailures} />
+      <LabelerFailureBanner
+        failedLabelers={bannerFailures}
+        onDismiss={(did) => setDismissedDids(prev => new Set(prev).add(did))}
+        onRetry={() => refresh?.()}
+      />
       <LabelerFailureToast failedLabelers={failedLabelers} />
       
       <PullToRefresh onRefresh={refresh ?? REFRESH_NOOP} scrollRef={scrollRef} />
@@ -180,7 +244,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
 
         {!loading && !error && posts.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-text-secondary">
-            <span className="text-4xl mb-3">🕊️</span>
+            <Icon name="bird" size={48} className="mb-3" />
             <p className="text-sm">{t('status.noPosts')}</p>
           </div>
         )}
@@ -216,7 +280,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                 data-index={virtualItem.index}
                 role="listitem"
               >
-                <PostCard
+                <PostPreviewCard
                   post={post}
                   onClick={() => goTo({ type: 'thread', uri: post.uri })}
                   goTo={goTo}
@@ -226,10 +290,10 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
                   client={client}
                   previewLines={previewLines}
                   quotedPreviewLines={quotedPreviewLines}
-                  moderationDecision={moderationDecisions.get(post.uri) ?? null}
+                  moderationDecision={decisions.get(post.uri) ?? null}
                 >
                   <PostActionsRow client={client} goTo={goTo} post={post} />
-                </PostCard>
+                </PostPreviewCard>
               </div>
             );
           })}
@@ -238,7 +302,7 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
         {/* Auto-load sentinel */}
         <div ref={sentinelRef} className="h-px" />
 
-        {cursor && (
+        {cursor && !cacheFull && (
           <div className="flex justify-center py-4">
             <button
               onClick={loadMore}
@@ -246,6 +310,19 @@ export function FeedTimeline({ goTo, posts, loading, cursor, error, loadMore, re
               className="rounded-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-6 py-2 disabled:opacity-50 transition-colors"
             >
               {loading ? t('action.loading') : t('action.loadMore')}
+            </button>
+          </div>
+        )}
+
+        {cacheFull && (
+          <div className="flex flex-col items-center gap-2 py-6 text-text-secondary">
+            <Icon name="bird" size={24} />
+            <p className="text-sm">{t('feed.cacheLimitReached', { limit: cacheLimit })}</p>
+            <button
+              onClick={refresh}
+              className="text-xs text-primary hover:underline"
+            >
+              {t('action.refresh')}
             </button>
           </div>
         )}

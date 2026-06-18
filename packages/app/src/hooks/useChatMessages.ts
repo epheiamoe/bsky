@@ -34,6 +34,8 @@ export function useChatMessages(client: BskyClient | null) {
       const mr: GetMessagesResponse = await client.getMessages(cr.convo.id, 30);
       setMessages(mr.messages.reverse());
       setCursor(mr.cursor);
+      // Auto-mark as read when loading a conversation
+      try { await client.updateRead(cr.convo.id); } catch { /* silent */ }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -112,9 +114,10 @@ export function useChatMessages(client: BskyClient | null) {
     }
   }, [client, convo]);
 
-  const markRead = useCallback(async () => {
-    if (!client || !convo) return;
-    try { await client.updateRead(convo.id); } catch { /* silent */ }
+  const markRead = useCallback(async (convoId?: string) => {
+    const id = convoId ?? convo?.id;
+    if (!client || !id) return;
+    try { await client.updateRead(id); } catch { /* silent */ }
   }, [client, convo]);
 
   const muteConvoFn = useCallback(async () => {

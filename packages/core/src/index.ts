@@ -70,7 +70,17 @@ export type {
   LabelerView,
   ContentLabelPref,
   ModerationPrefs,
+  VideoUploadOptions,
+  VideoUploadResult,
+  VideoUploadProgress,
+  VideoUploadPhase,
+  VideoJobStatus,
+  GetServiceAuthResponse,
+  VideoServiceErrorCode,
 } from './at/types.js';
+
+export { VideoServiceError } from './at/types.js';
+export { makeUniqueVideoName } from './at/client.js';
 
 // AI exports
 export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft, generateChatTitle, describeImage } from './ai/assistant.js';
@@ -117,13 +127,16 @@ export {
   DEFAULT_MODERATION_CONFIG,
   OFFICIAL_LABELER_DID,
   STANDARD_LABELS,
+  BUILTIN_LABEL_DEFINITIONS,
   isStandardLabel,
+  extractBlobReferences,
 } from './moderation.js';
 export type {
   ModerationAction,
   ModerationDecision,
   LabelerConfig,
   ModerationConfig,
+  BlobReference,
 } from './moderation.js';
 export { LabelCache } from './moderation-cache.js';
 export type { LabelerFailureState, RetryConfig } from './moderation-cache.js';
@@ -157,3 +170,11 @@ export type {
   BskyToolsAPI,
   BskyToolsBaseOptions,
 } from './ai/bsky-tools-api.js';
+
+// Language utilities
+export {
+  SUPPORTED_LANGUAGES,
+  getLanguageName,
+  COMMON_LANGUAGE_CODES,
+} from './at/languages.js';
+export type { Language } from './at/languages.js';

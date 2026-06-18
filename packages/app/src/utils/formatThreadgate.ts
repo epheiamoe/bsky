@@ -15,18 +15,39 @@ export function formatThreadgateSummary(rules: ThreadgateRule[], listInfo?: Arra
   return labels.join(' + ') || 'nobody';
 }
 
-export function buildThreadgateRules(type: string, listUri?: string): ThreadgateRule[] | null {
-  switch (type) {
-    case 'everyone': return null; // no threadgate
-    case 'nobody': return [];
-    case 'mentioned': return [{ $type: 'app.bsky.feed.threadgate#mentionRule' }];
-    case 'followers': return [{ $type: 'app.bsky.feed.threadgate#followerRule' }];
-    case 'following': return [{ $type: 'app.bsky.feed.threadgate#followingRule' }];
-    case 'list':
-      if (!listUri) return null;
-      return [{ $type: 'app.bsky.feed.threadgate#listRule', list: listUri }];
-    default: return null;
+export function buildThreadgateRules(types: string | string[], listUri?: string): ThreadgateRule[] | null {
+  const typeArray = Array.isArray(types) ? types : [types];
+
+  // 'everyone' means no threadgate — only if it's the sole selection
+  if (typeArray.length === 1 && typeArray[0] === 'everyone') return null;
+
+  // 'nobody' is mutually exclusive and takes precedence
+  if (typeArray.includes('nobody')) return [];
+
+  const rules: ThreadgateRule[] = [];
+  const seen = new Set<string>();
+
+  for (const type of typeArray) {
+    if (seen.has(type)) continue;
+    seen.add(type);
+
+    switch (type) {
+      case 'mentioned':
+        rules.push({ $type: 'app.bsky.feed.threadgate#mentionRule' });
+        break;
+      case 'followers':
+        rules.push({ $type: 'app.bsky.feed.threadgate#followerRule' });
+        break;
+      case 'following':
+        rules.push({ $type: 'app.bsky.feed.threadgate#followingRule' });
+        break;
+      case 'list':
+        if (listUri) rules.push({ $type: 'app.bsky.feed.threadgate#listRule', list: listUri });
+        break;
+    }
   }
+
+  return rules.length > 0 ? rules : null;
 }
 
 /** Return the i18n key for a threadgate's display text. */
@@ -43,17 +64,38 @@ export function getThreadgateDisplayKey(rules: ThreadgateRule[], _listInfo?: Arr
   return 'thread.replyRestricted.multiple';
 }
 
-export function rulesToThreadgateType(rules?: ThreadgateRule[] | null, listInfo?: Array<{ uri: string; name: string }>): { type: string; listUri?: string } {
-  if (!rules || rules.length === 0) {
-    if (rules?.length === 0) return { type: 'nobody' };
-    return { type: 'everyone' };
+export function rulesToThreadgateType(rules?: ThreadgateRule[] | null): { type: string; types: string[]; listUri?: string } {
+  if (!rules) {
+    return { type: 'everyone', types: ['everyone'] };
   }
-  if (rules.length === 1) {
-    const r = rules[0]!;
-    if (r.$type === 'app.bsky.feed.threadgate#mentionRule') return { type: 'mentioned' };
-    if (r.$type === 'app.bsky.feed.threadgate#followerRule') return { type: 'followers' };
-    if (r.$type === 'app.bsky.feed.threadgate#followingRule') return { type: 'following' };
-    if (r.$type === 'app.bsky.feed.threadgate#listRule') return { type: 'list', listUri: r.list };
+  if (rules.length === 0) {
+    return { type: 'nobody', types: ['nobody'] };
   }
-  return { type: 'everyone' };
+
+  const types: string[] = [];
+  let listUri: string | undefined;
+
+  for (const r of rules) {
+    switch (r.$type) {
+      case 'app.bsky.feed.threadgate#mentionRule':
+        types.push('mentioned');
+        break;
+      case 'app.bsky.feed.threadgate#followerRule':
+        types.push('followers');
+        break;
+      case 'app.bsky.feed.threadgate#followingRule':
+        types.push('following');
+        break;
+      case 'app.bsky.feed.threadgate#listRule':
+        types.push('list');
+        listUri = r.list;
+        break;
+    }
+  }
+
+  if (types.length === 1) {
+    return { type: types[0]!, types, listUri };
+  }
+
+  return { type: 'multiple', types, listUri };
 }

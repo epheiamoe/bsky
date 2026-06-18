@@ -195,6 +195,8 @@ function calculateDelay(attempt: number): number {
 
 ## 3. Phase 2: Mixed Sync/Async Loading Pipeline (v0.15.0)
 
+> **历史状态**：该 Phase 2 方案已被废弃。`useModerationPipeline` 及相关组件（`LoadingSafetyBanner`、`BlockedLoadingScreen`）虽已实现，但从未被任何列表组件使用，最终于 2026-06-09 作为死代码清理。列表视图继续使用 `useModerationBatch`，失败通知由 `LabelerFailureBanner` / `LabelerFailureToast` 承担。
+
 ### Goal
 Implement the complete architecture: loading strategy determined by highest active failure level.
 
@@ -306,18 +308,18 @@ Active Labelers: [silent: xblock, silent: sonasky]
 
 | File | Action | Description |
 |------|--------|-------------|
-| `packages/app/src/hooks/useModerationPipeline.ts` | [NEW] | Core pipeline hook: determines strategy, manages loading states |
-| `packages/app/src/hooks/useLabelerHealth.ts` | [NEW] | Periodic health checks, recovery detection |
-| `packages/pwa/src/components/LoadingSafetyBanner.tsx` | [NEW] | "Loading content safety verification..." banner |
-| `packages/pwa/src/components/BlockedLoadingScreen.tsx` | [NEW] | Full-screen block when safety unavailable |
-| `packages/pwa/src/components/FeedTimeline.tsx` | Modify | Integrate pipeline, handle loading states |
-| `packages/pwa/src/components/BookmarkPage.tsx` | Modify | Integrate pipeline |
-| `packages/pwa/src/components/ProfilePage.tsx` | Modify | Integrate pipeline |
-| `packages/pwa/src/components/SearchPage.tsx` | Modify | Integrate pipeline |
-| `packages/pwa/src/components/ListDetailPage.tsx` | Modify | Integrate pipeline |
-| `packages/pwa/src/components/ThreadView.tsx` | Modify | Integrate pipeline |
-| `packages/pwa/src/components/PostCard.tsx` | Modify | Support placeholder → active transition |
-| `packages/pwa/src/components/ModerationOverlay.tsx` | Modify | Smooth CSS transitions for state changes |
+| `packages/app/src/hooks/useModerationPipeline.ts` | [废弃 — 已删除] | Pipeline hook 已实现但未被采用，相关代码已清理 |
+| `packages/app/src/hooks/useLabelerHealth.ts` | [已实现] | Periodic health checks, recovery detection |
+| `packages/pwa/src/components/LoadingSafetyBanner.tsx` | [废弃 — 已删除] | 已创建但未被 import，作为死代码清理 |
+| `packages/pwa/src/components/BlockedLoadingScreen.tsx` | [废弃 — 已删除] | 已创建但未被 import，作为死代码清理 |
+| `packages/pwa/src/components/FeedTimeline.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/BookmarkPage.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/ProfilePage.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/SearchPage.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/ListDetailPage.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/ThreadView.tsx` | 无需修改 | 继续使用 `useModerationBatch` |
+| `packages/pwa/src/components/PostCard.tsx` | 无需修改 | — |
+| `packages/pwa/src/components/ModerationOverlay.tsx` | 无需修改 | — |
 
 ---
 
@@ -390,9 +392,9 @@ export function useModerationBatch(
 ): UseModerationBatchResult;
 ```
 
-### v0.15.0 (Phase 2 — Future)
+### v0.15.0 (Phase 2 — 已废弃)
 
-#### `useModerationPipeline()` [NEW]
+#### `useModerationPipeline()` [已废弃 — 未投入使用]
 ```typescript
 // [v0.15.0] NEW — replaces useModerationBatch in list views
 export interface PipelineState {
@@ -404,11 +406,16 @@ export interface PipelineState {
   error?: string;
 }
 
+> 该接口虽已编码实现，但从未被列表组件调用，最终作为死代码删除。`useModerationBatch` 继续作为标准方案。
+
+```typescript
+// [已废弃] 原 Planned interface — 未实际投入使用
 export function useModerationPipeline(
   fetchPosts: () => Promise<PostView[]>,
   config: ModerationConfig,
   client: BskyClient | null
 ): PipelineState & { refresh: () => void };
+```
 ```
 
 #### `LabelCache` [MODIFIED — health tracking]
@@ -450,7 +457,7 @@ class LabelCache {
 
 ### Phase 2 Steps (v0.15.0)
 
-1. **Pipeline Hook** — Create `useModerationPipeline`
+1. ~~**Pipeline Hook** — Create `useModerationPipeline`~~ — **已废弃**：决定采用 `useModerationBatch`，Pipeline 死代码已清理
 2. **Health Monitoring** — Create `useLabelerHealth` with periodic pings
 3. **Strategy Router** — Implement silent/banner/block loading strategies
 4. **Scroll Preservation** — Enhance virtual scroll for height changes

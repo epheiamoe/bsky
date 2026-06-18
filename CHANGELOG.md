@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3] — 2026-06-13
+
+### Added
+
+- **Gallery embed (`app.bsky.embed.gallery`)**: full support for Bluesky's new photo carousel — 5-10 images per post, swipeable carousel with count badge, keyboard navigation, touch swipe, lightbox integration.
+- **Gallery compose**: `buildGalleryEmbed()` with required `$type`, `alt`, `aspectRatio` per item; automatic image dimension detection via `createImageBitmap`.
+- **Gallery dominant aspect ratio**: carousel container uses the most common aspect ratio among images; non-matching images are cropped (`object-fit: cover`).
+- **`viewExternal` rich metadata**: `ExternalLinkCard` component renders publication source icon/theme, reading time, thumbnail, timestamps.
+- **10-image compose**: `MAX_IMAGES` raised from 4 to 10; 5+ images route to gallery embed.
+- **i18n**: 6 new keys (`gallery.*`, `external.*`).
+- **TUI gallery**: text-based index navigator with ←/→/h/l navigation.
+- **DM auto-read**: opening a chat conversation now automatically marks it as read.
+- **BskyLinkCard portal**: the "open in" choice modal is now portaled to `document.body` for proper fixed positioning.
+
+### Changed
+
+- Gallery lightbox uses actual click position as animation source rect (instead of hardcoded center).
+- `PostPreviewCard` (used by all page views) now renders gallery embeds with lightbox support.
+- `ExternalLinkCard` replaces inline `<a>` tags for external link rendering.
+
+### Fixed
+
+- Fixed gallery posts failing silently: each gallery item now includes required `$type: 'app.bsky.embed.gallery#image'`.
+- Fixed gallery `aspectRatio` being optional: now always included (required by lexicon), with `{width:1, height:1}` fallback.
+- Fixed gallery arrows triggering form submission: added `type="button"` to prevent default `type="submit"`.
+- Fixed gallery click bubbling to post navigation: `stopPropagation` on image click and container.
+- Fixed lightbox close animation: removed immediate unmount guard, using phase-based state machine.
+- Fixed ThreadView gallery rendering: added `extractEmbeds()` call and `GalleryCard` with lightbox.
+- Fixed `extractGallery` to check view-side embed data for CDN URLs.
+
+## [0.14.2] — 2026-06-12
+
+### Added
+
+- Delete confirmation modal in thread view, styled consistently with the reply-restriction modal.
+- Vitest test setup for `@bsky/app` (`packages/app/vitest.config.ts`).
+- Unit tests for `extractEmbeds` and `buildFirstPostEmbed` in `@bsky/app`.
+
+### Changed
+
+- Quoted post cards now render below media (images/video/external/list embeds) in thread view for consistent visual hierarchy.
+
+### Fixed
+
+- Fixed missing quote embeds in our client when a post uses `app.bsky.embed.recordWithMedia` (image + quote). The extraction code now correctly unwraps the `recordWithMedia#view` wrapper (`embed.record.record`).
+- Fixed video + quote submissions so the quote is preserved in `recordWithMedia` instead of being dropped.
+- Fixed `extractVideo` to recurse into `recordWithMedia.media`.
+- Fixed reply-restriction (`ThreadgateEditor`) modal layout offset by making the inner container `w-full`.
+
+## [0.14.1] — 2026-06-12
+
+### Added
+
+- **Video preprocessing reliability**: `BskyClient.uploadVideo()` now surfaces failures explicitly instead of silently falling back to raw `uploadBlob`.
+- **Video error classification**: new `VideoServiceError` / `VideoServiceErrorCode` with recoverable vs non-recoverable semantics.
+- **Video response normalization**: `normalizeJobStatus()` handles both lexicon-wrapped `{ jobStatus }` and flat `JobStatus` shapes returned by `video.bsky.app`.
+- **Unique video upload names**: `{timestamp}-{random}-{safeFileName}` to reduce `already_exists` collisions.
+- **PDS DID fallback**: `_resolvePdsDid()` uses `com.atproto.server.describeServer` for custom PDS hostname mismatches.
+- **Compose video error modal**: on recoverable `VideoServiceError`, users can retry preprocessing, upload without preprocessing, or return to editing with the draft preserved.
+- **Unprocessed video placeholder**: `VideoCard` shows an explicit "processing / unavailable" state instead of requesting a non-existent HLS playlist.
+- **TUI video placeholder**: `PostItem` guards against missing `playlistUrl`.
+- **Delete-post toast**: `Toast` component; after deleting a post, success shows a bottom-right auto-dismiss toast and navigates back; failure shows the error message.
+- **Tests**: `packages/core/tests/video-upload.test.ts` with 26 tests covering normalization, error classification, polling, 409 handling, and fallback behavior.
+
+### Changed
+
+- `uploadVideo()` default `allowFallback` is now `false`; fallback only occurs when explicitly opted in and the error is recoverable.
+- `ExtractVideo` type: `playlistUrl` is now optional; added `processing` flag.
+
+### Fixed
+
+- **Videos uploaded via AI bsky were unplayable**: raw MP4 blobs were being posted because Video Service responses were mis-parsed and silently fell back to `uploadBlob`.
+- **409 `already_exists` now returns the processed blob** instead of throwing.
+- **`JOB_STATE_FAILED` with a `blob` is treated as success** during polling.
+- **Thread view "post not found" for raw videos**: placeholder rendering prevents broken HLS player errors.
+
 ## [0.14.0] — 2026-05-22
 
 ### Added

@@ -18,7 +18,7 @@ type AllowType = (typeof ALLOW_TYPES)[number];
 
 export function ThreadgateEditor({ client, postUri, currentRules, listInfo, onClose, onSaved }: ThreadgateEditorProps) {
   const { t } = useI18n();
-  const initial = rulesToThreadgateType(currentRules, listInfo);
+  const initial = rulesToThreadgateType(currentRules);
   const [selected, setSelected] = useState<AllowType>(initial.type as AllowType);
   const [selectedListUri, setSelectedListUri] = useState(initial.listUri ?? '');
   const [userLists, setUserLists] = useState<ListView[]>([]);
@@ -62,7 +62,7 @@ export function ThreadgateEditor({ client, postUri, currentRules, listInfo, onCl
 
   return (
     <Modal open onClose={onClose}>
-      <div className="max-w-sm" onClick={e => e.stopPropagation()}>
+      <div className="w-full" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="text-base font-bold text-text-primary">{t('compose.replyRestriction')}</h2>
           <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors p-0.5"><Icon name="x" size={18} /></button>
