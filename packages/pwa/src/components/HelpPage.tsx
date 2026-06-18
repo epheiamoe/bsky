@@ -3,46 +3,46 @@ import { useI18n } from '@bsky/app';
 import { getHelpCategories, getCategoryInfo, getContent, type HelpEntry, type Platform, type Lang } from '@bsky/app';
 import { Icon } from './Icon.js';
 
-// ── Glass card styles (matching example HTML) ──────────────────────
+// ── Glass card styles (using CSS variables for light/dark + CVD support) ──
 
 const GLASS_CARD_BASE: React.CSSProperties = {
-  background: 'rgba(24, 24, 27, 0.5)',
+  background: 'color-mix(in srgb, var(--color-surface) 50%, transparent)',
   backdropFilter: 'blur(16px)',
   border: '1px solid transparent',
-  boxShadow: '0 0 0 1px rgba(255,255,255,0.02) inset, 0 4px 24px rgba(0,0,0,0.2)',
+  boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-border) 10%, transparent) inset, 0 4px 24px rgba(0,0,0,0.2)',
 };
 
 const GLASS_CARD_HOVER: React.CSSProperties = {
-  background: 'rgba(24, 24, 27, 0.7)',
-  borderColor: 'rgba(255, 255, 255, 0.12)',
-  boxShadow: '0 0 0 1px rgba(255,255,255,0.03) inset, 0 12px 40px rgba(0,0,0,0.3)',
+  background: 'color-mix(in srgb, var(--color-surface) 70%, transparent)',
+  borderColor: 'color-mix(in srgb, var(--color-border) 50%, transparent)',
+  boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-border) 15%, transparent) inset, 0 12px 40px rgba(0,0,0,0.3)',
 };
 
 const SEARCH_INPUT_STYLE: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
+  background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
+  border: '1px solid var(--color-border)',
 };
 
 const SEARCH_INPUT_FOCUS: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.06)',
-  borderColor: 'rgba(59, 130, 246, 0.4)',
-  boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)',
+  background: 'color-mix(in srgb, var(--color-surface) 80%, transparent)',
+  borderColor: 'var(--color-primary)',
+  boxShadow: '0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent)',
 };
 
 const ICON_BOX_STYLE: React.CSSProperties = {
-  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(96, 165, 250, 0.05) 100%)',
-  border: '1px solid rgba(59, 130, 246, 0.15)',
+  background: 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 15%, transparent) 0%, color-mix(in srgb, var(--color-primary) 5%, transparent) 100%)',
+  border: '1px solid color-mix(in srgb, var(--color-primary) 15%, transparent)',
 };
 
 const KBD_STYLE: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.05)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: '0 2px 0 rgba(255, 255, 255, 0.03)',
+  background: 'color-mix(in srgb, var(--color-surface) 80%, transparent)',
+  border: '1px solid var(--color-border)',
+  boxShadow: '0 2px 0 color-mix(in srgb, var(--color-border) 20%, transparent)',
 };
 
 const TIP_ITEM_STYLE: React.CSSProperties = {
-  background: 'rgba(255, 255, 255, 0.03)',
-  border: '1px solid rgba(255, 255, 255, 0.06)',
+  background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
+  border: '1px solid var(--color-border)',
 };
 
 // ── Keyframe + modal animation styles (injected once) ──────────────
@@ -112,7 +112,7 @@ interface HelpPageProps {
   goBack: () => void;
 }
 
-export function HelpPage({ goBack }: HelpPageProps) {
+export function HelpPage({ goBack: _goBack }: HelpPageProps) {
   const { t, locale } = useI18n();
 
   // Map i18n locale to help content language
@@ -191,14 +191,20 @@ export function HelpPage({ goBack }: HelpPageProps) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [selectedEntry]);
 
-  // ── Modal body scroll lock ──
+  // ── Modal body scroll lock (with scrollbar width compensation) ──
   useEffect(() => {
     if (selectedEntry) {
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
     } else {
       document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
   }, [selectedEntry]);
 
   // ── Modal actions ──
@@ -254,56 +260,41 @@ export function HelpPage({ goBack }: HelpPageProps) {
 
   // ── Render ──
   return (
-    <div className="min-h-[100dvh] relative" style={{ background: '#09090b', color: '#e4e4e7' }}>
+    <div className="min-h-[100dvh] relative" style={{ background: 'var(--color-background)', color: 'var(--color-text-primary)' }}>
       {/* Background ambiance */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
         <div
           className="absolute rounded-full"
           style={{
             top: '-10%', left: '-5%', width: 400, height: 400,
-            background: 'rgba(59, 130, 246, 0.04)', filter: 'blur(100px)',
+            background: 'color-mix(in srgb, var(--color-primary) 4%, transparent)', filter: 'blur(100px)',
           }}
         />
         <div
           className="absolute rounded-full"
           style={{
             bottom: '-10%', right: '-5%', width: 500, height: 500,
-            background: 'rgba(99, 102, 241, 0.04)', filter: 'blur(100px)',
+            background: 'color-mix(in srgb, var(--color-primary) 3%, transparent)', filter: 'blur(100px)',
           }}
         />
       </div>
 
       {/* Content */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 py-8 md:py-12">
-        {/* Header with back button */}
-        <div className="flex items-center mb-6">
-          <button
-            type="button"
-            onClick={goBack}
-            className="mr-3 w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-            aria-label={t('nav.back')}
-          >
-            <Icon name="arrow-big-left" size={16} className="text-zinc-400" />
-          </button>
-          <div className="flex-1 text-center">
-            <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-              {t('help.title')}
-            </h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              {t('help.searchPlaceholder').replace('...', '').replace('\u2026', '')}
-            </p>
-          </div>
-          <div className="w-8" /> {/* Spacer for centering */}
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+            {t('help.title')}
+          </h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+            {t('help.searchPlaceholder').replace('...', '').replace('\u2026', '')}
+          </p>
         </div>
 
         {/* Search bar */}
         <div className="relative max-w-md mx-auto mb-8 md:mb-10">
           <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
-            <Icon name="search" size={16} className="text-zinc-500" />
+            <Icon name="search" size={16} className="text-[var(--color-text-secondary)]" />
           </div>
           <input
             ref={searchRef}
@@ -313,18 +304,19 @@ export function HelpPage({ goBack }: HelpPageProps) {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             placeholder={t('help.searchPlaceholder')}
-            className="w-full rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-zinc-600 focus:outline-none transition-all duration-300"
+            className="w-full rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none transition-all duration-300"
             style={{
               ...SEARCH_INPUT_STYLE,
               ...(searchFocused ? SEARCH_INPUT_FOCUS : {}),
+              color: 'var(--color-text-primary)',
             }}
             aria-label={t('help.searchPlaceholder')}
           />
           {/* Keyboard shortcut hint (desktop only) */}
           <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1">
             <kbd
-              className="px-1.5 py-0.5 rounded text-[10px] text-zinc-500"
-              style={KBD_STYLE}
+              className="px-1.5 py-0.5 rounded text-[10px]"
+              style={{ ...KBD_STYLE, color: 'var(--color-text-secondary)' }}
             >
               /
             </kbd>
@@ -352,12 +344,12 @@ export function HelpPage({ goBack }: HelpPageProps) {
                       className="w-8 h-8 rounded-lg flex items-center justify-center"
                       style={ICON_BOX_STYLE}
                     >
-                      <Icon name={catInfo.icon} size={16} className="text-blue-400" />
+                      <Icon name={catInfo.icon} size={16} className="text-[var(--color-primary)]" />
                     </div>
-                    <h2 className="text-sm font-semibold text-zinc-300 group-hover:text-white transition-colors">
+                    <h2 className="text-sm font-semibold group-hover:opacity-100 transition-colors" style={{ color: 'var(--color-text-secondary)' }}>
                       {t(catInfo.labelKey)}
                     </h2>
-                    <span className="text-xs text-zinc-600 ml-1">
+                    <span className="text-xs ml-1" style={{ color: 'var(--color-text-secondary)', opacity: 0.5 }}>
                       {entries.length}
                     </span>
                     {/* Collapse arrow (mobile only) */}
@@ -365,7 +357,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
                       <Icon
                         name={isCollapsed ? 'chevron-down' : 'chevron-up'}
                         size={14}
-                        className="text-zinc-600"
+                        className="text-[var(--color-text-secondary)]"
                       />
                     </div>
                   </button>
@@ -400,17 +392,18 @@ export function HelpPage({ goBack }: HelpPageProps) {
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
               style={{
-                background: 'rgba(255, 255, 255, 0.03)',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
+                border: '1px solid var(--color-border)',
               }}
             >
-              <Icon name="search-x" size={28} className="text-zinc-600" />
+              <Icon name="search-x" size={28} className="text-[var(--color-text-secondary)]" />
             </div>
-            <p className="text-zinc-500 text-sm">{t('help.noResults')}</p>
+            <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>{t('help.noResults')}</p>
             <button
               type="button"
               onClick={() => { setQuery(''); searchRef.current?.focus(); }}
-              className="mt-3 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              className="mt-3 text-sm transition-opacity hover:opacity-80"
+              style={{ color: 'var(--color-primary)' }}
             >
               {t('help.clearSearch')}
             </button>
@@ -419,7 +412,7 @@ export function HelpPage({ goBack }: HelpPageProps) {
 
         {/* Footer hint */}
         <div className="mt-12 text-center">
-          <p className="text-xs text-zinc-700">
+          <p className="text-xs" style={{ color: 'var(--color-text-secondary)', opacity: 0.4 }}>
             Press <kbd className="px-1 rounded text-[10px]" style={KBD_STYLE}>/</kbd> to search
           </p>
         </div>
@@ -472,7 +465,7 @@ function HelpCard({
     <div
       role="button"
       tabIndex={0}
-      className="rounded-2xl p-5 cursor-pointer group"
+      className="rounded-2xl p-5 cursor-pointer group focus:outline-none focus:ring-0"
       style={{
         ...GLASS_CARD_BASE,
         ...(isHovered ? GLASS_CARD_HOVER : {}),
@@ -498,7 +491,7 @@ function HelpCard({
             transform: isHovered ? 'scale(1.1)' : 'none',
           }}
         >
-          <Icon name={entry.icon} size={20} className="text-blue-400" />
+          <Icon name={entry.icon} size={20} className="text-[var(--color-primary)]" />
         </div>
 
         {/* Content */}
@@ -506,7 +499,7 @@ function HelpCard({
           <div className="flex items-center gap-2 mb-1">
             <h3
               className="font-semibold text-[15px] transition-colors"
-              style={{ color: isHovered ? '#93c5fd' : '#ffffff' }}
+              style={{ color: isHovered ? 'var(--color-primary)' : 'var(--color-text-primary)' }}
             >
               {content.title}
             </h3>
@@ -514,16 +507,16 @@ function HelpCard({
               <span
                 className="text-[10px] px-1.5 py-0.5 rounded font-medium"
                 style={{
-                  background: 'rgba(59, 130, 246, 0.15)',
-                  color: '#60a5fa',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  background: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
+                  color: 'var(--color-primary)',
+                  border: '1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)',
                 }}
               >
                 {t('help.platform.pwa')}
               </span>
             )}
           </div>
-          <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2">
+          <p className="text-sm leading-relaxed line-clamp-2" style={{ color: 'var(--color-text-secondary)' }}>
             {content.summary}
           </p>
         </div>
@@ -536,7 +529,7 @@ function HelpCard({
             transform: isHovered ? 'translateX(0)' : 'translateX(-8px)',
           }}
         >
-          <Icon name="chevron-right" size={16} className="text-zinc-500" />
+          <Icon name="chevron-right" size={16} className="text-[var(--color-text-secondary)]" />
         </div>
       </div>
     </div>
@@ -545,7 +538,7 @@ function HelpCard({
 
 // ── Simple Markdown renderer ────────────────────────────────────────
 
-/** Convert basic markdown to React elements. Supports: **bold**, `- lists`, `code` */
+/** Convert basic markdown to React elements. Supports: **bold**, `- lists`, `code`, `[links](url)` */
 function renderMarkdown(text: string): React.ReactNode[] {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
@@ -556,7 +549,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
-        <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 mb-4 text-zinc-400">
+        <ul key={`list-${elements.length}`} className="list-disc list-inside space-y-1 mb-4" style={{ color: 'var(--color-text-secondary)' }}>
           {listItems}
         </ul>
       );
@@ -567,8 +560,8 @@ function renderMarkdown(text: string): React.ReactNode[] {
   const flushCodeBlock = () => {
     if (codeLines.length > 0) {
       elements.push(
-        <pre key={`code-${elements.length}`} className="mb-4 p-3 rounded-lg text-sm overflow-x-auto" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-          <code className="text-zinc-300">{codeLines.join('\n')}</code>
+        <pre key={`code-${elements.length}`} className="mb-4 p-3 rounded-lg text-sm overflow-x-auto" style={{ background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)', border: '1px solid var(--color-border)' }}>
+          <code style={{ color: 'var(--color-text-primary)' }}>{codeLines.join('\n')}</code>
         </pre>
       );
       codeLines = [];
@@ -576,15 +569,16 @@ function renderMarkdown(text: string): React.ReactNode[] {
   };
 
   const renderInline = (line: string): React.ReactNode => {
-    // Split by **bold** and `code`
+    // Split by **bold**, `code`, and [text](url)
     const parts: React.ReactNode[] = [];
     let remaining = line;
     let key = 0;
     while (remaining.length > 0) {
       const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
       const codeMatch = remaining.match(/`(.+?)`/);
+      const linkMatch = remaining.match(/\[([^\]]+)\]\(([^)]+)\)/);
 
-      let firstMatch: { type: 'bold' | 'code'; index: number; full: string; content: string } | null = null;
+      let firstMatch: { type: 'bold' | 'code' | 'link'; index: number; full: string; content: string; url?: string } | null = null;
 
       if (boldMatch && boldMatch.index !== undefined) {
         firstMatch = { type: 'bold', index: boldMatch.index, full: boldMatch[0], content: boldMatch[1]! };
@@ -592,6 +586,11 @@ function renderMarkdown(text: string): React.ReactNode[] {
       if (codeMatch && codeMatch.index !== undefined) {
         if (!firstMatch || codeMatch.index < firstMatch.index) {
           firstMatch = { type: 'code', index: codeMatch.index, full: codeMatch[0], content: codeMatch[1]! };
+        }
+      }
+      if (linkMatch && linkMatch.index !== undefined) {
+        if (!firstMatch || linkMatch.index < firstMatch.index) {
+          firstMatch = { type: 'link', index: linkMatch.index, full: linkMatch[0], content: linkMatch[1]!, url: linkMatch[2]! };
         }
       }
 
@@ -605,10 +604,23 @@ function renderMarkdown(text: string): React.ReactNode[] {
       }
 
       if (firstMatch.type === 'bold') {
-        parts.push(<strong key={key++} className="text-zinc-200 font-semibold">{firstMatch.content}</strong>);
+        parts.push(<strong key={key++} className="font-semibold" style={{ color: 'var(--color-text-primary)' }}>{firstMatch.content}</strong>);
+      } else if (firstMatch.type === 'link') {
+        parts.push(
+          <a
+            key={key++}
+            href={firstMatch.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline transition-opacity hover:opacity-80"
+            style={{ color: 'var(--color-primary)' }}
+          >
+            {firstMatch.content}
+          </a>
+        );
       } else {
         parts.push(
-          <code key={key++} className="px-1.5 py-0.5 rounded text-[13px]" style={{ background: 'rgba(255,255,255,0.06)', color: '#93c5fd' }}>
+          <code key={key++} className="px-1.5 py-0.5 rounded text-[13px]" style={{ background: 'color-mix(in srgb, var(--color-surface) 80%, transparent)', color: 'var(--color-primary)' }}>
             {firstMatch.content}
           </code>
         );
@@ -659,7 +671,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
         j++;
       }
       elements.push(
-        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 mb-4 text-zinc-400">
+        <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 mb-4" style={{ color: 'var(--color-text-secondary)' }}>
           {numItems}
         </ol>
       );
@@ -676,7 +688,7 @@ function renderMarkdown(text: string): React.ReactNode[] {
     // Normal paragraph
     flushList();
     elements.push(
-      <p key={`p-${elements.length}`} className="text-zinc-400 leading-relaxed mb-3 text-[15px]">
+      <p key={`p-${elements.length}`} className="leading-relaxed mb-3 text-[15px]" style={{ color: 'var(--color-text-secondary)' }}>
         {renderInline(line)}
       </p>
     );
@@ -715,7 +727,7 @@ function DetailModal({
     <div
       className={`help-modal-overlay fixed inset-0 z-50 flex items-end md:items-center justify-center ${isClosing ? 'closing' : ''}`}
       style={{
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: 'color-mix(in srgb, var(--color-background) 70%, transparent)',
         backdropFilter: 'blur(4px)',
       }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
@@ -725,10 +737,10 @@ function DetailModal({
     >
       <div
         ref={modalRef}
-        className={`help-modal-sheet w-full md:w-[640px] md:max-h-[80vh] overflow-hidden flex flex-col ${isOpening ? 'opening' : ''} ${isClosing ? 'closing' : ''} ${dragY > 0 ? 'dragging' : ''}`}
+        className={`help-modal-sheet w-full md:w-[640px] md:max-h-[80vh] max-h-[85vh] overflow-hidden flex flex-col ${isOpening ? 'opening' : ''} ${isClosing ? 'closing' : ''} ${dragY > 0 ? 'dragging' : ''}`}
         style={{
-          background: '#131316',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'var(--color-background)',
+          border: '1px solid var(--color-border)',
           borderRadius: '1.5rem 1.5rem 0 0',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
@@ -744,33 +756,33 @@ function DetailModal({
         >
           <div
             className="w-10 h-1 rounded-full"
-            style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+            style={{ background: 'var(--color-border)' }}
           />
         </div>
 
         {/* Modal header */}
         <div
-          className="px-6 pt-2 md:pt-6 pb-4 flex items-center justify-between"
-          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}
+          className="px-6 pt-2 md:pt-6 pb-4 flex items-center justify-between flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--color-border)' }}
         >
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center"
               style={ICON_BOX_STYLE}
             >
-              <Icon name={entry.icon} size={20} className="text-blue-400" />
+              <Icon name={entry.icon} size={20} className="text-[var(--color-primary)]" />
             </div>
             <div>
-              <h2 id="help-modal-title" className="text-lg font-semibold text-white">
+              <h2 id="help-modal-title" className="text-lg font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {content.title}
               </h2>
               {isPwaOnly && (
                 <span
                   className="text-[10px] px-1.5 py-0.5 rounded font-medium mt-0.5 inline-block"
                   style={{
-                    background: 'rgba(59, 130, 246, 0.15)',
-                    color: '#60a5fa',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                    background: 'color-mix(in srgb, var(--color-primary) 15%, transparent)',
+                    color: 'var(--color-primary)',
+                    border: '1px solid color-mix(in srgb, var(--color-primary) 25%, transparent)',
                   }}
                 >
                   {t('help.platform.pwa')}
@@ -781,19 +793,19 @@ function DetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors focus:outline-none focus:ring-0"
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'color-mix(in srgb, var(--color-surface) 60%, transparent)',
+              border: '1px solid var(--color-border)',
             }}
             aria-label={t('help.done')}
           >
-            <Icon name="x" size={16} className="text-zinc-400" />
+            <Icon name="x" size={16} className="text-[var(--color-text-secondary)]" />
           </button>
         </div>
 
         {/* Modal content */}
-        <div className="px-6 py-6 overflow-y-auto help-modal-content">
+        <div className="px-6 py-6 overflow-y-auto help-modal-content flex-1 min-h-0">
           {/* Detail as markdown */}
           <div className="mb-6">
             {renderMarkdown(content.detail)}
@@ -807,19 +819,19 @@ function DetailModal({
                 className="flex items-center gap-3 p-3 rounded-xl transition-all duration-200 hover:translate-x-1"
                 style={TIP_ITEM_STYLE}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+                  (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--color-surface) 80%, transparent)';
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.03)';
+                  (e.currentTarget as HTMLElement).style.background = 'color-mix(in srgb, var(--color-surface) 60%, transparent)';
                 }}
               >
                 <div
                   className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(59, 130, 246, 0.1)' }}
+                  style={{ background: 'color-mix(in srgb, var(--color-primary) 10%, transparent)' }}
                 >
-                  <Icon name={tip.icon} size={16} className="text-blue-400" />
+                  <Icon name={tip.icon} size={16} className="text-[var(--color-primary)]" />
                 </div>
-                <span className="text-sm text-zinc-300">{tip.text}</span>
+                <span className="text-sm" style={{ color: 'var(--color-text-primary)' }}>{tip.text}</span>
               </div>
             ))}
           </div>
@@ -827,18 +839,18 @@ function DetailModal({
 
         {/* Modal footer */}
         <div
-          className="px-6 py-4"
+          className="px-6 py-4 flex-shrink-0"
           style={{
-            borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-            background: 'rgba(255, 255, 255, 0.02)',
+            borderTop: '1px solid var(--color-border)',
+            background: 'color-mix(in srgb, var(--color-surface) 40%, transparent)',
           }}
         >
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90"
+            className="w-full py-2.5 rounded-xl text-sm font-medium text-white flex items-center justify-center gap-2 transition-opacity hover:opacity-90 focus:outline-none focus:ring-0"
             style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+              background: 'var(--color-primary)',
             }}
           >
             {t('help.done')}

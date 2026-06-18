@@ -24,3 +24,6 @@ staging-login-page.png
 out-of-date/
 
 .swarm
+
+.wiki/temp
+.wiki/sessions/
