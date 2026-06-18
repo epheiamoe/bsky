@@ -24,6 +24,51 @@ export interface BskyUrlInfo {
   path: string;
 }
 
+/** Third-party Bluesky client domains that use the same URL format as bsky.app */
+const THIRD_PARTY_DOMAIN_MAP = new Set([
+  'deer.social',
+  'www.deer.social',
+  'tokimeki.blue',
+  'www.tokimeki.blue',
+  'useouranos.app',
+  'www.useouranos.app',
+  'deck.blue',
+  'www.deck.blue',
+]);
+
+/**
+ * If the URL hostname is a known third-party Bluesky client,
+ * rewrite it to bsky.app so downstream parsers work unchanged.
+ * Returns the rewritten URL, or null if not a third-party domain.
+ */
+function tryRewriteThirdParty(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (THIRD_PARTY_DOMAIN_MAP.has(parsed.hostname.toLowerCase())) {
+      parsed.hostname = 'bsky.app';
+      parsed.protocol = 'https:';
+      return parsed.toString();
+    }
+  } catch {
+    // not a valid URL
+  }
+  return null;
+}
+
+/**
+ * Same as tryRewriteThirdParty but for bare domain inputs (no protocol).
+ * Input like "deer.social/profile/alice" → "https://bsky.app/profile/alice"
+ */
+function tryRewriteThirdPartyBare(input: string): string | null {
+  const lower = input.toLowerCase();
+  for (const domain of THIRD_PARTY_DOMAIN_MAP) {
+    if (lower.startsWith(domain + '/') || lower === domain) {
+      return 'https://bsky.app/' + input.slice(domain.length + 1);
+    }
+  }
+  return null;
+}
+
 /**
  * Check if a URL is a bsky.app link
  */
@@ -48,6 +93,18 @@ export function normalizeBskyInput(raw: string): string | null {
   // AT URI — return as-is
   if (trimmed.startsWith('at://')) return trimmed;
 
+  // Third-party Bluesky client domains (full URL with protocol)
+  const thirdPartyRewrite = tryRewriteThirdParty(trimmed);
+  if (thirdPartyRewrite) {
+    return thirdPartyRewrite;
+  }
+
+  // Third-party bare domains (no protocol, e.g. deer.social/profile/alice)
+  const thirdPartyBareRewrite = tryRewriteThirdPartyBare(trimmed);
+  if (thirdPartyBareRewrite) {
+    return thirdPartyBareRewrite;
+  }
+
   // /i/ redirect prefix (Twitter-style redirects that wrap bsky URLs)
   if (trimmed.startsWith('/i/')) {
     const rest = trimmed.slice(3);
@@ -56,6 +113,9 @@ export function normalizeBskyInput(raw: string): string | null {
     // /i/https://bsky.app/xxx → strip /i/, force https
     if (rest.startsWith('https://') || rest.startsWith('http://')) {
       const stripped = rest.startsWith('http://') ? 'https://' + rest.slice(7) : rest;
+      // Check if the URL inside /i/ is a third-party domain
+      const thirdPartyInProtocol = tryRewriteThirdParty(stripped);
+      if (thirdPartyInProtocol) return thirdPartyInProtocol;
       return stripped;
     }
 
@@ -65,6 +125,16 @@ export function normalizeBskyInput(raw: string): string | null {
     // /i/bsky.app/xxx → https://bsky.app/xxx
     if (rest.startsWith('bsky.app/') || rest.startsWith('www.bsky.app/'))
       return 'https://' + rest;
+
+    // /i/deer.social/xxx → https://bsky.app/xxx (third-party domain in redirect)
+    const thirdPartyInRedirect = tryRewriteThirdParty('https://' + rest);
+    if (thirdPartyInRedirect) {
+      return thirdPartyInRedirect;
+    }
+    const thirdPartyBareInRedirect = tryRewriteThirdPartyBare(rest);
+    if (thirdPartyBareInRedirect) {
+      return thirdPartyBareInRedirect;
+    }
 
     // Non-bsky domain inside /i/ — not a bsky resource
     return null;

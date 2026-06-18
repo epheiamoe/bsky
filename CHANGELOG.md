@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`normalizeBskyInput()`**: unified URL normalization — bare domains, `/i/https://...`, `/i/bsky/...`, `at://` URIs, `bluesky://` scheme all resolve to standard bsky.app URLs or AT URIs.
+- **Third-party client URL support**: `normalizeBskyInput()` now recognizes URLs from deer.social, tokimeki.blue, useouranos.app, deck.blue and rewrites them to bsky.app URLs via `THIRD_PARTY_DOMAIN_MAP` (8 domain entries including `www.` variants).
 - **Expanded URL types**: `parseBskyAppUrl()` now handles `/hashtag/{tag}`, `/intent/compose?text=`, `/messages`, `/notifications`.
 - **`parseAtUri()`**: direct parsing of `at://` AT Protocol URIs into `BskyUrlInfo`.
 - **Clipboard paste button**: in FeedHeader, left of refresh. Reads clipboard, normalizes URL, and navigates. Silent failure for empty/non-URL clipboard.
-- **i18n**: 9 new keys (`action.pasteAndGo`, `link.type.hashtag/intent/messages/notifications`, `redirect.unsupportedFormat`, `clipboard.empty/notUrl/permissionDenied`).
+- **Help page**: new `HelpPage.tsx` component accessible from sidebar, documents 7 unique features (clipboard paste, URL compatibility, rich embeds, AI assistant, keyboard shortcuts, AT Play, widgets). Added `{ type: 'help' }` to `AppView`.
+- **i18n**: 26 new keys — 9 URL/clipboard keys (`action.pasteAndGo`, `link.type.hashtag/intent/messages/notifications`, `redirect.unsupportedFormat`, `clipboard.empty/notUrl/permissionDenied`) + 17 help page keys.
 
 ### Changed
 
