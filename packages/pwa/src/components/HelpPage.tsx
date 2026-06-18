@@ -5,17 +5,10 @@ import { Icon } from './Icon.js';
 
 // ── Glass card styles (using CSS variables for light/dark + CVD support) ──
 
+// Glass card base styles — hover visual effects (background, border, boxShadow)
+// are handled by CSS :hover in ensureStyles() for reliable border reset.
 const GLASS_CARD_BASE: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--color-surface) 50%, transparent)',
   backdropFilter: 'blur(16px)',
-  border: '1px solid transparent',
-  boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-border) 10%, transparent) inset, 0 4px 24px rgba(0,0,0,0.2)',
-};
-
-const GLASS_CARD_HOVER: React.CSSProperties = {
-  background: 'color-mix(in srgb, var(--color-surface) 70%, transparent)',
-  borderColor: 'color-mix(in srgb, var(--color-border) 50%, transparent)',
-  boxShadow: '0 0 0 1px color-mix(in srgb, var(--color-border) 15%, transparent) inset, 0 12px 40px rgba(0,0,0,0.3)',
 };
 
 const SEARCH_INPUT_STYLE: React.CSSProperties = {
@@ -102,6 +95,19 @@ function ensureStyles() {
     /* Hide scrollbar */
     .help-modal-content::-webkit-scrollbar { display: none; }
     .help-modal-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Glass card hover — CSS :hover for reliable border reset */
+    .help-glass-card {
+      background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+      border: 1px solid transparent;
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-border) 10%, transparent) inset, 0 4px 24px rgba(0,0,0,0.2);
+      transition: background 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .help-glass-card:hover {
+      background: color-mix(in srgb, var(--color-surface) 70%, transparent);
+      border-color: color-mix(in srgb, var(--color-border) 50%, transparent);
+      box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-border) 15%, transparent) inset, 0 12px 40px rgba(0,0,0,0.3);
+    }
   `;
   document.head.appendChild(style);
 }
@@ -465,13 +471,11 @@ function HelpCard({
     <div
       role="button"
       tabIndex={0}
-      className="rounded-2xl p-5 cursor-pointer group focus:outline-none focus:ring-0"
+      className="help-glass-card rounded-2xl p-5 cursor-pointer group focus:outline-none focus:ring-0"
       style={{
         ...GLASS_CARD_BASE,
-        ...(isHovered ? GLASS_CARD_HOVER : {}),
         animation: `helpCardEnter 0.5s ease-out ${index * 0.05}s forwards`,
         opacity: 0,
-        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         transform: isHovered ? 'translateY(-2px)' : isActive ? 'scale(0.98)' : 'none',
       }}
       onClick={onClick}
