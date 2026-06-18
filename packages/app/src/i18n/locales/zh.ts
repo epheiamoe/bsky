@@ -644,7 +644,7 @@ const zh: LocaleMessages = {
   'post.openInBsky': '在 bsky.app 中查看',
 
   // ── Keyboard hints (TUI) ──
-  'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用',
+  'keys.feed': '↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用 ^V:粘贴跳转',
   'keys.bookmarks': '↑↓/jk:导航 Enter:查看 d:删除 r:刷新 q:引用',
   'keys.lists': 'j/k:导航 Enter:查看 c:创建 d:删除 r:刷新 Esc:返回',
   'keys.listDetail': 'Tab:切换 j/k:导航 Enter:查看 r:刷新 Esc:返回',

@@ -45,6 +45,7 @@ Processed in App.tsx:87 in this order. Each returns immediately.
 | Key | Action | Scope |
 |-----|--------|-------|
 | `Ctrl+G` | `goTo({ type: 'aiChat', contextUri: threadUri })` | All views. `threadUri` is only set when in thread view. |
+| `Ctrl+V` | Paste & Go — read clipboard, normalize URL, navigate | All views except compose/search (when typing). |
 
 ### Global Navigation Shortcuts
 
@@ -71,6 +72,7 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `Esc` | Universal back |
 | `Tab` | AI focus toggle |
 | `Ctrl+G` | AI chat launcher |
+| `Ctrl+V` | Paste & Go (clipboard → navigate) |
 
 **When adding a new view-specific shortcut, pick from**: `f`, `z`, `x`, `w`, `u`, `o`, `g`, `q`, `e`, `d` (except in bookmarks), `l` (except in thread/ai-history), `h` (except in thread), `y` (except in thread), `i` (except in compose), `,` (comma). Note: `m` is reserved for DM + feed load more.
 
@@ -90,10 +92,11 @@ These keys are permanently reserved across ALL views and MUST NOT be reused for 
 | `f` | Switch / configure feed (jk nav, Enter select, d delete, a add) |
 | `v` | Toggle bookmark on selected post |
 | `q` | Open quoted post in thread (when post has a quote embed) |
+| `Ctrl+V` | Paste & Go — read clipboard URL, normalize, and navigate |
 | Mouse scroll up | Move cursor up by 1 |
 | Mouse scroll down | Move cursor down by 1 |
 
-**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用`
+**Footer hint**: `↑↓/jk:导航 Enter:查看 m:更多 r:刷新 f:切换Feed v:收藏 q:引用 ^V:粘贴跳转`
 
 ---
 

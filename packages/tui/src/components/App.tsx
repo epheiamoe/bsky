@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists, normalizeBskyInput, parseBskyAppUrl, bskyUrlToAppView, parseAtUri } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig, extractGallery } from '@bsky/app';
@@ -24,6 +24,7 @@ import { DMListView } from './DMListView.jsx';
 import { DMChatView } from './DMChatView.jsx';
 import { WidgetOverlay } from './WidgetOverlay.js';
 import { sandbox } from '../cli.js';
+import clipboard from 'clipboardy';
 
 interface AppConfig {
   blueskyHandle: string;
@@ -700,6 +701,41 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
     // Search mode — all keys handled by SearchView (like compose mode)
     if (currentView.type === 'search') return;
+
+    // Ctrl+V — Paste & Go (read clipboard, normalize URL, navigate)
+    if (input === '\x16') {
+      try {
+        const text = clipboard.readSync();
+        if (!text?.trim()) {
+          process.stderr.write(`\n⚠ ${t('clipboard.empty')}\n`);
+          return;
+        }
+        const normalized = normalizeBskyInput(text.trim());
+        if (!normalized) {
+          process.stderr.write(`\n⚠ ${t('clipboard.notUrl')}\n`);
+          return;
+        }
+        let info;
+        if (normalized.startsWith('at://')) {
+          info = parseAtUri(normalized);
+        } else {
+          info = parseBskyAppUrl(normalized);
+        }
+        if (!info) {
+          process.stderr.write(`\n⚠ ${t('clipboard.notUrl')}\n`);
+          return;
+        }
+        const view = bskyUrlToAppView(info);
+        if (view) {
+          goTo(view as AppView);
+        } else {
+          process.stderr.write(`\n⚠ ${t('clipboard.notUrl')}\n`);
+        }
+      } catch {
+        process.stderr.write(`\n⚠ ${t('clipboard.permissionDenied')}\n`);
+      }
+      return;
+    }
 
     // ── Global navigation shortcuts ──
     if (k === 't') { if (currentView.type !== 'aiChat') goHome(); return; }

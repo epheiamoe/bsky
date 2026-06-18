@@ -774,6 +774,7 @@ const ja: LocaleMessages = {
   // [v0.14.0] 通知
   'notifications.markAllAsRead': 'すべて既読にする',
   'keys.markRead': 'M: 既読にする',
+  'keys.feed': '↑↓/jk:移動 Enter:表示 m:もっと r:更新 f:フィード v:保存 q:引用 ^V:貼付けて移動',
 
   // [v0.14.3] 外部リンクリッチカード
   'external.readingTime': '読了{minutes}分',
