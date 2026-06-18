@@ -926,7 +926,7 @@ const zh: LocaleMessages = {
   'help.clipboard.title': '快速导航',
   'help.clipboard.desc': '复制任意 bsky.app 链接（或 deer.social 等第三方客户端链接），然后使用地址栏的「粘贴并跳转」按钮直接跳转到帖子、主页或动态。',
   'help.urls.title': 'URL 兼容性',
-  'help.urls.desc': '本客户端支持多种 URL 格式：bsky.app 链接、/i/ 重定向链接（来自 Twitter/X 分享）、at:// 协议 URI、bluesky:// 协议，以及 deer.social、tokimeki.blue、useouranos.app 等第三方 Bluesky 客户端的链接。',
+  'help.urls.desc': '本客户端支持多种 URL 格式：bsky.app 链接、/i/ 内部重定向链接、at:// 协议 URI、bluesky:// 协议，以及 deer.social、tokimeki.blue、useouranos.app 等第三方 Bluesky 客户端的链接。',
   'help.embeds.title': '富媒体嵌入',
   'help.embeds.desc': '多图帖子以可滚动画廊展示。引用帖子以内联卡片呈现，包含预览文本。外部链接显示富链接预览。',
   'help.ai.title': 'AI 助手',

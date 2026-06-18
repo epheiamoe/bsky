@@ -775,7 +775,7 @@ const en: LocaleMessages = {
   'help.clipboard.title': 'Quick Navigation',
   'help.clipboard.desc': 'Copy any bsky.app link (or links from supported third-party clients like deer.social), then use the "Paste & Go" button in the address bar to jump directly to that post, profile, or feed.',
   'help.urls.title': 'URL Compatibility',
-  'help.urls.desc': 'This client understands multiple URL formats: bsky.app links, /i/ redirect links (from Twitter/X shares), at:// protocol URIs, bluesky:// scheme, and links from third-party Bluesky clients like deer.social, tokimeki.blue, and useouranos.app.',
+  'help.urls.desc': 'This client understands multiple URL formats: bsky.app links, /i/ internal redirect links, at:// protocol URIs, bluesky:// scheme, and links from third-party Bluesky clients like deer.social, tokimeki.blue, and useouranos.app.',
   'help.embeds.title': 'Rich Embeds',
   'help.embeds.desc': 'Posts with multiple images display as a scrollable gallery. Quoted posts render as inline cards with preview text. External links show rich link previews.',
   'help.ai.title': 'AI Assistant',

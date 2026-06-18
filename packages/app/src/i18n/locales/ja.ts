@@ -785,7 +785,7 @@ const ja: LocaleMessages = {
   'help.clipboard.title': 'クイックナビゲーション',
   'help.clipboard.desc': 'bsky.app のリンク（または deer.social などサードパーティクライアントのリンク）をコピーし、アドレスバーの「貼り付け＆移動」ボタンで投稿、プロフィール、フィードに直接ジャンプできます。',
   'help.urls.title': 'URL 互換性',
-  'help.urls.desc': 'このクライアントは複数の URL 形式に対応しています：bsky.app リンク、/i/ リダイレクトリンク（Twitter/X からの共有）、at:// プロトコル URI、bluesky:// スキーム、deer.social・tokimeki.blue・useouranos.app などのサードパーティ Bluesky クライアントのリンク。',
+  'help.urls.desc': 'このクライアントは複数の URL 形式に対応しています：bsky.app リンク、/i/ 内部リダイレクトリンク、at:// プロトコル URI、bluesky:// スキーム、deer.social・tokimeki.blue・useouranos.app などのサードパーティ Bluesky クライアントのリンク。',
   'help.embeds.title': 'リッチ埋め込み',
   'help.embeds.desc': '複数画像の投稿はスクロール可能なギャラリーとして表示。引用投稿はプレビューテキスト付きのインラインカードとしてレンダリング。外部リンクはリッチリンクプレビューを表示。',
   'help.ai.title': 'AI アシスタント',
