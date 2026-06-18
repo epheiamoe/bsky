@@ -1,6 +1,6 @@
 # @epheiamoe/bsky-mcp
 
-**MCP server for Bluesky AT Protocol** — 33 tools that let any MCP-compatible AI client (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf, OpenCode) interact with Bluesky.
+**MCP server for Bluesky AT Protocol** — 35 tools that let any MCP-compatible AI client (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf, OpenCode) interact with Bluesky.
 
 > Source: [github.com/epheiamoe/bsky](https://github.com/epheiamoe/bsky) · Zero UI · Pure Node.js stdio transport
 

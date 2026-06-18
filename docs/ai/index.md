@@ -44,7 +44,7 @@ AIAssistant.sendMessage(text)        ← packages/core/src/ai/assistant.ts
 
 ## Quick Reference
 
-- **34 tools** (28 read + 1 sandbox + 6 write) — see [tools.md](./tools.md)
+- **35 tools** (28 read + 1 sandbox + 6 write) — see [tools.md](./tools.md)
 - **7 providers** (OpenAI, xAI, DeepSeek, Mistral, Kimi CN, Kimi Overseas, OpenRouter) — see [providers.md](./providers.md)
 - **2 adapter types**: Chat Completions (`/v1/chat/completions`) and Responses API (`/v1/responses`) — see [adapter.md](./adapter.md)
 - **Default model**: `deepseek-v4-flash`

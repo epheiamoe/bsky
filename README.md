@@ -21,7 +21,7 @@ Supports third-party PDS.
 
 ![AI Chat](assets/illustration/AI-chat-1.png)
 
-Streaming responses with visible thinking. **33 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap.
+Streaming responses with visible thinking. **35 tools** bridging AI to Bluesky — analyze threads, summarize discussions, manage your lists, polish drafts. All write actions require a confirmation tap.
 
 Bring your own API key — nothing runs through our servers.
 

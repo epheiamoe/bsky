@@ -8,14 +8,14 @@
 
 ## Motivation
 
-External AI clients (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf, OpenCode) support MCP for connecting to third-party tools. ai-bsky had 34 tools locked inside the built-in AI chat. Exporting them as an MCP server makes them available to any MCP-compatible AI client.
+External AI clients (Claude Desktop, ChatGPT, VS Code, Cursor, Windsurf, OpenCode) support MCP for connecting to third-party tools. ai-bsky had 35 tools locked inside the built-in AI chat. Exporting them as an MCP server makes them available to any MCP-compatible AI client.
 
 ---
 
 ## Architecture
 
 ```
-@bsky/core (BskyClient + 34 tools)
+@bsky/core (BskyClient + 35 tools)
     └── @epheiamoe/bsky-mcp (MCP stdio server)
             └── External MCP clients (Claude Desktop, OpenCode, etc.)
 ```
@@ -44,7 +44,7 @@ src/*.ts → tsc --noEmit (typecheck only)
 ### Tool mapping
 
 ```typescript
-createTools(client: BskyClient) → ToolDescriptor[] (34 tools)
+createTools(client: BskyClient) → ToolDescriptor[] (35 tools)
   → filter by BSKY_ENABLE_WRITE gate
   → map to MCP tool schema (name, description, inputSchema)
   → register via Server.setRequestHandler(ListToolsRequestSchema)

@@ -4,7 +4,7 @@
 
 **Exports** (`src/index.ts`):
 - `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`, `listConvos`, `getConvoForMembers`, `getMessages`, `sendMessage`, `addReaction`, `removeReaction`, `updateRead`, `deleteMessageForSelf`, `muteConvo`, `unmuteConvo`, `putProfile`)
-- `createTools(tools)` — 34 tool definitions + handlers
+- `createTools(tools)` — 35 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
@@ -255,7 +255,7 @@ Hash-based SPA routing (`useHashRouter.ts`):
 
 **Architecture**:
 ```
-@bsky/core (BskyClient + 33 tools)  ←  bundled at build (esbuild)
+@bsky/core (BskyClient + 35 tools)  ←  bundled at build (esbuild)
     └── @epheiamoe/bsky-mcp (MCP stdio server)
             └── External MCP clients (OpenCode, Claude Desktop, VS Code, etc.)
 ```
@@ -287,7 +287,7 @@ See `docs/MCP.md` for full implementation record, lessons, and test results.
 
 | File | Content |
 |------|---------|
-| `tools.json` | JSON Schema for all 33 tools (name, description, inputSchema, endpoint, readonly) |
+| `tools.json` | JSON Schema for all 35 tools (name, description, inputSchema, endpoint, readonly) |
 | `system_prompts.md` | System prompts used by AI assistant, translator, and Polish functions |
 | `package.json` | Package metadata only |
 

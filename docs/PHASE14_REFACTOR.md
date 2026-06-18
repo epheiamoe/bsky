@@ -583,7 +583,7 @@ worker.onmessage = async (e) => {
 - [ ] `fetch_web_markdown` works on all platforms
 - [ ] `BSKY_WORKSPACE` is set correctly
 - [ ] No `globals()` namespace pollution
-- [ ] All 33 tools available on all platforms
+- [ ] All 35 tools available on all platforms
 - [ ] Write confirmation works on all platforms
 - [ ] Performance: <100ms overhead per tool call vs direct API
 

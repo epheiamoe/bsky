@@ -22,7 +22,7 @@
 | **系统架构** | `docs/ARCHITECTURE.md` | Monorepo 结构、依赖流、TUI/PWA 差异、关键决策 |
 | **文件清单** | `docs/PACKAGES.md` | 各包完整文件列表 |
 | **Hook 签名** | `docs/hooks/index.md` | 所有 hook 分类索引、store 模式 |
-| **AI 系统** | `docs/ai/index.md` | ApiAdapter 模式、7 个 Provider、33 个工具、流式 SSE |
+| **AI 系统** | `docs/ai/index.md` | ApiAdapter 模式、7 个 Provider、35 个工具、流式 SSE |
 | **MCP 服务器** | `docs/MCP.md` | MCP 实现记录、测试路径、npm 发布 |
 | **DM 私信** | `docs/DM.md` | API/鉴权/模型/教训 |
 | **虚拟滚动** | `docs/SCROLL.md` | 虚拟滚动 + 滚动恢复规范（必须用像素值） |

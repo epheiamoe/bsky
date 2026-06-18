@@ -68,7 +68,7 @@
 ```
 bsky/
 ├── packages/
-│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 34 tools.
+│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 35 tools.
 │   ├── app/         Layer 1: React hooks + pure stores. Shared by PWA/TUI.
 │   ├── pwa/         Layer 2a: Browser PWA (React DOM + Tailwind).
 │   ├── tui/         Layer 2b: Terminal UI (Ink).
