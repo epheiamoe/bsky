@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import { getHelpCategories, searchHelp, getCategoryInfo, iconToEmoji, getContent, type HelpEntry, type Platform, type Lang } from '@bsky/app';
 import { useI18n } from '@bsky/app';
+import { renderMarkdown } from '../utils/markdown.js';
 
 interface HelpViewProps {
   goBack: () => void;
@@ -227,8 +228,7 @@ export function HelpView({ goBack, cols, rows }: HelpViewProps) {
 
       // Render expanded content
       if (isExpanded) {
-        const detailText = content.detail;
-        const detailLines = wrapText(detailText, cols - 6);
+        const detailNodes = renderMarkdown(content.detail);
 
         return (
           <Box key={`entry-${entry.id}-${listIndex}`} flexDirection="column">
@@ -246,10 +246,10 @@ export function HelpView({ goBack, cols, rows }: HelpViewProps) {
                 {platformTag && <Text dimColor>{platformTag}</Text>}
               </Text>
             </Box>
-            {/* Detail text */}
-            {detailLines.map((line, i) => (
+            {/* Detail text (rendered markdown with bold, lists, headings) */}
+            {detailNodes.map((node, i) => (
               <Box key={`detail-${i}`} height={1} paddingLeft={4}>
-                <Text dimColor>{line}</Text>
+                {node}
               </Box>
             ))}
             {/* Tips */}
@@ -328,25 +328,4 @@ export function HelpView({ goBack, cols, rows }: HelpViewProps) {
       </Box>
     </Box>
   );
-}
-
-// Helper function to wrap text to fit within width
-function wrapText(text: string, maxWidth: number): string[] {
-  if (maxWidth <= 0) return [text];
-  
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    if (currentLine.length + word.length + 1 <= maxWidth) {
-      currentLine = currentLine ? `${currentLine} ${word}` : word;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
-    }
-  }
-  if (currentLine) lines.push(currentLine);
-
-  return lines.length > 0 ? lines : [''];
 }

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text } from 'ink';
 
-const TOKEN_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+)/g;
+// Token regex captures URLs, @handles, and **bold** spans
+const TOKEN_REGEX = /(https?:\/\/[^\s<>"']+|@[a-zA-Z0-9._-]+(?:\.[a-zA-Z]{2,})+|\*\*[^*]+\*\*)/g;
 
 function tokenizeLine(line: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
@@ -11,7 +12,14 @@ function tokenizeLine(line: string): React.ReactNode[] {
     if (match.index > lastIndex) {
       parts.push(line.slice(lastIndex, match.index));
     }
-    parts.push(<Text key={match.index} color="blue">{match[1]}</Text>);
+    const token = match[1]!;
+    if (token.startsWith('**') && token.endsWith('**')) {
+      // Bold: strip the ** delimiters and render bold
+      parts.push(<Text key={match.index} bold>{token.slice(2, -2)}</Text>);
+    } else {
+      // URL or @handle
+      parts.push(<Text key={match.index} color="blue">{token}</Text>);
+    }
     lastIndex = TOKEN_REGEX.lastIndex;
   }
   if (lastIndex < line.length) {
