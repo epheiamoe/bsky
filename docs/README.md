@@ -18,7 +18,7 @@
 | [ai/adapter.md](./ai/adapter.md) | ApiAdapter pattern, Chat vs Responses API |
 | [ai/providers.md](./ai/providers.md) | 7 provider configs, ModelInfo, fixedParams |
 | [ai/assistant.md](./ai/assistant.md) | AIAssistant class, AIConfig |
-| [ai/tools.md](./ai/tools.md) | 33 AI tools architecture |
+| [ai/tools.md](./ai/tools.md) | 34 AI tools architecture |
 | [ai/streaming.md](./ai/streaming.md) | SSE streaming, token delivery |
 | [ai/reasoning.md](./ai/reasoning.md) | Reasoning effort, thinking mode |
 | [ai/features.md](./ai/features.md) | Translation, Polish draft, single-turn functions |
@@ -68,7 +68,7 @@
 ```
 bsky/
 ├── packages/
-│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 33 tools.
+│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 34 tools.
 │   ├── app/         Layer 1: React hooks + pure stores. Shared by PWA/TUI.
 │   ├── pwa/         Layer 2a: Browser PWA (React DOM + Tailwind).
 │   ├── tui/         Layer 2b: Terminal UI (Ink).
@@ -86,7 +86,7 @@ bsky/
 3. **Single source of truth** — Business logic lives once in `core` + `app`
 4. **ChatStorage interface** — PWA uses IndexedDB, TUI uses JSON files
 5. **All tests use real API calls** — no mocks
-6. **33 AI tools** — 27 read + 1 sandbox + 6 write operations
+6. **34 AI tools** — 28 read + 1 sandbox + 6 write operations
 
 ## Tech Stack
 

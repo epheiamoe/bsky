@@ -24,6 +24,26 @@ export interface ToolDefinition {
   };
 }
 
+/** A single help center entry with translated content */
+export interface HelpEntry {
+  id: string;
+  category: string;
+  title: string;
+  summary: string;
+  detail: string;
+  platforms: string[];
+  tips: Array<{ icon: string; text: string }>;
+  related?: string[];
+}
+
+/** Provider interface for help center data — injected by the app layer */
+export interface HelpProvider {
+  search(query: string): HelpEntry[];
+  get(id: string): HelpEntry | undefined;
+  listCategories(): Array<{ name: string; count: number }>;
+  listByCategory(category: string): HelpEntry[];
+}
+
 interface WikipediaSummary {
   title: string;
   displaytitle: string;
@@ -72,7 +92,7 @@ function toBase64(data: Uint8Array): string {
   return btoa(binary);
 }
 
-export function createTools(client: BskyClient, getChatId?: () => string | undefined): ToolDescriptor[] {
+export function createTools(client: BskyClient, getChatId?: () => string | undefined, helpProvider?: HelpProvider): ToolDescriptor[] {
   const tools: ToolDescriptor[] = [
     // ======================== PYTHON SANDBOX ========================
     {
@@ -909,6 +929,73 @@ print(f"Processed {len(df)} rows")`,
             error: `search_wikipedia failed: ${err instanceof Error ? err.message : String(err)}`,
             hint: 'Wikipedia API might be unreachable from your network.',
           });
+        }
+      },
+      requiresWrite: false,
+    },
+
+    // ======================== HELP CENTER ========================
+    {
+      definition: {
+        name: 'ai-bsky_help',
+        description: 'Search and retrieve help center content. Use this to find features, usage tips, and guides for the Bluesky client. Can search by keyword, get a specific entry by ID, list all categories, or browse entries by category.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            action: { type: 'string', description: 'Action to perform', enum: ['search', 'get', 'listCategories', 'listByCategory'] },
+            query: { type: 'string', description: 'Search query (for search action)' },
+            id: { type: 'string', description: 'Help entry ID (for get action)' },
+            category: { type: 'string', description: 'Category name (for listByCategory action)' },
+          },
+          required: ['action'],
+        },
+      },
+      handler: async (p) => {
+        if (!helpProvider) {
+          return JSON.stringify({ error: 'Help center is not available in this context.' });
+        }
+        const action = p.action as string;
+        try {
+          switch (action) {
+            case 'search': {
+              const query = (p.query as string || '').trim();
+              if (!query) {
+                return JSON.stringify({ action, error: 'Search query is empty.', results: [], count: 0 });
+              }
+              const results = helpProvider.search(query);
+              return JSON.stringify({ action, query, results, count: results.length });
+            }
+            case 'get': {
+              const id = (p.id as string || '').trim();
+              if (!id) {
+                return JSON.stringify({ action, error: 'Help entry ID is required.' });
+              }
+              const entry = helpProvider.get(id);
+              if (!entry) {
+                return JSON.stringify({ action, error: `Help entry "${id}" not found.`, id });
+              }
+              return JSON.stringify({ action, entry });
+            }
+            case 'listCategories': {
+              const categories = helpProvider.listCategories();
+              return JSON.stringify({ action, categories, count: categories.length });
+            }
+            case 'listByCategory': {
+              const category = (p.category as string || '').trim();
+              if (!category) {
+                return JSON.stringify({ action, error: 'Category name is required.' });
+              }
+              const entries = helpProvider.listByCategory(category);
+              if (entries.length === 0) {
+                return JSON.stringify({ action, error: `No entries found for category "${category}".`, category, entries: [], count: 0 });
+              }
+              return JSON.stringify({ action, category, entries, count: entries.length });
+            }
+            default:
+              return JSON.stringify({ error: `Unknown action: "${action}". Valid actions: search, get, listCategories, listByCategory.` });
+          }
+        } catch (err) {
+          return JSON.stringify({ error: `Help center error: ${err instanceof Error ? err.message : String(err)}` });
         }
       },
       requiresWrite: false,

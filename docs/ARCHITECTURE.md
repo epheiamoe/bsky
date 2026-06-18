@@ -7,7 +7,7 @@
 ```
 bsky/
 ├── packages/
-│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 33 tools.
+│   ├── core/        Layer 0: Zero UI. BskyClient, AIAssistant, 34 tools.
 │   ├── app/         Layer 1: React hooks + pure stores. PWA-ready.
 │   ├── tui/         Layer 2: Ink/React terminal UI.
 │   │   └── src/
@@ -65,14 +65,14 @@ bsky/
 ```
 ┌──────────┐
 │ @bsky/   │  纯 TS, 零 UI 依赖
-│ core     │  BskyClient | AIAssistant | ApiAdapter | 33 tools | types
+│ core     │  BskyClient | AIAssistant | ApiAdapter | 34 tools | types
 └────┬─────┘
      │
      ├──────────────────────────────────────┐
      │                                      │
 ┌────▼─────┐                          ┌─────▼──────┐
 │ @bsky/   │  React hooks + 纯 stores │ @epheiamoe/ │  MCP stdio server
-│ app      │  useAuth | useTimeline   │ bsky-mcp    │  33 tools → external AI
+│ app      │  useAuth | useTimeline   │ bsky-mcp    │  34 tools → external AI
 │          │  useAIChat | hooks       │             │  npm published
 └────┬─────┘                          └─────────────┘
      │

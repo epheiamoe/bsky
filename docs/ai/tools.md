@@ -18,7 +18,7 @@ interface ToolDescriptor {
 
 ## Tool Categories
 
-**Read Tools (27)**:
+**Read Tools (28)**:
 - `resolve_handle` — resolve handle → DID
 - `get_record` — get raw AT record
 - `list_records` — list repo collection records
@@ -46,6 +46,7 @@ interface ToolDescriptor {
 - `search_wikipedia` — Wikipedia page summary
 - `get_lists` — user's lists
 - `get_list_feed` — posts from list members
+- `ai-bsky_help` — search/retrieve help center content (action=search|get|listCategories|listByCategory)
 
 **Sandbox Tools (1, read-only)**:
 - `execute_python` — run isolated Python code in browser via Pyodide WASM (pandas/numpy/matplotlib available). Files can be uploaded to workspace for analysis. Returns stdout/stderr/output files (CSV/PNG/JSON). Lazy init on first call. See `docs/WORKSPACE.md`.
@@ -106,6 +107,33 @@ handler: async (p) => {
 ```
 
 These guards catch the empty string case early, returning a friendly JSON error message to the AI instead of making an unnecessary API call that would fail or return garbage results.
+
+### ai-bsky_help
+
+```typescript
+handler: async (p) => {
+  if (!helpProvider) {
+    return JSON.stringify({ error: 'Help center is not available in this context.' });
+  }
+  // ... proceed with help lookup
+}
+```
+
+The help tool also guards against missing `helpProvider` (e.g., when called from MCP or ToolDispatcher without injected help data).
+
+## HelpProvider Dependency Injection
+
+The `ai-bsky_help` tool uses **dependency injection** to bridge the core↔app layer boundary:
+
+```
+packages/core/src/ai/tools.ts   — defines HelpProvider interface + tool handler
+packages/app/src/utils/helpCenter.ts — implements createHelpProvider(t) using i18n
+packages/app/src/hooks/useAIChat.ts  — wires provider into createTools()
+```
+
+**Why DI?** `@bsky/core` cannot import from `@bsky/app` (dependency direction). The help center data and i18n live in `@bsky/app`. The `HelpProvider` interface lets the app layer inject translated help data into the core-layer tool.
+
+**MCP/ToolDispatcher**: When no `helpProvider` is passed, the tool returns a graceful error. MCP and the Python sandbox dispatcher don't need help center access.
 
 ## Thread Flattening Format
 

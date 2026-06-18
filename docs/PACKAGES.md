@@ -4,7 +4,7 @@
 
 **Exports** (`src/index.ts`):
 - `BskyClient` — AT Protocol HTTP client (incl. `getTrends`, `getSuggestedFollows`, `createDraft`, `updateDraft`, `getDrafts`, `deleteDraft`, `listConvos`, `getConvoForMembers`, `getMessages`, `sendMessage`, `addReaction`, `removeReaction`, `updateRead`, `deleteMessageForSelf`, `muteConvo`, `unmuteConvo`, `putProfile`)
-- `createTools(tools)` — 33 tool definitions + handlers
+- `createTools(tools)` — 34 tool definitions + handlers
 - `AIAssistant` — OpenAI-compatible chat with function calling (unlimited rounds, user-controlled via pause/stop)
 - `sendMessageStreaming` — streaming variant with SSE parser + reasoning_content preservation
 - `translateText` — dual-mode translation (simple/JSON) with retry logic
@@ -21,7 +21,7 @@
 | File | Purpose |
 |------|---------|
 | `src/at/client.ts` | BskyClient class. Auth (createSession), all AT endpoints via `ky`. |
-| `src/ai/tools.ts` | `createTools()` → 33 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
+| `src/ai/tools.ts` | `createTools()` → 34 AI ToolDescriptor[]. Each has `definition` (JSON Schema) + `handler` (async function). |
 | `src/ai/adapter.ts` | `ApiAdapter` interface + `ChatCompletionsAdapter` + `StreamProcessor`. |
 | `src/ai/responses-adapter.ts` | `ResponsesApiAdapter` + `ResponsesApiStreamProcessor`. |
 | `src/ai/providers.ts` | Provider registry with metadata (`fixedParams`, `supportsReasoningEffort`, `video` reserved). |

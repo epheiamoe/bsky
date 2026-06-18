@@ -423,6 +423,41 @@ export function formatToolResult(toolName: string, content: string): ToolResultD
     return { summary: 'Web page', body: content };
   }
 
+  // ── Help center tool ──
+  if (toolName === 'ai-bsky_help') {
+    const r = jsonTry(content, obj => {
+      const action = String(obj.action ?? '');
+      const error = obj.error ? String(obj.error) : null;
+      if (error) return { action, error, summary: `Help error: ${truncate(error, 50)}`, body: error };
+
+      if (action === 'search') {
+        const results = obj.results as Array<Record<string, unknown>> ?? [];
+        const count = Number(obj.count ?? results.length);
+        const first3 = results.slice(0, 3).map(e => `• ${e.title}: ${truncate(String(e.summary ?? ''), 100)}`);
+        return { action, summary: `Help: ${count} results`, body: first3.join('\n') || '(no results)' };
+      }
+      if (action === 'get') {
+        const entry = obj.entry as Record<string, unknown> | undefined;
+        if (entry) return { action, summary: `Help: ${entry.title}`, body: `${entry.title}\n${entry.summary}\n\n${entry.detail}` };
+        return { action, summary: 'Help entry', body: truncate(content, 500) };
+      }
+      if (action === 'listCategories') {
+        const categories = obj.categories as Array<Record<string, unknown>> ?? [];
+        const list = categories.map(c => `${c.name} (${c.count})`).join(', ');
+        return { action, summary: `Help: ${categories.length} categories`, body: list };
+      }
+      if (action === 'listByCategory') {
+        const entries = obj.entries as Array<Record<string, unknown>> ?? [];
+        const count = Number(obj.count ?? entries.length);
+        const list = entries.map(e => `• ${e.title}`).join('\n');
+        return { action, summary: `Help: ${count} entries in ${obj.category}`, body: list || '(empty)' };
+      }
+      return { action, summary: 'Help center', body: truncate(content, 500) };
+    });
+    if (r) return { summary: r.summary, body: r.body };
+    return { summary: 'Help center', body: truncate(content, 500) };
+  }
+
   // ── Fallback: show content directly ──
   const previewLine = content.split('\n')[0] || content;
   return { summary: truncate(previewLine, 80), body: content };

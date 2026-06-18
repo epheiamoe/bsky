@@ -401,7 +401,7 @@ cd packages/core && npx vitest run --config vitest.config.ts
 | `packages/pwa/src/components/ConvoListPage.tsx` | DM 会话列表 |
 | `packages/pwa/src/components/DMChatPage.tsx` | DM 对话视图（气泡 + 反应 + 引用 + 删除 + 静音） |
 | `packages/pwa/src/components/ai/` | AI 共享组件（ThinkingCard, ToolCard, formatToolResult） |
-| `packages/core/src/ai/tools.ts` | 33 个 AI 工具定义（单一真相源） |
+| `packages/core/src/ai/tools.ts` | 34 个 AI 工具定义（单一真相源） |
 | `packages/core/src/ai/tool-dispatcher.ts` | 统一工具调度器（PWA/TUI/MCP 共用） |
 | `packages/core/src/ai/bsky-tools-api.ts` | bsky_tools API 类型定义 + filterFields |
 | `packages/core/src/ai/bsky-tools-definitions.ts` | 工具元数据 + Python wrapper 生成 |

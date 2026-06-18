@@ -3,7 +3,7 @@
 
 export { BskyClient } from './at/client.js';
 export { createTools } from './ai/tools.js';
-export type { ToolDefinition, ToolHandler, ToolDescriptor } from './ai/tools.js';
+export type { ToolDefinition, ToolHandler, ToolDescriptor, HelpEntry, HelpProvider } from './ai/tools.js';
 export { ToolDispatcher } from './ai/tool-dispatcher.js';
 export type { ToolDispatchRequest, ToolDispatchResponse } from './ai/tool-dispatcher.js';
 export { parseAtUri } from './at/types.js';
