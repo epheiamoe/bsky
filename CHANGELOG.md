@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.4] — 2026-06-19
+
+### Added
+
+- **`normalizeBskyInput()`**: unified URL normalization — bare domains, `/i/https://...`, `/i/bsky/...`, `at://` URIs, `bluesky://` scheme all resolve to standard bsky.app URLs or AT URIs.
+- **Expanded URL types**: `parseBskyAppUrl()` now handles `/hashtag/{tag}`, `/intent/compose?text=`, `/messages`, `/notifications`.
+- **`parseAtUri()`**: direct parsing of `at://` AT Protocol URIs into `BskyUrlInfo`.
+- **Clipboard paste button**: in FeedHeader, left of refresh. Reads clipboard, normalizes URL, and navigates. Silent failure for empty/non-URL clipboard.
+- **i18n**: 9 new keys (`action.pasteAndGo`, `link.type.hashtag/intent/messages/notifications`, `redirect.unsupportedFormat`, `clipboard.empty/notUrl/permissionDenied`).
+
+### Changed
+
+- `parseRedirectPath()` refactored to use `normalizeBskyInput()` — now supports `/i/https://bsky.app/xxx`, `/i/bsky/xxx`, `/i/at://...` formats.
+- `RedirectPage.tsx` uses `normalizeBskyInput()` for path normalization.
+
 ## [0.14.3] — 2026-06-13
 
 ### Added

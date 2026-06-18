@@ -24,7 +24,16 @@
 
 ## 当前版本
 
-**v0.14.3 — 照片轮播 + viewExternal 富链接 + 10 图支持 ✅ staging**
+**v0.14.4 — URL 标准化 + 剪贴板粘贴按钮 ✅ staging**
+
+### v0.14.4 新功能 (已完成):
+- ✅ **`normalizeBskyInput()`**：统一 URL 标准化 — 裸域名、`/i/https://...`、`/i/bsky/...`、`at://` URI、`bluesky://` scheme 全部解析为标准 bsky.app URL 或 AT URI
+- ✅ **扩展 URL 类型**：`parseBskyAppUrl()` 新增 `/hashtag/{tag}`、`/intent/compose?text=`、`/messages`、`/notifications` 支持
+- ✅ **`parseAtUri()`**：直接解析 `at://` AT Protocol URI 为 `BskyUrlInfo`
+- ✅ **剪贴板粘贴按钮**：FeedHeader 中刷新按钮左侧，读取剪贴板 → 标准化 URL → 导航。空/非 URL 剪贴板静默失败
+- ✅ **新 SVG 图标**：`clipboard-paste.svg`
+- ✅ **i18n**：9 新 key（`action.pasteAndGo`、`link.type.hashtag/intent/messages/notifications`、`redirect.unsupportedFormat`、`clipboard.empty/notUrl/permissionDenied`）
+- ✅ **`parseRedirectPath()` 重构**：委托 `normalizeBskyInput()`，支持 `/i/https://bsky.app/xxx`、`/i/bsky/xxx`、`/i/at://...` 格式
 
 ### v0.14.3 新功能 (已完成 — 部署到 staging):
 - ✅ **`app.bsky.embed.gallery` 照片轮播渲染**：新 `extractGallery()`、`GalleryCard` 轮播组件（CSS translateX、触摸滑动、键盘导航、ALT 徽章、灯箱集成、`object-fit: cover` 裁剪）
@@ -53,6 +62,13 @@ v0.14.1 重点修复了视频上传成功后无法播放的问题，并优化了
 - **审核决策引擎**: 9 种 severity × blurs 组合，多提供商独立评估
 - **批量审核集成**: `useModerationBatch` hook + 6 个 PWA 列表组件集成
 - **举报功能**: `createModerationReport` API，帖子详情页举报 + TUI `!` 快捷键
+
+### 最近修复与优化 (2026-06-19):
+- ✅ 统一 URL 标准化管线：`normalizeBskyInput()` 处理所有用户输入格式
+- ✅ `parseBskyAppUrl()` 扩展支持 hashtag、intent/compose、messages、notifications
+- ✅ `parseAtUri()` 直接解析 AT Protocol URI
+- ✅ 剪贴板粘贴按钮：一键从剪贴板读取并导航到 bsky 链接
+- ✅ `parseRedirectPath()` 重构为委托模式
 
 ### 最近修复与优化 (2026-06-12):
 - ✅ 修复 recordWithMedia 引用帖在客户端丢失：`extractQuotedPost` 正确解包 `recordWithMedia#view`

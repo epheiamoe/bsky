@@ -178,6 +178,24 @@ export function extractEmbeds(post: PostView): { images: ExtractImage[]; video: 
 
 **Critical**: `extractQuotedPost` reads from `(post as any).embed` (API-resolved `#view`), NEVER `post.record.embed`. All consumers must call these shared functions — no inline extraction.
 
+### URL Parsing (v0.14.4)
+
+**File**: `packages/app/src/utils/parseBskyUrl.ts`
+
+```typescript
+export interface BskyUrlInfo { type: string; params: Record<string, string>; }
+
+export function normalizeBskyInput(input: string): string;
+export function parseBskyAppUrl(url: string): BskyUrlInfo | null;
+export function parseAtUri(uri: string): BskyUrlInfo | null;
+export function parseRedirectPath(path: string): string;
+```
+
+- **`normalizeBskyInput()`** — Unified input normalizer. Accepts bare domains (`bsky.app/...`), `/i/` prefixed paths (`/i/https://...`, `/i/bsky/...`, `/i/at://...`), `at://` URIs, and `bluesky://` scheme. Returns a standard `https://bsky.app/...` URL or `at://` URI.
+- **`parseBskyAppUrl()`** — Parses bsky.app URLs into `BskyUrlInfo`. Supported types: `profile`, `post`, `feed`, `list`, `hashtag`, `intent`, `messages`, `notifications`.
+- **`parseAtUri()`** — Parses `at://` AT Protocol URIs into `BskyUrlInfo` (collection-based routing: `app.bsky.feed.post` → post, `app.bsky.graph.list` → list, etc.).
+- **`parseRedirectPath()`** — Delegates to `normalizeBskyInput()` for `/i/` redirect handling. Supports `/i/https://bsky.app/xxx`, `/i/bsky/xxx`, `/i/at://...`.
+
 ### AI Tool Result Formatting
 
 **File**: `packages/pwa/src/components/ai/formatToolResult.ts`
