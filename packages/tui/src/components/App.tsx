@@ -297,6 +297,8 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
       }
       return;
     }
+    // Help view — all keys handled by HelpView's own useInput (search input must not trigger global shortcuts)
+    if (currentView.type === 'help') return;
     if (key.escape) {
       if (creatingList) { setCreatingList(false); setListInput(''); return; }
       if (editingListUri) { setEditingListUri(null); setListInput(''); return; }
