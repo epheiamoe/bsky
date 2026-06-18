@@ -113,6 +113,7 @@ pnpm -r typecheck
     - Architecture changes → update `docs/ARCHITECTURE.md`
     - If a doc is actively changing, add `[WIP]` or `[v0.X.0+]` at the top
     - Outdated docs that are superseded should be moved to `docs/archive/`
+13. **Help Center**: When adding or changing user-facing features, check `packages/app/src/data/help-content.ts` for related entries. Help content must be updated alongside docs — it's the user-facing version of documentation. Each entry has inline EN/ZH/JA content with markdown support. Platform tags (`pwa`/`tui`) must reflect actual platform support (verify against code, not assumptions).
 
 ## AI Guidance
 

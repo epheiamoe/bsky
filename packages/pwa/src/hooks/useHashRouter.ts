@@ -144,6 +144,8 @@ function parseHash(): AppView {
       return { type: 'diagnostic' };
     case '/about':
       return { type: 'about' };
+    case '/help':
+      return { type: 'help' };
     case '/atplay':
       return { type: 'atplay' };
     case '/atplay/social-circle':
@@ -230,6 +232,8 @@ function encodeView(view: AppView): string {
       return '#/diagnostic';
     case 'about':
       return '#/about';
+    case 'help':
+      return '#/help';
     case 'atplay':
       return '#/atplay';
     case 'atplaySocialCircle':
