@@ -34,6 +34,7 @@ import { SuggestedFeedsWidget } from './components/widgets/SuggestedFeedsWidget.
 import { TrendsWidget } from './components/widgets/TrendsWidget.js';
 import { AIChatWidget, AIChatHeaderButtons } from './components/widgets/AIChatWidget.js';
 import { AboutPage } from './components/AboutPage.js';
+import { HelpPage } from './components/HelpPage.js';
 import { DiagnosticPage } from './components/DiagnosticPage.js';
 import { AtPlayPage } from './components/AtPlayPage.js';
 import { AtPlaySocialCircle } from './components/AtPlaySocialCircle.js';
@@ -218,6 +219,7 @@ export function App() {
       case 'drafts': document.title = `${base} — Drafts`; break;
       case 'lists': document.title = `${base} — Lists`; break;
       case 'about': document.title = `${base} — About`; break;
+      case 'help': document.title = `${base} — Help`; break;
       case 'diagnostic': document.title = `${base} — Diagnostic`; break;
       case 'components': document.title = `${base} — Components`; break;
       case 'atplay': document.title = `${base} — AT Play`; break;
@@ -507,6 +509,8 @@ export function App() {
         return <ComponentsPage goBack={goBack} goTo={goTo} client={client} />;
       case 'about':
         return <AboutPage goBack={goBack} />;
+      case 'help':
+        return <HelpPage goBack={goBack} />;
       case 'diagnostic':
         return <DiagnosticPage client={client} goBack={goBack} posts={timeline.posts} />;
       case 'atplay':

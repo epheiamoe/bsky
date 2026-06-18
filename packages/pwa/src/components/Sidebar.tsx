@@ -79,6 +79,20 @@ export function Sidebar({ currentView, goTo, client, notifCount, draftCount, dmC
       </div>
       <div className="pt-3 border-t border-border space-y-1">
         <button
+          type="button"
+          onClick={() => goTo({ type: 'help' } as AppView)}
+          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
+            currentView.type === 'help'
+              ? 'bg-primary/10 text-primary font-semibold border-primary'
+              : 'text-text-secondary hover:bg-surface border-transparent'
+          }`}
+          aria-current={currentView.type === 'help' ? 'page' : undefined}
+        >
+          <Icon name="book-search" size={20} className="mr-2" />
+          <span>{t('nav.help')}</span>
+        </button>
+        <button
+          type="button"
           onClick={() => goTo({ type: 'settings' } as AppView)}
           className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors text-left w-full border-l-2 ${
             currentView.type === 'settings'

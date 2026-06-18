@@ -778,6 +778,25 @@ const ja: LocaleMessages = {
   // [v0.14.3] 外部リンクリッチカード
   'external.readingTime': '読了{minutes}分',
   'external.bySource': '{source}より',
+
+  // ── ヘルプページ ──
+  'nav.help': 'ヘルプ',
+  'help.title': 'ヘルプ',
+  'help.clipboard.title': 'クイックナビゲーション',
+  'help.clipboard.desc': 'bsky.app のリンク（または deer.social などサードパーティクライアントのリンク）をコピーし、アドレスバーの「貼り付け＆移動」ボタンで投稿、プロフィール、フィードに直接ジャンプできます。',
+  'help.urls.title': 'URL 互換性',
+  'help.urls.desc': 'このクライアントは複数の URL 形式に対応しています：bsky.app リンク、/i/ リダイレクトリンク（Twitter/X からの共有）、at:// プロトコル URI、bluesky:// スキーム、deer.social・tokimeki.blue・useouranos.app などのサードパーティ Bluesky クライアントのリンク。',
+  'help.embeds.title': 'リッチ埋め込み',
+  'help.embeds.desc': '複数画像の投稿はスクロール可能なギャラリーとして表示。引用投稿はプレビューテキスト付きのインラインカードとしてレンダリング。外部リンクはリッチリンクプレビューを表示。',
+  'help.ai.title': 'AI アシスタント',
+  'help.ai.desc': 'AI チャットを開くと投稿の検索、プロフィール閲覧、コンテンツの翻訳、下書きの推敲ができます。Python サンドボックスでブラウザ内でデータ分析スクリプトを直接実行できます。',
+  'help.keyboard.title': 'キーボードショートカット',
+  'help.keyboard.desc': '? キーを押してキーボードショートカット一覧を開きます。タイムライン、スレッド、投稿など、すべてをキーボードで操作できます。',
+  'help.atplay.title': 'AT Play — ソーシャルサークル',
+  'help.atplay.desc': 'ソーシャルグラフをインタラクティブな図として可視化。最も交流が多い人を発見し、共通のつながりを見つけ、ネットワークパターンを探索できます。',
+  'help.widgets.title': 'カスタマイズ可能なウィジェット',
+  'help.widgets.desc': '右サイドバーにウィジェットを表示：トレンド、おすすめフォロー、プロフィールプレビュー、AI クイックアクション。設定で切り替えられます。',
+  'help.version': 'バージョン {version}',
 };
 
 export default ja;

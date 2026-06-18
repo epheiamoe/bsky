@@ -768,6 +768,25 @@ const en: LocaleMessages = {
   // [v0.14.3] External link rich card
   'external.readingTime': '{minutes} min read',
   'external.bySource': 'By {source}',
+
+  // ── Help page ──
+  'nav.help': 'Help',
+  'help.title': 'Help',
+  'help.clipboard.title': 'Quick Navigation',
+  'help.clipboard.desc': 'Copy any bsky.app link (or links from supported third-party clients like deer.social), then use the "Paste & Go" button in the address bar to jump directly to that post, profile, or feed.',
+  'help.urls.title': 'URL Compatibility',
+  'help.urls.desc': 'This client understands multiple URL formats: bsky.app links, /i/ redirect links (from Twitter/X shares), at:// protocol URIs, bluesky:// scheme, and links from third-party Bluesky clients like deer.social, tokimeki.blue, and useouranos.app.',
+  'help.embeds.title': 'Rich Embeds',
+  'help.embeds.desc': 'Posts with multiple images display as a scrollable gallery. Quoted posts render as inline cards with preview text. External links show rich link previews.',
+  'help.ai.title': 'AI Assistant',
+  'help.ai.desc': 'Open AI Chat to search posts, view profiles, translate content, or polish your drafts. The Python sandbox can run data analysis scripts directly in your browser.',
+  'help.keyboard.title': 'Keyboard Shortcuts',
+  'help.keyboard.desc': 'Press ? to open the full keyboard shortcut reference. Navigate the app entirely with keyboard — timeline, threads, compose, and more.',
+  'help.atplay.title': 'AT Play — Social Circle',
+  'help.atplay.desc': 'Visualize your social graph as an interactive diagram. Discover who you interact with most, find mutual connections, and explore your network patterns.',
+  'help.widgets.title': 'Customizable Widgets',
+  'help.widgets.desc': 'The right sidebar offers widgets: trending topics, suggested follows, profile preview, and AI quick actions. Toggle them in Settings.',
+  'help.version': 'Version {version}',
 };
 
 export default en;
