@@ -36,7 +36,7 @@
 - ✅ **`ai-bsky_help` AI 工具**：4 个 action（search/get/listCategories/listByCategory）
 - ✅ **i18n**：26+ 新 key
 - **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.4）
-- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（PWA v0.14.4）
+- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev` / `https://c597a3bf.ai-bsky.pages.dev`（PWA v0.14.4）
 
 ### v0.14.3 新功能 (已完成 — 部署到 production):
 - ✅ **`app.bsky.embed.gallery` 照片轮播渲染**：新 `extractGallery()`、`GalleryCard` 轮播组件（CSS translateX、触摸滑动、键盘导航、ALT 徽章、灯箱集成、`object-fit: cover` 裁剪）
