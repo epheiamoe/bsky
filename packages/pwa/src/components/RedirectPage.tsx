@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { AppView } from '@bsky/app';
-import { useI18n, parseBskyAppUrl, bskyUrlToAppView } from '@bsky/app';
+import { useI18n, parseBskyAppUrl, bskyUrlToAppView, normalizeBskyInput } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 import { Icon } from './Icon.js';
 
@@ -19,19 +19,54 @@ export function RedirectPage({ pathname, client, onNavigate }: RedirectPageProps
   useEffect(() => {
     async function resolve() {
       try {
-        // Parse the /i/ path
-        const path = pathname.slice(3); // remove /i/
-        const [domain, ...segments] = path.split('/').filter(Boolean);
-
-        if (!domain || domain !== 'bsky.app') {
+        // Use normalizeBskyInput to handle /i/ path and all format variations
+        const pathAfterI = pathname.slice(3); // remove /i/
+        if (!pathAfterI) {
           setStatus('error');
-          setErrorMsg(t('redirect.unsupportedClient'));
+          setErrorMsg(t('redirect.invalidUrl'));
           return;
         }
 
-        const bskyUrl = `https://${domain}/${segments.join('/')}`;
-        const info = parseBskyAppUrl(bskyUrl);
+        const normalized = normalizeBskyInput(pathAfterI);
+        if (!normalized) {
+          setStatus('error');
+          setErrorMsg(t('redirect.unsupportedFormat'));
+          return;
+        }
 
+        // Handle AT URIs — parse directly
+        if (normalized.startsWith('at://')) {
+          // AT URIs are already resolved, navigate directly
+          const atMatch = normalized.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
+          if (atMatch) {
+            const [, , collection] = atMatch;
+            let view: AppView;
+            if (collection === 'app.bsky.feed.post') {
+              view = { type: 'thread', uri: normalized };
+            } else if (collection === 'app.bsky.feed.generator') {
+              view = { type: 'feed', feedUri: normalized };
+            } else if (collection === 'app.bsky.graph.list') {
+              view = { type: 'listDetail', uri: normalized };
+            } else {
+              setStatus('error');
+              setErrorMsg(t('redirect.unsupportedPath'));
+              return;
+            }
+            setResolvedView(view);
+            setStatus('success');
+            if (window.history.replaceState) {
+              window.history.replaceState(null, '', '/');
+            }
+            setTimeout(() => { onNavigate(view); }, 500);
+            return;
+          }
+          setStatus('error');
+          setErrorMsg(t('redirect.invalidUrl'));
+          return;
+        }
+
+        // Parse as bsky.app URL
+        const info = parseBskyAppUrl(normalized);
         if (!info) {
           setStatus('error');
           setErrorMsg(t('redirect.invalidUrl'));
@@ -39,7 +74,6 @@ export function RedirectPage({ pathname, client, onNavigate }: RedirectPageProps
         }
 
         let view = bskyUrlToAppView(info);
-
         if (!view) {
           setStatus('error');
           setErrorMsg(t('redirect.unsupportedPath'));

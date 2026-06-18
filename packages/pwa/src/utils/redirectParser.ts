@@ -1,4 +1,4 @@
-import { parseBskyAppUrl, bskyUrlToAppView, isBskyAppUrl } from '@bsky/app';
+import { parseBskyAppUrl, bskyUrlToAppView, isBskyAppUrl, normalizeBskyInput } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 
 export interface RedirectInfo {
@@ -11,25 +11,27 @@ export interface RedirectInfo {
 }
 
 /**
- * Parse a redirect path like /i/bsky.app/profile/xxx into redirect info
+ * Parse a redirect path like /i/bsky.app/profile/xxx into redirect info.
+ * Delegates to normalizeBskyInput() for all format handling (bare domains,
+ * /i/ redirects, bluesky:// scheme, AT URIs, etc.).
  */
 export function parseRedirectPath(pathname: string): RedirectInfo | null {
   if (!pathname.startsWith('/i/')) return null;
 
-  const path = pathname.slice(3); // remove /i/
-  const [domain, ...segments] = path.split('/').filter(Boolean);
+  const pathAfterI = pathname.slice(3); // remove /i/
+  if (!pathAfterI) return null;
 
-  if (!domain) return null;
+  // Delegate to normalizeBskyInput for all format handling
+  const normalized = normalizeBskyInput(pathAfterI);
+  if (!normalized) return null;
 
-  // Currently only support bsky.app
-  if (domain !== 'bsky.app') {
-    // Future: support other clients like graysky.app, klearsky, etc.
-    return null;
+  // Handle AT URIs directly
+  if (normalized.startsWith('at://')) {
+    return parseAtUriToRedirectInfo(normalized);
   }
 
-  // Reconstruct the bsky.app URL
-  const bskyUrl = `https://${domain}/${segments.join('/')}`;
-  const info = parseBskyAppUrl(bskyUrl);
+  // Parse as bsky.app URL
+  const info = parseBskyAppUrl(normalized);
   if (!info) return null;
 
   const appView = bskyUrlToAppView(info);
@@ -52,8 +54,49 @@ export function parseRedirectPath(pathname: string): RedirectInfo | null {
     handle: info.handleOrDid && !info.handleOrDid.startsWith('did:') ? info.handleOrDid : undefined,
     did: info.handleOrDid?.startsWith('did:') ? info.handleOrDid : undefined,
     rkey: info.rkey || info.listRkey || info.feedRkey,
-    type: info.type,
+    type: info.type as RedirectInfo['type'],
   };
+}
+
+/**
+ * Parse an AT URI into RedirectInfo.
+ * Supports at://{authority}/{collection}/{rkey} format.
+ */
+function parseAtUriToRedirectInfo(atUri: string): RedirectInfo | null {
+  // at://{authority}/{collection}/{rkey}
+  const match = atUri.match(/^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/);
+  if (!match) return null;
+  const [, authority, collection, rkey] = match;
+
+  if (collection === 'app.bsky.feed.post') {
+    return {
+      target: `#/thread?uri=${encodeURIComponent(atUri)}`,
+      needsResolution: false,
+      did: authority?.startsWith('did:') ? authority : undefined,
+      handle: authority?.startsWith('did:') ? undefined : authority,
+      rkey,
+      type: 'post',
+    };
+  }
+  if (collection === 'app.bsky.feed.generator') {
+    return {
+      target: `#/feed?feed=${encodeURIComponent(atUri)}`,
+      needsResolution: false,
+      did: authority?.startsWith('did:') ? authority : undefined,
+      rkey,
+      type: 'feed',
+    };
+  }
+  if (collection === 'app.bsky.graph.list') {
+    return {
+      target: `#/list?uri=${encodeURIComponent(atUri)}`,
+      needsResolution: false,
+      did: authority?.startsWith('did:') ? authority : undefined,
+      rkey,
+      type: 'list',
+    };
+  }
+  return null;
 }
 
 /**
@@ -87,6 +130,16 @@ function appViewToHash(view: AppView): string {
       const uri = (view as { uri: string }).uri;
       return `#/list?uri=${encodeURIComponent(uri)}`;
     }
+    case 'compose': {
+      const text = (view as { initialText?: string }).initialText;
+      let url = '#/compose';
+      if (text) url += `?text=${encodeURIComponent(text)}`;
+      return url;
+    }
+    case 'dm':
+      return '#/dm';
+    case 'notifications':
+      return '#/notifications';
     default:
       return '#/';
   }
