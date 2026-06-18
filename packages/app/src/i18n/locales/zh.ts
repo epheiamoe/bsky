@@ -937,6 +937,198 @@ const zh: LocaleMessages = {
   'help.atplay.desc': '将你的社交图谱可视化为交互式图表。发现你互动最多的人，找到共同关注，探索你的网络模式。',
   'help.widgets.title': '可自定义小部件',
   'help.widgets.desc': '右侧边栏提供小部件：热门话题、推荐关注、个人资料预览和 AI 快捷操作。可在设置中切换。',
+  // ── 帮助中心 — 结构化条目 ──
+  'help.searchPlaceholder': '搜索功能…',
+  'help.noResults': '未找到结果',
+  'help.platform.pwa': 'PWA',
+  'help.platform.tui': 'TUI',
+
+  // 帮助分类
+  'help.category.navigation': '导航',
+  'help.category.media': '媒体',
+  'help.category.ai': 'AI',
+  'help.category.shortcuts': '快捷操作',
+  'help.category.settings': '设置',
+  'help.category.social': '社交',
+  'help.category.advanced': '高级',
+
+  // clipboard-paste（导航，PWA）
+  'help.clipboard.summary': '粘贴 bsky.app 链接即可跳转到对应内容',
+  'help.clipboard.detail': '从浏览器或任意应用复制 Bluesky 链接，使用地址栏的「粘贴并跳转」按钮即可直接跳转到帖子、主页或动态。支持 deer.social、tokimeki 等第三方客户端链接。',
+  'help.clipboard.tip1': '复制任意链接后点击地址栏',
+  'help.clipboard.tip2': '使用「粘贴并跳转」快速导航',
+  'help.clipboard.tip3': '支持 bsky.app、deer.social 等客户端链接',
+
+  // url-compatibility（导航）
+  'help.urlCompat.title': 'URL 兼容性',
+  'help.urlCompat.summary': '支持多种 Bluesky URL 格式和第三方客户端链接',
+  'help.urlCompat.detail': '本客户端支持 bsky.app 链接、/i/ 内部重定向链接、at:// 协议 URI、bluesky:// 协议，以及 deer.social、tokimeki.blue、ouranos 等第三方客户端链接。URL 会自动标准化为 AT Protocol 格式。',
+  'help.urlCompat.tip1': '在地址栏粘贴任意 Bluesky URL 格式',
+  'help.urlCompat.tip2': '第三方客户端链接可无缝使用',
+  'help.urlCompat.tip3': 'AT URI (at://...) 原生支持',
+
+  // third-party-clients（导航）
+  'help.thirdParty.title': '第三方客户端',
+  'help.thirdParty.summary': '直接在本应用中打开其他 Bluesky 客户端的链接',
+  'help.thirdParty.detail': '来自 deer.social、tokimeki.blue、ouranos、deck.blue 等第三方客户端的链接会自动识别和转换。你可以选择在本应用或原客户端中打开。',
+  'help.thirdParty.tip1': '第三方客户端链接默认在应用内打开',
+  'help.thirdParty.tip2': '粘贴任意客户端链接即可导航',
+  'help.thirdParty.tip3': 'AT Protocol URI 跨客户端通用',
+
+  // gallery-embed（媒体）
+  'help.gallery.title': '图片画廊',
+  'help.gallery.summary': '多图帖子以可交互轮播方式展示',
+  'help.gallery.detail': '包含多张图片的帖子以可滑动画廊形式展示，配有导航控件。点击任意图片可查看原图。每个帖子最多支持 10 张图片，切换流畅。',
+  'help.gallery.tip1': '滑动或使用方向键浏览图片',
+  'help.gallery.tip2': '点击图片查看原图',
+  'help.gallery.tip3': '每个帖子最多 10 张图片',
+
+  // rich-embeds（媒体）
+  'help.richEmbeds.title': '富媒体嵌入',
+  'help.richEmbeds.summary': '引用帖子和链接以预览卡片形式呈现',
+  'help.richEmbeds.detail': '引用帖子以内联卡片形式展示，包含作者信息和预览文本。外部链接显示富预览，含标题、描述和缩略图。所有嵌入内容支持键盘导航。',
+  'help.richEmbeds.tip1': '引用帖子以内联卡片形式显示',
+  'help.richEmbeds.tip2': '外部链接显示富链接卡片',
+  'help.richEmbeds.tip3': '所有嵌入内容支持键盘导航',
+
+  // video-embed（媒体）
+  'help.video.title': '视频播放',
+  'help.video.summary': '内联视频播放器，支持字幕',
+  'help.video.detail': '视频在动态中直接播放，内置播放器。支持多语言字幕（VTT 格式）。视频针对桌面和移动端优化，支持自适应流媒体。',
+  'help.video.tip1': '视频内联播放，带播放控件',
+  'help.video.tip2': '支持多语言字幕',
+  'help.video.tip3': '点击可切换全屏播放',
+
+  // ai-chat（AI）
+  'help.aiChat.title': 'AI 对话',
+  'help.aiChat.summary': '与 AI 对话，搜索、分析和管理你的 Bluesky 体验',
+  'help.aiChat.detail': '打开 AI 对话可搜索帖子、查看资料、翻译内容或获取分析。AI 可使用工具代你与 Bluesky 交互——读取时间线、搜索等。所有写操作需要你确认。',
+  'help.aiChat.tip1': '让 AI 搜索帖子或查看资料',
+  'help.aiChat.tip2': '使用 @handle 引用特定用户',
+  'help.aiChat.tip3': '在支持的页面使用 /view 获取上下文',
+  'help.aiChat.tip4': '在设置 → AI 中配置 API Key',
+
+  // ai-polish（AI）
+  'help.aiPolish.title': '草稿润色',
+  'help.aiPolish.summary': 'AI 驱动的帖子写作改进',
+  'help.aiPolish.detail': '使用 AI 在发布前润色和改进草稿。可要求特定改进，如更精简、更正式或更幽默。润色后一键替换草稿。',
+  'help.aiPolish.tip1': '撰写时按 F 润色草稿',
+  'help.aiPolish.tip2': '可指定具体的风格要求',
+  'help.aiPolish.tip3': '复制润色文本或替换草稿',
+
+  // ai-translate（AI）
+  'help.aiTranslate.title': 'AI 翻译',
+  'help.aiTranslate.summary': '使用 AI 翻译帖子和内容',
+  'help.aiTranslate.detail': '使用 AI 翻译任意帖子或文本内容。翻译比传统机器翻译更尊重语境和细微差别。在设置 → 通用中设定目标语言。',
+  'help.aiTranslate.tip1': '翻译任意语言的帖子',
+  'help.aiTranslate.tip2': '一键复制翻译文本',
+  'help.aiTranslate.tip3': '在设置中设定目标语言',
+
+  // ai-sandbox（AI，PWA）
+  'help.aiSandbox.title': 'Python 沙箱',
+  'help.aiSandbox.summary': '在浏览器中直接运行 Python 代码进行数据分析',
+  'help.aiSandbox.detail': 'AI 沙箱在 WebAssembly 环境（Pyodide）中运行 Python 代码。无需离开浏览器即可分析数据、绘制图表和处理文件。支持 pandas、numpy、matplotlib 等常用库。',
+  'help.aiSandbox.tip1': '让 AI 分析数据或创建图表',
+  'help.aiSandbox.tip2': '使用代码搜索和处理帖子数据',
+  'help.aiSandbox.tip3': '结果以表格和图表形式展示',
+
+  // ai-api-keys（AI）
+  'help.apiKeys.title': 'API 密钥',
+  'help.apiKeys.summary': '配置 AI 提供商 API 密钥以启用智能功能',
+  'help.apiKeys.detail': '添加来自支持的提供商（DeepSeek、OpenAI、Mistral、xAI、Kimi、OpenRouter）的 API 密钥以启用 AI 功能。密钥保存在浏览器本地，请求直接发送到提供商——我们不会看到你的密钥。',
+  'help.apiKeys.tip1': '在设置 → AI 中添加 API Key',
+  'help.apiKeys.tip2': '密钥仅保存在浏览器本地',
+  'help.apiKeys.tip3': '支持 DeepSeek、OpenAI 等',
+
+  // keyboard-shortcuts（快捷操作）
+  'help.keyboard.summary': '使用键盘快捷键操作整个应用',
+  'help.keyboard.detail': '按 ? 查看所有可用快捷键。使用 J/K 导航时间线，L 点赞，R 转发，C 回复等。快捷键在所有视图中有效，包括帖子详情、发帖和 AI 对话。',
+  'help.keyboard.tip1': '按 ? 查看所有快捷键',
+  'help.keyboard.tip2': 'J/K 导航，L 点赞，R 转发',
+  'help.keyboard.tip3': '按 / 聚焦搜索栏',
+  'help.keyboard.tip4': 'C 回复，V 收藏',
+
+  // slash-commands（快捷操作）
+  'help.slashCommands.title': '斜杠命令',
+  'help.slashCommands.summary': 'AI 对话和导航的快捷命令',
+  'help.slashCommands.detail': '在 AI 对话中使用斜杠命令进行快捷操作。/view 加载当前页面上下文，/search 搜索帖子等。输入时命令会自动补全。',
+  'help.slashCommands.tip1': '输入 / 查看可用命令',
+  'help.slashCommands.tip2': '/view 加载当前页面上下文',
+  'help.slashCommands.tip3': '/search 按关键词搜索帖子',
+
+  // moderation-settings（设置）
+  'help.moderation.title': '内容审核',
+  'help.moderation.summary': '自定义内容过滤和标签偏好',
+  'help.moderation.detail': '控制标记内容的显示方式。配置成人、性和暴力内容的过滤器。添加第三方标签提供商以获得更多审核功能。跨设备同步设置。',
+  'help.moderation.tip1': '在设置 → 审核中设置内容可见性',
+  'help.moderation.tip2': '添加第三方标签提供商获取更多过滤器',
+  'help.moderation.tip3': '同步设置到服务器实现跨设备使用',
+
+  // color-blind-mode（设置，PWA）
+  'help.cvd.title': '色弱友好模式',
+  'help.cvd.summary': '为色觉差异用户提供的无障碍配色方案',
+  'help.cvd.detail': '启用色弱友好调色板，使界面对色觉差异用户更易用。红色映射为品红，绿色映射为青色，黄色映射为琥珀色，以获得更好的对比度和可区分性。',
+  'help.cvd.tip1': '在设置 → 通用中启用',
+  'help.cvd.tip2': '影响所有颜色编码的 UI 元素',
+  'help.cvd.tip3': '改善常见色觉差异类型的对比度',
+
+  // widgets（设置，PWA）
+  'help.widgets.summary': '自定义侧边栏中的实用小组件面板',
+  'help.widgets.detail': '右侧面板提供热门话题、推荐关注、资料预览和 AI 快捷操作等小组件。在设置中切换各小组件的开关，个性化你的体验。',
+  'help.widgets.tip1': '在设置 → 显示中切换小组件',
+  'help.widgets.tip2': '拖拽重新排列小组件',
+  'help.widgets.tip3': '小组件会适配当前视图',
+
+  // at-play（社交）
+  'help.atPlay.title': '社交圈',
+  'help.atPlay.summary': '将你的 Bluesky 互动模式可视化为社交图谱',
+  'help.atPlay.detail': '分析你的 Bluesky 互动数据，发现核心圈、互关关系和社交图谱模式。查看你互动最多的人，发现你可能想要关注的潜在连接。',
+  'help.atPlay.tip1': '输入任意 handle 分析其社交圈',
+  'help.atPlay.tip2': '搜索特定的互动模式',
+  'help.atPlay.tip3': '分享你的社交圈到 Bluesky',
+
+  // lists-management（社交）
+  'help.lists.title': '列表',
+  'help.lists.summary': '创建和管理用户列表，用于内容策展和审核',
+  'help.lists.detail': '创建精选列表来组织动态源，或创建审核列表来静音/屏蔽用户。订阅他人的列表并管理成员。列表跨设备同步，可公开分享。',
+  'help.lists.tip1': '创建精选或审核列表',
+  'help.lists.tip2': '使用审核列表静音或屏蔽用户',
+  'help.lists.tip3': '订阅其他用户的列表',
+
+  // drafts（社交）
+  'help.drafts.title': '草稿',
+  'help.drafts.summary': '保存和管理帖子草稿，稍后发布',
+  'help.drafts.detail': '将正在编辑的帖子保存为草稿。草稿支持单帖和帖子串，可同步到服务器实现跨设备访问。AI 润色直接集成到草稿系统中。',
+  'help.drafts.tip1': '撰写时保存草稿',
+  'help.drafts.tip2': '复制草稿内容以在其他地方使用',
+  'help.drafts.tip3': '通过服务器同步草稿到其他设备',
+
+  // at-protocol（高级）
+  'help.atProtocol.title': 'AT Protocol',
+  'help.atProtocol.summary': 'Bluesky 背后的去中心化社交网络协议',
+  'help.atProtocol.detail': 'AT Protocol 是驱动 Bluesky 的开放、去中心化协议。它使用 DID 作为身份标识，AT URI 作为地址，PDS（个人数据服务器）存储数据。本客户端完全支持协议规范。',
+  'help.atProtocol.tip1': 'AT URI (at://...) 标识所有内容',
+  'help.atProtocol.tip2': '链接使用 AT Protocol 寻址方案',
+  'help.atProtocol.tip3': '数据存储在你选择的 PDS 上',
+
+  // mcp-server（高级）
+  'help.mcp.title': 'MCP 服务器',
+  'help.mcp.summary': 'Model Context Protocol 服务器，用于 AI 工具集成',
+  'help.mcp.detail': 'MCP 服务器将 Bluesky 工具暴露给任何兼容 MCP 的 AI 客户端。通过 npx 运行，让 AI 助手访问搜索、资料、动态源等功能。兼容 Claude Desktop、Cursor 等 MCP 客户端。',
+  'help.mcp.tip1': '使用 npx @epheiamoe/bsky-mcp 运行',
+  'help.mcp.tip2': '在 MCP 客户端设置中配置',
+  'help.mcp.tip3': '兼容 Claude Desktop、Cursor 等',
+
+  // dual-platform（高级）
+  'help.dualPlatform.title': '双平台',
+  'help.dualPlatform.summary': '浏览器和终端中提供相同的功能',
+  'help.dualPlatform.detail': '本客户端同时作为浏览器中的 PWA（渐进式 Web 应用）和终端中的 TUI（终端用户界面）运行。两者共享相同的核心逻辑和功能，并针对各自平台进行 UI 适配。',
+  'help.dualPlatform.tip1': 'PWA：浏览器中的完整视觉体验',
+  'help.dualPlatform.tip2': 'TUI：键盘驱动的终端界面',
+  'help.dualPlatform.tip3': '设置在两个平台间同步',
+
+  'help.clearSearch': '清除搜索',
+  'help.done': '知道了',
   'help.version': '版本 {version}',
 };
 

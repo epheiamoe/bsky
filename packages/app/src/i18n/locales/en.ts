@@ -786,6 +786,198 @@ const en: LocaleMessages = {
   'help.atplay.desc': 'Visualize your social graph as an interactive diagram. Discover who you interact with most, find mutual connections, and explore your network patterns.',
   'help.widgets.title': 'Customizable Widgets',
   'help.widgets.desc': 'The right sidebar offers widgets: trending topics, suggested follows, profile preview, and AI quick actions. Toggle them in Settings.',
+  // ── Help center — structured entries ──
+  'help.searchPlaceholder': 'Search features...',
+  'help.noResults': 'No results found',
+  'help.platform.pwa': 'PWA',
+  'help.platform.tui': 'TUI',
+
+  // Help categories
+  'help.category.navigation': 'Navigation',
+  'help.category.media': 'Media',
+  'help.category.ai': 'AI',
+  'help.category.shortcuts': 'Shortcuts',
+  'help.category.settings': 'Settings',
+  'help.category.social': 'Social',
+  'help.category.advanced': 'Advanced',
+
+  // clipboard-paste (Navigation, PWA)
+  'help.clipboard.summary': 'Paste any bsky.app link to jump directly to that content',
+  'help.clipboard.detail': 'Copy a Bluesky link from the browser or any app, then use the Paste & Go button in the address bar to instantly navigate to the post, profile, or feed. Supports links from third-party clients like deer.social and tokimeki.',
+  'help.clipboard.tip1': 'Copy a link from anywhere, then tap the address bar',
+  'help.clipboard.tip2': 'Use Paste & Go to navigate instantly',
+  'help.clipboard.tip3': 'Supports bsky.app, deer.social, and other client links',
+
+  // url-compatibility (Navigation)
+  'help.urlCompat.title': 'URL Compatibility',
+  'help.urlCompat.summary': 'Supports multiple Bluesky URL formats and third-party client links',
+  'help.urlCompat.detail': 'This client understands bsky.app links, /i/ internal redirects, at:// protocol URIs, bluesky:// scheme, and links from third-party clients like deer.social, tokimeki.blue, and ouranos. URLs are automatically normalized to AT Protocol format.',
+  'help.urlCompat.tip1': 'Paste any Bluesky URL format into the address bar',
+  'help.urlCompat.tip2': 'Third-party client links work seamlessly',
+  'help.urlCompat.tip3': 'AT URIs (at://...) are natively supported',
+
+  // third-party-clients (Navigation)
+  'help.thirdParty.title': 'Third-Party Clients',
+  'help.thirdParty.summary': 'Open links from other Bluesky clients directly in this app',
+  'help.thirdParty.detail': 'Links from popular third-party Bluesky clients like deer.social, tokimeki.blue, ouranos, and deck.blue are automatically detected and converted. You can choose to open them in this app or the original client.',
+  'help.thirdParty.tip1': 'Links from third-party clients open in-app by default',
+  'help.thirdParty.tip2': 'Paste any client link to navigate to it',
+  'help.thirdParty.tip3': 'AT Protocol URIs work across all clients',
+
+  // gallery-embed (Media)
+  'help.gallery.title': 'Image Gallery',
+  'help.gallery.summary': 'Multi-image posts display as an interactive carousel',
+  'help.gallery.detail': 'Posts with multiple images are shown as a swipeable gallery with navigation controls. Click any image to view it full-size. Supports up to 10 images per post with smooth transitions.',
+  'help.gallery.tip1': 'Swipe or use arrow keys to browse images',
+  'help.gallery.tip2': 'Click an image to view full-size',
+  'help.gallery.tip3': 'Up to 10 images per post',
+
+  // rich-embeds (Media)
+  'help.richEmbeds.title': 'Rich Embeds',
+  'help.richEmbeds.summary': 'Quoted posts and links render as preview cards',
+  'help.richEmbeds.detail': 'Quoted posts display as inline cards with author info and preview text. External links show rich previews with title, description, and thumbnail. All embeds are fully accessible with keyboard navigation.',
+  'help.richEmbeds.tip1': 'Quoted posts show inline with preview text',
+  'help.richEmbeds.tip2': 'External links display rich link cards',
+  'help.richEmbeds.tip3': 'All embeds support keyboard navigation',
+
+  // video-embed (Media)
+  'help.video.title': 'Video Playback',
+  'help.video.summary': 'Inline video player with captions support',
+  'help.video.detail': 'Videos play directly in the feed with a built-in player. Supports subtitles in multiple languages (VTT format). Videos are optimized for both desktop and mobile viewing with adaptive streaming.',
+  'help.video.tip1': 'Videos play inline with playback controls',
+  'help.video.tip2': 'Subtitles available in multiple languages',
+  'help.video.tip3': 'Click to expand to full-screen view',
+
+  // ai-chat (AI)
+  'help.aiChat.title': 'AI Chat',
+  'help.aiChat.summary': 'Chat with AI to search, analyze, and manage your Bluesky experience',
+  'help.aiChat.detail': 'Open AI Chat to search posts, view profiles, translate content, or get insights. The AI can use tools to interact with Bluesky on your behalf — reading timelines, searching, and more. All write actions require your confirmation.',
+  'help.aiChat.tip1': 'Ask AI to search posts or view profiles',
+  'help.aiChat.tip2': 'Use @handle to reference specific users',
+  'help.aiChat.tip3': 'Use /view in supported pages for context',
+  'help.aiChat.tip4': 'Configure API key in Settings → AI',
+
+  // ai-polish (AI)
+  'help.aiPolish.title': 'Draft Polish',
+  'help.aiPolish.summary': 'AI-powered writing improvement for your posts',
+  'help.aiPolish.detail': 'Use AI to polish and improve your draft posts before publishing. Request specific improvements like making text more concise, formal, or humorous. The polished version replaces your draft with one click.',
+  'help.aiPolish.tip1': 'Press F while composing to polish your draft',
+  'help.aiPolish.tip2': 'Request specific style changes',
+  'help.aiPolish.tip3': 'Copy the polished text or replace the draft',
+
+  // ai-translate (AI)
+  'help.aiTranslate.title': 'AI Translation',
+  'help.aiTranslate.summary': 'Translate posts and content with AI',
+  'help.aiTranslate.detail': 'Translate any post or text content using AI. The translation respects context and nuance better than traditional machine translation. Set your target language in Settings → General.',
+  'help.aiTranslate.tip1': 'Translate posts from any language',
+  'help.aiTranslate.tip2': 'Copy translated text with one click',
+  'help.aiTranslate.tip3': 'Set target language in Settings',
+
+  // ai-sandbox (AI, PWA)
+  'help.aiSandbox.title': 'Python Sandbox',
+  'help.aiSandbox.summary': 'Run Python code directly in the browser for data analysis',
+  'help.aiSandbox.detail': 'The AI sandbox runs Python code in a WebAssembly environment (Pyodide). Analyze data, create plots, and process files without leaving the browser. Supports common libraries like pandas, numpy, and matplotlib.',
+  'help.aiSandbox.tip1': 'Ask AI to analyze data or create charts',
+  'help.aiSandbox.tip2': 'Search and process post data with code',
+  'help.aiSandbox.tip3': 'Results display as tables and charts',
+
+  // ai-api-keys (AI)
+  'help.apiKeys.title': 'API Keys',
+  'help.apiKeys.summary': 'Configure AI provider API keys for intelligent features',
+  'help.apiKeys.detail': 'Add your own API key from supported providers (DeepSeek, OpenAI, Mistral, xAI, Kimi, OpenRouter) to enable AI features. Your key stays in your browser and requests go directly to the provider — we never see your key.',
+  'help.apiKeys.tip1': 'Add API key in Settings → AI',
+  'help.apiKeys.tip2': 'Your key is stored locally in the browser',
+  'help.apiKeys.tip3': 'Supports DeepSeek, OpenAI, and more',
+
+  // keyboard-shortcuts (Shortcuts)
+  'help.keyboard.summary': 'Navigate the entire app using keyboard shortcuts',
+  'help.keyboard.detail': 'Press ? to view all available shortcuts. Navigate the timeline with J/K, like with L, repost with R, reply with C, and much more. Keyboard shortcuts work across all views including threads, compose, and AI chat.',
+  'help.keyboard.tip1': 'Press ? to view all shortcuts',
+  'help.keyboard.tip2': 'J/K to navigate, L to like, R to repost',
+  'help.keyboard.tip3': 'Press / to focus the search bar',
+  'help.keyboard.tip4': 'C to reply, V to bookmark',
+
+  // slash-commands (Shortcuts)
+  'help.slashCommands.title': 'Slash Commands',
+  'help.slashCommands.summary': 'Quick commands for AI chat and navigation',
+  'help.slashCommands.detail': 'Use slash commands in the AI chat for quick actions. /view loads the current page context, /search finds posts, and more. Commands auto-complete as you type.',
+  'help.slashCommands.tip1': 'Type / to see available commands',
+  'help.slashCommands.tip2': '/view loads current page context',
+  'help.slashCommands.tip3': '/search finds posts by keyword',
+
+  // moderation-settings (Settings)
+  'help.moderation.title': 'Moderation',
+  'help.moderation.summary': 'Customize content filtering and labeling preferences',
+  'help.moderation.detail': 'Control how labeled content is displayed. Configure content filters for adult, sexual, and graphic content. Add third-party labelers for additional moderation. Sync settings across devices.',
+  'help.moderation.tip1': 'Set content visibility in Settings → Moderation',
+  'help.moderation.tip2': 'Add third-party labelers for more filters',
+  'help.moderation.tip3': 'Sync settings to server for cross-device use',
+
+  // color-blind-mode (Settings, PWA)
+  'help.cvd.title': 'Color Vision Deficiency',
+  'help.cvd.summary': 'Accessible color palette for color vision differences',
+  'help.cvd.detail': 'Enable the CVD-friendly palette to make the interface more accessible for users with color vision deficiency. Red maps to magenta, green to teal, and yellow to amber for better contrast and distinguishability.',
+  'help.cvd.tip1': 'Enable in Settings → General',
+  'help.cvd.tip2': 'Affects all color-coded UI elements',
+  'help.cvd.tip3': 'Improves contrast for common CVD types',
+
+  // widgets (Settings, PWA)
+  'help.widgets.summary': 'Customize the sidebar with useful widget panels',
+  'help.widgets.detail': 'The right sidebar offers widgets including trending topics, suggested follows, profile preview, and AI quick actions. Toggle individual widgets on/off in Settings to personalize your experience.',
+  'help.widgets.tip1': 'Toggle widgets in Settings → Display',
+  'help.widgets.tip2': 'Drag to reorder widget panels',
+  'help.widgets.tip3': 'Widgets adapt to the current view',
+
+  // at-play (Social)
+  'help.atPlay.title': 'Social Circle',
+  'help.atPlay.summary': 'Visualize your Bluesky interaction patterns as a social graph',
+  'help.atPlay.detail': 'Analyze your Bluesky interactions to discover your core circle, mutual connections, and social graph patterns. See who you interact with most and find potential connections you might want to follow.',
+  'help.atPlay.tip1': 'Enter any handle to analyze their social circle',
+  'help.atPlay.tip2': 'Search for specific interaction patterns',
+  'help.atPlay.tip3': 'Share your social circle to Bluesky',
+
+  // lists-management (Social)
+  'help.lists.title': 'Lists',
+  'help.lists.summary': 'Create and manage user lists for curation and moderation',
+  'help.lists.detail': 'Create curated lists to organize feeds or moderation lists to mute/block users. Subscribe to others\' lists and manage members. Lists sync across devices and can be shared publicly.',
+  'help.lists.tip1': 'Create curated or moderation lists',
+  'help.lists.tip2': 'Use moderation lists to mute or block users',
+  'help.lists.tip3': 'Subscribe to lists from other users',
+
+  // drafts (Social)
+  'help.drafts.title': 'Drafts',
+  'help.drafts.summary': 'Save and manage post drafts for later publishing',
+  'help.drafts.detail': 'Save your work-in-progress posts as drafts. Drafts support single posts and threads, and can be synced to the server for cross-device access. AI polish integrates directly with the drafts system.',
+  'help.drafts.tip1': 'Save drafts while composing',
+  'help.drafts.tip2': 'Copy draft content to reuse elsewhere',
+  'help.drafts.tip3': 'Sync drafts across devices via server',
+
+  // at-protocol (Advanced)
+  'help.atProtocol.title': 'AT Protocol',
+  'help.atProtocol.summary': 'The decentralized social networking protocol behind Bluesky',
+  'help.atProtocol.detail': 'AT Protocol is the open, decentralized protocol that powers Bluesky. It uses DIDs for identity, AT URIs for addressing, and PDS (Personal Data Servers) for data storage. This client fully supports the protocol specification.',
+  'help.atProtocol.tip1': 'AT URIs (at://...) identify all content',
+  'help.atProtocol.tip2': 'Links use the AT Protocol addressing scheme',
+  'help.atProtocol.tip3': 'Data is stored on your chosen PDS',
+
+  // mcp-server (Advanced)
+  'help.mcp.title': 'MCP Server',
+  'help.mcp.summary': 'Model Context Protocol server for AI tool integration',
+  'help.mcp.detail': 'The MCP server exposes Bluesky tools to any MCP-compatible AI client. Run it via npx to give AI assistants access to search, profiles, feeds, and more. Compatible with Claude Desktop, Cursor, and other MCP clients.',
+  'help.mcp.tip1': 'Run with npx @epheiamoe/bsky-mcp',
+  'help.mcp.tip2': 'Configure in your MCP client settings',
+  'help.mcp.tip3': 'Works with Claude Desktop, Cursor, and more',
+
+  // dual-platform (Advanced)
+  'help.dualPlatform.title': 'Dual Platform',
+  'help.dualPlatform.summary': 'Same features available in both browser and terminal',
+  'help.dualPlatform.detail': 'This client runs as both a PWA (Progressive Web App) in the browser and a TUI (Terminal User Interface) in the terminal. Both share the same core logic and features, with platform-specific UI adaptations.',
+  'help.dualPlatform.tip1': 'PWA: full visual experience in the browser',
+  'help.dualPlatform.tip2': 'TUI: keyboard-driven terminal interface',
+  'help.dualPlatform.tip3': 'Settings sync between platforms',
+
+  'help.clearSearch': 'Clear search',
+  'help.done': 'Done',
   'help.version': 'Version {version}',
 };
 

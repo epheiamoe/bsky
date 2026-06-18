@@ -16,6 +16,7 @@ import { NotifView } from './NotifView.jsx';
 import { AIChatView } from './AIChatView.jsx';
 import { UnifiedThreadView } from './UnifiedThreadView.jsx';
 import { SettingsView } from './SettingsView.jsx';
+import { HelpView } from './HelpView.jsx';
 import { enableMouseTracking, disableMouseTracking, parseMouseEvent } from '../utils/mouse.js';
 import type { MouseEvent } from '../utils/mouse.js';
 import { ComposeView } from './ComposeView.jsx';
@@ -708,7 +709,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     if (k === 'b') { goTo({ type: 'bookmarks' }); return; }
     if (k === 'L') { goTo({ type: 'lists' }); return; }
     if (k === 'm') { if (currentView.type !== 'feed') { goTo({ type: 'dm' }); } return; }
-    if (k === '?') { goTo({ type: 'about' }); return; }
+    if (k === '?') { goTo({ type: 'help' }); return; }
     if (k === 'w') { setShowWidgets(true); return; }
 
     // ── Feed-specific ──
@@ -1093,6 +1094,12 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
             cols={mainW}
           />
         );
+      case 'help':
+        return (
+          <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="cyan" paddingX={1}>
+            <HelpView goBack={goBack} cols={mainW - 4} rows={rows - 5} />
+          </Box>
+        );
       case 'about':
         return (
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="gray" paddingX={1}>
@@ -1258,8 +1265,8 @@ function FeedConfigOverlay({ feeds, subscribedLists, currentFeedUri, defaultFeed
   );
 }
 
-const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', lists: '📃', listDetail: '📃', dm: '💬', dmChat: '💬' };
-const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', lists: 'breadcrumb.lists', listDetail: 'breadcrumb.listDetail', dm: 'nav.dm', dmChat: 'nav.dm' };
+const VIEW_EMOJI: Record<string, string> = { feed: '📋', thread: '🧵', compose: '✏️', profile: '👤', notifications: '🔔', search: '🔍', aiChat: '🤖', bookmarks: '🔖', lists: '📃', listDetail: '📃', dm: '💬', dmChat: '💬', help: '❓', about: 'ℹ️' };
+const VIEW_KEY: Record<string, string> = { feed: 'breadcrumb.feed', thread: 'breadcrumb.thread', compose: 'breadcrumb.compose', profile: 'breadcrumb.profile', notifications: 'breadcrumb.notifications', search: 'breadcrumb.search', aiChat: 'breadcrumb.aiChat', bookmarks: 'breadcrumb.bookmarks', lists: 'breadcrumb.lists', listDetail: 'breadcrumb.listDetail', dm: 'nav.dm', dmChat: 'nav.dm', help: 'help.title', about: 'nav.about' };
 
 function viewLabel(v: { type: string }, t: (key: string) => string): string {
   const emoji = VIEW_EMOJI[v.type] ?? '';
@@ -1273,6 +1280,7 @@ const KEY_MAP: Record<string, string> = {
   aiChat: 'keys.aiChat', bookmarks: 'keys.bookmarks',
   lists: 'keys.lists', listDetail: 'keys.listDetail',
   dm: 'keys.dm', dmChat: 'keys.dmChat',
+  help: 'help.title',
 };
 
 function footerHint(v: { type: string }, canGoBack: boolean, focusedPanel: FocusTarget, t: (key: string) => string): string {
