@@ -220,7 +220,29 @@ export class ChatCompletionsAdapter implements ApiAdapter {
     if (!choice) return { content: '' };
 
     const message = choice.message || {};
-    const content = message.content || '';
+    const rawContent = message.content;
+    // Some providers return message.content as an array of content blocks
+    // (e.g., [{type: 'thinking', thinking: [...], closed: true}, {type: 'text', text: '...'}]).
+    // Arrays are truthy so `rawContent || ''` passes them through as-is. This caused
+    // React Error #31 when the object was rendered directly in the Polish Widget.
+    let content: string;
+    if (Array.isArray(rawContent)) {
+      content = rawContent
+        .map((block: any) => {
+          if (block.type === 'text' && typeof block.text === 'string') return block.text;
+          if (block.type === 'thinking' && Array.isArray(block.thinking)) {
+            return block.thinking
+              .map((t: any) => (t.type === 'text' ? t.text ?? '' : ''))
+              .join('');
+          }
+          return '';
+        })
+        .join('');
+    } else if (typeof rawContent === 'string') {
+      content = rawContent;
+    } else {
+      content = String(rawContent ?? '');
+    }
     const reasoningContent = message.reasoning_content;
 
     let toolCalls: ParsedResponse['toolCalls'];

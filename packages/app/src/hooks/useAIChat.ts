@@ -592,7 +592,16 @@ function truncateToolResult(raw: string): string {
 function contentToString(c: string | unknown): string {
   if (typeof c === 'string') return c;
   if (Array.isArray(c)) {
-    return c.map((b: { type?: string; text?: string }) => b.text ?? '').join('');
+    return c
+      .map((b: any) => {
+        if (typeof b.text === 'string') return b.text;
+        // Handle thinking blocks like {type: 'thinking', thinking: [{type: 'text', text: '...'}]}
+        if (b.type === 'thinking' && Array.isArray(b.thinking)) {
+          return b.thinking.map((t: any) => (t.type === 'text' ? t.text ?? '' : '')).join('');
+        }
+        return '';
+      })
+      .join('');
   }
   return String(c ?? '');
 }
