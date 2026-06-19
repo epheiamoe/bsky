@@ -627,17 +627,48 @@ export async function translateToChinese(config: AIConfig, text: string): Promis
 }
 
 /**
- * Polish/refine post draft
+ * Polish/refine post draft. Returns polished text and optional reasoning (CoT) content.
  */
-export async function polishDraft(config: AIConfig, draft: string, requirement: string, modelOverride?: string): Promise<string> {
-  return singleTurnAI(
-    config,
-    P_POLISH_SYSTEM,
-    PF_POLISH_USER(requirement, draft),
-    0.7,
-    2000,
-    modelOverride,
-  );
+export interface PolishResult {
+  polished: string;
+  reasoning?: string;
+}
+
+export async function polishDraft(config: AIConfig, draft: string, requirement: string, modelOverride?: string): Promise<PolishResult> {
+  const adapter = getAdapter(config.apiType);
+  const messages: ChatMessage[] = [
+    { role: 'system', content: P_POLISH_SYSTEM },
+    { role: 'user', content: PF_POLISH_USER(requirement, draft) },
+  ];
+
+  const spec = adapter.buildRequest(config, messages, [], false, {
+    temperature: 0.7,
+    maxTokens: 2000,
+    model: modelOverride,
+  });
+
+  let res: Response;
+  try {
+    res = await fetch(spec.url, {
+      method: 'POST',
+      headers: spec.headers,
+      body: JSON.stringify(spec.body),
+    });
+  } catch (e) {
+    if (e instanceof TypeError) {
+      throw new Error(`Network error: unable to reach LLM API at ${spec.url}. Check LLM_BASE_URL and network. (${(e as Error).message})`);
+    }
+    throw e;
+  }
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`AI API error ${res.status}: ${errorText}`);
+  }
+
+  const data = (await res.json()) as any;
+  const parsed = adapter.parseResponse(data);
+  return { polished: parsed.content, reasoning: parsed.reasoningContent || undefined };
 }
 
 /**

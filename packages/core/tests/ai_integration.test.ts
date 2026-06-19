@@ -137,7 +137,7 @@ describe('AI Translation & Polish (Single Turn)', () => {
   it('should polish a draft post', async () => {
     const draft = 'i think bluesky is cool and the at protocol is very nice and good';
     const requirement = '更正式';
-    const result = await polishDraft(AI_CONFIG, draft, requirement);
+    const { polished: result } = await polishDraft(AI_CONFIG, draft, requirement);
     console.log('Polish result:', result);
     expect(result).toBeTruthy();
     expect(result.length).toBeGreaterThan(0);
@@ -146,7 +146,7 @@ describe('AI Translation & Polish (Single Turn)', () => {
   it('should polish a draft to be more humorous', async () => {
     const draft = 'Bluesky is a decentralized social network.';
     const requirement = '更幽默';
-    const result = await polishDraft(AI_CONFIG, draft, requirement);
+    const { polished: result } = await polishDraft(AI_CONFIG, draft, requirement);
     console.log('Humor polish result:', result);
     expect(result).toBeTruthy();
     expect(result.length).toBeGreaterThan(0);

@@ -278,7 +278,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
     try {
       const polishConfig = resolveScenarioConfig(config.scenarioModels.polish);
       const { polishDraft } = await import('@bsky/core');
-      const result = await polishDraft(polishConfig, text, requirement);
+      const result = (await polishDraft(polishConfig, text, requirement)).polished;
       setPolishResult(result);
       setPolishPhase('result');
     } catch (e) {

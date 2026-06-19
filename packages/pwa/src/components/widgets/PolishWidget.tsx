@@ -5,6 +5,7 @@ import type { WidgetProps, WidgetContext } from '@bsky/app';
 import type { AIConfig } from '@bsky/core';
 import { polishDraft } from '@bsky/core';
 import { Icon } from '../Icon.js';
+import { ThinkingCard } from '../ai/ThinkingCard.js';
 
 interface PolishWidgetContext extends WidgetContext {
   polishConfig?: AIConfig;
@@ -21,6 +22,8 @@ export function PolishWidget({ onClose, context }: WidgetProps) {
   const [requirement, setRequirement] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const [reasoning, setReasoning] = useState<string | null>(null);
+  const [thinkingExpanded, setThinkingExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -29,9 +32,12 @@ export function PolishWidget({ onClose, context }: WidgetProps) {
     setLoading(true);
     setError(null);
     setResult(null);
+    setReasoning(null);
+    setThinkingExpanded(false);
     try {
-      const polished = await polishDraft(polishConfig, draft, requirement);
+      const { polished, reasoning: r } = await polishDraft(polishConfig, draft, requirement);
       setResult(polished);
+      if (r) setReasoning(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -84,11 +90,21 @@ export function PolishWidget({ onClose, context }: WidgetProps) {
       )}
 
       {result && (
-        <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20 space-y-2">
-          <div className="text-text-primary whitespace-pre-wrap break-words text-sm leading-relaxed">
-            {result}
+        <div className="border border-purple-200 dark:border-purple-800 rounded-lg bg-purple-50 dark:bg-purple-900/20 space-y-2">
+          {reasoning && (
+            <ThinkingCard
+              content={reasoning}
+              expanded={thinkingExpanded}
+              onToggle={() => setThinkingExpanded(v => !v)}
+              compact
+            />
+          )}
+          <div className="max-h-60 overflow-y-auto px-3 pb-3">
+            <div className="text-text-primary whitespace-pre-wrap break-words text-sm leading-relaxed">
+              {result}
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 px-3 pb-3">
             <button
               onClick={handleCopy}
               className="flex-1 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-text-primary text-xs font-medium transition-colors"

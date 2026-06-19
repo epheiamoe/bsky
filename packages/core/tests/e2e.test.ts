@@ -148,7 +148,7 @@ describe('E2E: Full Integration Test Suite', () => {
 
   // ======== 6. AI POLISH ========
   it('[6] AI: draft polish', async () => {
-    const result = await polishDraft(AI_CONFIG, 'bluesky is cool i like it', '更正式');
+    const { polished: result } = await polishDraft(AI_CONFIG, 'bluesky is cool i like it', '更正式');
     expect(result).toBeTruthy();
     expect(result.length).toBeGreaterThan(10);
   }, 60000);

@@ -223,27 +223,35 @@ export class ChatCompletionsAdapter implements ApiAdapter {
     const rawContent = message.content;
     // Some providers return message.content as an array of content blocks
     // (e.g., [{type: 'thinking', thinking: [...], closed: true}, {type: 'text', text: '...'}]).
-    // Arrays are truthy so `rawContent || ''` passes them through as-is. This caused
-    // React Error #31 when the object was rendered directly in the Polish Widget.
+    // Arrays are truthy so `rawContent || ''` passes them through as-is → React Error #31.
+    // IMPORTANT: {type:'thinking'} blocks are the model's internal CoT — extract only
+    // {type:'text'} blocks for visible output. Thinking content goes to reasoningContent.
     let content: string;
+    let reasoningContent: string | undefined = message.reasoning_content;
     if (Array.isArray(rawContent)) {
-      content = rawContent
-        .map((block: any) => {
-          if (block.type === 'text' && typeof block.text === 'string') return block.text;
-          if (block.type === 'thinking' && Array.isArray(block.thinking)) {
-            return block.thinking
-              .map((t: any) => (t.type === 'text' ? t.text ?? '' : ''))
-              .join('');
+      const textParts: string[] = [];
+      const thinkingParts: string[] = [];
+      for (const block of rawContent) {
+        if (block.type === 'text' && typeof block.text === 'string') {
+          textParts.push(block.text);
+        } else if (block.type === 'thinking' && Array.isArray(block.thinking)) {
+          for (const t of block.thinking) {
+            if (t.type === 'text' && t.text) thinkingParts.push(t.text);
           }
-          return '';
-        })
-        .join('');
+        }
+      }
+      content = textParts.join('');
+      // Merge thinking blocks into reasoningContent (don't overwrite if already present)
+      if (thinkingParts.length > 0) {
+        reasoningContent = reasoningContent
+          ? reasoningContent + '\n' + thinkingParts.join('')
+          : thinkingParts.join('');
+      }
     } else if (typeof rawContent === 'string') {
       content = rawContent;
     } else {
       content = String(rawContent ?? '');
     }
-    const reasoningContent = message.reasoning_content;
 
     let toolCalls: ParsedResponse['toolCalls'];
     if (message.tool_calls && message.tool_calls.length > 0) {

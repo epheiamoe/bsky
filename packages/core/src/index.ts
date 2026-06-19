@@ -84,7 +84,7 @@ export { makeUniqueVideoName } from './at/client.js';
 
 // AI exports
 export { AIAssistant, singleTurnAI, translateToChinese, translateText, polishDraft, generateChatTitle, describeImage } from './ai/assistant.js';
-export type { TranslationResult } from './ai/assistant.js';
+export type { TranslationResult, PolishResult } from './ai/assistant.js';
 export type { AIConfig, ChatMessage, ToolCall } from './ai/adapter.js';
 export { getAdapter, registerAdapter } from './ai/adapter.js';
 export type { ApiAdapter, StreamProcessor } from './ai/adapter.js';
