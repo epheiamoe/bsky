@@ -97,6 +97,7 @@ export function PolishWidget({ onClose, context }: WidgetProps) {
               expanded={thinkingExpanded}
               onToggle={() => setThinkingExpanded(v => !v)}
               compact
+              maxHeight="200px"
             />
           )}
           <div className="max-h-60 overflow-y-auto px-3 pb-3">

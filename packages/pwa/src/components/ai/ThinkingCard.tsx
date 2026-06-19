@@ -8,9 +8,10 @@ interface ThinkingCardProps {
   expanded: boolean;
   onToggle: () => void;
   compact?: boolean;
+  maxHeight?: string; // CSS value, e.g. '200px' (default '600px')
 }
 
-export function ThinkingCard({ content, expanded, onToggle, compact }: ThinkingCardProps) {
+export function ThinkingCard({ content, expanded, onToggle, compact, maxHeight = '600px' }: ThinkingCardProps) {
   const { t } = useI18n();
   const firstLine = content.split('\n')[0] || content;
 
@@ -51,9 +52,9 @@ export function ThinkingCard({ content, expanded, onToggle, compact }: ThinkingC
       {/* Expanded content — animated max-height + scrollable */}
       <div
         onWheel={handleScroll}
-        style={{ overscrollBehaviorY: 'auto' }}
+        style={{ overscrollBehaviorY: 'auto', maxHeight: expanded ? maxHeight : '0' }}
         className={`transition-all duration-300 ease-out ${
-          expanded ? 'max-h-[600px] opacity-100 overflow-y-auto overflow-x-auto' : 'max-h-0 opacity-0 overflow-hidden'
+          expanded ? 'opacity-100 overflow-y-auto overflow-x-auto' : 'opacity-0 overflow-hidden'
         }`}
       >
         <div className={`border-t border-border ${compact ? 'px-3 py-2 text-[12px]' : 'px-3.5 py-3 text-[14px]'} text-text-secondary/80 whitespace-pre-wrap leading-relaxed`}>

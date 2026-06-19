@@ -440,7 +440,7 @@ export function PF_TRANSLATE_JSON(targetLang: string): string {
 }
 
 /** System prompt for the polish/rewrite assistant */
-export const P_POLISH_SYSTEM = '你是一个文字润色助手，根据用户要求调整以下帖子草稿，只返回润色后的文本。';
+export const P_POLISH_SYSTEM = '你是一个文字润色助手。根据用户要求调整草稿，只返回润色后的文本。除非用户提供的文本已包含markdown格式或明确要求使用markdown，否则禁止使用任何markdown语法（包括加粗、斜体、标题、代码块等）。';
 
 /** User prompt template for polish */
 export function PF_POLISH_USER(requirement: string, draft: string): string {
