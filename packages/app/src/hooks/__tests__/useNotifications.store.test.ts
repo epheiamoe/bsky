@@ -267,6 +267,85 @@ describe('notificationStore', () => {
       // 因此这里只断言状态被重置，不断言缓存是否为空
     });
 
+    it('discards in-flight listNotifications response from old client after account switch', async () => {
+      let resolveA: (value: { notifications: Notification[] }) => void = () => {};
+      const clientA = createMockClient({
+        listNotifications: vi.fn().mockImplementation(() => new Promise(resolve => { resolveA = resolve; })),
+      });
+      const clientB = createMockClient({
+        listNotifications: vi.fn().mockResolvedValue({ notifications: [] }),
+      });
+
+      const { result: resultA } = renderHook(() => useNotifications(clientA));
+      let refreshPromise: Promise<void>;
+      await act(async () => {
+        refreshPromise = resultA.current.refresh();
+      });
+
+      // 切换账号：clientB 挂载会重置 Store 并触发其初始加载
+      const { result: resultB } = renderHook(() => useNotifications(clientB));
+      await waitFor(() => {
+        expect(resultB.current.unreadCount).toBe(0);
+      });
+
+      // clientA 的慢速响应此时才到达
+      await act(async () => {
+        resolveA({ notifications: [makeNotification({ uri: 'a1', isRead: false })] });
+      });
+      await act(async () => {
+        await refreshPromise;
+      });
+
+      // 旧账号数据不能泄漏到 Store
+      await waitFor(() => {
+        expect(resultB.current.unreadCount).toBe(0);
+      });
+      expect(resultB.current.notifications).toEqual([]);
+      expect(resultA.current.unreadCount).toBe(0);
+    });
+
+    it('discards stale updateNotificationsSeen result after switching account', async () => {
+      let resolveUpdate: () => void;
+      const clientA = createMockClient({
+        listNotifications: vi.fn().mockResolvedValue({
+          notifications: [makeNotification({ uri: 'n1', isRead: false })],
+        }),
+        updateNotificationsSeen: vi.fn().mockImplementation(() => new Promise<void>(resolve => { resolveUpdate = resolve; })),
+      });
+      const clientB = createMockClient({
+        listNotifications: vi.fn().mockResolvedValue({ notifications: [] }),
+      });
+
+      const { result: resultA } = renderHook(() => useNotifications(clientA));
+      await act(async () => {
+        await resultA.current.refresh();
+      });
+      expect(resultA.current.unreadCount).toBe(1);
+
+      let markPromise: Promise<boolean>;
+      await act(async () => {
+        markPromise = resultA.current.markAllAsRead();
+      });
+
+      // 在 updateNotificationsSeen 尚未完成时切换账号
+      const { result: resultB } = renderHook(() => useNotifications(clientB));
+      await waitFor(() => {
+        expect(resultB.current.unreadCount).toBe(0);
+      });
+
+      // 旧账号的 updateNotificationsSeen 终于完成
+      await act(async () => {
+        resolveUpdate();
+      });
+      const markResult = await act(async () => markPromise);
+
+      expect(markResult).toBe(false);
+      await waitFor(() => {
+        expect(resultB.current.unreadCount).toBe(0);
+      });
+      expect(resultB.current.notifications).toEqual([]);
+    });
+
     it('__resetNotificationStore restores a clean initial state and notifies listeners', async () => {
       const client = createMockClient({
         listNotifications: vi.fn().mockResolvedValue({

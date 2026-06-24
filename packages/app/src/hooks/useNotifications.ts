@@ -93,8 +93,16 @@ function createNotificationStore() {
     emit();
   };
 
+  const resetAll = () => {
+    currentClient = null;
+    initialLoadDone = false;
+    resetState();
+  };
+
   async function load(client: BskyClient | null, silent = false, retried = false): Promise<void> {
     if (!client) return;
+    // 捕获发起请求的 client 身份；若后续账号已切换，则丢弃该响应，防止旧账号数据泄漏
+    const initiatingClient = currentClient;
     const epoch = ++state.epoch;
     if (!silent) {
       state = { ...state, loading: true, error: null };
@@ -106,12 +114,18 @@ function createNotificationStore() {
 
     try {
       const res = await client.listNotifications(30);
+      // 账号已切换，丢弃旧响应，避免跨账号数据污染
+      if (currentClient !== initiatingClient) return;
       const notifs = res.notifications as Notification[];
       const unread = countUnread(notifs);
       applyLoadResult(epoch, notifs, unread);
     } catch (e) {
+      // 账号已切换，忽略旧请求的失败，不覆盖新账号状态
+      if (currentClient !== initiatingClient) return;
       if (!retried) {
         await new Promise(r => setTimeout(r, 1500));
+        // 重试前再次校验，避免在延迟等待期间切换账号后继续旧请求
+        if (currentClient !== initiatingClient) return;
         return load(client, silent, true);
       }
       // 只在当前 epoch 仍是最新时暴露错误，避免过期失败覆盖成功状态
@@ -125,10 +139,15 @@ function createNotificationStore() {
   const markAllAsRead = async (client: BskyClient | null): Promise<boolean> => {
     if (!client) return false;
 
+    // 捕获发起操作的 client 身份；账号切换后不再写回状态或缓存
+    const initiatingClient = currentClient;
     const epoch = ++state.epoch;
     const snapshotNotifications = state.notifications;
     const snapshotUnread = state.unreadCount;
     const snapshotCache = readCache<NotifCache>(CACHE_KEY);
+
+    // 若在操作开始前账号已切换，直接放弃，避免旧账号数据污染
+    if (currentClient !== initiatingClient) return false;
 
     // 乐观更新：本地全部标为已读
     const optimisticNotifications = snapshotNotifications.map(n => ({ ...n, isRead: true }));
@@ -144,10 +163,14 @@ function createNotificationStore() {
 
     try {
       await client.updateNotificationsSeen();
+      // 服务端调用完成后若已切换账号，不再刷新或修改状态
+      if (currentClient !== initiatingClient) return false;
       // 成功后静默刷新，确保服务端与本地一致
       await load(client, true);
-      return true;
+      return currentClient === initiatingClient;
     } catch (e) {
+      // 账号已切换，不回滚到新账号状态
+      if (currentClient !== initiatingClient) return false;
       // 失败回滚到操作前的状态与缓存
       if (snapshotCache) {
         writeCache(CACHE_KEY, snapshotCache);
@@ -173,6 +196,7 @@ function createNotificationStore() {
     getSnapshot,
     setClient,
     resetState,
+    resetAll,
     ensureInitialLoad,
     load,
     markAllAsRead,
@@ -224,6 +248,5 @@ export function useNotifications(client: BskyClient | null, options?: UseNotific
 
 /** 测试辅助：重置模块级 Store */
 export function __resetNotificationStore(): void {
-  notificationStore.setClient(null);
-  notificationStore.resetState();
+  notificationStore.resetAll();
 }
