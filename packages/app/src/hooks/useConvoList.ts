@@ -104,8 +104,8 @@ function setClient(client: BskyClient | null): void {
     currentClient = client;
     initialLoadPromise = null;
     initialLoadDone = false;
-    // Broadcast an empty list so all hook instances drop stale convos.
-    convoUnreadStore.setRawConvos([]);
+    // Clear any optimistic overlay entries that belong to the previous user.
+    convoUnreadStore.reset();
   }
 }
 
@@ -148,39 +148,53 @@ export function useConvoList(client: BskyClient | null) {
 
   const load = useCallback(async (reset = false) => {
     if (!client) return;
+    const initiatingClient = currentClient;
     setLoading(true);
     setError(null);
     try {
       const res: ConvoListResponse = await client.listConvos(30, reset ? undefined : cursor);
+      if (currentClient !== initiatingClient) return;
       setRawConvos(reset ? res.convos : prev => [...prev, ...res.convos]);
       setCursor(res.cursor);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (currentClient === initiatingClient) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setLoading(false);
+      if (currentClient === initiatingClient) {
+        setLoading(false);
+      }
     }
   }, [client, cursor, setRawConvos]);
 
   const refresh = useCallback(async () => {
     if (!client) return;
+    const initiatingClient = currentClient;
     setLoading(true);
     setError(null);
     try {
       const res: ConvoListResponse = await client.listConvos(30);
+      if (currentClient !== initiatingClient) return;
       setRawConvos(res.convos);
       setCursor(res.cursor);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (currentClient === initiatingClient) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
-      setLoading(false);
+      if (currentClient === initiatingClient) {
+        setLoading(false);
+      }
     }
   }, [client, setRawConvos]);
 
   // Silent poll — no loading indicator
   const silentPoll = useCallback(async () => {
     if (!client) return;
+    const initiatingClient = currentClient;
     try {
       const res: ConvoListResponse = await client.listConvos(30);
+      if (currentClient !== initiatingClient) return;
       setRawConvos(res.convos);
       setCursor(res.cursor);
     } catch { /* silent poll — ignore errors */ }
@@ -195,12 +209,18 @@ export function useConvoList(client: BskyClient | null) {
   // Shared initial load: the first useConvoList instance with a valid client
   // performs the fetch and every instance gets the same result via the Store.
   useEffect(() => {
+    if (!client) {
+      setClient(null);
+      return;
+    }
     setClient(client);
-    if (!client || initialLoadDone) return;
+    if (initialLoadDone) return;
     initialLoadDone = true;
+    const initiatingClient = currentClient;
     initialLoadPromise = (async () => {
       try {
         const res: ConvoListResponse = await client.listConvos(30);
+        if (currentClient !== initiatingClient) return;
         // Use the store as a broadcast channel for raw convos. Each instance
         // will apply its own overlay via the subscription.
         convoUnreadStore.setRawConvos(res.convos);

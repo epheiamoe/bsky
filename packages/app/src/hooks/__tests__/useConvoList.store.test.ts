@@ -109,6 +109,70 @@ describe('ConvoUnreadStore', () => {
     expect(result.current.convos[0]?.id).toBe('c2');
   });
 
+  it('discards stale initial-load response after client switch', async () => {
+    let resolveA: (value: { convos: ConvoView[]; cursor?: string }) => void = () => {};
+    let resolveB: (value: { convos: ConvoView[]; cursor?: string }) => void = () => {};
+
+    const clientA = {
+      listConvos: vi.fn().mockImplementation(() => new Promise<{ convos: ConvoView[]; cursor?: string }>(r => { resolveA = r; })),
+    } as unknown as BskyClient;
+
+    const clientB = {
+      listConvos: vi.fn().mockImplementation(() => new Promise<{ convos: ConvoView[]; cursor?: string }>(r => { resolveB = r; })),
+    } as unknown as BskyClient;
+
+    const { result, rerender } = renderHook(
+      ({ client }) => useConvoList(client),
+      { initialProps: { client: clientA } },
+    );
+
+    // Switch to clientB before clientA's initial load resolves.
+    rerender({ client: clientB });
+
+    await act(async () => {
+      resolveA({ convos: [makeConvo('c1', 1)] });
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    // Stale response from clientA must not leak into the shared store.
+    expect(result.current.convos).toHaveLength(0);
+
+    await act(async () => {
+      resolveB({ convos: [makeConvo('c2', 2)] });
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(result.current.convos).toHaveLength(1);
+    expect(result.current.convos[0]?.id).toBe('c2');
+  });
+
+  it('discards stale refresh response after client switch', async () => {
+    const clientA = makeClient([makeConvo('c1', 1)]);
+    const clientB = makeClient([makeConvo('c2', 2)]);
+
+    const { result, rerender } = renderHook(
+      ({ client }) => useConvoList(client),
+      { initialProps: { client: clientA } },
+    );
+
+    await waitFor(() => expect(result.current.convos).toHaveLength(1));
+
+    let resolveA: (value: { convos: ConvoView[]; cursor?: string }) => void = () => {};
+    (clientA.listConvos as ReturnType<typeof vi.fn>).mockImplementationOnce(() => new Promise<{ convos: ConvoView[]; cursor?: string }>(r => { resolveA = r; }));
+
+    // Start a refresh on clientA, then switch before it resolves.
+    act(() => { void result.current.refresh(); });
+    rerender({ client: clientB });
+
+    await act(async () => {
+      resolveA({ convos: [makeConvo('stale', 9)] });
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(result.current.convos.find(c => c.id === 'stale')).toBeUndefined();
+    await waitFor(() => expect(result.current.convos[0]?.id).toBe('c2'));
+  });
+
   it('markConvoRead before initial load still reduces badge once list arrives', async () => {
     let resolveList: (value: { convos: ConvoView[]; cursor?: string }) => void = () => {};
     const listConvos = vi.fn().mockImplementation(() => new Promise<{ convos: ConvoView[]; cursor?: string }>(r => { resolveList = r; }));
