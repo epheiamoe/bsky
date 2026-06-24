@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 import type { ChatMessage } from '@bsky/app';
-import { useChatMessages, useI18n, getDmEmojiConfig } from '@bsky/app';
+import { useChatMessages, useI18n, getDmEmojiConfig, markConvoRead } from '@bsky/app';
 import type { BskyClient } from '@bsky/core';
 
 interface DMChatViewProps {
@@ -14,13 +14,19 @@ interface DMChatViewProps {
 
 export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewProps) {
   const { t } = useI18n();
-  const { messages, convo, loading, error, loadConvo, sendMessage, toggleReaction } = useChatMessages(client);
+  const { messages, convo, loading, error, loadConvo, sendMessage, toggleReaction, refresh } = useChatMessages(client);
   const [input, setInput] = useState('');
   const [reactMode, setReactMode] = useState(false);
   const did = client.getDID();
   const emojis = getDmEmojiConfig();
 
-  useEffect(() => { loadConvo(conversationId, true); }, [conversationId]);
+  useEffect(() => {
+    let cancelled = false;
+    loadConvo(conversationId, true).then(convoId => {
+      if (!cancelled && convoId) markConvoRead(convoId);
+    });
+    return () => { cancelled = true; };
+  }, [conversationId]);
 
   const rows = process.stdout.rows || 24;
   const availableRows = rows - (reactMode ? 9 : 6);
@@ -49,8 +55,12 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
       }
       return;
     }
-    if (_input === 'e' && !key.ctrl && !key.meta) {
+    if (_input === 'e' && !key.ctrl && !key.meta && input.trim() === '') {
       setReactMode(true);
+      return;
+    }
+    if (_input === 'r' && !key.ctrl && !key.meta && input.trim() === '') {
+      void refresh();
       return;
     }
   });

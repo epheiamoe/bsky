@@ -12,7 +12,7 @@ interface NotifViewProps {
 }
 
 export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
-  const { notifications, loading, refresh, markAllAsRead } = useNotifications(client);
+  const { notifications, loading, refresh, markAllAsRead, error } = useNotifications(client);
   const [cursorIdx, setCursorIdx] = useState(0);
   const { t, locale } = useI18n();
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
@@ -42,6 +42,11 @@ export function NotifView({ client, goBack, goTo, cols }: NotifViewProps) {
         <Text bold>{'🔔 '}{t('notifications.title')}</Text>
         <Text dimColor>{' ('}{notifications.length}{t('notifications.count')}{') '}{t('keys.notifications')}{' | '}{t('keys.markRead')}</Text>
       </Box>
+      {error && (
+        <Box height={1}>
+          <Text color="red">{'⚠ '}{error}</Text>
+        </Box>
+      )}
       {notifications.length === 0 && <Text dimColor>{t('notifications.empty')}</Text>}
       {notifications.map((n, i) => {
         const isSel = i === cursorIdx;
