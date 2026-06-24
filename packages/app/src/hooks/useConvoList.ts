@@ -55,14 +55,43 @@ class ConvoUnreadStore {
     return () => { this.listeners.delete(listener); };
   }
 
+  reset() {
+    this.entries.clear();
+    this.emit();
+  }
+
   private emit() {
     for (const listener of this.listeners) {
+      listener();
+    }
+  }
+
+  // Broadcast raw convos to every subscribed instance so shared initial loads
+  // (or future module-level updates) can update all hooks at once.
+  setRawConvos(raw: ConvoView[]) {
+    for (const listener of this.listeners) {
+      // We attach a hidden payload to the listener call so instances can receive
+      // the raw list directly without exposing module internals publicly.
+      (listener as (() => void) & { __rawConvos?: ConvoView[] }).__rawConvos = raw;
       listener();
     }
   }
 }
 
 const convoUnreadStore = new ConvoUnreadStore();
+
+// Module-level lock so multiple useConvoList instances share a single initial
+// fetch. Without this, App.tsx and ConvoListPage/DMListView each issue their
+// own listConvos on mount and the global dmCount lags behind the actual list.
+let initialLoadPromise: Promise<void> | null = null;
+let initialLoadDone = false;
+
+/** Reset module-level state (useful for tests or after logout). */
+export function __resetConvoStore(): void {
+  convoUnreadStore.reset();
+  initialLoadPromise = null;
+  initialLoadDone = false;
+}
 
 /** Called after reading a conversation to immediately clear the badge across all subscribers. */
 export function markConvoRead(convoId: string): void {
@@ -78,8 +107,16 @@ export function useConvoList(client: BskyClient | null) {
   const [cursor, setCursor] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Track whether this instance has received the shared initial load result.
+  const initialLoadedRef = useRef(false);
 
   const applyOverlay = useCallback(() => {
+    const listener = applyOverlay as (() => void) & { __rawConvos?: ConvoView[] };
+    const raw = listener.__rawConvos;
+    if (raw) {
+      rawConvosRef.current = raw;
+      delete listener.__rawConvos;
+    }
     setConvos(convoUnreadStore.apply(rawConvosRef.current));
   }, []);
 
@@ -89,6 +126,8 @@ export function useConvoList(client: BskyClient | null) {
     applyOverlay();
   }, [applyOverlay]);
 
+  // Publish raw convo setter to the store so the shared initial load can update
+  // every instance's raw list directly.
   useEffect(() => {
     return convoUnreadStore.subscribe(applyOverlay);
   }, [applyOverlay]);
@@ -138,6 +177,24 @@ export function useConvoList(client: BskyClient | null) {
     const iv = setInterval(silentPoll, POLL_INTERVAL);
     return () => clearInterval(iv);
   }, [silentPoll, client]);
+
+  // Shared initial load: the first useConvoList instance with a valid client
+  // performs the fetch and every instance gets the same result via the Store.
+  useEffect(() => {
+    if (!client || initialLoadDone || initialLoadedRef.current) return;
+    initialLoadedRef.current = true;
+    if (!initialLoadPromise) {
+      initialLoadPromise = (async () => {
+        try {
+          const res: ConvoListResponse = await client.listConvos(30);
+          // Use the store as a broadcast channel for raw convos. Each instance
+          // will apply its own overlay via the subscription.
+          convoUnreadStore.setRawConvos(res.convos);
+        } catch { /* ignore initial load errors; rely on silentPoll */ }
+      })();
+    }
+    initialLoadDone = true;
+  }, [client]);
 
   return { convos, cursor, loading, error, load, refresh };
 }

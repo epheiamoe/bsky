@@ -1,7 +1,7 @@
 import { useSyncExternalStore, useEffect, useCallback } from 'react';
 import { BskyClient } from '@bsky/core';
 import type { Notification } from '@bsky/core';
-import { readCache, writeCache, hasCache } from '../stores/cache';
+import { readCache, writeCache, hasCache, clearCache } from '../stores/cache';
 
 const CACHE_KEY = 'notifications';
 
@@ -68,6 +68,8 @@ function createNotificationStore() {
     if (client !== currentClient) {
       currentClient = client;
       initialLoadDone = false;
+      // 用户切换或登出时清空状态与全局缓存，避免跨账号泄漏通知数据
+      resetState();
     }
   };
 
@@ -81,14 +83,26 @@ function createNotificationStore() {
     // 丢弃被 markAllAsRead 等更高 epoch 操作覆盖的过期响应
     if (epoch < state.epoch) return;
     writeCache(CACHE_KEY, { notifications, unreadCount: unread });
-    setState({ notifications, unreadCount: unread, loading: false, error: null, epoch });
+    state = { ...state, notifications, unreadCount: unread, loading: false, error: null, epoch };
+    emit();
+  };
+
+  const resetState = () => {
+    clearCache(CACHE_KEY);
+    state = getInitialState();
+    emit();
   };
 
   async function load(client: BskyClient | null, silent = false, retried = false): Promise<void> {
     if (!client) return;
     const epoch = ++state.epoch;
-    if (!silent) setState({ loading: true, error: null });
-    else setState({ error: null });
+    if (!silent) {
+      state = { ...state, loading: true, error: null };
+      emit();
+    } else {
+      state = { ...state, error: null };
+      emit();
+    }
 
     try {
       const res = await client.listNotifications(30);
@@ -102,12 +116,13 @@ function createNotificationStore() {
       }
       // 只在当前 epoch 仍是最新时暴露错误，避免过期失败覆盖成功状态
       if (epoch >= state.epoch) {
-        setState({ error: e instanceof Error ? e.message : String(e), loading: false, epoch });
+        state = { ...state, error: e instanceof Error ? e.message : String(e), loading: false, epoch };
+        emit();
       }
     }
   }
 
-  async function markAllAsRead(client: BskyClient | null): Promise<boolean> {
+  const markAllAsRead = async (client: BskyClient | null): Promise<boolean> => {
     if (!client) return false;
 
     const epoch = ++state.epoch;
@@ -118,12 +133,14 @@ function createNotificationStore() {
     // 乐观更新：本地全部标为已读
     const optimisticNotifications = snapshotNotifications.map(n => ({ ...n, isRead: true }));
     writeCache(CACHE_KEY, { notifications: optimisticNotifications, unreadCount: 0 });
-    setState({
+    state = {
+      ...state,
       notifications: optimisticNotifications,
       unreadCount: 0,
       error: null,
       epoch,
-    });
+    };
+    emit();
 
     try {
       await client.updateNotificationsSeen();
@@ -137,20 +154,25 @@ function createNotificationStore() {
       } else {
         writeCache(CACHE_KEY, { notifications: snapshotNotifications, unreadCount: snapshotUnread });
       }
-      setState({
-        notifications: snapshotNotifications,
-        unreadCount: snapshotUnread,
-        error: e instanceof Error ? e.message : String(e),
-        epoch: ++state.epoch,
-      });
+      // 只有当前 epoch 未被覆盖时才回滚状态，避免过期的失败响应覆盖后续新操作
+      if (state.epoch === epoch) {
+        state = {
+          ...state,
+          notifications: snapshotNotifications,
+          unreadCount: snapshotUnread,
+          error: e instanceof Error ? e.message : String(e),
+        };
+        emit();
+      }
       return false;
     }
-  }
+  };
 
   return {
     subscribe,
     getSnapshot,
     setClient,
+    resetState,
     ensureInitialLoad,
     load,
     markAllAsRead,
@@ -203,4 +225,5 @@ export function useNotifications(client: BskyClient | null, options?: UseNotific
 /** 测试辅助：重置模块级 Store */
 export function __resetNotificationStore(): void {
   notificationStore.setClient(null);
+  notificationStore.resetState();
 }
