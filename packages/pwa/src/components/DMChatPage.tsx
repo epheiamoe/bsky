@@ -40,7 +40,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
     loadConvo(conversationId, true).then((convoId) => {
       if (convoId) markConvoRead(convoId);
     });
-  }, [conversationId]);
+  }, [conversationId, loadConvo]);
 
   useEffect(() => {
     const currentLastMsg = messages[messages.length - 1];
@@ -397,7 +397,7 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
           disabled={sending || !input.trim()}
           className="px-3 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 transition-colors"
         >
-          {sending ? '...' : t('dm.send')}
+          {sending ? t('action.loading') : t('dm.send')}
         </button>
       </div>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text, useInput, useFocus } from 'ink';
 import TextInput from 'ink-text-input';
 import type { ChatMessage } from '@bsky/app';
 import { useChatMessages, useI18n, getDmEmojiConfig, markConvoRead } from '@bsky/app';
@@ -17,6 +17,7 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
   const { messages, convo, loading, error, loadConvo, sendMessage, toggleReaction, refresh } = useChatMessages(client);
   const [input, setInput] = useState('');
   const [reactMode, setReactMode] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(true);
   const did = client.getDID();
   const emojis = getDmEmojiConfig();
 
@@ -55,11 +56,11 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
       }
       return;
     }
-    if (_input === 'e' && !key.ctrl && !key.meta && input.trim() === '') {
+    if (_input === 'e' && !key.ctrl && !key.meta && !isInputFocused) {
       setReactMode(true);
       return;
     }
-    if (_input === 'r' && !key.ctrl && !key.meta && input.trim() === '') {
+    if (_input === 'r' && !key.ctrl && !key.meta && !isInputFocused) {
       void refresh();
       return;
     }
@@ -130,15 +131,32 @@ export function DMChatView({ client, conversationId, goBack, cols }: DMChatViewP
 
       <Box height={1}>
         <Text color="yellow">▸ </Text>
-        <TextInput
+        <FocusableTextInput
           value={input}
           onChange={setInput}
           onSubmit={handleSend}
           placeholder={t('dm.placeholder')}
+          onFocusChange={setIsInputFocused}
         />
       </Box>
     </Box>
   );
+}
+
+interface FocusableTextInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: (value: string) => void;
+  placeholder?: string;
+  onFocusChange?: (focused: boolean) => void;
+}
+
+function FocusableTextInput({ value, onChange, onSubmit, placeholder, onFocusChange }: FocusableTextInputProps) {
+  const { isFocused } = useFocus({ id: 'dm-chat-input' });
+  useEffect(() => {
+    onFocusChange?.(isFocused);
+  }, [isFocused, onFocusChange]);
+  return <TextInput value={value} onChange={onChange} onSubmit={onSubmit} placeholder={placeholder} focus={isFocused} />;
 }
 
 function wrapText(text: string, maxWidth: number): string[] {
