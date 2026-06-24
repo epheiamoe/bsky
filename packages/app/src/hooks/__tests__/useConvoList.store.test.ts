@@ -91,6 +91,24 @@ describe('ConvoUnreadStore', () => {
     expect(listConvos).toHaveBeenCalledTimes(1);
   });
 
+  it('changing client resets state and triggers a fresh initial load', async () => {
+    const firstClient = makeClient([makeConvo('c1', 1)]);
+    const secondClient = makeClient([makeConvo('c2', 2)]);
+
+    const { result, rerender } = renderHook(
+      ({ client }) => useConvoList(client),
+      { initialProps: { client: firstClient } },
+    );
+
+    await waitFor(() => expect(result.current.convos).toHaveLength(1));
+    expect(result.current.convos[0]?.id).toBe('c1');
+
+    rerender({ client: secondClient });
+
+    await waitFor(() => expect(result.current.convos).toHaveLength(1));
+    expect(result.current.convos[0]?.id).toBe('c2');
+  });
+
   it('markConvoRead before initial load still reduces badge once list arrives', async () => {
     let resolveList: (value: { convos: ConvoView[]; cursor?: string }) => void = () => {};
     const listConvos = vi.fn().mockImplementation(() => new Promise<{ convos: ConvoView[]; cursor?: string }>(r => { resolveList = r; }));

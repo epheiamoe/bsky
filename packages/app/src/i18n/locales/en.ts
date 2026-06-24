@@ -766,6 +766,8 @@ const en: LocaleMessages = {
   'notifications.markAllAsRead': 'Mark All as Read',
   'keys.markRead': 'M: Mark read',
   'keys.feed': '↑↓/jk:Nav Enter:View m:More r:Refresh f:Feed v:Bookmark q:Quote ^V:Paste & Go',
+  'keys.dm': 'j/k:Nav Enter:Open r:Refresh',
+  'keys.dmChat': 'Enter send · Esc back · e react · r refresh',
 
   // [v0.14.3] External link rich card
   'external.readingTime': '{minutes} min read',

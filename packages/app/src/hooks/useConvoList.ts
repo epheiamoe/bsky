@@ -80,17 +80,33 @@ class ConvoUnreadStore {
 
 const convoUnreadStore = new ConvoUnreadStore();
 
-// Module-level lock so multiple useConvoList instances share a single initial
-// fetch. Without this, App.tsx and ConvoListPage/DMListView each issue their
-// own listConvos on mount and the global dmCount lags behind the actual list.
+// Module-level state for shared initial load. The lock ensures multiple
+// useConvoList instances issue only one listConvos request per client.
 let initialLoadPromise: Promise<void> | null = null;
 let initialLoadDone = false;
+let currentClient: BskyClient | null = null;
 
 /** Reset module-level state (useful for tests or after logout). */
 export function __resetConvoStore(): void {
   convoUnreadStore.reset();
   initialLoadPromise = null;
   initialLoadDone = false;
+  currentClient = null;
+}
+
+/**
+ * Detect client changes and reset shared load state. Prevents the next
+ * authenticated user from seeing the previous user's conversation list
+ * until a fresh fetch completes.
+ */
+function setClient(client: BskyClient | null): void {
+  if (client !== currentClient) {
+    currentClient = client;
+    initialLoadPromise = null;
+    initialLoadDone = false;
+    // Broadcast an empty list so all hook instances drop stale convos.
+    convoUnreadStore.setRawConvos([]);
+  }
 }
 
 /** Called after reading a conversation to immediately clear the badge across all subscribers. */
@@ -107,8 +123,6 @@ export function useConvoList(client: BskyClient | null) {
   const [cursor, setCursor] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Track whether this instance has received the shared initial load result.
-  const initialLoadedRef = useRef(false);
 
   const applyOverlay = useCallback(() => {
     const listener = applyOverlay as (() => void) & { __rawConvos?: ConvoView[] };
@@ -181,19 +195,17 @@ export function useConvoList(client: BskyClient | null) {
   // Shared initial load: the first useConvoList instance with a valid client
   // performs the fetch and every instance gets the same result via the Store.
   useEffect(() => {
-    if (!client || initialLoadDone || initialLoadedRef.current) return;
-    initialLoadedRef.current = true;
-    if (!initialLoadPromise) {
-      initialLoadPromise = (async () => {
-        try {
-          const res: ConvoListResponse = await client.listConvos(30);
-          // Use the store as a broadcast channel for raw convos. Each instance
-          // will apply its own overlay via the subscription.
-          convoUnreadStore.setRawConvos(res.convos);
-        } catch { /* ignore initial load errors; rely on silentPoll */ }
-      })();
-    }
+    setClient(client);
+    if (!client || initialLoadDone) return;
     initialLoadDone = true;
+    initialLoadPromise = (async () => {
+      try {
+        const res: ConvoListResponse = await client.listConvos(30);
+        // Use the store as a broadcast channel for raw convos. Each instance
+        // will apply its own overlay via the subscription.
+        convoUnreadStore.setRawConvos(res.convos);
+      } catch { /* ignore initial load errors; rely on silentPoll */ }
+    })();
   }, [client]);
 
   return { convos, cursor, loading, error, load, refresh };

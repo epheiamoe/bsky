@@ -661,7 +661,7 @@ const zh: LocaleMessages = {
   'keys.aiHistory': 'Esc 返回 ↑↓:选 N:新建 L:加载 D:删除',
   'keys.drafts': '↑↓/jk:导航 Enter:加载 D:删除 S:同步 R:刷新 Esc:返回',
   'keys.dm': 'j/k:导航 Enter:打开 r:刷新',
-  'keys.dmChat': '输入消息 · Enter 发送 · Esc 返回',
+  'keys.dmChat': '输入消息 · Enter 发送 · Esc 返回 · e 表情 · r 刷新',
 
   // ── View breadcrumbs (TUI) ──
   'breadcrumb.feed': '时间线',
