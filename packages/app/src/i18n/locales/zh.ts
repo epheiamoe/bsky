@@ -13,6 +13,7 @@ const zh: LocaleMessages = {
   'nav.settings': '设置',
   'nav.login': '登录',
   'nav.menu': '菜单',
+  'nav.menuUnread': '菜单（{n} 条未读通知）',
   'nav.back': '返回',
   'nav.drafts': '草稿',
   'nav.about': '关于',

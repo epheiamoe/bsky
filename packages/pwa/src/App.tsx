@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, initChatService, useConvoList, setWorkspaceStorageFactory } from '@bsky/app';
+import { useAuth, useTimeline, useI18n, useDrafts, usePostActions, registerWidget, setDraftStorageFactory, initChatService, useConvoList, useNotifications, setWorkspaceStorageFactory } from '@bsky/app';
 import type { AppView, SearchTab } from '@bsky/app';
 import type { PostView, AIConfig } from '@bsky/core';
 import { BskyClient } from '@bsky/core';
@@ -77,6 +77,7 @@ export function App() {
   const { drafts } = useDrafts(client);
   const { convos } = useConvoList(client);
   const dmCount = convos.reduce((sum, c) => sum + c.unreadCount, 0);
+  const { unreadCount: notifCount } = useNotifications(client);
   const { t } = useI18n();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('bsky_welcomed_v2'));
@@ -556,6 +557,7 @@ export function App() {
       onRelogin={handleRelogin}
       draftCount={drafts.filter(d => d.syncStatus !== 'synced').length}
       dmCount={dmCount}
+      notifCount={notifCount}
       polishConfig={scenarioModels.polish}
       aiConfig={effectiveAiConfig}
       userDisplayName={profile?.displayName}

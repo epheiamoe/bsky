@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import type { BskyClient, Notification } from '@bsky/core';
 import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
@@ -11,6 +11,7 @@ interface NotifsPageProps {
   goTo: (v: AppView) => void;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
+  autoMarkRead?: boolean;
 }
 
 function timeAgo(dateStr: string): string {
@@ -94,9 +95,18 @@ function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) =>
   );
 }
 
-export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange }: NotifsPageProps) {
+export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, autoMarkRead = true }: NotifsPageProps) {
   const { t } = useI18n();
   const { notifications, loading, error, refresh, unreadCount, markAllAsRead } = useNotifications(client);
+  const autoMarkedRef = useRef(false);
+
+  // 进入通知页后，若存在未读通知则自动标记已读（默认开启）
+  useEffect(() => {
+    if (autoMarkRead && unreadCount > 0 && !autoMarkedRef.current) {
+      autoMarkedRef.current = true;
+      void markAllAsRead();
+    }
+  }, [autoMarkRead, unreadCount, markAllAsRead]);
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
     notifications, 'notifs', 72, n => n.uri, { initialScrollTop, onScrollTopChange },
   );

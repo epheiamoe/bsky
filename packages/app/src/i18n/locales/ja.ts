@@ -19,6 +19,7 @@ const ja: LocaleMessages = {
   'nav.settings': '設定',
   'nav.login': 'ログイン',
   'nav.menu': 'メニュー',
+  'nav.menuUnread': 'メニュー（{n} 件未読の通知）',
   'nav.back': '戻る',
   'nav.drafts': '下書き',
   'nav.about': 'について',

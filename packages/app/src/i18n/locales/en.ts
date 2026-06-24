@@ -19,6 +19,7 @@ const en: LocaleMessages = {
   'nav.settings': 'Settings',
   'nav.login': 'Login',
   'nav.menu': 'Menu',
+  'nav.menuUnread': 'Menu ({n} unread notifications)',
   'nav.back': 'Back',
   'nav.drafts': 'Drafts',
   'nav.about': 'About',

@@ -18,7 +18,8 @@ export const MobileHeaderCtx = React.createContext<{
   tabBarHidden: boolean;
   setTabBarHidden: (v: boolean) => void;
   dmCount: number;
-}>({ onSidebarOpen: () => {}, tabBarHidden: false, setTabBarHidden: () => {}, dmCount: 0 });
+  notifCount: number;
+}>({ onSidebarOpen: () => {}, tabBarHidden: false, setTabBarHidden: () => {}, dmCount: 0, notifCount: 0 });
 
 interface LayoutProps {
   currentView: AppView;
@@ -34,6 +35,7 @@ interface LayoutProps {
   onRelogin: (handle: string, password: string) => Promise<void>;
   draftCount?: number;
   dmCount?: number;
+  notifCount?: number;
   polishConfig?: AIConfig;
   userDisplayName?: string;
   composeDraft?: string;
@@ -55,6 +57,7 @@ export function Layout({
   onRelogin,
   draftCount,
   dmCount,
+  notifCount,
   polishConfig,
   composeDraft,
   onComposeDraftChange,
@@ -203,9 +206,17 @@ export function Layout({
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden text-text-secondary hover:text-text-primary transition-colors p-1 -ml-1 text-lg leading-none"
-            aria-label={t('nav.menu')}
+            aria-label={notifCount ? t('nav.menuUnread', { n: notifCount }) : t('nav.menu')}
           >
-            <Icon name="menu" size={20} />
+            <span className="relative inline-flex">
+              <Icon name="menu" size={20} />
+              {notifCount != null && notifCount > 0 && (
+                <span
+                  className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
+            </span>
           </button>
 
           {canGoBack && (
@@ -269,6 +280,7 @@ export function Layout({
                 currentView={currentView}
                 goTo={(v, replace) => { goTo(v, replace); setSidebarOpen(false); }}
                 client={client}
+                notifCount={notifCount}
                 draftCount={draftCount}
                 dmCount={dmCount}
                 onLogout={() => { onLogout(); setSidebarOpen(false); }}
@@ -281,10 +293,10 @@ export function Layout({
       <div className="flex">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex flex-col w-sidebar h-[calc(100dvh-3rem)] sticky top-12 border-r border-border flex-shrink-0 overflow-hidden" aria-label={t('a11y.sidebar')}>
-          <Sidebar currentView={currentView} goTo={goTo} client={client} draftCount={draftCount} dmCount={dmCount} onLogout={onLogout} />
+          <Sidebar currentView={currentView} goTo={goTo} client={client} notifCount={notifCount} draftCount={draftCount} dmCount={dmCount} onLogout={onLogout} />
         </aside>
 
-        <MobileHeaderCtx.Provider value={{ onSidebarOpen: () => setSidebarOpen(true), tabBarHidden, setTabBarHidden, dmCount: dmCount ?? 0 }}>
+        <MobileHeaderCtx.Provider value={{ onSidebarOpen: () => setSidebarOpen(true), tabBarHidden, setTabBarHidden, dmCount: dmCount ?? 0, notifCount: notifCount ?? 0 }}>
         <main id="main-content" tabIndex={-1} className={`flex-1 max-w-content mx-auto w-full pt-[env(safe-area-inset-top)] ${isTabPage ? '' : 'min-h-[calc(100dvh-3rem)]'}`}>
           {children}
         </main>
