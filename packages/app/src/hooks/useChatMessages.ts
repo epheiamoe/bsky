@@ -24,23 +24,27 @@ export function useChatMessages(client: BskyClient | null) {
     }
   }, [messages]);
 
-  const loadConvo = useCallback(async (conversationId: string, reset = false) => {
-    if (!client) return;
+  const loadConvo = useCallback(async (conversationId: string, reset = false): Promise<string | undefined> => {
+    if (!client) return undefined;
     setLoading(true);
     setError(null);
     try {
-      const cr: GetConvoResponse = await client.getConvoForMembers([conversationId]);
+      const cr: GetConvoResponse = conversationId.startsWith('did:')
+        ? await client.getConvoForMembers([conversationId])
+        : await client.getConvo(conversationId);
       setConvo(cr.convo);
       const mr: GetMessagesResponse = await client.getMessages(cr.convo.id, 30);
       setMessages(mr.messages.reverse());
       setCursor(mr.cursor);
       // Auto-mark as read when loading a conversation
       try { await client.updateRead(cr.convo.id); } catch { /* silent */ }
+      return cr.convo.id;
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
+    return undefined;
   }, [client]);
 
   const loadOlder = useCallback(async () => {
@@ -141,13 +145,16 @@ export function useChatMessages(client: BskyClient | null) {
     if (!client || !convo) return;
     try {
       const mr: GetMessagesResponse = await client.getMessages(convo.id, 30);
-      const newMsgs = mr.messages.reverse();
-      const lastNewId = newMsgs.length > 0 ? newMsgs[newMsgs.length - 1]?.id : null;
-      // Only update if there are new messages (last ID differs from what we've shown)
-      if (lastNewId && lastNewId !== lastMsgIdRef.current) {
-        setMessages(newMsgs);
-        setCursor(mr.cursor);
-      }
+      const polledMsgs = mr.messages.reverse();
+      setMessages(prev => {
+        const merged = mergeMessages(prev, polledMsgs);
+        // Avoid an unnecessary re-render if nothing changed.
+        if (merged.length === prev.length && merged.every((m, i) => m.id === prev[i]?.id)) {
+          return prev;
+        }
+        return merged;
+      });
+      setCursor(mr.cursor);
     } catch { /* silent poll — ignore errors */ }
   }, [client, convo]);
 
@@ -162,6 +169,18 @@ export function useChatMessages(client: BskyClient | null) {
     loadConvo, loadOlder, sendMessage, toggleReaction, refresh,
     deleteMessage, markRead, muteConvo: muteConvoFn, unmuteConvo: unmuteConvoFn,
   };
+}
+
+/** Merge polled messages with existing history, deduping by id and sorting by sentAt. */
+function mergeMessages(existing: AnyChatMessage[], incoming: AnyChatMessage[]): AnyChatMessage[] {
+  const byId = new Map<string, AnyChatMessage>();
+  for (const m of existing) byId.set(m.id, m);
+  for (const m of incoming) byId.set(m.id, m);
+  return Array.from(byId.values()).sort((a, b) => {
+    const ta = new Date(a.sentAt).getTime();
+    const tb = new Date(b.sentAt).getTime();
+    return ta - tb;
+  });
 }
 
 /** Check if text looks like a Bluesky post URI; parse it for embedding */

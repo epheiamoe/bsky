@@ -1290,6 +1290,10 @@ export class BskyClient {
     });
   }
 
+  async getConvo(convoId: string): Promise<GetConvoResponse> {
+    return this.chatGet<GetConvoResponse>('chat.bsky.convo.getConvo', { convoId });
+  }
+
   async getMessages(convoId: string, limit = 30, cursor?: string): Promise<GetMessagesResponse> {
     const params: Record<string, string | number> = { convoId, limit };
     if (cursor) params.cursor = cursor;

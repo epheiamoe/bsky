@@ -37,7 +37,9 @@ export function DMChatPage({ client, conversationId, goBack, goTo }: DMChatPageP
   const lastMsgIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    loadConvo(conversationId, true).then(() => { markConvoRead(conversationId); });
+    loadConvo(conversationId, true).then((convoId) => {
+      if (convoId) markConvoRead(convoId);
+    });
   }, [conversationId]);
 
   useEffect(() => {
