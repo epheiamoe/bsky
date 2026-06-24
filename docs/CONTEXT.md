@@ -24,7 +24,21 @@
 
 ## 当前版本
 
-**v0.14.4 — URL 标准化 + 剪贴板粘贴 + 第三方客户端 URL + 帮助中心系统 ✅ production**
+**v0.14.5 — 通知红点 + 通知已读 + 私信已读同步 ✅ staging**
+
+### v0.14.5 新功能 (已完成 — 待 staging 验证):
+- ✅ **PWA 通知红点**：桌面侧边栏 + 移动端 Header 汉堡按钮显示未读通知数
+- ✅ **PWA 通知自动已读**：进入通知页自动 `markAllAsRead`
+- ✅ **TUI 通知轮询**：`useNotifications` 每 60 秒刷新
+- ✅ **TUI DM 快捷键**：输入框非聚焦时 `e` 进入反应模式、`r` 刷新消息
+- ✅ **共享 DM 未读覆盖 Store**：`ConvoUnreadStore` 带 60s TTL，所有 `useConvoList` 实例即时同步已读
+- ✅ **共享通知 Store**：模块级 Store + `useSyncExternalStore` + epoch 竞态保护 + 失败回滚
+- ✅ **单元测试**：`useNotifications.store.test.ts`（12 项）、`useConvoList.store.test.ts`（8 项）
+- ✅ **`useChatMessages.loadConvo`**：同时支持 member DID 与 conversation id，返回真实 `convo.id`
+- ✅ **`BskyClient.getConvo(convoId)`**：新增直接会话查询
+- ✅ **跨账号竞态保护**：切换账号后丢弃旧 client 的异步响应
+- **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.5）
+- **生产环境部署**：待 staging 验证后部署
 
 ### v0.14.4 新功能 (已完成 — 部署到 production):
 - ✅ **帮助中心系统**：共享数据层 `help-content.ts`（22 条目 × 7 分类），PWA glass-card UI + TUI 列表 + MCP `ai-bsky_help` AI 工具。自包含三语内容（EN/ZH/JA），支持 markdown

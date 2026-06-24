@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.5] — 2026-06-25
+
+### Added
+
+- **PWA notification badge**: sidebar and mobile header hamburger button now show unread notification counts.
+- **PWA auto mark-as-read**: notification page automatically marks all notifications as read on entry.
+- **TUI notification polling**: `useNotifications` refreshes every 60 seconds in TUI.
+- **TUI DM shortcuts**: `e` toggles reaction mode when input is not focused; `r` refreshes messages.
+- **Shared DM unread overlay store**: `ConvoUnreadStore` with TTL lets all `useConvoList` instances reflect read status immediately.
+- **Shared notification store**: module-level store with `useSyncExternalStore`, epoch race protection, and rollback on `markAllAsRead` failure.
+- **Unit tests**: `useNotifications.store.test.ts` (12 tests) and `useConvoList.store.test.ts` (8 tests) covering shared state, rollback, TTL, race conditions, and client-switch guards.
+
+### Changed
+
+- `useChatMessages.loadConvo()` now accepts both member DID and conversation id, and returns the actual `convo.id`.
+- `BskyClient` adds `getConvo(convoId)` for direct conversation lookup.
+- TUI `keys.dmChat` hint updated to include `e:react` / `r:refresh` in EN/ZH/JA.
+
+### Fixed
+
+- Fixed PWA sidebar never showing notification red dot.
+- Fixed PWA DM unread badge not clearing immediately after opening a chat.
+- Fixed TUI DM unread badge not clearing after opening a chat.
+- Fixed Profile → DM navigation when `conversationId` is a conversation id rather than member DID.
+- Fixed notification `markAllAsRead` having no failure rollback and racing with refresh.
+- Fixed cross-account data leak: in-flight responses from an old client are discarded after switching accounts.
+
 ## [0.14.4] — 2026-06-19
 
 ### Added
