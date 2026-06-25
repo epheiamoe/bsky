@@ -93,6 +93,7 @@ describe('BskyClient.getPosts', () => {
     const req = firstCall[0];
     const url = typeof req === 'string' ? req : req.url;
     expect(url).toContain('app.bsky.feed.getPosts');
+    expect(url).toContain('uris=');
     expect(url).toContain(encodeURIComponent('at://did:plc:abc/app.bsky.feed.post/123'));
   });
 

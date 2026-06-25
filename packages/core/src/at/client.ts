@@ -407,12 +407,11 @@ export class BskyClient {
 
   async getPosts(uris: string[]): Promise<GetPostsResponse> {
     if (uris.length === 0) return { posts: [] };
-    const sp = new URLSearchParams();
-    for (const uri of uris) sp.append('uris', uri);
+    const params: [string, string][] = uris.map((uri) => ['uris', uri]);
     const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
     return kyInstance.get('app.bsky.feed.getPosts', {
-      searchParams: sp,
+      searchParams: params,
       ...headers,
     }).json<GetPostsResponse>();
   }
