@@ -9,18 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **PWA notification page redesign**: bsky.app-style layout with header, settings gear, All/Mentions tabs, grouped notifications, actor avatar stacks, SVG reason icons, and post preview cards.
+- **PWA notification aggregation**: consecutive notifications with the same `reason` + `reasonSubject` are grouped into a single row ("X and N others liked your post").
+- **PWA notification post previews**: target post author, truncated text, and up to 4 media thumbnails shown for like/repost/reply/quote/mention notifications.
+- **PWA clickable notifications**: tap a notification to navigate to the related thread or follower profile.
 - **PWA notification badge**: sidebar and mobile header hamburger button now show unread notification counts.
-- **PWA auto mark-as-read**: notification page automatically marks all notifications as read on entry.
 - **TUI notification polling**: `useNotifications` refreshes every 60 seconds in TUI.
 - **TUI DM shortcuts**: `e` toggles reaction mode when input is not focused; `r` refreshes messages.
 - **Shared DM unread overlay store**: `ConvoUnreadStore` with TTL lets all `useConvoList` instances reflect read status immediately.
 - **Shared notification store**: module-level store with `useSyncExternalStore`, epoch race protection, and rollback on `markAllAsRead` failure.
-- **Unit tests**: `useNotifications.store.test.ts` (12 tests) and `useConvoList.store.test.ts` (8 tests) covering shared state, rollback, TTL, race conditions, and client-switch guards.
+- **Unit tests**: `useNotifications.store.test.ts` (12 tests), `useConvoList.store.test.ts` (8 tests), and `notifications.test.ts` (9 tests) covering grouping, `getPosts` batching, shared state, rollback, TTL, race conditions, and client-switch guards.
 
 ### Changed
 
 - `useChatMessages.loadConvo()` now accepts both member DID and conversation id, and returns the actual `convo.id`.
-- `BskyClient` adds `getConvo(convoId)` for direct conversation lookup.
+- `BskyClient` adds `getConvo(convoId)` for direct conversation lookup and `getPosts(uris)` for batch post fetching.
 - TUI `keys.dmChat` hint updated to include `e:react` / `r:refresh` in EN/ZH/JA.
 
 ### Fixed

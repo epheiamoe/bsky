@@ -27,13 +27,17 @@
 **v0.14.5 — 通知红点 + 通知已读 + 私信已读同步 ✅ staging**
 
 ### v0.14.5 新功能 (已完成 — 待 staging 验证):
+- ✅ **PWA 通知页重设计**：bsky.app 风格 — 标题栏 + 设置齿轮、全部/提及标签、连续分组聚合、触发者头像堆叠、SVG reason 图标、帖文预览卡片、点击跳转
+- ✅ **PWA 通知聚合**：连续相同 `reason` + `reasonSubject` 合并为 "X 及其他 N 人 赞了/转发了/回复了你的帖文"
+- ✅ **PWA 通知帖子预览**：目标帖作者、截断正文、最多 4 张媒体缩略图
+- ✅ **PWA 通知可点击**：帖文相关 → thread；关注 → profile
+- ✅ **`BskyClient.getPosts(uris)`**：批量拉取帖文视图，支持 25 个/批分片
 - ✅ **PWA 通知红点**：桌面侧边栏 + 移动端 Header 汉堡按钮显示未读通知数
-- ✅ **PWA 通知自动已读**：进入通知页自动 `markAllAsRead`
 - ✅ **TUI 通知轮询**：`useNotifications` 每 60 秒刷新
 - ✅ **TUI DM 快捷键**：输入框非聚焦时 `e` 进入反应模式、`r` 刷新消息
 - ✅ **共享 DM 未读覆盖 Store**：`ConvoUnreadStore` 带 60s TTL，所有 `useConvoList` 实例即时同步已读
 - ✅ **共享通知 Store**：模块级 Store + `useSyncExternalStore` + epoch 竞态保护 + 失败回滚
-- ✅ **单元测试**：`useNotifications.store.test.ts`（12 项）、`useConvoList.store.test.ts`（8 项）
+- ✅ **单元测试**：`useNotifications.store.test.ts`（12 项）、`useConvoList.store.test.ts`（8 项）、`notifications.test.ts`（9 项）
 - ✅ **`useChatMessages.loadConvo`**：同时支持 member DID 与 conversation id，返回真实 `convo.id`
 - ✅ **`BskyClient.getConvo(convoId)`**：新增直接会话查询
 - ✅ **跨账号竞态保护**：切换账号后丢弃旧 client 的异步响应
