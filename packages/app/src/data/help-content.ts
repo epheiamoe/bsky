@@ -1099,6 +1099,84 @@ Go to Settings → Display to toggle individual widgets. Widgets adapt to the cu
   // SOCIAL
   // ════════════════════════════════════════════════════════════════════
   {
+    id: 'notifications',
+    category: 'social',
+    icon: 'bell',
+    platforms: ['pwa'],
+    keywords: ['notification', 'mention', 'reply', 'like', 'repost', 'follow', 'unread', '通知'],
+    related: ['lists-management'],
+    title: {
+      en: 'Notifications',
+      zh: '通知',
+      ja: '通知',
+    },
+    summary: {
+      en: 'Browse likes, reposts, follows, mentions, and replies in a bsky.app-style list',
+      zh: '以 bsky.app 风格列表浏览赞、转发、关注、提及与回复',
+      ja: 'bsky.app スタイルのリストでいいね、リポスト、フォロー、メンション、返信を確認',
+    },
+    detail: {
+      en: `The Notifications page groups consecutive interactions that target the same post.
+
+**Tabs:**
+- **All** — every notification reason
+- **Mentions** — only mentions and replies
+
+**Interactions:**
+- Likes, reposts, quotes, replies, and mentions show the actor avatars, the action icon, a short summary, and a preview of the target post.
+- Follow notifications show the actor avatars and a "followed you" summary without a post preview.
+
+**Navigation:**
+- Tap a post-related notification to open the thread.
+- Tap a follow notification to open the first follower's profile.
+
+**Unread state:**
+- Unread items have a subtle background highlight and a left border.
+- Screen readers announce "unread" in the item label.`,
+      zh: `通知页会将针对同一帖子的连续互动聚合为一行。
+
+**标签页：**
+- **全部** — 所有通知类型
+- **提及** — 仅提及与回复
+
+**互动项：**
+- 点赞、转发、引用、回复和提及会显示触发者头像、操作图标、聚合文案以及目标帖子的预览。
+- 关注通知显示触发者头像与「关注了你」文案，不展示帖子预览。
+
+**跳转：**
+- 点击帖子相关通知进入讨论串。
+- 点击关注通知进入首位关注者的资料页。
+
+**未读状态：**
+- 未读项带有背景高亮与左边框。
+- 屏幕阅读器会通过标签朗读「未读」。`,
+      ja: `通知ページでは、同じ投稿を対象とする連続したインタラクションを1行にまとめます。
+
+**タブ：**
+- **すべて** — すべての通知理由
+- **メンション** — メンションと返信のみ
+
+**インタラクション：**
+- いいね、リポスト、引用、返信、メンションにはアクターアバター、アクションアイコン、要約、対象投稿のプレビューが表示されます。
+- フォロー通知にはアクターアバターと「フォローしました」の要約が表示され、投稿プレビューはありません。
+
+**ナビゲーション：**
+- 投稿関連の通知をタップするとスレッドを開きます。
+- フォロー通知をタップすると、最初のフォロワーのプロフィールを開きます。
+
+**未読状態：**
+- 未読項目には背景ハイライトと左ボーダーがあります。
+- スクリーンリーダーは項目ラベル内で「未読」を読み上げます。`,
+    },
+    tips: [
+      { icon: 'bell', en: 'All notifications in a single grouped list', zh: '所有通知以聚合列表展示', ja: 'すべての通知をまとめたリストで表示' },
+      { icon: 'at-sign', en: 'Mentions tab filters mentions and replies', zh: '提及标签仅显示提及与回复', ja: 'メンションタブではメンションと返信のみ表示' },
+      { icon: 'users', en: 'Follow notifications jump to the follower profile', zh: '关注通知跳转到关注者资料', ja: 'フォロー通知でフォロワーのプロフィールへ' },
+      { icon: 'message-circle', en: 'Post-related notifications open the thread', zh: '帖子相关通知进入讨论串', ja: '投稿関連の通知でスレッドを開く' },
+    ],
+  },
+
+  {
     id: 'at-play',
     category: 'social',
     icon: 'users',

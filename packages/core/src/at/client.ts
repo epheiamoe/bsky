@@ -7,6 +7,7 @@ import type {
   ProfileView,
   TimelineResponse,
   PostThreadResponse,
+  GetPostsResponse,
   GetLikesResponse,
   GetRepostedByResponse,
   SearchPostsResponse,
@@ -402,6 +403,18 @@ export class BskyClient {
       searchParams: { uri, depth, parentHeight },
       ...headers,
     }).json<PostThreadResponse>();
+  }
+
+  async getPosts(uris: string[]): Promise<GetPostsResponse> {
+    if (uris.length === 0) return { posts: [] };
+    const sp = new URLSearchParams();
+    for (const uri of uris) sp.append('uris', uri);
+    const kyInstance = this.session ? this.ky : this.publicKy;
+    const headers = this.session ? { headers: this.getAuthHeaders() } : {};
+    return kyInstance.get('app.bsky.feed.getPosts', {
+      searchParams: sp.toString(),
+      ...headers,
+    }).json<GetPostsResponse>();
   }
 
   async getLikes(uri: string, limit = 50, cursor?: string): Promise<GetLikesResponse> {

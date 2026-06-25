@@ -23,6 +23,7 @@ export type {
   Notification,
   ThreadViewPost,
   NotFoundPost,
+  GetPostsResponse,
   CreateSessionResponse,
   PostRecord,
   GetBookmarksResponse,

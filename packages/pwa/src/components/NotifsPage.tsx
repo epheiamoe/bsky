@@ -1,9 +1,13 @@
-import React, { useCallback, useEffect, useRef } from 'react';
-import type { BskyClient, Notification } from '@bsky/core';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { BskyClient } from '@bsky/core';
 import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
 import { Icon } from './Icon.js';
 import { PullToRefresh } from './PullToRefresh.js';
+import { NotifTabs, type NotifTab } from './NotifTabs.js';
+import { NotifItem } from './NotifItem.js';
+import { useNotificationGroups } from '../hooks/useNotificationGroups.js';
+import { useNotificationPosts } from '../hooks/useNotificationPosts.js';
 
 interface NotifsPageProps {
   client: BskyClient;
@@ -14,90 +18,17 @@ interface NotifsPageProps {
   autoMarkRead?: boolean;
 }
 
-function timeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const seconds = Math.floor((now - then) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `${months}mo`;
-  return `${Math.floor(months / 12)}y`;
-}
-
-const REASON_EMOJI: Record<string, string> = {
-  like: '\u2665',
-  repost: '\u267B',
-  follow: '\uD83D\uDC64',
-  reply: '\uD83D\uDCAC',
-  mention: '@',
-  quote: '\uD83D\uDCAC',
-};
-
-function reasonText(reason: string, t: (key: string) => string): string {
-  const map: Record<string, string> = {
-    like: 'notifications.reason.like',
-    repost: 'notifications.reason.repost',
-    follow: 'notifications.reason.follow',
-    reply: 'notifications.reason.reply',
-    mention: 'notifications.reason.mention',
-    quote: 'notifications.reason.quote',
-  };
-  return t(map[reason] ?? reason);
-}
-
-function NotifItem({ n, t, goTo, index }: { n: Notification; t: (key: string) => string; goTo: (v: AppView) => void; index: number }) {
-  const emoji = REASON_EMOJI[n.reason] ?? null;
-  const reasonLabel = reasonText(n.reason, t);
-  const reasonSubject = n.reasonSubject;
-
-  return (
-    <div
-      onClick={reasonSubject ? () => goTo({ type: 'thread', uri: reasonSubject! }) : undefined}
-      className={`border-b border-border px-4 py-3 hover:bg-surface transition-colors animate-slideUp stagger-${(index % 6) + 1} ${reasonSubject ? 'cursor-pointer' : ''}`}>
-      <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full shrink-0 overflow-hidden">
-          {n.author.avatar ? (
-            <img src={n.author.avatar} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-primary flex items-center justify-center text-white font-bold text-sm">
-              {(n.author.displayName || n.author.handle).charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1">
-            <span className="text-lg shrink-0">{emoji}{!emoji && <Icon name="bell" size={20} />}</span>
-            <span className="text-text-primary font-semibold text-sm truncate">
-              {n.author.displayName || n.author.handle}
-            </span>
-          </div>
-          <p className="text-text-secondary text-xs mt-0.5">
-            @{n.author.handle}{' '}
-            {reasonLabel}
-          </p>
-          <p className="text-text-secondary text-xs mt-0.5">
-            {timeAgo(n.indexedAt)}
-          </p>
-        </div>
-        {!n.isRead && (
-          <div className="shrink-0 self-center">
-            <div className="w-2 h-2 rounded-full bg-primary" />
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTopChange, autoMarkRead = true }: NotifsPageProps) {
+export function NotifsPage({
+  client,
+  goBack,
+  goTo,
+  initialScrollTop,
+  onScrollTopChange,
+  autoMarkRead = true,
+}: NotifsPageProps) {
   const { t } = useI18n();
   const { notifications, loading, error, refresh, unreadCount, markAllAsRead } = useNotifications(client);
+  const [activeTab, setActiveTab] = useState<NotifTab>('all');
   const autoMarkedRef = useRef(false);
 
   // 进入通知页后，若存在未读通知则自动标记已读（默认开启）
@@ -107,13 +38,27 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
       void markAllAsRead();
     }
   }, [autoMarkRead, unreadCount, markAllAsRead]);
+
+  const groups = useNotificationGroups(notifications);
+
+  const filteredGroups = groups.filter((g) => {
+    if (activeTab === 'all') return true;
+    return g.reason === 'mention' || g.reason === 'reply';
+  });
+
+  const { posts, loading: postsLoading, error: postsError } = useNotificationPosts(client, filteredGroups);
+
   const { scrollRef, virtualizer, measureAndCache } = useVirtualizedList(
-    notifications, 'notifs', 72, n => n.uri, { initialScrollTop, onScrollTopChange },
+    filteredGroups,
+    'notifs',
+    96,
+    (g) => g.key,
+    { initialScrollTop, onScrollTopChange },
   );
 
-  const handleMarkAllAsRead = useCallback(async () => {
-    await markAllAsRead();
-  }, [markAllAsRead]);
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
 
   return (
     <div className="flex flex-col h-[calc(100dvh-3rem)] bg-background animate-fadeIn">
@@ -126,32 +71,40 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
           >
             <Icon name="arrow-big-left" size={20} />
           </button>
-          <h1 className="text-text-primary font-semibold text-lg"><Icon name="bell" size={20} /> {t('notifications.title')}</h1>
+          <h1 className="text-text-primary font-semibold text-lg flex items-center gap-2">
+            <Icon name="bell" size={20} />
+            {t('notifications.title')}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <button
-              onClick={handleMarkAllAsRead}
-              disabled={loading}
-              className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
-              aria-label={t('notifications.markAllAsRead')}
-            >
-              {t('notifications.markAllAsRead')}
-            </button>
-          )}
           <button
-            onClick={() => refresh()}
+            onClick={handleRefresh}
             disabled={loading}
-            className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors text-sm font-medium"
+            className="text-text-secondary hover:text-text-primary disabled:opacity-50 transition-colors p-1"
+            aria-label={t('action.refresh')}
+            title={t('action.refresh')}
           >
-            {t('action.refresh')}
+            <Icon name="refresh-cw" size={18} />
+          </button>
+          <button
+            onClick={() => goTo({ type: 'settings' })}
+            className="text-text-secondary hover:text-text-primary transition-colors p-1"
+            aria-label={t('notifications.settings')}
+            title={t('notifications.settings')}
+          >
+            <Icon name="settings" size={20} />
           </button>
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
-          {error}
+      <NotifTabs activeTab={activeTab} onChange={setActiveTab} />
+
+      {(error || postsError) && (
+        <div
+          role="alert"
+          className="m-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm"
+        >
+          {error || postsError}
         </div>
       )}
 
@@ -159,30 +112,44 @@ export function NotifsPage({ client, goBack, goTo, initialScrollTop, onScrollTop
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : notifications.length > 0 ? (
+      ) : filteredGroups.length > 0 ? (
         <>
           <PullToRefresh onRefresh={refresh} scrollRef={scrollRef} />
           <div ref={scrollRef} role="list" className="flex-1 overflow-y-auto">
-          <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
-            {virtualizer.getVirtualItems().map((vi) => {
-              const n = notifications[vi.index]!;
-              return (
-                <div
-                  key={n.uri}
-            data-index={vi.index}
-            role="listitem"
-            ref={(el) => measureAndCache(el, n)}
-                  style={{
-                    position: 'absolute', top: 0, left: 0, width: '100%',
-                    transform: `translateY(${vi.start}px)`,
-                  }}
-                >
-                  <NotifItem n={n} t={t} goTo={goTo} index={vi.index} />
-                </div>
-              );
-            })}
+            <div
+              style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}
+            >
+              {virtualizer.getVirtualItems().map((vi) => {
+                const group = filteredGroups[vi.index]!;
+                return (
+                  <div
+                    key={group.key}
+                    data-index={vi.index}
+                    ref={(el) => measureAndCache(el, group)}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${vi.start}px)`,
+                    }}
+                  >
+                    <NotifItem
+                      group={group}
+                      post={posts.get(group.reasonSubject ?? '')}
+                      index={vi.index}
+                      goTo={goTo}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
+          {postsLoading && (
+            <div className="sr-only" role="status" aria-live="polite">
+              {t('action.loading')}
+            </div>
+          )}
         </>
       ) : (
         <div className="flex flex-col items-center justify-center py-16 px-4">

@@ -277,6 +277,10 @@ export interface PostThreadResponse {
   threadgate?: ThreadgateView | null;
 }
 
+export interface GetPostsResponse {
+  posts: PostView[];
+}
+
 export interface GetLikesResponse {
   uri: string;
   cid?: string;
