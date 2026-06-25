@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BskyClient } from '@bsky/core';
 import { useNotifications, useI18n, useVirtualizedList } from '@bsky/app';
 import type { AppView } from '@bsky/app';
@@ -41,10 +41,14 @@ export function NotifsPage({
 
   const groups = useNotificationGroups(notifications);
 
-  const filteredGroups = groups.filter((g) => {
-    if (activeTab === 'all') return true;
-    return g.reason === 'mention' || g.reason === 'reply';
-  });
+  const filteredGroups = useMemo(
+    () =>
+      groups.filter((g) => {
+        if (activeTab === 'all') return true;
+        return g.reason === 'mention' || g.reason === 'reply';
+      }),
+    [groups, activeTab],
+  );
 
   const { posts, loading: postsLoading, error: postsError } = useNotificationPosts(client, filteredGroups);
 

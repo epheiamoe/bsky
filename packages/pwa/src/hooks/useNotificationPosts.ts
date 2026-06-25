@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BskyClient, PostView } from '@bsky/core';
 import type { NotifGroup } from './useNotificationGroups.js';
 
@@ -12,10 +12,25 @@ export function chunkUris(uris: string[], size = CHUNK_SIZE): string[][] {
   return chunks;
 }
 
+/**
+ * Build a stable cache key from the sorted unique reasonSubject URIs.
+ * Changing the order or identity of the `groups` array must not change the key
+ * when the same URIs are referenced.
+ */
+export function buildStableKey(groups: NotifGroup[], retryCount = 0): string {
+  const subjects = groups
+    .map((g) => g.reasonSubject)
+    .filter((s): s is string => typeof s === 'string' && s.length > 0);
+  const unique = Array.from(new Set(subjects)).sort();
+  if (unique.length === 0) return '';
+  return `${unique.join('|')}::retry=${retryCount}`;
+}
+
 export interface UseNotificationPostsResult {
   posts: Map<string, PostView>;
   loading: boolean;
   error: string | null;
+  retry: () => void;
 }
 
 /**
@@ -23,7 +38,8 @@ export interface UseNotificationPostsResult {
  *
  * - 只收集存在 reasonSubject 的组
  * - 去重并按 25 个 URI 每批调用 client.getPosts
- * - 用组 key 集合做缓存键，避免重复请求
+ * - 用排序后的唯一 URI 集合做稳定缓存键，避免数组引用抖动导致重复请求
+ * - 通过单调递增 request id 忽略过期响应，避免旧 effect 把 loading 卡死
  */
 export function useNotificationPosts(
   client: BskyClient | null,
@@ -32,7 +48,10 @@ export function useNotificationPosts(
   const [posts, setPosts] = useState<Map<string, PostView>>(new Map());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fetchedKeyRef = useRef('');
+  const [retryCount, setRetryCount] = useState(0);
+  const requestIdRef = useRef(0);
+
+  const stableKey = useMemo(() => buildStableKey(groups, retryCount), [groups, retryCount]);
 
   useEffect(() => {
     const activeClient = client;
@@ -47,43 +66,53 @@ export function useNotificationPosts(
       setPosts(new Map());
       setLoading(false);
       setError(null);
-      fetchedKeyRef.current = '';
       return;
     }
 
-    const key = unique.sort().join('|');
-    if (key === fetchedKeyRef.current) return;
-    fetchedKeyRef.current = key;
+    const requested = new Set(unique);
+    const requestId = ++requestIdRef.current;
 
-    let cancelled = false;
+    setLoading(true);
+    setError(null);
 
     async function load(c: BskyClient) {
-      setLoading(true);
-      setError(null);
       try {
         const next = new Map<string, PostView>();
         for (let i = 0; i < unique.length; i += CHUNK_SIZE) {
           const chunk = unique.slice(i, i + CHUNK_SIZE);
           const res = await c.getPosts(chunk);
           for (const post of res.posts) {
-            next.set(post.uri, post);
+            // Defensive: only keep posts whose URI was actually requested.
+            if (requested.has(post.uri)) {
+              next.set(post.uri, post);
+            }
           }
         }
-        if (!cancelled) setPosts(next);
+        if (requestIdRef.current === requestId) {
+          setPosts(next);
+        }
       } catch (e) {
-        if (!cancelled) {
+        if (requestIdRef.current === requestId) {
           setError(e instanceof Error ? e.message : String(e));
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        // Always run finally, but only update loading for the current in-flight
+        // request so a stale response cannot flip loading back to false early.
+        if (requestIdRef.current === requestId) {
+          setLoading(false);
+        }
       }
     }
 
     void load(activeClient);
-    return () => {
-      cancelled = true;
-    };
-  }, [client, groups]);
+  }, [client, stableKey, groups]);
 
-  return { posts, loading, error };
+  const retry = useMemo(
+    () => () => {
+      setRetryCount((c) => c + 1);
+    },
+    [],
+  );
+
+  return { posts, loading, error, retry };
 }

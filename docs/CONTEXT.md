@@ -31,13 +31,19 @@
 - ✅ **PWA 通知聚合**：连续相同 `reason` + `reasonSubject` 合并为 "X 及其他 N 人 赞了/转发了/回复了你的帖文"
 - ✅ **PWA 通知帖子预览**：目标帖作者、截断正文、最多 4 张媒体缩略图
 - ✅ **PWA 通知可点击**：帖文相关 → thread；关注 → profile
+- ✅ **PWA 通知预览紧凑 redesign（v0.14.5-patch）**：
+  - 修复 `useNotificationPosts` effect race 导致预览永远 loading 的问题（稳定 URI key + request id 过期响应丢弃）
+  - 预览改为紧凑内联行：作者文本 + 右侧单图/多图水平条带，无大卡片占位
+  - 支持 `app.bsky.embed.gallery#view`（最多 10 张图），预览条带最多显示 4 张，无 `+N` 覆盖层
+  - 重构 `NotifItem` DOM：`<article>` 外壳，reason icon 最左，头像堆叠相邻，内容区独立 `<button>`，消除嵌套 button 与 `aria-hidden` 内可聚焦元素问题
+  - `NotifActorStack` 头像按钮自带 `aria-label`，溢出按钮保留可见文本
 - ✅ **`BskyClient.getPosts(uris)`**：批量拉取帖文视图，支持 25 个/批分片
 - ✅ **PWA 通知红点**：桌面侧边栏 + 移动端 Header 汉堡按钮显示未读通知数
 - ✅ **TUI 通知轮询**：`useNotifications` 每 60 秒刷新
 - ✅ **TUI DM 快捷键**：输入框非聚焦时 `e` 进入反应模式、`r` 刷新消息
 - ✅ **共享 DM 未读覆盖 Store**：`ConvoUnreadStore` 带 60s TTL，所有 `useConvoList` 实例即时同步已读
 - ✅ **共享通知 Store**：模块级 Store + `useSyncExternalStore` + epoch 竞态保护 + 失败回滚
-- ✅ **单元测试**：`useNotifications.store.test.ts`（12 项）、`useConvoList.store.test.ts`（8 项）、`notifications.test.ts`（9 项）
+- ✅ **单元测试**：`useNotifications.store.test.ts`（12 项）、`useConvoList.store.test.ts`（8 项）、`notifications.test.ts`（12 项，新增 stable-key 与 gallery 提取覆盖）
 - ✅ **`useChatMessages.loadConvo`**：同时支持 member DID 与 conversation id，返回真实 `convo.id`
 - ✅ **`BskyClient.getConvo(convoId)`**：新增直接会话查询
 - ✅ **跨账号竞态保护**：切换账号后丢弃旧 client 的异步响应

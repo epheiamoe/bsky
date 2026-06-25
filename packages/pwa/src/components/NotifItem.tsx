@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import type { AppView } from '@bsky/app';
 import { useI18n } from '@bsky/app';
 import type { PostView, ProfileViewBasic } from '@bsky/core';
@@ -40,10 +40,10 @@ function truncate(text: string, max = 80): string {
   return text.slice(0, max - 1) + '\u2026';
 }
 
-function buildAriaLabel(
+function buildContentAriaLabel(
   group: NotifGroup,
   post: PostView | undefined,
-  t: (key: string) => string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
 ): string {
   const actorText = buildActorText(group, t);
   const unreadPrefix = group.isRead ? '' : `${t('a11y.notificationUnread')} `;
@@ -56,7 +56,12 @@ function buildAriaLabel(
   if (post && group.reasonSubject) {
     const authorName = post.author.displayName || post.author.handle;
     const previewText = truncate(post.record.text || '');
-    return `${unreadPrefix}${actorText}, ${authorName}. ${previewText}`;
+    const imageCount =
+      ((post.record.embed as any)?.images?.length as number | undefined) ??
+      ((post.record.embed as any)?.items?.length as number | undefined) ??
+      0;
+    const mediaSuffix = imageCount > 0 ? `. ${t('post.imageCount', { n: imageCount })}` : '';
+    return `${unreadPrefix}${actorText}, ${authorName}. ${previewText}${mediaSuffix}`;
   }
 
   if (group.reasonSubject) {
@@ -74,7 +79,7 @@ export function NotifItem({ group, post, index, goTo, loadingPost }: NotifItemPr
     (group.reason === 'follow' && group.actors[0]?.handle) ||
     (!!group.reasonSubject && POST_REASONS.has(group.reason));
 
-  const handleActivate = useCallback(() => {
+  const handleRowClick = useCallback(() => {
     if (group.reason === 'follow') {
       const handle = group.actors[0]?.handle;
       if (handle) goTo({ type: 'profile', actor: handle });
@@ -84,16 +89,6 @@ export function NotifItem({ group, post, index, goTo, loadingPost }: NotifItemPr
       goTo({ type: 'thread', uri: group.reasonSubject });
     }
   }, [group, goTo]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        handleActivate();
-      }
-    },
-    [handleActivate],
-  );
 
   const handleActorClick = useCallback(
     (actor: ProfileViewBasic) => {
@@ -105,58 +100,59 @@ export function NotifItem({ group, post, index, goTo, loadingPost }: NotifItemPr
   );
 
   const actorText = buildActorText(group, t);
-  const ariaLabel = buildAriaLabel(group, post, t);
+  const contentLabel = useMemo(() => buildContentAriaLabel(group, post, t), [group, post, t]);
 
   const fallbackText =
     group.reason === 'reply' || group.reason === 'mention'
       ? (group.record?.text as string | undefined)
       : undefined;
-  const fallbackAuthor =
-    group.reason === 'reply' || group.reason === 'mention' ? group.actors[0] : undefined;
 
   return (
     <>
-      <div role="listitem">
-        <div
-          role={isClickable ? 'button' : undefined}
-          tabIndex={isClickable ? 0 : undefined}
-          onClick={isClickable ? handleActivate : undefined}
-          onKeyDown={isClickable ? handleKeyDown : undefined}
-          aria-label={ariaLabel}
-          className={`border-b border-border px-4 py-3 transition-colors ${
-            !group.isRead
-              ? 'bg-surface/60 border-l-2 border-l-primary'
-              : ''
-          } ${isClickable ? 'cursor-pointer hover:bg-surface' : ''}`}
-        >
-          <div className="flex gap-3">
-            <NotifActorStack
-              actors={group.actors}
-              onActorClick={handleActorClick}
-              onRemainingClick={() => setShowActorList(true)}
-            />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-2">
-                <NotifReasonIcon reason={group.reason} />
-                <span className="text-text-primary text-sm min-w-0 flex-1">
-                  {actorText}
-                </span>
-                <span className="text-text-secondary text-xs shrink-0">
-                  {formatTimeAgo(group.latestIndexedAt, t)}
-                </span>
-              </div>
-              {group.reason !== 'follow' && (
-                <NotifPostPreview
-                  post={post}
-                  fallbackText={fallbackText}
-                  fallbackAuthor={fallbackAuthor}
-                  loading={loadingPost && !post}
-                />
-              )}
+      <article
+        className={`border-b border-border px-4 py-2.5 transition-colors ${
+          !group.isRead ? 'bg-surface/60 border-l-2 border-l-primary' : ''
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          <NotifReasonIcon
+            reason={group.reason}
+            className="shrink-0 w-6 text-center"
+            aria-hidden="true"
+          />
+
+          <NotifActorStack
+            actors={group.actors}
+            className="shrink-0"
+            onActorClick={handleActorClick}
+            onRemainingClick={() => setShowActorList(true)}
+          />
+
+          <button
+            type="button"
+            onClick={handleRowClick}
+            disabled={!isClickable}
+            aria-label={contentLabel}
+            className={`min-w-0 flex-1 text-left ${
+              isClickable ? 'cursor-pointer hover:opacity-90' : 'cursor-default'
+            }`}
+          >
+            <div className="flex items-start gap-2">
+              <span className="text-text-primary text-sm min-w-0 flex-1">{actorText}</span>
+              <span className="text-text-secondary text-xs shrink-0">
+                {formatTimeAgo(group.latestIndexedAt, t)}
+              </span>
             </div>
-          </div>
+            {group.reason !== 'follow' && (
+              <NotifPostPreview
+                post={post}
+                fallbackText={fallbackText}
+                loading={loadingPost && !post}
+              />
+            )}
+          </button>
         </div>
-      </div>
+      </article>
       <NotifActorListModal
         open={showActorList}
         onClose={() => setShowActorList(false)}

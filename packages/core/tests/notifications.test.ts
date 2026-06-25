@@ -127,6 +127,47 @@ describe('useNotificationPosts chunking', () => {
   });
 });
 
+describe('useNotificationPosts buildStableKey', () => {
+  it('returns empty string when no groups have a reasonSubject', async () => {
+    const { buildStableKey } = await import('../../pwa/src/hooks/useNotificationPosts.js');
+    const groups = [makeGroup({ reason: 'follow' })];
+    expect(buildStableKey(groups)).toBe('');
+  });
+
+  it('is stable across different array identities and orders', async () => {
+    const { buildStableKey } = await import('../../pwa/src/hooks/useNotificationPosts.js');
+    const a = [
+      makeGroup({ subject: 'at://post/b' }),
+      makeGroup({ subject: 'at://post/a' }),
+      makeGroup({ subject: 'at://post/b' }),
+    ];
+    const b = [
+      makeGroup({ subject: 'at://post/a' }),
+      makeGroup({ subject: 'at://post/b' }),
+    ];
+    expect(buildStableKey(a)).toBe(buildStableKey(b));
+  });
+
+  it('changes when retryCount changes', async () => {
+    const { buildStableKey } = await import('../../pwa/src/hooks/useNotificationPosts.js');
+    const groups = [makeGroup({ subject: 'at://post/a' })];
+    expect(buildStableKey(groups, 0)).not.toBe(buildStableKey(groups, 1));
+  });
+});
+
+function makeGroup(opts: { reason?: string; subject?: string } = {}) {
+  return {
+    key: `like:${opts.subject ?? 'none'}`,
+    reason: (opts.reason ?? 'like') as any,
+    reasonSubject: opts.subject,
+    actors: [],
+    uris: [],
+    isRead: true,
+    latestIndexedAt: new Date().toISOString(),
+    record: {},
+  };
+}
+
 function makeNotif(opts: {
   uri: string;
   reason: string;

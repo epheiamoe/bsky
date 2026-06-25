@@ -141,23 +141,28 @@ export function extractImages(post: PostView): ExtractImage[] {
 }
 
 export function extractGallery(post: PostView): ExtractGallery | null {
-  const embed = post.record.embed as Record<string, unknown> | undefined;
-  if (!embed) return null;
+  const recordEmbed = post.record.embed as Record<string, unknown> | undefined;
+  const viewEmbed = (post as any).embed as Record<string, unknown> | undefined;
+  if (!recordEmbed) return null;
 
-  const resolve = (e: Record<string, unknown>): ExtractGallery | null => {
-    const type = e.$type as string | undefined;
-    if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(e.items)) {
-      // Try to get view-side resolved data from (post as any).embed
-      const viewEmbed = (post as any).embed as Record<string, unknown> | undefined;
-      const viewItems = (viewEmbed?.$type === 'app.bsky.embed.gallery#view')
-        ? (viewEmbed.items as Array<Record<string, unknown>> | undefined)
-        : undefined;
+  const resolve = (recordE: Record<string, unknown>, viewE?: Record<string, unknown>): ExtractGallery | null => {
+    const type = recordE.$type as string | undefined;
+    if ((type === 'app.bsky.embed.gallery' || type === 'app.bsky.embed.gallery#view') && Array.isArray(recordE.items)) {
+      // Prefer the matching view-side resolved data (has CDN URLs). For a top-level
+      // gallery the view is the post's embed; for a gallery nested inside
+      // recordWithMedia it lives at view.media.
+      const galleryView =
+        viewE?.$type === 'app.bsky.embed.gallery#view'
+          ? viewE
+          : viewEmbed?.$type === 'app.bsky.embed.gallery#view'
+            ? viewEmbed
+            : undefined;
+      const viewItems = (galleryView?.items as Array<Record<string, unknown>> | undefined);
 
       const images: ExtractGalleryItem[] = [];
-      const items = e.items as Array<Record<string, unknown>>;
+      const items = recordE.items as Array<Record<string, unknown>>;
       for (let idx = 0; idx < items.length; idx++) {
         const item = items[idx]!;
-        // Prefer view-side resolved data (has CDN URLs)
         const viewItem = viewItems?.[idx];
         images.push({
           thumbnail: (viewItem?.thumbnail as string) || (item.thumbnail as string) || '',
@@ -171,13 +176,16 @@ export function extractGallery(post: PostView): ExtractGallery | null {
       return images.length > 0 ? { images } : null;
     }
     // Recurse into recordWithMedia (gallery + quote)
-    if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && e.media) {
-      return resolve(e.media as Record<string, unknown>);
+    if ((type === 'app.bsky.embed.recordWithMedia' || type === 'app.bsky.embed.recordWithMedia#view') && recordE.media) {
+      return resolve(
+        recordE.media as Record<string, unknown>,
+        viewE?.media as Record<string, unknown> | undefined,
+      );
     }
     return null;
   };
 
-  return resolve(embed);
+  return resolve(recordEmbed, viewEmbed);
 }
 
 export function extractVideo(post: PostView): ExtractVideo | null {

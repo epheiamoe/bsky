@@ -5,6 +5,8 @@ import type { NotifReason } from '../hooks/useNotificationGroups.js';
 
 interface NotifReasonIconProps {
   reason: NotifReason;
+  className?: string;
+  'aria-hidden'?: boolean | 'true' | 'false';
 }
 
 const REASON_CONFIG: Record<NotifReason, { icon: string; color: string }> = {
@@ -17,16 +19,17 @@ const REASON_CONFIG: Record<NotifReason, { icon: string; color: string }> = {
   unknown: { icon: 'bell', color: 'text-text-secondary' },
 };
 
-export function NotifReasonIcon({ reason }: NotifReasonIconProps) {
+export function NotifReasonIcon({ reason, className, 'aria-hidden': ariaHidden }: NotifReasonIconProps) {
   const { t } = useI18n();
   const config = REASON_CONFIG[reason];
   const label = t(`notifications.reason.${reason}`);
 
   return (
     <span
-      className={`inline-flex shrink-0 ${config.color}`}
+      className={`inline-flex shrink-0 ${config.color} ${className ?? ''}`}
       role="img"
-      aria-label={label}
+      aria-hidden={ariaHidden}
+      aria-label={ariaHidden ? undefined : label}
       title={label}
     >
       <Icon name={config.icon} size={18} filled={reason === 'like'} />

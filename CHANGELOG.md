@@ -12,13 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **PWA notification page redesign**: bsky.app-style layout with header, settings gear, All/Mentions tabs, grouped notifications, actor avatar stacks, SVG reason icons, and post preview cards.
 - **PWA notification aggregation**: consecutive notifications with the same `reason` + `reasonSubject` are grouped into a single row ("X and N others liked your post").
 - **PWA notification post previews**: target post author, truncated text, and up to 4 media thumbnails shown for like/repost/reply/quote/mention notifications.
+- **PWA notification compact preview redesign**: inline compact row with text on the left and a single small thumbnail / horizontal gallery strip on the right; supports `app.bsky.embed.gallery#view` (up to 10 images, preview first 4 without `+N` overlay); eliminates oversized loading skeletons.
 - **PWA clickable notifications**: tap a notification to navigate to the related thread or follower profile.
 - **PWA notification badge**: sidebar and mobile header hamburger button now show unread notification counts.
 - **TUI notification polling**: `useNotifications` refreshes every 60 seconds in TUI.
 - **TUI DM shortcuts**: `e` toggles reaction mode when input is not focused; `r` refreshes messages.
 - **Shared DM unread overlay store**: `ConvoUnreadStore` with TTL lets all `useConvoList` instances reflect read status immediately.
 - **Shared notification store**: module-level store with `useSyncExternalStore`, epoch race protection, and rollback on `markAllAsRead` failure.
-- **Unit tests**: `useNotifications.store.test.ts` (12 tests), `useConvoList.store.test.ts` (8 tests), and `notifications.test.ts` (9 tests) covering grouping, `getPosts` batching, shared state, rollback, TTL, race conditions, and client-switch guards.
+- **Unit tests**: `useNotifications.store.test.ts` (12 tests), `useConvoList.store.test.ts` (8 tests), and `notifications.test.ts` (12 tests) covering grouping, `getPosts` batching, stable-key logic, gallery extraction, shared state, rollback, TTL, race conditions, and client-switch guards.
 
 ### Changed
 
@@ -28,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed PWA notification post previews getting stuck in the loading state due to an unstable `filteredGroups` reference restarting the `useNotificationPosts` effect on every render.
+- Fixed PWA notification preview accessibility: removed nested interactive elements (`button` inside `button`) and `aria-hidden` over focusable avatar buttons; added per-actor labels.
 - Fixed PWA sidebar never showing notification red dot.
 - Fixed PWA DM unread badge not clearing immediately after opening a chat.
 - Fixed TUI DM unread badge not clearing after opening a chat.
