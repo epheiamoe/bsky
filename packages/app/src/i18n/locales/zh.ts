@@ -226,6 +226,10 @@ const zh: LocaleMessages = {
   'video.unavailable': '视频暂不可用',
   'video.openInBsky': '在 bsky.app 打开',
 
+  // 媒体类型标签（通知预览）
+  'mediaType.video': '视频',
+  'mediaType.external': '外部链接',
+
   'drafts.title': '草稿',
   'drafts.empty': '没有草稿',
   'drafts.notSynced': '此草稿未保存到服务器',
@@ -292,12 +296,14 @@ const zh: LocaleMessages = {
   'notifications.reason.reply': '回复了你的帖子',
   'notifications.reason.mention': '提到了你',
   'notifications.reason.quote': '引用了你的帖子',
+  'notifications.reason.unknown': '与你互动',
   'notifications.aggregated.like': '{name} 及其他 {n} 人赞了你的帖子',
   'notifications.aggregated.repost': '{name} 及其他 {n} 人转发了你的帖子',
   'notifications.aggregated.reply': '{name} 及其他 {n} 人回复了你的帖子',
   'notifications.aggregated.quote': '{name} 及其他 {n} 人引用了你的帖子',
   'notifications.aggregated.follow': '{name} 及其他 {n} 人关注了你',
   'notifications.aggregated.mention': '{name} 及其他 {n} 人提到了你',
+  'notifications.aggregated.unknown': '{name} 及其他 {n} 人与你互动',
 
   // ── Relative time ──
   'timeAgo.justNow': '刚刚',
@@ -631,6 +637,7 @@ const zh: LocaleMessages = {
   'a11y.pageThread': '帖子详情页',
   'a11y.pageSearch': '搜索页',
   'a11y.pageNotifications': '通知页',
+  'a11y.openProfileOf': '打开资料页',
   'a11y.notificationUnread': '未读',
   'a11y.pageBookmarks': '书签页',
   'a11y.pageAIChat': 'AI 对话',

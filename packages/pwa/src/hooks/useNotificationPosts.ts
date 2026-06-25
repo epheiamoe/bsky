@@ -4,6 +4,14 @@ import type { NotifGroup } from './useNotificationGroups.js';
 
 const CHUNK_SIZE = 25;
 
+export function chunkUris(uris: string[], size = CHUNK_SIZE): string[][] {
+  const chunks: string[][] = [];
+  for (let i = 0; i < uris.length; i += size) {
+    chunks.push(uris.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export interface UseNotificationPostsResult {
   posts: Map<string, PostView>;
   loading: boolean;

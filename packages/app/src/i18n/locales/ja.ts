@@ -228,6 +228,10 @@ const ja: LocaleMessages = {
   'video.unavailable': '動画を利用できません',
   'video.openInBsky': 'bsky.app で開く',
 
+  // メディアタイプラベル（通知プレビュー）
+  'mediaType.video': '動画',
+  'mediaType.external': '外部リンク',
+
   'drafts.title': '下書き',
   'drafts.empty': '下書きがありません',
   'drafts.notSynced': 'サーバーに未同期',
@@ -292,12 +296,14 @@ const ja: LocaleMessages = {
   'notifications.reason.reply': 'があなたの投稿に返信しました',
   'notifications.reason.mention': 'があなたに言及しました',
   'notifications.reason.quote': 'があなたの投稿を引用しました',
+  'notifications.reason.unknown': 'があなたとやり取りしました',
   'notifications.aggregated.like': '{name}さん他{n}人があなたの投稿にいいねしました',
   'notifications.aggregated.repost': '{name}さん他{n}人があなたの投稿をリポストしました',
   'notifications.aggregated.reply': '{name}さん他{n}人があなたの投稿に返信しました',
   'notifications.aggregated.quote': '{name}さん他{n}人があなたの投稿を引用しました',
   'notifications.aggregated.follow': '{name}さん他{n}人があなたをフォローしました',
   'notifications.aggregated.mention': '{name}さん他{n}人があなたに言及しました',
+  'notifications.aggregated.unknown': '{name}さん他{n}人があなたとやり取りしました',
 
   // 相対時間
   'timeAgo.justNow': 'たった今',
@@ -600,6 +606,7 @@ const ja: LocaleMessages = {
   'a11y.pageThread': 'スレッド',
   'a11y.pageSearch': '検索',
   'a11y.pageNotifications': '通知',
+  'a11y.openProfileOf': 'プロフィールを開く',
   'a11y.notificationUnread': '未読',
   'a11y.pageBookmarks': 'ブックマーク',
   'a11y.pageAIChat': 'AIチャット',

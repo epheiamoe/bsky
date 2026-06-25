@@ -228,6 +228,10 @@ const en: LocaleMessages = {
   'video.unavailable': 'Video unavailable',
   'video.openInBsky': 'Open in bsky.app',
 
+  // ── Media type labels for notification previews ──
+  'mediaType.video': 'Video',
+  'mediaType.external': 'External link',
+
   'drafts.title': 'Drafts',
   'drafts.empty': 'No drafts',
   'drafts.notSynced': 'Not synced to server',
@@ -292,12 +296,14 @@ const en: LocaleMessages = {
   'notifications.reason.reply': 'replied to your post',
   'notifications.reason.mention': 'mentioned you',
   'notifications.reason.quote': 'quoted your post',
+  'notifications.reason.unknown': 'interacted with you',
   'notifications.aggregated.like': '{name} and {n} others liked your post',
   'notifications.aggregated.repost': '{name} and {n} others reposted your post',
   'notifications.aggregated.reply': '{name} and {n} others replied to your post',
   'notifications.aggregated.quote': '{name} and {n} others quoted your post',
   'notifications.aggregated.follow': '{name} and {n} others followed you',
   'notifications.aggregated.mention': '{name} and {n} others mentioned you',
+  'notifications.aggregated.unknown': '{name} and {n} others interacted with you',
 
   // ── Relative time ──
   'timeAgo.justNow': 'now',
@@ -601,7 +607,7 @@ const en: LocaleMessages = {
   'a11y.pageProfile': 'Profile page',
   'a11y.pageThread': 'Thread page',
   'a11y.pageSearch': 'Search page',
-  'a11y.pageNotifications': 'Notifications page',
+  'a11y.openProfileOf': 'Open profile of',
   'a11y.notificationUnread': 'unread',
   'a11y.pageBookmarks': 'Bookmarks page',
   'a11y.pageAIChat': 'AI Chat',

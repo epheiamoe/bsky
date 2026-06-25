@@ -56,6 +56,15 @@ describe('notification grouping', () => {
     expect(groups[0]!.reason).toBe('follow');
     expect(groups[0]!.reasonSubject).toBeUndefined();
   });
+
+  it('maps unknown reasons to unknown and isolates them from mentions tab', () => {
+    const notifications: Notification[] = [
+      makeNotif({ uri: 'at://1', reason: 'custom-action', subject: 'at://post/a', isRead: true }),
+    ];
+    const groups = groupNotifications(notifications);
+    expect(groups[0]!.reason).toBe('unknown');
+    expect(groups[0]!.key.startsWith('unknown:')).toBe(true);
+  });
 });
 
 describe('BskyClient.getPosts', () => {
@@ -100,6 +109,20 @@ describe('BskyClient.getPosts', () => {
 
     expect(result.posts).toHaveLength(1);
     expect(result.posts[0]!.uri).toBe('at://did:plc:abc/app.bsky.feed.post/123');
+  });
+});
+
+describe('useNotificationPosts chunking', () => {
+  it('splits URIs into chunks of 25', async () => {
+    const { chunkUris } = await import('../../pwa/src/hooks/useNotificationPosts.js');
+    const uris: string[] = [];
+    for (let i = 0; i < 30; i++) {
+      uris.push(`at://did:plc:abc/app.bsky.feed.post/${i}`);
+    }
+    const chunks = chunkUris(uris);
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toHaveLength(25);
+    expect(chunks[1]).toHaveLength(5);
   });
 });
 

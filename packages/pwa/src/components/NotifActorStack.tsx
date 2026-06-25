@@ -17,7 +17,7 @@ export function NotifActorStack({ actors, max = 3 }: NotifActorStackProps) {
   return (
     <div
       className="flex -space-x-2 rtl:space-x-reverse shrink-0"
-      aria-label={`${actors.length} ${actors.length === 1 ? 'actor' : 'actors'}`}
+      aria-hidden="true"
     >
       {visible.map((actor, idx) => (
         <div

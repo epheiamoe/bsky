@@ -24,7 +24,7 @@ export function NotifsPage({
   goTo,
   initialScrollTop,
   onScrollTopChange,
-  autoMarkRead = true,
+  autoMarkRead = false,
 }: NotifsPageProps) {
   const { t } = useI18n();
   const { notifications, loading, error, refresh, unreadCount, markAllAsRead } = useNotifications(client);

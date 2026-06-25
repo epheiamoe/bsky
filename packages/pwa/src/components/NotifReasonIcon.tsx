@@ -14,6 +14,7 @@ const REASON_CONFIG: Record<NotifReason, { icon: string; color: string }> = {
   reply: { icon: 'message-circle', color: 'text-blue-500' },
   mention: { icon: 'at-sign', color: 'text-primary' },
   quote: { icon: 'quote', color: 'text-blue-500' },
+  unknown: { icon: 'bell', color: 'text-text-secondary' },
 };
 
 export function NotifReasonIcon({ reason }: NotifReasonIconProps) {

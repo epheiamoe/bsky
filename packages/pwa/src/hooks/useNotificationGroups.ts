@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Notification, ProfileViewBasic } from '@bsky/core';
 
-export type NotifReason = 'like' | 'repost' | 'follow' | 'reply' | 'mention' | 'quote';
+export type NotifReason = 'like' | 'repost' | 'follow' | 'reply' | 'mention' | 'quote' | 'unknown';
 
 const VALID_REASONS = new Set<NotifReason>([
   'like',
@@ -14,8 +14,10 @@ const VALID_REASONS = new Set<NotifReason>([
 
 function toNotifReason(reason: string): NotifReason {
   if (VALID_REASONS.has(reason as NotifReason)) return reason as NotifReason;
-  // Gracefully degrade unknown server reasons instead of crashing the list.
-  return 'mention';
+  // [Debt: i18n] Unknown server reasons are isolated to the 'All' tab to avoid
+  // mis-classifying potentially sensitive notifications under 'Mentions'.
+  // Add a proper label when the server introduces a new reason.
+  return 'unknown';
 }
 
 export interface NotifGroup {

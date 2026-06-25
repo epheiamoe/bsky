@@ -20,37 +20,35 @@ export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPo
   const thumbnails = useMemo(() => {
     if (!post) return [];
     const embeds = extractEmbeds(post);
+    const seen = new Set<string>();
     const items: { url: string; alt: string; kind: 'image' | 'video' | 'external' | 'gallery' }[] = [];
 
+    function push(url: string, alt: string, kind: typeof items[number]['kind']) {
+      if (!url || seen.has(url)) return;
+      if (items.length >= MAX_THUMBNAILS) return;
+      seen.add(url);
+      items.push({ url, alt, kind });
+    }
+
     for (const img of embeds.images ?? []) {
-      if (items.length >= MAX_THUMBNAILS) break;
-      items.push({ url: img.url, alt: img.alt, kind: 'image' });
+      push(img.url, img.alt, 'image');
     }
 
     if (embeds.gallery) {
       for (const img of embeds.gallery.images) {
-        if (items.length >= MAX_THUMBNAILS) break;
-        items.push({ url: img.thumbnail || img.fullsize, alt: img.alt, kind: 'gallery' });
+        push(img.thumbnail || img.fullsize, img.alt, 'gallery');
       }
     }
 
-    if (embeds.video && items.length < MAX_THUMBNAILS) {
-      items.push({
-        url: embeds.video.thumbnailUrl,
-        alt: embeds.video.alt || t('video.unavailable'),
-        kind: 'video',
-      });
+    if (embeds.video) {
+      push(embeds.video.thumbnailUrl, embeds.video.alt || t('video.unavailable'), 'video');
     }
 
-    if (embeds.external?.thumb && items.length < MAX_THUMBNAILS) {
-      items.push({
-        url: embeds.external.thumb,
-        alt: embeds.external.title,
-        kind: 'external',
-      });
+    if (embeds.external?.thumb) {
+      push(embeds.external.thumb, embeds.external.title, 'external');
     }
 
-    return items.slice(0, MAX_THUMBNAILS);
+    return items;
   }, [post, t]);
 
   if (!author && !text && thumbnails.length === 0) return null;
@@ -82,12 +80,20 @@ export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPo
                 loading="lazy"
               />
               {thumb.kind === 'video' && (
-                <span className="absolute inset-0 flex items-center justify-center text-white/90 bg-black/20">
+                <span
+                  className="absolute inset-0 flex items-center justify-center text-white/90 bg-black/20"
+                  aria-label={t('mediaType.video')}
+                  title={t('mediaType.video')}
+                >
                   <Icon name="video" size={16} />
                 </span>
               )}
               {thumb.kind === 'external' && (
-                <span className="absolute inset-0 flex items-center justify-center text-white/90 bg-black/20">
+                <span
+                  className="absolute inset-0 flex items-center justify-center text-white/90 bg-black/20"
+                  aria-label={t('mediaType.external')}
+                  title={t('mediaType.external')}
+                >
                   <Icon name="link" size={16} />
                 </span>
               )}

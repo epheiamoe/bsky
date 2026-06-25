@@ -33,6 +33,37 @@ function buildActorText(group: NotifGroup, t: (key: string) => string): string {
 
 const POST_REASONS: Set<NotifReason> = new Set(['like', 'repost', 'reply', 'quote', 'mention']);
 
+function truncate(text: string, max = 80): string {
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1) + '\u2026';
+}
+
+function buildAriaLabel(
+  group: NotifGroup,
+  post: PostView | undefined,
+  t: (key: string) => string,
+): string {
+  const actorText = buildActorText(group, t);
+  const unreadPrefix = group.isRead ? '' : `${t('a11y.notificationUnread')} `;
+
+  if (group.reason === 'follow') {
+    const target = group.actors[0]?.handle ?? '';
+    return `${unreadPrefix}${actorText}. ${t('a11y.openProfileOf')} @${target}`;
+  }
+
+  if (post && group.reasonSubject) {
+    const authorName = post.author.displayName || post.author.handle;
+    const previewText = truncate(post.record.text || '');
+    return `${unreadPrefix}${actorText}, ${authorName}. ${previewText}`;
+  }
+
+  if (group.reasonSubject) {
+    return `${unreadPrefix}${actorText}, ${t('notifications.viewPostHint')}`;
+  }
+
+  return `${unreadPrefix}${actorText}`;
+}
+
 export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
   const { t } = useI18n();
 
@@ -62,8 +93,7 @@ export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
   );
 
   const actorText = buildActorText(group, t);
-  const unreadPrefix = group.isRead ? '' : `${t('a11y.notificationUnread')} `;
-  const ariaLabel = `${unreadPrefix}${actorText}`;
+  const ariaLabel = buildAriaLabel(group, post, t);
 
   const fallbackText =
     group.reason === 'reply' || group.reason === 'mention'
@@ -73,7 +103,7 @@ export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
     group.reason === 'reply' || group.reason === 'mention' ? group.actors[0] : undefined;
 
   return (
-    <div role="listitem" data-index={index}>
+    <div role="listitem">
       <div
         role={isClickable ? 'button' : undefined}
         tabIndex={isClickable ? 0 : undefined}
