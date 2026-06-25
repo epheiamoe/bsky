@@ -105,7 +105,13 @@ export function useNotificationPosts(
     }
 
     void load(activeClient);
-  }, [client, stableKey, groups]);
+
+    return () => {
+      // Invalidate this request's callbacks when the effect is cleaned up
+      // (e.g. groups change, retry fires, or the component unmounts).
+      ++requestIdRef.current;
+    };
+  }, [client, stableKey]);
 
   const retry = useMemo(
     () => () => {

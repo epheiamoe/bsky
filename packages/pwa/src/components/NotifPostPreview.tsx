@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import type { PostView } from '@bsky/core';
-import { extractEmbeds, extractGallery, extractImages } from '@bsky/app';
+import { extractEmbeds, extractImages } from '@bsky/app';
 import { useI18n } from '@bsky/app';
 import { Icon } from './Icon.js';
 
@@ -29,11 +29,10 @@ function extractNotificationMedia(post: PostView, t: (key: string, vars?: Record
   const embeds = extractEmbeds(post);
 
   // 1. Gallery (new app.bsky.embed.gallery) — up to 10 images, preview first 4.
-  const gallery = embeds.gallery ?? extractGallery(post);
-  if (gallery && gallery.images.length > 0) {
+  if (embeds.gallery && embeds.gallery.images.length > 0) {
     return {
-      type: gallery.images.length === 1 ? 'image' : 'gallery',
-      images: gallery.images.map((img, idx) => ({
+      type: embeds.gallery.images.length === 1 ? 'image' : 'gallery',
+      images: embeds.gallery.images.map((img, idx) => ({
         url: img.thumbnail || img.fullsize,
         alt: img.alt || t('post.imageAlt', { n: idx + 1 }),
       })),
@@ -75,8 +74,8 @@ function extractNotificationMedia(post: PostView, t: (key: string, vars?: Record
 
 function SingleImage({ image, className }: { image: PreviewImage; className?: string }) {
   return (
-    <div
-      className={`w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0 ${className ?? ''}`}
+    <span
+      className={`inline-flex w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0 ${className ?? ''}`}
       aria-hidden="true"
     >
       <img
@@ -85,21 +84,21 @@ function SingleImage({ image, className }: { image: PreviewImage; className?: st
         className="w-full h-full object-cover"
         loading="lazy"
       />
-    </div>
+    </span>
   );
 }
 
 function GalleryStrip({ images, className }: { images: PreviewImage[]; className?: string }) {
   const visible = images.slice(0, GALLERY_PREVIEW_COUNT);
   return (
-    <div
-      className={`flex gap-1 h-12 items-center shrink-0 ${className ?? ''}`}
+    <span
+      className={`inline-flex gap-1 h-12 items-center shrink-0 ${className ?? ''}`}
       aria-hidden="true"
     >
       {visible.map((img, idx) => (
-        <div
+        <span
           key={idx}
-          className="w-10 h-10 rounded-md overflow-hidden bg-black/5 shrink-0"
+          className="inline-flex w-10 h-10 rounded-md overflow-hidden bg-black/5 shrink-0"
         >
           <img
             src={img.url}
@@ -107,45 +106,45 @@ function GalleryStrip({ images, className }: { images: PreviewImage[]; className
             className="w-full h-full object-cover"
             loading="lazy"
           />
-        </div>
+        </span>
       ))}
-    </div>
+    </span>
   );
 }
 
 function VideoThumbnail({ thumbnailUrl, alt }: { thumbnailUrl: string; alt: string }) {
   return (
-    <div
-      className="relative w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0"
+    <span
+      className="inline-flex relative w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0"
       aria-hidden="true"
     >
       <img src={thumbnailUrl} alt={alt} className="w-full h-full object-cover" loading="lazy" />
-      <div className="absolute inset-0 flex items-center justify-center">
+      <span className="absolute inset-0 inline-flex items-center justify-center">
         <Icon name="play" size={16} className="text-white drop-shadow" />
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }
 
 function ExternalThumbnail({ thumbnailUrl, alt }: { thumbnailUrl?: string; alt: string }) {
   if (thumbnailUrl) {
     return (
-      <div
-        className="w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0"
+      <span
+        className="inline-flex w-12 h-12 rounded-md overflow-hidden bg-black/5 shrink-0"
         aria-hidden="true"
       >
         <img src={thumbnailUrl} alt={alt} className="w-full h-full object-cover" loading="lazy" />
-      </div>
+      </span>
     );
   }
 
   return (
-    <div
-      className="w-12 h-12 rounded-md overflow-hidden bg-surface flex items-center justify-center shrink-0"
+    <span
+      className="inline-flex w-12 h-12 rounded-md overflow-hidden bg-surface items-center justify-center shrink-0"
       aria-hidden="true"
     >
       <Icon name="link" size={16} className="text-text-secondary" />
-    </div>
+    </span>
   );
 }
 
@@ -180,19 +179,19 @@ export function NotifPostPreview({ post, fallbackText, loading }: NotifPostPrevi
 
   if (loading && !post) {
     return (
-      <div className="mt-1 flex items-center gap-2 min-w-0 animate-pulse">
-        <div className="h-3 w-full bg-surface rounded" />
-        <div className="w-12 h-12 bg-surface rounded-md shrink-0" />
-      </div>
+      <span className="mt-1 inline-flex items-center gap-2 min-w-0 animate-pulse">
+        <span className="inline-block h-3 w-full bg-surface rounded" />
+        <span className="inline-block w-12 h-12 bg-surface rounded-md shrink-0" />
+      </span>
     );
   }
 
   return (
-    <div className="mt-1 flex items-center gap-2 min-w-0">
-      <p className="text-text-secondary text-xs line-clamp-3 break-words whitespace-pre-wrap flex-1 min-w-0">
+    <span className="mt-1 inline-flex items-center gap-2 min-w-0">
+      <span className="inline-block text-text-secondary text-xs line-clamp-3 break-words whitespace-pre-wrap flex-1 min-w-0">
         {text}
-      </p>
+      </span>
       {post && <NotificationMedia post={post} className="shrink-0" />}
-    </div>
+    </span>
   );
 }

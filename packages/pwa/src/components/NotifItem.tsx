@@ -137,12 +137,12 @@ export function NotifItem({ group, post, index, goTo, loadingPost }: NotifItemPr
               isClickable ? 'cursor-pointer hover:opacity-90' : 'cursor-default'
             }`}
           >
-            <div className="flex items-start gap-2">
+            <span className="flex items-start gap-2">
               <span className="text-text-primary text-sm min-w-0 flex-1">{actorText}</span>
               <span className="text-text-secondary text-xs shrink-0">
                 {formatTimeAgo(group.latestIndexedAt, t)}
               </span>
-            </div>
+            </span>
             {group.reason !== 'follow' && (
               <NotifPostPreview
                 post={post}

@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useI18n } from '@bsky/app';
 import type { ProfileViewBasic } from '@bsky/core';
 
 interface NotifActorStackProps {
@@ -24,6 +25,7 @@ export function NotifActorStack({
   onActorClick,
   onRemainingClick,
 }: NotifActorStackProps) {
+  const { t } = useI18n();
   const visible = actors.slice(0, max);
   const remaining = Math.max(0, actors.length - max);
 
@@ -65,11 +67,11 @@ export function NotifActorStack({
         <button
           type="button"
           onClick={handleRemainingClick}
-          aria-label={`+${remaining}`}
-          title={`+${remaining}`}
+          aria-label={t('notifications.actorStack.more', { n: remaining })}
+          title={t('notifications.actorStack.more', { n: remaining })}
           className="w-8 h-8 rounded-full border-2 border-background bg-surface text-text-primary flex items-center justify-center text-xs font-medium hover:bg-surface/80 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:ring-offset-background"
         >
-          +{remaining}
+          {t('notifications.actorStack.more', { n: remaining })}
         </button>
       )}
     </div>

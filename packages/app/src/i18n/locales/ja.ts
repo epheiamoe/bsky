@@ -305,6 +305,7 @@ const ja: LocaleMessages = {
   'notifications.aggregated.mention': '{name}さん他{n}人があなたに言及しました',
   'notifications.aggregated.unknown': '{name}さん他{n}人があなたとやり取りしました',
   'notifications.actorListTitle': 'ユーザー一覧',
+  'notifications.actorStack.more': '+{n}',
 
   // 相対時間
   'timeAgo.justNow': 'たった今',
