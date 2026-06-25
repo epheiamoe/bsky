@@ -304,6 +304,7 @@ const en: LocaleMessages = {
   'notifications.aggregated.follow': '{name} and {n} others followed you',
   'notifications.aggregated.mention': '{name} and {n} others mentioned you',
   'notifications.aggregated.unknown': '{name} and {n} others interacted with you',
+  'notifications.actorListTitle': 'People',
 
   // ── Relative time ──
   'timeAgo.justNow': 'now',

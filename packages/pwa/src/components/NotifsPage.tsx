@@ -56,6 +56,13 @@ export function NotifsPage({
     { initialScrollTop, onScrollTopChange },
   );
 
+  // Post previews change item heights; remeasure virtual list when posts arrive
+  useEffect(() => {
+    if (!postsLoading) {
+      virtualizer.measure();
+    }
+  }, [postsLoading, posts, virtualizer]);
+
   const handleRefresh = useCallback(async () => {
     await refresh();
   }, [refresh]);
@@ -139,6 +146,7 @@ export function NotifsPage({
                       post={posts.get(group.reasonSubject ?? '')}
                       index={vi.index}
                       goTo={goTo}
+                      loadingPost={postsLoading}
                     />
                   </div>
                 );

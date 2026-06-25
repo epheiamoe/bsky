@@ -1,18 +1,20 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import type { AppView } from '@bsky/app';
 import { useI18n } from '@bsky/app';
-import type { PostView } from '@bsky/core';
+import type { PostView, ProfileViewBasic } from '@bsky/core';
 import type { NotifGroup, NotifReason } from '../hooks/useNotificationGroups.js';
 import { formatTimeAgo } from '../utils/timeAgo.js';
 import { NotifActorStack } from './NotifActorStack.js';
 import { NotifReasonIcon } from './NotifReasonIcon.js';
 import { NotifPostPreview } from './NotifPostPreview.js';
+import { NotifActorListModal } from './NotifActorListModal.js';
 
 interface NotifItemProps {
   group: NotifGroup;
   post?: PostView;
   index: number;
   goTo: (v: AppView) => void;
+  loadingPost?: boolean;
 }
 
 function formatTemplate(tmpl: string, name: string, n: number): string {
@@ -64,8 +66,9 @@ function buildAriaLabel(
   return `${unreadPrefix}${actorText}`;
 }
 
-export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
+export function NotifItem({ group, post, index, goTo, loadingPost }: NotifItemProps) {
   const { t } = useI18n();
+  const [showActorList, setShowActorList] = useState(false);
 
   const isClickable =
     (group.reason === 'follow' && group.actors[0]?.handle) ||
@@ -92,6 +95,15 @@ export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
     [handleActivate],
   );
 
+  const handleActorClick = useCallback(
+    (actor: ProfileViewBasic) => {
+      if (actor.handle) {
+        goTo({ type: 'profile', actor: actor.handle });
+      }
+    },
+    [goTo],
+  );
+
   const actorText = buildActorText(group, t);
   const ariaLabel = buildAriaLabel(group, post, t);
 
@@ -103,41 +115,54 @@ export function NotifItem({ group, post, index, goTo }: NotifItemProps) {
     group.reason === 'reply' || group.reason === 'mention' ? group.actors[0] : undefined;
 
   return (
-    <div role="listitem">
-      <div
-        role={isClickable ? 'button' : undefined}
-        tabIndex={isClickable ? 0 : undefined}
-        onClick={isClickable ? handleActivate : undefined}
-        onKeyDown={isClickable ? handleKeyDown : undefined}
-        aria-label={ariaLabel}
-        className={`border-b border-border px-4 py-3 transition-colors ${
-          !group.isRead
-            ? 'bg-surface/60 border-l-2 border-l-primary'
-            : ''
-        } ${isClickable ? 'cursor-pointer hover:bg-surface' : ''}`}
-      >
-        <div className="flex gap-3">
-          <NotifActorStack actors={group.actors} />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2">
-              <NotifReasonIcon reason={group.reason} />
-              <span className="text-text-primary text-sm min-w-0 flex-1">
-                {actorText}
-              </span>
-              <span className="text-text-secondary text-xs shrink-0">
-                {formatTimeAgo(group.latestIndexedAt, t)}
-              </span>
+    <>
+      <div role="listitem">
+        <div
+          role={isClickable ? 'button' : undefined}
+          tabIndex={isClickable ? 0 : undefined}
+          onClick={isClickable ? handleActivate : undefined}
+          onKeyDown={isClickable ? handleKeyDown : undefined}
+          aria-label={ariaLabel}
+          className={`border-b border-border px-4 py-3 transition-colors ${
+            !group.isRead
+              ? 'bg-surface/60 border-l-2 border-l-primary'
+              : ''
+          } ${isClickable ? 'cursor-pointer hover:bg-surface' : ''}`}
+        >
+          <div className="flex gap-3">
+            <NotifActorStack
+              actors={group.actors}
+              onActorClick={handleActorClick}
+              onRemainingClick={() => setShowActorList(true)}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start gap-2">
+                <NotifReasonIcon reason={group.reason} />
+                <span className="text-text-primary text-sm min-w-0 flex-1">
+                  {actorText}
+                </span>
+                <span className="text-text-secondary text-xs shrink-0">
+                  {formatTimeAgo(group.latestIndexedAt, t)}
+                </span>
+              </div>
+              {group.reason !== 'follow' && (
+                <NotifPostPreview
+                  post={post}
+                  fallbackText={fallbackText}
+                  fallbackAuthor={fallbackAuthor}
+                  loading={loadingPost && !post}
+                />
+              )}
             </div>
-            {group.reason !== 'follow' && (
-              <NotifPostPreview
-                post={post}
-                fallbackText={fallbackText}
-                fallbackAuthor={fallbackAuthor}
-              />
-            )}
           </div>
         </div>
       </div>
-    </div>
+      <NotifActorListModal
+        open={showActorList}
+        onClose={() => setShowActorList(false)}
+        actors={group.actors}
+        goTo={goTo}
+      />
+    </>
   );
 }

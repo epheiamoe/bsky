@@ -304,6 +304,7 @@ const zh: LocaleMessages = {
   'notifications.aggregated.follow': '{name} 及其他 {n} 人关注了你',
   'notifications.aggregated.mention': '{name} 及其他 {n} 人提到了你',
   'notifications.aggregated.unknown': '{name} 及其他 {n} 人与你互动',
+  'notifications.actorListTitle': '这些人',
 
   // ── Relative time ──
   'timeAgo.justNow': '刚刚',

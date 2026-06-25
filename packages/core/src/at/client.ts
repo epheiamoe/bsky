@@ -412,7 +412,7 @@ export class BskyClient {
     const kyInstance = this.session ? this.ky : this.publicKy;
     const headers = this.session ? { headers: this.getAuthHeaders() } : {};
     return kyInstance.get('app.bsky.feed.getPosts', {
-      searchParams: sp.toString(),
+      searchParams: sp,
       ...headers,
     }).json<GetPostsResponse>();
   }

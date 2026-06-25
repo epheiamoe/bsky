@@ -7,11 +7,13 @@ interface NotifPostPreviewProps {
   post?: PostView;
   fallbackText?: string;
   fallbackAuthor?: ProfileViewBasic;
+  /** Whether the parent knows this notification references a post but the post data has not arrived yet. */
+  loading?: boolean;
 }
 
 const MAX_IMAGES = 4;
 
-export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPostPreviewProps) {
+export function NotifPostPreview({ post, fallbackText, fallbackAuthor, loading }: NotifPostPreviewProps) {
   const { t } = useI18n();
   const author = post?.author ?? fallbackAuthor;
   const text = (post?.record.text as string | undefined) ?? fallbackText ?? '';
@@ -37,12 +39,13 @@ export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPo
     return items;
   }, [post]);
 
-  if (!author && !text && images.length === 0) return null;
+  const hasContent = author || text || images.length > 0;
+  if (!hasContent && !loading) return null;
 
   return (
     <div className="mt-2 rounded-xl border border-border bg-surface/40 overflow-hidden">
       <div className="p-2.5">
-        {author && (
+        {author ? (
           <div className="flex items-center gap-1.5 text-xs mb-1">
             <div className="w-4 h-4 rounded-full overflow-hidden shrink-0">
               {author.avatar ? (
@@ -58,12 +61,23 @@ export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPo
             </span>
             <span className="text-text-secondary truncate max-w-[120px]">@{author.handle}</span>
           </div>
-        )}
-        {text && (
+        ) : loading ? (
+          <div className="flex items-center gap-1.5 text-xs mb-1 animate-pulse">
+            <div className="w-4 h-4 rounded-full bg-surface" />
+            <div className="h-3 w-20 bg-surface rounded" />
+            <div className="h-3 w-16 bg-surface rounded" />
+          </div>
+        ) : null}
+        {text ? (
           <p className="text-text-secondary text-sm line-clamp-3 break-words whitespace-pre-wrap">{text}</p>
-        )}
+        ) : loading ? (
+          <div className="space-y-1 animate-pulse">
+            <div className="h-3 w-full bg-surface rounded" />
+            <div className="h-3 w-2/3 bg-surface rounded" />
+          </div>
+        ) : null}
       </div>
-      {images.length > 0 && (
+      {images.length > 0 ? (
         <div className={`grid gap-[2px] ${images.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
           {images.map((img, idx) => {
             const isLast = idx === images.length - 1;
@@ -91,7 +105,12 @@ export function NotifPostPreview({ post, fallbackText, fallbackAuthor }: NotifPo
             );
           })}
         </div>
-      )}
+      ) : loading ? (
+        <div className="grid grid-cols-2 gap-[2px]">
+          <div className="aspect-square bg-surface animate-pulse" />
+          <div className="aspect-square bg-surface animate-pulse" />
+        </div>
+      ) : null}
     </div>
   );
 }
