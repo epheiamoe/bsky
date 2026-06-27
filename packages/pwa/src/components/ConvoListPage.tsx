@@ -15,6 +15,11 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
   const { convos, loading, error, refresh } = useConvoList(client);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Filter out group chats — they are not yet supported in this client.
+  // Group convos (kind === 'group') are silently hidden; a banner guides users to bsky.app.
+  const directConvos = convos.filter(c => c.kind === 'direct' || !c.kind);
+  const groupConvoCount = convos.filter(c => c.kind === 'group').length;
+
   useEffect(() => {
     refresh();
   }, []);
@@ -26,6 +31,8 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
   };
 
   const handleConvoClick = (convo: ConvoView) => {
+    // Guard: group chats are filtered from the list, but prevent navigation if somehow triggered
+    if (convo.kind === 'group') return;
     // For direct (1-1) convos, navigate to the other member
     const members = convo.members || [];
     const currentDid = client.getDID();
@@ -101,16 +108,30 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
         </button>
       </div>
 
+      {/* Group chat banner — shown only when group chats exist */}
+      {groupConvoCount > 0 && (
+        <a
+          href="https://bsky.app/messages"
+          target="_blank"
+          rel="noopener noreferrer"
+          role="status"
+          className="flex items-center gap-2 px-4 py-2 mx-3 mt-2 mb-1 bg-primary/10 text-primary text-sm rounded-lg hover:bg-primary/20 transition-colors no-underline"
+        >
+          <Icon name="info" size={16} aria-hidden="true" />
+          <span>{t('dm.groupChatBanner', { n: groupConvoCount })}</span>
+        </a>
+      )}
+
       {/* List */}
       <div role="list" className="flex-1 overflow-y-auto">
-        {loading && convos.length === 0 && (
+        {loading && directConvos.length === 0 && (
           <div className="p-6 text-center text-text-secondary animate-pulse">{t('common.loading')}</div>
         )}
         {error && <div className="p-3 m-3 bg-red-100 dark:bg-red-900/20 text-red-600 text-sm rounded-lg">{error}</div>}
-        {!loading && convos.length === 0 && (
+        {!loading && directConvos.length === 0 && (
           <div className="p-6 text-center text-text-secondary">{t('dm.empty')}</div>
         )}
-        {convos.map((convo) => {
+        {directConvos.map((convo) => {
           const memberHandle = getMemberHandle(convo);
           return (
           <div key={convo.id} role="listitem" className="flex items-center px-4 py-3 border-b border-border hover:bg-surface transition-colors">

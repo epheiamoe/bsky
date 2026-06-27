@@ -363,6 +363,8 @@ const ja: LocaleMessages = {
   'dm.systemMessage': 'システムメッセージ',
   'dm.unknown': '不明なユーザー',
   'dm.newMessages': '{n}件の新着メッセージ',
+  'dm.groupChatBanner': '{n}件のグループチャット通知 - bsky.appで確認',
+  'dm.groupChatBannerLink': 'bsky.app',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

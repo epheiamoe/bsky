@@ -78,6 +78,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const { drafts, saveDraft, deleteDraft, loadDraft } = useDrafts(client);
   const { convos, loading: dmLoading, error: dmError, refresh: refreshDMs } = useConvoList(client);
   const [dmIdx, setDmIdx] = useState(0);
+  // Filter out group chats — not yet supported in TUI. Only 1:1 convos are navigable.
+  const directConvos = useMemo(
+    () => convos.filter(c => c.kind === 'direct' || !c.kind),
+    [convos]
+  );
   const { t, locale } = useI18n(config.targetLang as Locale);
   const dateLocale = locale === 'zh' ? 'zh-CN' : locale === 'ja' ? 'ja-JP' : 'en-US';
 
@@ -840,11 +845,11 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
 
     // ── DM list specific ──
     if (currentView.type === 'dm') {
-      if (k === 'j') setDmIdx(i => Math.min(convos.length - 1, i + 1));
+      if (k === 'j') setDmIdx(i => Math.min(directConvos.length - 1, i + 1));
       else if (k === 'k') setDmIdx(i => Math.max(0, i - 1));
       else if (k === 'r') refreshDMs();
       else if (key.return) {
-        const c = convos[dmIdx];
+        const c = directConvos[dmIdx];
         if (c && client) {
           const members = c.members || [];
           const other = members.find(m => m.did !== client.getDID());
@@ -1112,7 +1117,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
           <Box flexDirection="column" width={mainW} borderStyle="single" borderColor="green" paddingX={1}>
             <Box height={1}><Text bold color="green">💬 {t('nav.dm')}</Text><Text dimColor>{' '}[j/k] Nav [Enter] Open [r] Refresh</Text></Box>
             <DMListView
-              convos={convos}
+              convos={directConvos}
               loading={dmLoading}
               error={dmError}
               selectedIndex={dmIdx}

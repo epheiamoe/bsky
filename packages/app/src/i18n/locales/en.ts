@@ -363,6 +363,8 @@ const en: LocaleMessages = {
   'dm.emojiConfig': 'Customize Quick Emojis',
   'dm.emojiConfigHint': 'Selected {n} emojis. Click to add/remove.',
   'dm.newMessages': '{n} new messages',
+  'dm.groupChatBanner': '{n} group chat notification(s) - view on bsky.app',
+  'dm.groupChatBannerLink': 'bsky.app',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

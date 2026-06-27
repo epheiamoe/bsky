@@ -769,6 +769,8 @@ const zh: LocaleMessages = {
   'dm.systemMessage': '系统消息',
   'dm.unknown': '未知用户',
   'dm.newMessages': '{n} 条新消息',
+  'dm.groupChatBanner': '{n} 条群聊通知，在 bsky.app 中查看',
+  'dm.groupChatBannerLink': 'bsky.app',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',
