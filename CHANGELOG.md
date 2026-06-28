@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.6] — 2026-06-28
+
+### Added
+
+- **PWA notifications auto-mark-as-read**: `NotifsPage` now defaults `autoMarkRead` to `true`; entering the notifications page clears the unread badge immediately (with API failure rollback).
+- **Group chat silencing in DM list**: PWA/TUI now filter out Bluesky group chats (`chat.bsky.convo.defs#groupConvo`) which are not yet supported, preventing them from opening the wrong 1:1 conversation.
+- **Group chat temporary banner**: PWA DM list shows `{n} group chat notification(s) - view on bsky.app`; clicking opens `https://bsky.app/messages` in a new tab.
+- **DM empty-state improvement**: when only group chats exist, the PWA list shows a clearer "No 1:1 DMs" message with the group-chat count.
+- **Convo kind helpers**: new `@bsky/app` utilities `isDirectConvo`, `isGroupConvo`, and `getGroupConvoName` that correctly handle the union-shaped `ConvoView.kind` field.
+
+### Changed
+
+- **PWA notification preview redesign**: compact inline row with text on the left and a single small thumbnail / horizontal gallery strip on the right; supports `app.bsky.embed.gallery#view` (up to 10 images, preview first 4 without `+N` overlay).
+- **Service Worker fetch handling**:
+  - Ignore non-HTTP(S) schemes (e.g. `chrome-extension://`) to prevent `Cache.put` errors.
+  - API requests are now network-only and never cached, avoiding stale/empty notification or DM lists.
+- `ConvoView.kind` type updated from plain string `'direct' | 'group'` to the union objects returned by the Bluesky chat lexicon.
+
+### Fixed
+
+- Fixed PWA notification post previews stuck in loading due to an unstable `filteredGroups` reference restarting the `useNotificationPosts` effect every render.
+- Fixed PWA notification preview accessibility by removing nested interactive elements and `aria-hidden` over focusable avatar buttons.
+- Fixed `NotifActorStack` overflow button not using an i18n key.
+- Fixed DM list showing "No conversations" because `ConvoView.kind` was compared as a string instead of a union object.
+
 ## [0.14.5] — 2026-06-25
 
 ### Added

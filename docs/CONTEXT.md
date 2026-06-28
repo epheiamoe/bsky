@@ -24,9 +24,25 @@
 
 ## 当前版本
 
-**v0.14.5 — 通知红点 + 通知已读 + 私信已读同步 ✅ staging**
+**v0.14.6 — 通知 + DM 稳定性修复 ✅ production**
 
-### v0.14.5 新功能 (已完成 — 待 staging 验证):
+### v0.14.6 新功能 / 修复 (已完成 — 待 production 验证):
+- ✅ **PWA 通知页进入后自动标记已读**：`NotifsPage` 默认启用 `autoMarkRead`，进入页面后未读红点即时消失（带失败回滚）
+- ✅ **PWA 通知预览真正加载**：修复 `useNotificationPosts` effect race（`filteredGroups` 未 memo 导致 `loading` 永远为 true）
+- ✅ **PWA 通知预览紧凑 redesign**：内联行布局（文本 + 右侧小缩略图/水平 gallery 条带），无大占位卡片
+- ✅ **通知 gallery 支持**：预览兼容 `app.bsky.embed.gallery#view`（最多 10 张），条带最多显示 4 张，无 `+N` 覆盖层
+- ✅ **通知可访问性重构**：`NotifItem` 改为 `<article>` + reason icon + avatar stack + 独立内容按钮，消除嵌套交互元素；`NotifActorStack` 头像按钮自带 `aria-label`
+- ✅ **群聊静默忽略**：PWA/TUI DM 列表过滤 `kind.$type === 'chat.bsky.convo.defs#groupConvo'` 的群聊，避免点击后跳转到错误的 1:1 对话
+- ✅ **群聊临时 banner**：PWA DM 列表顶部显示 `{n} 条群聊通知，在 bsky.app 中查看`，点击跳转 bsky.app/messages
+- ✅ **Service Worker 修复**：忽略 `chrome-extension` 等非 HTTP(S) scheme 请求；API 请求改为 network-only，避免缓存空列表导致私信/通知空白
+- ✅ **DM 空状态优化**：仅有群聊时显示「暂无 1:1 私信，有 {n} 条群聊通知」
+- ✅ **正确识别 `ConvoView.kind` union**：修正 core 类型定义，新增 `isDirectConvo` / `isGroupConvo` / `getGroupConvoName` 辅助函数
+- ✅ **i18n**：新增 `dm.groupChatBanner`、`dm.groupChatBannerLink`、`dm.emptyWithGroupChats`
+- ✅ **测试覆盖**：`notifications.test.ts` 12 项、`useConvoList.store.test.ts` 8 项均通过
+- **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.6）
+- **生产环境部署**：`https://bsky.epheia.dev` / `https://ai-bsky.pages.dev`（PWA v0.14.6）
+
+### v0.14.5 新功能 (已完成 — 已合并入 v0.14.6):
 - ✅ **PWA 通知页重设计**：bsky.app 风格 — 标题栏 + 设置齿轮、全部/提及标签、连续分组聚合、触发者头像堆叠、SVG reason 图标、帖文预览卡片、点击跳转
 - ✅ **PWA 通知聚合**：连续相同 `reason` + `reasonSubject` 合并为 "X 及其他 N 人 赞了/转发了/回复了你的帖文"
 - ✅ **PWA 通知帖子预览**：目标帖作者、截断正文、最多 4 张媒体缩略图
@@ -48,7 +64,7 @@
 - ✅ **`BskyClient.getConvo(convoId)`**：新增直接会话查询
 - ✅ **跨账号竞态保护**：切换账号后丢弃旧 client 的异步响应
 - **staging 部署**：`https://staging.ai-bsky.pages.dev`（PWA v0.14.5）
-- **生产环境部署**：待 staging 验证后部署
+- **生产环境部署**：已并入 v0.14.6
 
 ### v0.14.4 新功能 (已完成 — 部署到 production):
 - ✅ **帮助中心系统**：共享数据层 `help-content.ts`（22 条目 × 7 分类），PWA glass-card UI + TUI 列表 + MCP `ai-bsky_help` AI 工具。自包含三语内容（EN/ZH/JA），支持 markdown
