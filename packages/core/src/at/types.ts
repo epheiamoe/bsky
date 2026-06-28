@@ -514,6 +514,20 @@ export interface GetListFeedResponse {
 
 // ── Chat (DM) types ──
 
+export interface DirectConvo {
+  $type: 'chat.bsky.convo.defs#directConvo';
+}
+
+export interface GroupConvo {
+  $type: 'chat.bsky.convo.defs#groupConvo';
+  createdAt?: string;
+  lockStatus?: 'unlocked' | 'locked' | 'locked-permanently';
+  lockStatusModerationOverride?: boolean;
+  memberCount: number;
+  memberLimit: number;
+  name: string;
+}
+
 export interface ConvoView {
   id: string;
   rev: string;
@@ -523,7 +537,7 @@ export interface ConvoView {
   muted: boolean;
   status: 'request' | 'accepted';
   unreadCount: number;
-  kind: 'direct' | 'group';
+  kind?: DirectConvo | GroupConvo;
 }
 
 export interface MessageInput {

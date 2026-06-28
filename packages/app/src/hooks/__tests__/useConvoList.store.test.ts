@@ -12,7 +12,7 @@ function makeConvo(id: string, unreadCount: number): ConvoView {
     muted: false,
     status: 'accepted',
     unreadCount,
-    kind: 'direct',
+    kind: { $type: 'chat.bsky.convo.defs#directConvo' },
   };
 }
 

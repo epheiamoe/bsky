@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Box, Text, useStdout, useInput } from 'ink';
 import TextInput from 'ink-text-input';
-import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists, normalizeBskyInput, parseBskyAppUrl, bskyUrlToAppView, parseAtUri } from '@bsky/app';
+import { useNavigation, useAuth, useNotifications, useTimeline, useCompose, useBookmarks, useLists, useListDetail, useI18n, useDrafts, useConvoList, buildThreadgateRules, useSubscribedLists, normalizeBskyInput, parseBskyAppUrl, bskyUrlToAppView, parseAtUri, isDirectConvo } from '@bsky/app';
 import type { ComposeMedia, AppView, Locale } from '@bsky/app';
 import { RECOMMENDED_FEEDS, getFeedLabel, resolveFeedId, getProviderById, getModelInfo } from '@bsky/core';
 import { setLastFeedUri, getFeedConfig, extractGallery } from '@bsky/app';
@@ -80,7 +80,7 @@ export function App({ config, isRawModeSupported = true }: AppProps) {
   const [dmIdx, setDmIdx] = useState(0);
   // Filter out group chats — not yet supported in TUI. Only 1:1 convos are navigable.
   const directConvos = useMemo(
-    () => convos.filter(c => c.kind === 'direct' || !c.kind),
+    () => convos.filter(c => isDirectConvo(c)),
     [convos]
   );
   const { t, locale } = useI18n(config.targetLang as Locale);

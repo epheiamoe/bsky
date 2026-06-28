@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { BskyClient, ConvoView } from '@bsky/core';
 import type { AppView } from '@bsky/app';
-import { useConvoList, useI18n } from '@bsky/app';
+import { useConvoList, useI18n, isDirectConvo, isGroupConvo } from '@bsky/app';
 import { Icon } from './Icon.js';
 
 interface ConvoListPageProps {
@@ -16,9 +16,10 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
   const [refreshing, setRefreshing] = useState(false);
 
   // Filter out group chats — they are not yet supported in this client.
-  // Group convos (kind === 'group') are silently hidden; a banner guides users to bsky.app.
-  const directConvos = convos.filter(c => c.kind === 'direct' || !c.kind);
-  const groupConvoCount = convos.filter(c => c.kind === 'group').length;
+  // Group convos (kind.$type === 'chat.bsky.convo.defs#groupConvo') are silently hidden;
+  // a banner guides users to bsky.app.
+  const directConvos = convos.filter(c => isDirectConvo(c));
+  const groupConvoCount = convos.filter(c => isGroupConvo(c)).length;
 
   useEffect(() => {
     refresh();
@@ -32,7 +33,7 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
 
   const handleConvoClick = (convo: ConvoView) => {
     // Guard: group chats are filtered from the list, but prevent navigation if somehow triggered
-    if (convo.kind === 'group') return;
+    if (isGroupConvo(convo)) return;
     // For direct (1-1) convos, navigate to the other member
     const members = convo.members || [];
     const currentDid = client.getDID();
