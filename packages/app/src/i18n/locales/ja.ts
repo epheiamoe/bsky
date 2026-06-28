@@ -365,6 +365,7 @@ const ja: LocaleMessages = {
   'dm.newMessages': '{n}件の新着メッセージ',
   'dm.groupChatBanner': '{n}件のグループチャット通知 - bsky.appで確認',
   'dm.groupChatBannerLink': 'bsky.app',
+  'dm.emptyWithGroupChats': '1:1のDMはありません。{n}件のグループチャット通知があります。',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

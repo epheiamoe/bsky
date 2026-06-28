@@ -365,6 +365,7 @@ const en: LocaleMessages = {
   'dm.newMessages': '{n} new messages',
   'dm.groupChatBanner': '{n} group chat notification(s) - view on bsky.app',
   'dm.groupChatBannerLink': 'bsky.app',
+  'dm.emptyWithGroupChats': 'No 1:1 DMs. You have {n} group chat notification(s).',
   'nav.atplay': 'AT Play',
 
   'atplay.title': 'AT Play',

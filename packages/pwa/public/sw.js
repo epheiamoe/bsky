@@ -33,6 +33,24 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  // Only handle standard HTTP(S) requests. Browser extensions, file://, etc.
+  // cannot be stored in the Cache API and will throw if we try.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
+  // API requests: network-only (never cache). Chat, notifications, and feed
+  // data must always be fresh; caching these can cause stale/empty lists.
+  if (
+    url.hostname === 'bsky.social' ||
+    url.hostname === 'public.api.bsky.app' ||
+    url.hostname === 'api.deepseek.com' ||
+    url.hostname.includes('api.')
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // Bluesky CDN images: cache-first (content-addressed, immutable)
   if (url.hostname === 'cdn.bsky.app') {
     event.respondWith(cachedMatch(request, IMG_CACHE));
@@ -51,17 +69,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API requests: network-first (always fresh data)
-  if (
-    url.hostname === 'bsky.social' ||
-    url.hostname === 'public.api.bsky.app' ||
-    url.hostname === 'api.deepseek.com' ||
-    url.hostname.includes('api.')
-  ) {
-    event.respondWith(networkFirst(request));
-    return;
-  }
-
   // Vite-built assets (.js, .css) and icons: cache-first (hashed filenames)
   if (url.pathname.includes('/assets/') || url.pathname.includes('/icons/')) {
     event.respondWith(cachedMatch(request, CACHE_NAME));
@@ -74,31 +81,14 @@ self.addEventListener('fetch', (event) => {
 
 // ── Strategies ──
 
-// Network-first with cache fallback (only caches GET requests)
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok && request.method === 'GET') {
-      const cache = await caches.open(CACHE_NAME);
-      cache.put(request, response.clone());
-    }
-    return response;
-  } catch {
-    const cached = await caches.match(request);
-    return cached || new Response(JSON.stringify({ error: 'Network offline' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-}
-
 // Cache-first: serve from cache, fall back to network and cache response
 async function cachedMatch(request, cacheName) {
+  if (request.method !== 'GET') return fetch(request);
   const cached = await caches.match(request);
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok && request.method === 'GET') {
+    if (response.ok) {
       const cache = await caches.open(cacheName);
       cache.put(request, response.clone());
     }
@@ -110,11 +100,12 @@ async function cachedMatch(request, cacheName) {
 
 // Stale-while-revalidate: serve from cache first, update in background
 async function staleWhileRevalidate(request, cacheName) {
+  if (request.method !== 'GET') return fetch(request);
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
   const fetchPromise = fetch(request)
     .then((response) => {
-      if (response.ok && request.method === 'GET') {
+      if (response.ok) {
         cache.put(request, response.clone());
       }
       return response;

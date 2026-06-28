@@ -129,7 +129,11 @@ export function ConvoListPage({ client, goBack, goTo }: ConvoListPageProps) {
         )}
         {error && <div className="p-3 m-3 bg-red-100 dark:bg-red-900/20 text-red-600 text-sm rounded-lg">{error}</div>}
         {!loading && directConvos.length === 0 && (
-          <div className="p-6 text-center text-text-secondary">{t('dm.empty')}</div>
+          <div className="p-6 text-center text-text-secondary">
+            {groupConvoCount > 0
+              ? t('dm.emptyWithGroupChats', { n: groupConvoCount })
+              : t('dm.empty')}
+          </div>
         )}
         {directConvos.map((convo) => {
           const memberHandle = getMemberHandle(convo);
